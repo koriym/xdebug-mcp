@@ -11,7 +11,7 @@ PHP Xdebug のデバッグ、プロファイル、カバレッジ分析をAIが�
 - **42個のXdebugツール**: デバッグ、プロファイル、カバレッジの完全自動化
 - **トレースベースデバッグ**: AIが実行時データを分析（var_dump不要）
 - **IDE互換性**: ポート9004でPhpStorm/VS Code（9003）との競合を回避
-- **コマンドラインツール**: 5つの独立したデバッグユーティリティ
+- **コマンドラインツール**: 6つの独立したデバッグユーティリティ
 
 ## ツールカテゴリ
 
@@ -82,18 +82,81 @@ claude mcp list
 - `xdebug-trace` - 実行トレース生成
 - `xdebug-profile` - パフォーマンスプロファイル  
 - `xdebug-coverage` - コードカバレッジ分析
+- `xdebug-phpunit` - PHPUnit選択的Xdebug分析
 
-## 使用方法
+### xdebug-phpunit 使用方法
+
+PHPUnitテストで自動Xdebugトレース・プロファイルを実行：
 
 ```bash
-# 確認
-claude mcp list
+# 特定テストメソッドのトレース（デフォルトモード）
+./bin/xdebug-phpunit tests/UserTest.php::testLogin
 
-# ツールテスト
-echo '{"method":"tools/list"}' | php bin/xdebug-mcp
+# テストファイル全体のプロファイル
+./bin/xdebug-phpunit --profile tests/UserTest.php
 
-# テスト実行
-vendor/bin/phpunit
+# フィルター条件でのトレース
+./bin/xdebug-phpunit --filter=testUserAuth
+
+# 遅いテストのプロファイル
+./bin/xdebug-phpunit --profile --filter=testSlow
+```
+
+**出力:**
+- トレースモード: `/tmp/trace_*.xt` (実行トレース)
+- プロファイルモード: `/tmp/cachegrind.out.*` (パフォーマンスデータ)
+
+**設定要件:**
+`phpunit.xml`に追加：
+```xml
+<extensions>
+    <bootstrap class="Koriym\XdebugMcp\TraceExtension"/>
+</extensions>
+```
+
+## 使用例
+
+### 1. 実行トレース
+```bash
+claude --print "test/debug_test.phpを実行して実行パターンを分析して"
+# AIが自動的に./bin/xdebug-traceを選択して分析を提供：
+# ✅ トレース完了: /tmp/xdebug_trace_20250821_044930.xt (64行)
+# 📊 分析: O(2^n) Fibonacci非効率性、安定メモリ使用、マイクロ秒レベル計測
+```
+
+### 2. パフォーマンスプロファイル
+```bash
+claude --print "test/debug_test.phpのパフォーマンスをプロファイルして"
+# AIが自動的に./bin/xdebug-profileを使用：
+# ✅ プロファイル完了: /tmp/cachegrind.out.1755719364
+# 📊 サイズ: 1.9K、関数: 29、呼び出し: 28、ボトルネック特定
+```
+
+### 3. コードカバレッジ分析
+```bash
+claude --print "test/debug_test.phpのコードカバレッジを分析して"
+# AIが自動的に./bin/xdebug-coverageを使用：
+# ✅ カバレッジ完了: HTMLレポート生成
+# 📊 カバレッジ: 85.2% 行、92.1% 関数、未テストコードパス特定
+```
+
+### 4. ステップデバッグ
+```bash
+claude --print "test/debug_test.phpをデバッグして、15行目でbreakして変数値を表示して"
+# AIがブレークポイントを設定してデバッグセッションを提供：
+# ✅ ブレークポイント設定: test/debug_test.php:15
+# 📊 ブレークポイントでの変数値:
+# | 変数     | 型     | 値                       |
+# |----------|--------|--------------------------|
+# | $n       | int    | 6                        |
+# | $result  | int    | 8                        |
+# | $user    | array  | ['name'=>'John','age'=>30] |
+```
+
+### 5. PHPUnitテスト
+```bash
+# PHPUnitテストのデバッグ（phpunit.xmlにTraceExtension追加後）
+./bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
 ```
 
 ## 利用できる42ツール

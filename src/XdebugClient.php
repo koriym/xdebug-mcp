@@ -1,9 +1,9 @@
 <?php
 
-namespace XdebugMcp;
+namespace Koriym\XdebugMcp;
 
-use XdebugMcp\Exceptions\SocketException;
-use XdebugMcp\Exceptions\XdebugConnectionException;
+use Koriym\XdebugMcp\Exceptions\SocketException;
+use Koriym\XdebugMcp\Exceptions\XdebugConnectionException;
 
 class XdebugClient
 {
@@ -254,7 +254,7 @@ class XdebugClient
     private function parseXml(string $xml): array
     {
         $previousUseErrors = libxml_use_internal_errors(true);
-        $xmlDoc = simplexml_load_string($xml);
+        $xmlDoc = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
         
         if ($xmlDoc === false) {
             $errors = libxml_get_errors();
@@ -370,7 +370,7 @@ class XdebugClient
         return $this->parseXml($response);
     }
 
-    public function setExceptionBreakpoint(string $exceptionName, string $state = 'all'): string
+    public function setExceptionBreakpoint(string $exceptionName, string $state = 'enabled'): string
     {
         $this->ensureConnected();
         

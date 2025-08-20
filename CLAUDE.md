@@ -4,7 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a PHP Xdebug MCP (Model Context Protocol) Server that allows AI assistants to control PHP debugging sessions through Xdebug. The server implements MCP to bridge between AI clients and Xdebug debugging sessions.
+This is a **universal PHP Xdebug MCP (Model Context Protocol) Server** that enables AI assistants to perform comprehensive PHP application analysis and debugging. The server acts as a bridge between AI clients and Xdebug, providing a standardized interface for:
+
+### Core Purpose
+- **AI-Driven PHP Analysis**: Enable AI assistants to understand PHP application behavior through runtime data rather than static code analysis
+- **Universal Debugging Tool**: Work with any PHP application, framework, or codebase without modification
+- **Performance Profiling**: Collect and analyze performance metrics to identify bottlenecks
+- **Code Coverage Analysis**: Generate comprehensive test coverage reports and identify untested code paths
+- **Runtime Debugging**: Step through code execution, inspect variables, and analyze call stacks
+
+### Target Use Cases
+1. **Performance Optimization**: AI can analyze profile data to suggest specific performance improvements
+2. **Bug Investigation**: Trace execution flow to identify the root cause of issues
+3. **Code Quality Assessment**: Use coverage data and execution traces to evaluate code quality
+4. **Educational Analysis**: Help developers understand how their PHP applications actually execute
+5. **Legacy Code Understanding**: Analyze complex or undocumented PHP applications through runtime behavior
+
+This is a **general-purpose tool** designed to work with any PHP application, not limited to specific frameworks or use cases. The MCP protocol ensures consistent AI interaction regardless of the underlying PHP codebase being analyzed.
 
 ## Common Commands
 
@@ -292,6 +308,43 @@ XDEBUG_TRIGGER=TRACE php -dzend_extension=xdebug \
 ### Core Philosophy: Non-Invasive Trace-Based Debugging
 
 This project prioritizes **execution-time trace analysis** over traditional code modification debugging approaches. AI assistants should always use trace-based debugging instead of adding debug statements to source code.
+
+### Automatic Xdebug Tool Usage for PHP Analysis
+
+**IMPORTANT: When asked to analyze, debug, or understand any PHP file, ALWAYS use appropriate Xdebug tools automatically unless explicitly told otherwise.**
+
+#### Available Xdebug Tools:
+- `./bin/xdebug-profile` - Performance profiling
+- `./bin/xdebug-coverage` - Code coverage analysis  
+- `./bin/xdebug-trace` - Execution tracing
+- `./bin/xdebug-server` - Start MCP server
+- `./bin/xdebug-mcp` - MCP client interface
+
+#### Automatic Tool Selection:
+
+**For Performance Analysis:**
+- User: "Analyze performance", "Find bottlenecks", "Profile this code"
+- AI automatically runs: `./bin/xdebug-profile path/to/file.php`
+
+**For Code Coverage:**
+- User: "Check test coverage", "Which lines are tested", "Coverage analysis"
+- AI automatically runs: `./bin/xdebug-coverage path/to/file.php`
+
+**For Execution Flow Analysis:**
+- User: "Trace execution", "Show function calls", "Debug this script"
+- AI automatically runs: `./bin/xdebug-trace path/to/file.php`
+
+**For General Analysis (choose most appropriate):**
+- User: "Analyze this PHP file", "What does this code do"
+- AI automatically runs: `./bin/xdebug-profile path/to/file.php` (default choice)
+- Then optionally: `./bin/xdebug-trace path/to/file.php` for detailed flow
+
+**Example workflows:**
+1. User: "Analyze test/debug_test.php" → AI runs `./bin/xdebug-profile test/debug_test.php`
+2. User: "Check coverage of my tests" → AI runs `./bin/xdebug-coverage test/MyTest.php`
+3. User: "Trace this function execution" → AI runs `./bin/xdebug-trace src/MyClass.php`
+
+Always use these tools proactively to provide runtime insights rather than static code analysis alone.
 
 ### ❌ Prohibited Debugging Methods
 

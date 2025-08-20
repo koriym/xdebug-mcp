@@ -1,12 +1,12 @@
 <?php
 
-namespace XdebugMcp;
+namespace Koriym\XdebugMcp;
 
-use XdebugMcp\Exceptions\InvalidToolException;
-use XdebugMcp\Exceptions\XdebugConnectionException;
-use XdebugMcp\Exceptions\XdebugNotAvailableException;
-use XdebugMcp\Exceptions\FileNotFoundException;
-use XdebugMcp\Exceptions\InvalidArgumentException;
+use Koriym\XdebugMcp\Exceptions\InvalidToolException;
+use Koriym\XdebugMcp\Exceptions\XdebugConnectionException;
+use Koriym\XdebugMcp\Exceptions\XdebugNotAvailableException;
+use Koriym\XdebugMcp\Exceptions\FileNotFoundException;
+use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 
 class McpServer
 {
