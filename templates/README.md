@@ -84,6 +84,7 @@ Claude automatically detects and uses project-specific debugging tools:
 ./bin/xdebug-profile     # Performance profiling
 ./bin/xdebug-coverage    # Code coverage analysis  
 ./bin/xdebug-trace       # Execution tracing
+./bin/xdebug-phpunit     # PHPUnit profiling/integration
 ./bin/xdebug-server      # MCP server integration
 ```
 
