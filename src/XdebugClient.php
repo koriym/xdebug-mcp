@@ -2,6 +2,9 @@
 
 namespace XdebugMcp;
 
+use XdebugMcp\Exceptions\SocketException;
+use XdebugMcp\Exceptions\XdebugConnectionException;
+
 class XdebugClient
 {
     private string $host;
@@ -20,23 +23,23 @@ class XdebugClient
     {
         $this->socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
         if ($this->socket === false) {
-            throw new \Exception('Failed to create socket: ' . socket_strerror(socket_last_error()));
+            throw new SocketException('Failed to create socket: ' . socket_strerror(socket_last_error()));
         }
 
         socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
         socket_set_option($this->socket, SOL_SOCKET, SO_RCVTIMEO, ['sec' => 30, 'usec' => 0]);
 
         if (!socket_bind($this->socket, $this->host, $this->port)) {
-            throw new \Exception('Failed to bind socket');
+            throw new SocketException('Failed to bind socket');
         }
 
         if (!socket_listen($this->socket, 1)) {
-            throw new \Exception('Failed to listen on socket');
+            throw new SocketException('Failed to listen on socket');
         }
         
         $clientSocket = socket_accept($this->socket);
         if ($clientSocket === false) {
-            throw new \Exception('Failed to accept connection');
+            throw new SocketException('Failed to accept connection');
         }
 
         socket_close($this->socket);
@@ -180,7 +183,7 @@ class XdebugClient
     private function ensureConnected(): void
     {
         if (!$this->connected || !$this->socket) {
-            throw new \Exception('Not connected to Xdebug session');
+            throw new XdebugConnectionException('Not connected to Xdebug session');
         }
     }
 
@@ -203,7 +206,7 @@ class XdebugClient
         
         $bytesWritten = socket_write($this->socket, $commandString, strlen($commandString));
         if ($bytesWritten === false) {
-            throw new \Exception('Failed to send command: ' . socket_strerror(socket_last_error($this->socket)));
+            throw new SocketException('Failed to send command: ' . socket_strerror(socket_last_error($this->socket)));
         }
 
         return $this->readResponse();
@@ -217,7 +220,7 @@ class XdebugClient
         while ($char !== "\0") {
             $result = socket_read($this->socket, 1);
             if ($result === false) {
-                throw new \Exception('Failed to read from socket: ' . socket_strerror(socket_last_error($this->socket)));
+                throw new SocketException('Failed to read from socket: ' . socket_strerror(socket_last_error($this->socket)));
             }
             $char = $result;
             if ($char !== "\0") {
@@ -227,7 +230,7 @@ class XdebugClient
 
         $length = (int)$lengthData;
         if ($length <= 0) {
-            throw new \Exception('Invalid response length: ' . $length);
+            throw new XdebugConnectionException('Invalid response length: ' . $length);
         }
 
         $response = '';
@@ -236,7 +239,7 @@ class XdebugClient
         while ($bytesRead < $length) {
             $chunk = socket_read($this->socket, $length - $bytesRead);
             if ($chunk === false) {
-                throw new \Exception('Failed to read response data: ' . socket_strerror(socket_last_error($this->socket)));
+                throw new SocketException('Failed to read response data: ' . socket_strerror(socket_last_error($this->socket)));
             }
             $response .= $chunk;
             $bytesRead += strlen($chunk);
@@ -256,7 +259,7 @@ class XdebugClient
         if ($xmlDoc === false) {
             $errors = libxml_get_errors();
             libxml_use_internal_errors($previousUseErrors);
-            throw new \Exception('Failed to parse XML response: ' . implode(', ', array_map(fn($e) => $e->message, $errors)));
+            throw new XdebugConnectionException('Failed to parse XML response: ' . implode(', ', array_map(fn($e) => $e->message, $errors)));
         }
         
         libxml_use_internal_errors($previousUseErrors);

@@ -3,6 +3,7 @@
 namespace XdebugMcp\Tests\Fake;
 
 use XdebugMcp\McpServer;
+use XdebugMcp\Exceptions\XdebugConnectionException;
 
 class FakeMcpServer extends McpServer
 {
@@ -23,7 +24,7 @@ class FakeMcpServer extends McpServer
     protected function disconnectFromXdebug(): string
     {
         if (!$this->fakeXdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $this->fakeXdebugClient->disconnect();
@@ -36,7 +37,7 @@ class FakeMcpServer extends McpServer
     protected function setBreakpoint(array $args): string
     {
         if (!$this->fakeXdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $filename = $args['filename'];
@@ -51,7 +52,7 @@ class FakeMcpServer extends McpServer
     protected function removeBreakpoint(array $args): string
     {
         if (!$this->fakeXdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $breakpointId = $args['breakpoint_id'];
@@ -63,7 +64,7 @@ class FakeMcpServer extends McpServer
     protected function stepInto(): string
     {
         if (!$this->fakeXdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $result = $this->fakeXdebugClient->stepInto();
@@ -73,7 +74,7 @@ class FakeMcpServer extends McpServer
     protected function stepOver(): string
     {
         if (!$this->fakeXdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $result = $this->fakeXdebugClient->stepOver();
@@ -83,7 +84,7 @@ class FakeMcpServer extends McpServer
     protected function stepOut(): string
     {
         if (!$this->fakeXdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $result = $this->fakeXdebugClient->stepOut();
@@ -93,7 +94,7 @@ class FakeMcpServer extends McpServer
     protected function continue(): string
     {
         if (!$this->fakeXdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $result = $this->fakeXdebugClient->continue();
@@ -103,7 +104,7 @@ class FakeMcpServer extends McpServer
     protected function getStack(): string
     {
         if (!$this->fakeXdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $stack = $this->fakeXdebugClient->getStack();
@@ -113,7 +114,7 @@ class FakeMcpServer extends McpServer
     protected function getVariables(array $args): string
     {
         if (!$this->fakeXdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $context = $args['context'] ?? 0;
@@ -125,7 +126,7 @@ class FakeMcpServer extends McpServer
     protected function evaluateExpression(array $args): string
     {
         if (!$this->fakeXdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $expression = $args['expression'];

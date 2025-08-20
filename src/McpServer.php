@@ -2,6 +2,12 @@
 
 namespace XdebugMcp;
 
+use XdebugMcp\Exceptions\InvalidToolException;
+use XdebugMcp\Exceptions\XdebugConnectionException;
+use XdebugMcp\Exceptions\XdebugNotAvailableException;
+use XdebugMcp\Exceptions\FileNotFoundException;
+use XdebugMcp\Exceptions\InvalidArgumentException;
+
 class McpServer
 {
     protected array $tools = [];
@@ -673,7 +679,7 @@ class McpServer
             case 'xdebug_get_feature':
                 return $this->getFeature($arguments);
             default:
-                throw new \Exception("Unknown tool: $toolName");
+                throw new InvalidToolException("Unknown tool: $toolName");
         }
     }
 
@@ -691,7 +697,7 @@ class McpServer
     protected function disconnectFromXdebug(): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $this->xdebugClient->disconnect();
@@ -703,7 +709,7 @@ class McpServer
     protected function setBreakpoint(array $args): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $filename = $args['filename'];
@@ -718,7 +724,7 @@ class McpServer
     protected function removeBreakpoint(array $args): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $breakpointId = $args['breakpoint_id'];
@@ -730,7 +736,7 @@ class McpServer
     protected function stepInto(): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $result = $this->xdebugClient->stepInto();
@@ -740,7 +746,7 @@ class McpServer
     protected function stepOver(): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $result = $this->xdebugClient->stepOver();
@@ -750,7 +756,7 @@ class McpServer
     protected function stepOut(): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $result = $this->xdebugClient->stepOut();
@@ -760,7 +766,7 @@ class McpServer
     protected function continue(): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $result = $this->xdebugClient->continue();
@@ -770,7 +776,7 @@ class McpServer
     protected function getStack(): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $stack = $this->xdebugClient->getStack();
@@ -780,7 +786,7 @@ class McpServer
     protected function getVariables(array $args): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $context = $args['context'] ?? 0;
@@ -792,7 +798,7 @@ class McpServer
     protected function evaluateExpression(array $args): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $expression = $args['expression'];
@@ -839,7 +845,7 @@ class McpServer
         $topFunctions = $args['top_functions'] ?? 10;
 
         if (!file_exists($profileFile)) {
-            throw new \Exception("Profile file not found: {$profileFile}");
+            throw new FileNotFoundException("Profile file not found: {$profileFile}");
         }
 
         $analysis = $this->parseProfileFile($profileFile, $topFunctions);
@@ -849,7 +855,7 @@ class McpServer
     private function startStandaloneProfiling(string $outputFile): string
     {
         if (!extension_loaded('xdebug')) {
-            throw new \Exception('Xdebug extension not loaded');
+            throw new XdebugNotAvailableException('Xdebug extension not loaded');
         }
 
         if ($outputFile) {
@@ -867,7 +873,7 @@ class McpServer
     private function stopStandaloneProfiling(): string
     {
         if (!extension_loaded('xdebug')) {
-            throw new \Exception('Xdebug extension not loaded');
+            throw new XdebugNotAvailableException('Xdebug extension not loaded');
         }
 
         if (function_exists('xdebug_stop_trace')) {
@@ -880,7 +886,7 @@ class McpServer
     private function getStandaloneProfileInfo(): string
     {
         if (!extension_loaded('xdebug')) {
-            throw new \Exception('Xdebug extension not loaded');
+            throw new XdebugNotAvailableException('Xdebug extension not loaded');
         }
 
         $info = [
@@ -897,7 +903,7 @@ class McpServer
     {
         $content = file_get_contents($profileFile);
         if ($content === false) {
-            throw new \Exception("Failed to read profile file: {$profileFile}");
+            throw new FileNotFoundException("Failed to read profile file: {$profileFile}");
         }
 
         $lines = explode("\n", $content);
@@ -940,7 +946,7 @@ class McpServer
     protected function startCoverage(array $args): string
     {
         if (!extension_loaded('xdebug')) {
-            throw new \Exception('Xdebug extension not loaded');
+            throw new XdebugNotAvailableException('Xdebug extension not loaded');
         }
 
         $includePatterns = $args['include_patterns'] ?? [];
@@ -964,7 +970,7 @@ class McpServer
     protected function stopCoverage(): string
     {
         if (!extension_loaded('xdebug')) {
-            throw new \Exception('Xdebug extension not loaded');
+            throw new XdebugNotAvailableException('Xdebug extension not loaded');
         }
 
         if (function_exists('xdebug_stop_code_coverage')) {
@@ -977,7 +983,7 @@ class McpServer
     protected function getCoverage(array $args): string
     {
         if (!extension_loaded('xdebug')) {
-            throw new \Exception('Xdebug extension not loaded');
+            throw new XdebugNotAvailableException('Xdebug extension not loaded');
         }
 
         $format = $args['format'] ?? 'raw';
@@ -993,7 +999,7 @@ class McpServer
             return "Code coverage data:\n" . json_encode($coverage, JSON_PRETTY_PRINT);
         }
 
-        throw new \Exception('xdebug_get_code_coverage function not available');
+        throw new XdebugNotAvailableException('xdebug_get_code_coverage function not available');
     }
 
     protected function analyzeCoverage(array $args): string
@@ -1003,7 +1009,7 @@ class McpServer
         $outputFile = $args['output_file'] ?? '';
 
         if (empty($coverageData)) {
-            throw new \Exception('No coverage data provided');
+            throw new InvalidArgumentException('No coverage data provided');
         }
 
         $analysis = $this->processCoverageData($coverageData);
@@ -1038,7 +1044,7 @@ class McpServer
             if (function_exists('xdebug_get_code_coverage')) {
                 $coverageData = xdebug_get_code_coverage();
             } else {
-                throw new \Exception('No coverage data available');
+                throw new InvalidArgumentException('No coverage data available');
             }
         }
 
@@ -1397,7 +1403,7 @@ class McpServer
         $functions = $args['functions'] ?? [];
 
         if (empty($functions)) {
-            throw new \Exception('No functions specified to monitor');
+            throw new InvalidArgumentException('No functions specified to monitor');
         }
 
         if (function_exists('xdebug_start_function_monitor')) {
@@ -1466,7 +1472,7 @@ class McpServer
     protected function listBreakpoints(): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $breakpoints = $this->xdebugClient->listBreakpoints();
@@ -1476,7 +1482,7 @@ class McpServer
     protected function setExceptionBreakpoint(array $args): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $exceptionName = $args['exception_name'];
@@ -1490,7 +1496,7 @@ class McpServer
     protected function setWatchBreakpoint(array $args): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $expression = $args['expression'];
@@ -1593,7 +1599,7 @@ class McpServer
     protected function getFeatures(): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $features = $this->xdebugClient->getFeatures();
@@ -1603,7 +1609,7 @@ class McpServer
     protected function setFeature(array $args): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $featureName = $args['feature_name'];
@@ -1622,7 +1628,7 @@ class McpServer
     protected function getFeature(array $args): string
     {
         if (!$this->xdebugClient) {
-            throw new \Exception('Not connected to Xdebug');
+            throw new XdebugConnectionException('Not connected to Xdebug');
         }
 
         $featureName = $args['feature_name'];

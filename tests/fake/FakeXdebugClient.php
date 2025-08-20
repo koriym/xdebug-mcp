@@ -3,6 +3,7 @@
 namespace XdebugMcp\Tests\Fake;
 
 use XdebugMcp\XdebugClient;
+use XdebugMcp\Exceptions\XdebugConnectionException;
 
 class FakeXdebugClient extends XdebugClient
 {
@@ -116,7 +117,7 @@ class FakeXdebugClient extends XdebugClient
     private function ensureConnected(): void
     {
         if (!$this->isConnected) {
-            throw new \Exception('Not connected to Xdebug session');
+            throw new XdebugConnectionException('Not connected to Xdebug session');
         }
     }
 
@@ -128,7 +129,7 @@ class FakeXdebugClient extends XdebugClient
         if ($xmlDoc === false) {
             $errors = libxml_get_errors();
             libxml_use_internal_errors($previousUseErrors);
-            throw new \Exception('Failed to parse XML response');
+            throw new XdebugConnectionException('Failed to parse XML response');
         }
         
         libxml_use_internal_errors($previousUseErrors);
