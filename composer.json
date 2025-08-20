@@ -24,6 +24,9 @@
         }
     },
     "bin": [
-        "bin/xdebug-mcp"
+        "bin/xdebug-mcp",
+        "bin/xdebug-trace",
+        "bin/xdebug-profile",
+        "bin/xdebug-coverage"
     ]
 }
