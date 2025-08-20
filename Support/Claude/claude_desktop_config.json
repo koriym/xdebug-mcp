@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "xdebug": {
+            "command": "php",
+            "args": ["/path/to/your/xdebug-mcp/bin/xdebug-mcp"],
+            "env": {
+                "PATH": "/usr/local/bin:/usr/bin:/bin"
+            }
+        }
+    }
+}
