@@ -65,6 +65,32 @@ claude mcp add xdebug php "$(pwd)/bin/xdebug-mcp"
 claude mcp list
 ```
 
+### AIに推測ではなく実行時解析を使わせる
+
+**問題**: 従来のAI開発は静的コード分析とエラーメッセージに依存しており、PHPアプリケーションで何が起こっているかをAIは推測するしかありません。
+
+**解決策**: これらのテンプレートはClaudeに推測ではなく、Xdebugプロファイリングとトレースからの実際の実行データを使用することを教えます。
+
+**[テンプレートディレクトリ](templates/README.md)** - 完全設定ガイド
+
+#### システム全体設定
+```bash
+# 全PHPプロジェクトでClaudeに実行時解析を使用させる
+cp templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUDE.md
+```
+
+#### プロジェクト固有設定
+```bash
+# このプロジェクトでClaudeに実行時解析を使用させる
+cp templates/CLAUDE_DEBUG_PRINCIPLES.md ./
+echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
+```
+
+**結果**: コード+エラー推測から実行時データ分析への開発変革:
+
+- **前**: 「このコードは遅いかもしれません」（AI推測）
+- **後**: 「fibonacci()は3,772μs（全体の27.6%）を24回の再帰呼び出しで消費」（AIが実データを分析）
+
 ## コマンドラインツール
 
 - `xdebug-server` - MCPサーバー起動（ポート9004）

@@ -65,6 +65,32 @@ claude mcp add xdebug php "$(pwd)/bin/xdebug-mcp"
 claude mcp list
 ```
 
+### Tell AI to Use Runtime Analysis Instead of Guesswork
+
+**Problem**: AI development traditionally relies on static code analysis and error messages. AI can only guess what might be happening in your PHP application.
+
+**Solution**: These templates teach Claude to use actual execution data from Xdebug profiling and tracing instead of making assumptions.
+
+**[Templates Directory](templates/README.md)** - Complete configuration guide
+
+#### System-Wide Configuration
+```bash
+# Teach Claude to use runtime analysis for ALL PHP projects
+cp templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUDE.md
+```
+
+#### Project-Specific Configuration
+```bash
+# Teach Claude to use runtime analysis for this project
+cp templates/CLAUDE_DEBUG_PRINCIPLES.md ./
+echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
+```
+
+**Result**: Transform development from code+error guessing to runtime data analysis:
+
+- **Before**: "This code might be slow" (AI guessing)
+- **After**: "fibonacci() consumed 3,772μs (27.6% of total) with 24 recursive calls" (AI analyzing real data)
+
 ## Command Line Tools
 
 - `xdebug-server` - Start MCP server (port 9004)
@@ -208,31 +234,6 @@ claude --print "Debug test/debug_test.php, break at line 15 and show variable va
 - Verify Xdebug installation: `php -m | grep xdebug`
 - Port conflicts: xdebug-mcp uses 9004, IDEs use 9003
 
-## Tell AI to Use Runtime Analysis Instead of Guesswork
-
-**Problem**: AI development traditionally relies on static code analysis and error messages. AI can only guess what might be happening in your PHP application.
-
-**Solution**: These templates teach Claude to use actual execution data from Xdebug profiling and tracing instead of making assumptions.
-
-**[Templates Directory](templates/README.md)** - Complete configuration guide
-
-### System-Wide Configuration
-```bash
-# Teach Claude to use runtime analysis for ALL PHP projects
-cp templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUDE.md
-```
-
-### Project-Specific Configuration
-```bash
-# Teach Claude to use runtime analysis for this project
-cp templates/CLAUDE_DEBUG_PRINCIPLES.md ./
-echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
-```
-
-**Result**: Transform development from code+error guessing to runtime data analysis:
-
-- **Before**: "This code might be slow" (AI guessing)
-- **After**: "fibonacci() consumed 3,772μs (27.6% of total) with 24 recursive calls" (AI analyzing real data)
 
 ## Links
 
