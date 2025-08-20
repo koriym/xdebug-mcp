@@ -6,10 +6,13 @@ A comprehensive MCP (Model Context Protocol) server that enables AI to control P
 
 This MCP server provides **complete coverage of 42 Xdebug features**, enabling AI to fully automate PHP application debugging, profiling, and code coverage analysis.
 
+**🎯 Key Innovation:** Revolutionary **trace-based debugging** approach that eliminates the need for var_dump modifications. AI analyzes actual runtime execution data instead of static code.
+
 **Specifications:**
 - **MCP 2025-03-26** (Latest specification)
 - **Xdebug 3.x** Full support
 - **42 MCP Tools** Available
+- **AI Debugging Optimized** Trace analysis
 
 ## Key Features
 
@@ -67,20 +70,35 @@ This MCP server provides **complete coverage of 42 Xdebug features**, enabling A
 
 ## Quick Start
 
+### Option 1: Easy Server Start
 ```bash
 # 1. Clone and install dependencies
 git clone <repository-url>
 cd xdebug-mcp
 composer install
 
-# 2. Add MCP server
+# 2. Start Xdebug MCP Server with automatic configuration
+./bin/xdebug-server
+
+# 3. Test debugging tools
+./bin/xdebug-trace test/debug_test.php      # Trace execution
+./bin/xdebug-profile test/debug_test.php    # Profile performance  
+./bin/xdebug-coverage test/debug_test.php   # Analyze coverage
+```
+
+### Option 2: Claude Desktop Integration
+```bash
+# 1. Install dependencies
+composer install
+
+# 2. Add MCP server to Claude Desktop
 claude mcp add xdebug php "$(pwd)/bin/xdebug-mcp"
 
 # 3. Verify installation
 claude mcp list
 
 # 4. Test in Claude Desktop
-# Ask: "利用可能なツールを教えてください"
+# Ask: "Show me available debugging tools"
 ```
 
 ## Setup
@@ -172,6 +190,57 @@ Refer to `mcp.json` file:
     }
   }
 }
+```
+
+## Command Line Tools
+
+xdebug-mcp provides 5 command-line tools for comprehensive PHP debugging:
+
+### 1. `xdebug-server` - MCP Server with Xdebug Configuration
+Start the MCP server with automatic Xdebug setup:
+```bash
+./bin/xdebug-server                    # Default configuration
+./bin/xdebug-server --port 9000        # Custom port
+./bin/xdebug-server --mode debug,trace # Custom modes
+./bin/xdebug-server --help             # Show all options
+```
+
+### 2. `xdebug-mcp` - Pure MCP Server
+Core MCP server for programmatic integration:
+```bash
+php bin/xdebug-mcp                     # Direct server start
+echo '{"method":"tools/list"}' | php bin/xdebug-mcp  # Test communication
+```
+
+### 3. `xdebug-trace` - Execution Tracing ⭐ AI Optimized
+Analyze runtime execution flow and variable states for AI debugging:
+```bash
+./bin/xdebug-trace script.php          # Generate trace file for AI analysis
+./bin/xdebug-trace --help              # Usage information
+
+# Output: /tmp/xdebug_trace_YYYYMMDD_HHMMSS.xt
+# Shows: function calls, parameters, execution time, memory usage
+# Perfect for: AI-powered debugging without var_dump modifications
+```
+
+### 4. `xdebug-profile` - Performance Profiling
+Generate detailed performance profiles:
+```bash
+./bin/xdebug-profile script.php        # Generate Cachegrind profile
+./bin/xdebug-profile --help            # Usage information
+
+# Output: /tmp/xdebug_profile_YYYYMMDD_HHMMSS.out
+# View with: kcachegrind or qcachegrind
+```
+
+### 5. `xdebug-coverage` - Code Coverage Analysis
+Analyze code coverage with detailed reports:
+```bash
+./bin/xdebug-coverage script.php       # Text summary
+./bin/xdebug-coverage script.php --html # HTML report
+./bin/xdebug-coverage --help           # Usage information
+
+# Generates coverage reports in /tmp/xdebug_coverage_*/
 ```
 
 ## Usage
