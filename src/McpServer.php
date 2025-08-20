@@ -371,23 +371,23 @@ class McpServer
         ];
     }
 
-    public function run(): void
+    public function __invoke(): void
     {
         try {
             $input = '';
-            
+
             // Check if STDIN is available and not closed immediately
             if (feof(STDIN)) {
                 // Handle immediate EOF - this might be a health check
                 return;
             }
-            
+
             while (($line = fgets(STDIN)) !== false) {
                 $input .= $line;
-                
+
                 if ($this->isCompleteJsonRpc($input)) {
                     $request = json_decode(trim($input), true);
-                    
+
                     if ($request === null) {
                         // Invalid JSON, send parse error
                         $errorResponse = [
@@ -402,10 +402,10 @@ class McpServer
                         fflush(STDOUT);
                     } else {
                         $this->debugLog('Received request', $request);
-                        
+
                         try {
                             $response = $this->handleRequest($request);
-                            
+
                             if ($response !== null) {
                                 $this->debugLog('Sending response', $response);
                                 echo json_encode($response) . "\n";
@@ -413,7 +413,7 @@ class McpServer
                             }
                         } catch (\Exception $e) {
                             error_log("MCP Server Error: " . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString());
-                            
+
                             $errorResponse = [
                                 'jsonrpc' => '2.0',
                                 'id' => $request['id'] ?? null,
@@ -426,7 +426,7 @@ class McpServer
                             fflush(STDOUT);
                         }
                     }
-                    
+
                     $input = '';
                 }
             }
@@ -441,7 +441,7 @@ class McpServer
         if (empty($trimmed)) {
             return false;
         }
-        
+
         $decoded = json_decode($trimmed);
         return json_last_error() === JSON_ERROR_NONE;
     }
@@ -493,13 +493,13 @@ class McpServer
     {
         // Use the protocol version requested by the client, defaulting to latest
         $clientVersion = $params['protocolVersion'] ?? '2025-06-18';
-        
+
         // Ensure we support the requested version
         $supportedVersions = ['2024-11-05', '2025-03-26', '2025-06-18'];
         if (!in_array($clientVersion, $supportedVersions)) {
             $clientVersion = '2025-06-18';
         }
-        
+
         return [
             'jsonrpc' => '2.0',
             'id' => $id,
@@ -560,7 +560,7 @@ class McpServer
 
         try {
             $result = $this->executeToolCall($toolName, $arguments);
-            
+
             return [
                 'jsonrpc' => '2.0',
                 'id' => $id,
@@ -684,7 +684,7 @@ class McpServer
 
         $this->xdebugClient = new XdebugClient($host, $port);
         $result = $this->xdebugClient->connect();
-        
+
         return "Connected to Xdebug at {$host}:{$port}. Session: " . json_encode($result);
     }
 
@@ -696,7 +696,7 @@ class McpServer
 
         $this->xdebugClient->disconnect();
         $this->xdebugClient = null;
-        
+
         return 'Disconnected from Xdebug';
     }
 
@@ -711,7 +711,7 @@ class McpServer
         $condition = $args['condition'] ?? '';
 
         $breakpointId = $this->xdebugClient->setBreakpoint($filename, $line, $condition);
-        
+
         return "Breakpoint set at {$filename}:{$line} (ID: {$breakpointId})";
     }
 
@@ -723,7 +723,7 @@ class McpServer
 
         $breakpointId = $args['breakpoint_id'];
         $this->xdebugClient->removeBreakpoint($breakpointId);
-        
+
         return "Breakpoint {$breakpointId} removed";
     }
 
@@ -785,7 +785,7 @@ class McpServer
 
         $context = $args['context'] ?? 0;
         $variables = $this->xdebugClient->getVariables($context);
-        
+
         return "Variables (context {$context}):\n" . json_encode($variables, JSON_PRETTY_PRINT);
     }
 
@@ -797,18 +797,18 @@ class McpServer
 
         $expression = $args['expression'];
         $result = $this->xdebugClient->eval($expression);
-        
+
         return "Evaluation result for '{$expression}':\n" . json_encode($result, JSON_PRETTY_PRINT);
     }
 
     protected function startProfiling(array $args): string
     {
         $outputFile = $args['output_file'] ?? '';
-        
+
         if (!$this->xdebugClient) {
             return $this->startStandaloneProfiling($outputFile);
         }
-        
+
         $result = $this->xdebugClient->startProfiling($outputFile);
         return "Profiling started: " . json_encode($result);
     }
@@ -818,7 +818,7 @@ class McpServer
         if (!$this->xdebugClient) {
             return $this->stopStandaloneProfiling();
         }
-        
+
         $result = $this->xdebugClient->stopProfiling();
         return "Profiling stopped: " . json_encode($result);
     }
@@ -828,7 +828,7 @@ class McpServer
         if (!$this->xdebugClient) {
             return $this->getStandaloneProfileInfo();
         }
-        
+
         $info = $this->xdebugClient->getProfileInfo();
         return "Profile info:\n" . json_encode($info, JSON_PRETTY_PRINT);
     }
@@ -837,11 +837,11 @@ class McpServer
     {
         $profileFile = $args['profile_file'];
         $topFunctions = $args['top_functions'] ?? 10;
-        
+
         if (!file_exists($profileFile)) {
             throw new \Exception("Profile file not found: {$profileFile}");
         }
-        
+
         $analysis = $this->parseProfileFile($profileFile, $topFunctions);
         return "Profile analysis for {$profileFile}:\n" . json_encode($analysis, JSON_PRETTY_PRINT);
     }
@@ -851,16 +851,16 @@ class McpServer
         if (!extension_loaded('xdebug')) {
             throw new \Exception('Xdebug extension not loaded');
         }
-        
+
         if ($outputFile) {
             ini_set('xdebug.profiler_output_name', basename($outputFile));
             ini_set('xdebug.output_dir', dirname($outputFile));
         }
-        
+
         if (function_exists('xdebug_start_trace')) {
             xdebug_start_trace();
         }
-        
+
         return "Standalone profiling started" . ($outputFile ? " (output: {$outputFile})" : "");
     }
 
@@ -869,11 +869,11 @@ class McpServer
         if (!extension_loaded('xdebug')) {
             throw new \Exception('Xdebug extension not loaded');
         }
-        
+
         if (function_exists('xdebug_stop_trace')) {
             xdebug_stop_trace();
         }
-        
+
         return "Standalone profiling stopped";
     }
 
@@ -882,14 +882,14 @@ class McpServer
         if (!extension_loaded('xdebug')) {
             throw new \Exception('Xdebug extension not loaded');
         }
-        
+
         $info = [
             'xdebug_version' => phpversion('xdebug'),
             'profiler_enabled' => ini_get('xdebug.profiler_enable') || ini_get('xdebug.mode') === 'profile',
             'output_dir' => ini_get('xdebug.output_dir'),
             'output_name' => ini_get('xdebug.profiler_output_name')
         ];
-        
+
         return json_encode($info, JSON_PRETTY_PRINT);
     }
 
@@ -899,16 +899,16 @@ class McpServer
         if ($content === false) {
             throw new \Exception("Failed to read profile file: {$profileFile}");
         }
-        
+
         $lines = explode("\n", $content);
         $functions = [];
         $totalTime = 0;
-        
+
         foreach ($lines as $line) {
             if (empty($line) || strpos($line, 'fl=') === 0 || strpos($line, 'fn=') === 0) {
                 continue;
             }
-            
+
             if (preg_match('/^(\d+)\s+(\d+)$/', $line, $matches)) {
                 $calls = (int)$matches[1];
                 $time = (int)$matches[2];
@@ -924,10 +924,10 @@ class McpServer
                 $functions[$currentFunction]['time'] += $time;
             }
         }
-        
+
         arsort($functions);
         $topFunctions = array_slice($functions, 0, $topFunctions, true);
-        
+
         return [
             'total_time' => $totalTime,
             'total_functions' => count($functions),
@@ -956,7 +956,7 @@ class McpServer
             xdebug_start_code_coverage($flags);
         }
 
-        return "Code coverage started" . 
+        return "Code coverage started" .
                ($includePatterns ? " (includes: " . implode(', ', $includePatterns) . ")" : "") .
                ($excludePatterns ? " (excludes: " . implode(', ', $excludePatterns) . ")" : "");
     }
@@ -984,12 +984,12 @@ class McpServer
 
         if (function_exists('xdebug_get_code_coverage')) {
             $coverage = xdebug_get_code_coverage();
-            
+
             if ($format === 'summary') {
                 $summary = $this->calculateCoverageSummary($coverage);
                 return "Coverage summary:\n" . json_encode($summary, JSON_PRETTY_PRINT);
             }
-            
+
             return "Code coverage data:\n" . json_encode($coverage, JSON_PRETTY_PRINT);
         }
 
@@ -1007,7 +1007,7 @@ class McpServer
         }
 
         $analysis = $this->processCoverageData($coverageData);
-        
+
         switch ($format) {
             case 'html':
                 $report = $this->generateHtmlCoverageReport($analysis);
@@ -1033,7 +1033,7 @@ class McpServer
     protected function getCoverageSummary(array $args): string
     {
         $coverageData = $args['coverage_data'] ?? [];
-        
+
         if (empty($coverageData)) {
             if (function_exists('xdebug_get_code_coverage')) {
                 $coverageData = xdebug_get_code_coverage();
@@ -1076,7 +1076,7 @@ class McpServer
     private function processCoverageData(array $coverageData): array
     {
         $processed = [];
-        
+
         foreach ($coverageData as $file => $lines) {
             $fileInfo = [
                 'file' => $file,
@@ -1113,11 +1113,11 @@ class McpServer
             $report .= "File: {$fileInfo['file']}\n";
             $report .= "Coverage: {$fileInfo['coverage_percentage']}%\n";
             $report .= "Lines: {$fileInfo['covered_lines']}/{$fileInfo['total_lines']}\n";
-            
+
             if (!empty($fileInfo['uncovered_lines'])) {
                 $report .= "Uncovered lines: " . implode(', ', $fileInfo['uncovered_lines']) . "\n";
             }
-            
+
             $report .= "\n";
         }
 
@@ -1146,7 +1146,7 @@ class McpServer
     private function generateXmlCoverageReport(array $analysis): string
     {
         $xml = "<?xml version='1.0'?>\n<coverage>\n";
-        
+
         foreach ($analysis as $fileInfo) {
             $xml .= "  <file name='{$fileInfo['file']}'>\n";
             $xml .= "    <coverage_percentage>{$fileInfo['coverage_percentage']}</coverage_percentage>\n";
@@ -1155,7 +1155,7 @@ class McpServer
             $xml .= "    <uncovered_lines>" . implode(',', $fileInfo['uncovered_lines']) . "</uncovered_lines>\n";
             $xml .= "  </file>\n";
         }
-        
+
         $xml .= "</coverage>";
         return $xml;
     }
@@ -1192,7 +1192,7 @@ class McpServer
     protected function getStackDepth(): string
     {
         $depth = 0;
-        
+
         if (function_exists('xdebug_get_stack_depth')) {
             $depth = xdebug_get_stack_depth();
         } else {
@@ -1225,7 +1225,7 @@ class McpServer
     protected function getXdebugInfo(array $args): string
     {
         $format = $args['format'] ?? 'array';
-        
+
         if (!extension_loaded('xdebug')) {
             return "Xdebug extension not loaded";
         }
@@ -1270,7 +1270,7 @@ class McpServer
 
         self::$errorCollection = [];
         self::$errorCollectionActive = true;
-        
+
         set_error_handler(function($severity, $message, $file, $line) {
             if (self::$errorCollectionActive) {
                 self::$errorCollection[] = [
@@ -1296,7 +1296,7 @@ class McpServer
 
         self::$errorCollectionActive = false;
         restore_error_handler();
-        
+
         $errorCount = count(self::$errorCollection);
         return "Custom error collection stopped. Collected {$errorCount} errors.";
     }
@@ -1311,7 +1311,7 @@ class McpServer
         }
 
         $errors = self::$errorCollection;
-        
+
         if ($clear) {
             self::$errorCollection = [];
         }
@@ -1423,7 +1423,7 @@ class McpServer
         self::$monitoredCalls = [];
 
         $callCount = count($calls);
-        return "Custom function monitor stopped. Monitored {$callCount} calls:\n" . 
+        return "Custom function monitor stopped. Monitored {$callCount} calls:\n" .
                json_encode($calls, JSON_PRETTY_PRINT);
     }
 
@@ -1483,7 +1483,7 @@ class McpServer
         $state = $args['state'] ?? 'all';
 
         $breakpointId = $this->xdebugClient->setExceptionBreakpoint($exceptionName, $state);
-        
+
         return "Exception breakpoint set for '{$exceptionName}' (state: {$state}, ID: {$breakpointId})";
     }
 
@@ -1497,7 +1497,7 @@ class McpServer
         $type = $args['type'] ?? 'write';
 
         $breakpointId = $this->xdebugClient->setWatchBreakpoint($expression, $type);
-        
+
         return "Watch breakpoint set for expression '{$expression}' (type: {$type}, ID: {$breakpointId})";
     }
 
@@ -1514,7 +1514,7 @@ class McpServer
             if (!$includeObject) {
                 $options = DEBUG_BACKTRACE_IGNORE_ARGS;
             }
-            
+
             $stack = debug_backtrace($options, $limit ?: 50);
         }
 
@@ -1545,13 +1545,13 @@ class McpServer
 
         $stack = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
         $output = $message . ":\n";
-        
+
         foreach ($stack as $i => $frame) {
             $function = $frame['function'] ?? 'unknown';
             $class = $frame['class'] ?? '';
             $file = $frame['file'] ?? 'unknown';
             $line = $frame['line'] ?? 0;
-            
+
             $fullFunction = $class ? "{$class}::{$function}" : $function;
             $output .= sprintf("#%d %s() called at [%s:%d]\n", $i, $fullFunction, $file, $line);
         }
@@ -1562,7 +1562,7 @@ class McpServer
     protected function getCallInfo(): string
     {
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
-        
+
         $info = [
             'current_function' => $backtrace[1]['function'] ?? 'unknown',
             'current_class' => $backtrace[1]['class'] ?? null,
@@ -1611,7 +1611,7 @@ class McpServer
 
         $result = $this->xdebugClient->setFeature($featureName, $value);
         $success = $result['@attributes']['success'] ?? '0';
-        
+
         if ($success === '1') {
             return "Feature '{$featureName}' set to '{$value}' successfully";
         } else {
@@ -1627,7 +1627,7 @@ class McpServer
 
         $featureName = $args['feature_name'];
         $result = $this->xdebugClient->getFeature($featureName);
-        
+
         $value = $result['#text'] ?? $result['@attributes']['supported'] ?? 'unknown';
         return "Feature '{$featureName}': {$value}";
     }

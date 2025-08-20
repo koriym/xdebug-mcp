@@ -134,14 +134,14 @@ claude mcp list
 claude mcp remove xdebug
 
 # Add with environment variables
-claude mcp add xdebug php /path/to/xdebug-mcp/bin/xdebug-mcp --env PATH=/usr/local/bin:/usr/bin:/bin
+claude mcp add xdebug php "$(pwd)/bin/xdebug-mcp" --env PATH=/usr/local/bin:/usr/bin:/bin
 ```
 
 #### Method 2: Manual Claude Desktop Configuration
 
 Add to Claude Desktop configuration file:
 
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**macOS**: `claude`
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
@@ -191,11 +191,8 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | php ./bin/xdebug-mcp
 
 #### Claude Desktop Verification
 Start a conversation and ask:
-```
-利用可能なツールを教えてください
-```
-or
-```
+
+```text
 What tools are available?
 ```
 
