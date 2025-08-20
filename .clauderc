@@ -1,0 +1,113 @@
+# .clauderc - Claude AI Configuration for xdebug-mcp project
+
+project_name: xdebug-mcp
+project_type: php_mcp_server
+description: "PHP Xdebug MCP Server for AI-assisted debugging via trace analysis"
+
+# Essential context files for AI to understand the project
+context:
+  - CLAUDE.md                    # Primary AI instructions and debugging principles
+  - README.md                    # Project overview and usage
+  - src/McpServer.php            # Main MCP protocol handler (42 tools)
+  - src/XdebugClient.php         # Xdebug communication client
+  - bin/xdebug-trace             # Primary trace execution command
+  - composer.json                # Project dependencies and configuration
+  - phpunit.xml                  # Test configuration
+
+# Critical rules for AI behavior in this project
+rules:
+  debugging:
+    - "NEVER suggest var_dump(), print_r(), or echo for debugging"
+    - "ALWAYS use trace-based debugging: ./bin/xdebug-trace file.php"
+    - "Analyze trace files in /tmp/xdebug_trace_*.xt for debugging insights"
+    - "Use Xdebug trace instead of code modification for all PHP debugging"
+  
+  trace_files:
+    - "Don't add .xt extension when specifying trace filenames"
+    - "Xdebug automatically appends .xt extension to trace files"
+    - "Use /tmp directory for all trace outputs"
+    - "Trace files contain: Level, FuncID, Time, Memory, Function, File:Line, Parameters"
+  
+  mcp_behavior:
+    - "Each MCP tool call runs in a separate PHP process"
+    - "MCP server must be started with: php bin/xdebug-mcp"
+    - "42 tools available across debugging/profiling/coverage/trace categories"
+    - "JSON-RPC 2.0 protocol for all MCP communication"
+
+  file_structure:
+    - "Core files: McpServer.php, XdebugClient.php, bin/xdebug-mcp, bin/xdebug-trace"
+    - "Tests in tests/ directory with PHPUnit configuration"
+    - "Fake implementations in tests/fake/ for Xdebug-less testing"
+
+# Known technical issues and their solutions
+known_issues:
+  trace_extension_duplication:
+    problem: "xdebug_start_trace() automatically adds .xt extension"
+    solution: "Pass filename without .xt extension to avoid .xt.xt duplication"
+    example: "xdebug_start_trace('/tmp/trace_file') → /tmp/trace_file.xt"
+  
+  xdebug_loading_warning:
+    problem: "Warning: Failed loading Zend extension 'xdebug'"
+    cause: "Using -dzend_extension=xdebug without full path"
+    solution: "Functionality works despite warning, or use full path to xdebug.so"
+    status: "cosmetic_issue"
+  
+  mcp_process_isolation:
+    problem: "Each MCP command runs in separate PHP process"
+    impact: "Cannot maintain debugging session state between commands"
+    solution: "Use integrated scripts like bin/xdebug-trace for continuous sessions"
+  
+  trace_compression:
+    problem: "Xdebug may create compressed .xt.gz files"
+    solution: "Use -dxdebug.use_compression=0 -dxdebug.compress=0"
+    implemented_in: "bin/xdebug-trace script"
+
+# Performance optimization insights
+optimizations:
+  fibonacci_recursion:
+    issue: "Standard recursive fibonacci has O(2^n) complexity"
+    evidence: "Trace shows fibonacci(1) called 8 times, fibonacci(2) called 5 times"
+    recommendation: "Implement memoization to achieve O(n) complexity"
+  
+  memory_management:
+    observation: "Normal memory cleanup at program end (401KB → 393KB)"
+    status: "healthy"
+
+# Common debugging workflows
+workflows:
+  basic_debugging:
+    command: "./bin/xdebug-trace problematic_file.php"
+    analysis: "Read generated /tmp/xdebug_trace_*.xt file"
+    focus: "Variable values, execution flow, performance bottlenecks"
+  
+  error_investigation:
+    step1: "Run trace on failing script"
+    step2: "Analyze function call hierarchy and parameters"
+    step3: "Identify where variables become undefined or unexpected"
+    avoid: "Adding debug statements to source code"
+  
+  performance_analysis:
+    approach: "Use trace file Time column to identify slow functions"
+    metrics: "Function call frequency, execution time, memory usage"
+    example: "Detect redundant calculations in recursive algorithms"
+
+# AI behavior preferences
+preferences:
+  response_style: "concise_technical"
+  code_analysis: "runtime_data_over_static_analysis"
+  debugging_approach: "non_invasive_trace_based"
+  error_handling: "evidence_based_from_trace_files"
+
+# Project evolution notes
+development_history:
+  phase1: "Basic MCP server with 42 tools implementation"
+  phase2: "Trace functionality development and optimization" 
+  phase3: "AI debugging principles establishment and documentation"
+  current: "Template creation for other PHP projects"
+  
+# Version and compatibility
+compatibility:
+  php: ">=8.0"
+  xdebug: "3.x (tested with 3.4.4)"
+  mcp_protocol: "JSON-RPC 2.0"
+  trace_format: "Xdebug format 4"

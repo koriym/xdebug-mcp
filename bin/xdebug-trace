@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# Xdebug Trace Testing Script - Flexible Version
+cd "$(dirname "$0")/.."
+PROJECT_ROOT=$(pwd)
+
+# Check for help flag or missing argument
+if [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ -z "$1" ]; then
+    echo "Usage: $0 PHP_FILE"
+    echo ""
+    echo "Runs Xdebug trace testing on the specified PHP file."
+    echo ""
+    echo "Arguments:"
+    echo "  PHP_FILE    Path to PHP file to trace (required)"
+    echo ""
+    echo "Examples:"
+    echo "  $0 test/debug_test.php       # Trace test file"
+    echo "  $0 my_script.php             # Trace specific file"
+    echo "  $0 tests/Unit/SomeTest.php   # Trace test file"
+    echo ""
+    if [ -z "$1" ]; then
+        echo "❌ Error: PHP file argument is required"
+        exit 1
+    fi
+    exit 0
+fi
+
+# Check target file exists
+TARGET_FILE="$1"
+if [ ! -f "$TARGET_FILE" ]; then
+    echo "❌ Error: File '$TARGET_FILE' not found"
+    echo "Use '$0 --help' for usage information"
+    exit 1
+fi
+
+# Generate unique trace filename
+TRACE_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+TRACE_FILE="/tmp/xdebug_trace_${TRACE_TIMESTAMP}"
+
+# Xdebug設定（圧縮を明示的に無効化）
+XDEBUG_OPTS="-dzend_extension=xdebug \
+    -dxdebug.mode=trace \
+    -dxdebug.start_with_request=trigger \
+    -dxdebug.trigger_value=TRACE \
+    -dxdebug.trace_format=1 \
+    -dxdebug.use_compression=0 \
+    -dxdebug.output_dir=/tmp \
+    -dxdebug.trace_output_name=xdebug_trace_${TRACE_TIMESTAMP}"
+
+echo "🔍 Tracing: $TARGET_FILE"
+# Execute with trace
+XDEBUG_TRIGGER=TRACE php $XDEBUG_OPTS "$TARGET_FILE" 2>/dev/null
+
+# Find the generated trace file
+LATEST_TRACE=$(ls -t /tmp/*trace*${TRACE_TIMESTAMP}*.xt 2>/dev/null | head -1)
+
+if [ -f "$LATEST_TRACE" ]; then
+    echo "✅ Trace complete: $LATEST_TRACE"
+    echo "📊 $(wc -l < "$LATEST_TRACE") lines generated"
+else
+    echo "❌ No trace file generated. Check Xdebug configuration."
+    exit 1
+fi

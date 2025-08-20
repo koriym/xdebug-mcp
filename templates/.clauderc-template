@@ -1,0 +1,67 @@
+# .clauderc - Claude AI Configuration Template for PHP Projects
+
+project_name: YOUR_PROJECT_NAME
+project_type: php_application
+description: "Brief description of your PHP project"
+
+# Essential context files for AI to understand the project
+context:
+  - CLAUDE.md                    # AI instructions and debugging principles
+  - README.md                    # Project overview
+  - composer.json                # Dependencies and configuration
+  # Add your key files:
+  # - src/main.php
+  # - config/app.php
+
+# Critical rules for AI behavior in this project
+rules:
+  debugging:
+    - "NEVER suggest var_dump(), print_r(), or echo for debugging"
+    - "ALWAYS use trace-based debugging with Xdebug"
+    - "Use XDEBUG_TRIGGER=TRACE php -dxdebug.mode=trace file.php"
+    - "Analyze trace files for debugging insights instead of code modification"
+  
+  trace_files:
+    - "Use /tmp directory for trace outputs"
+    - "Trace files contain execution flow, variable values, performance data"
+  
+  # Add project-specific rules:
+  # code_style:
+  #   - "Use PSR-12 coding standards"
+  #   - "Prefer dependency injection over global variables"
+
+# Known technical issues and their solutions
+known_issues:
+  # Add your project-specific issues:
+  # database_connection:
+  #   problem: "Connection timeouts in production"
+  #   solution: "Use connection pooling with retry logic"
+  
+  xdebug_setup:
+    problem: "Xdebug not configured for trace mode"
+    solution: "Add xdebug.mode=trace to php.ini or use -d flags"
+
+# Project-specific workflows
+workflows:
+  debugging:
+    command: "XDEBUG_TRIGGER=TRACE php -dxdebug.mode=trace target_file.php"
+    analysis: "Read generated trace file in /tmp/"
+    focus: "Execution flow, variable states, performance"
+  
+  # Add your workflows:
+  # testing:
+  #   command: "vendor/bin/phpunit"
+  #   coverage: "vendor/bin/phpunit --coverage-html coverage/"
+
+# AI behavior preferences
+preferences:
+  response_style: "concise_technical"
+  debugging_approach: "trace_based_non_invasive" 
+  code_analysis: "runtime_data_preferred"
+
+# Project-specific notes
+notes:
+  # Add important project context:
+  # - "Database schema changes require migration scripts"
+  # - "API endpoints follow REST conventions"
+  # - "Frontend uses jQuery 3.x"
