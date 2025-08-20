@@ -1,5 +1,5 @@
 {
-    "name": "xdebug-mcp/server",
+    "name": "koriym/xdebug-mcp",
     "description": "MCP server for controlling PHP Xdebug debugging sessions",
     "type": "library",
     "require": {
@@ -14,13 +14,13 @@
     },
     "autoload": {
         "psr-4": {
-            "XdebugMcp\\": "src/",
-            "XdebugMcp\\Tests\\Fake\\": "tests/fake/"
+            "Koriym\\XdebugMcp\\": "src/",
+            "Koriym\\XdebugMcp\\Tests\\Fake\\": "tests/fake/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "XdebugMcp\\Tests\\": "tests/"
+            "Koriym\\XdebugMcp\\Tests\\": "tests/"
         }
     },
     "bin": [
@@ -28,6 +28,7 @@
         "bin/xdebug-server",
         "bin/xdebug-trace",
         "bin/xdebug-profile",
-        "bin/xdebug-coverage"
+        "bin/xdebug-coverage",
+        "bin/xdebug-phpunit"
     ]
 }

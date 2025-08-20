@@ -82,18 +82,54 @@ claude mcp list
 - `xdebug-trace` - Generate execution traces
 - `xdebug-profile` - Performance profiling  
 - `xdebug-coverage` - Code coverage analysis
+- `xdebug-phpunit` - PHPUnit with selective Xdebug analysis
 
-## Usage
+### xdebug-phpunit Usage
+
+Run PHPUnit tests with automatic Xdebug tracing or profiling:
 
 ```bash
-# Verify
-claude mcp list
+# Trace specific test method (default mode)
+./bin/xdebug-phpunit tests/UserTest.php::testLogin
 
-# Test tools
-echo '{"method":"tools/list"}' | php bin/xdebug-mcp
+# Profile entire test file
+./bin/xdebug-phpunit --profile tests/UserTest.php
 
-# Run tests
-vendor/bin/phpunit
+# Trace tests matching filter
+./bin/xdebug-phpunit --filter=testUserAuth
+
+# Profile slow tests
+./bin/xdebug-phpunit --profile --filter=testSlow
+```
+
+**Output:**
+- Trace mode: `/tmp/trace_*.xt` (execution traces)
+- Profile mode: `/tmp/cachegrind.out.*` (performance data)
+
+**Requirements:**
+Add to your `phpunit.xml`:
+```xml
+<extensions>
+    <bootstrap class="Koriym\XdebugMcp\TraceExtension"/>
+</extensions>
+```
+
+## Usage Examples
+
+```bash
+# Natural language requests - AI automatically selects and runs appropriate tools
+claude --print "Run test/debug_test.php and analyze the execution patterns"
+# AI automatically chooses ./bin/xdebug-trace and provides analysis:
+# ✅ Trace complete: /tmp/xdebug_trace_20250821_044930.xt (64 lines)
+# 📊 Analysis: O(2^n) Fibonacci inefficiency, stable memory usage, microsecond-level metrics
+
+claude --print "Profile the performance of test/debug_test.php"
+# AI automatically uses ./bin/xdebug-profile:
+# ✅ Profile complete: /tmp/cachegrind.out.1755719364
+# 📊 Size: 1.9K, Functions: 29, Calls: 28, identifies bottlenecks
+
+# Debug PHPUnit tests (after adding TraceExtension to phpunit.xml)
+./bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
 ```
 
 ## 42 Available Tools
@@ -176,8 +212,35 @@ Ask Claude in natural language:
 - Verify Xdebug installation: `php -m | grep xdebug`
 - Port conflicts: xdebug-mcp uses 9004, IDEs use 9003
 
+## Tell AI to Use Runtime Analysis Instead of Guesswork
+
+**Problem**: AI development traditionally relies on static code analysis and error messages. AI can only guess what might be happening in your PHP application.
+
+**Solution**: These templates teach Claude to use actual execution data from Xdebug profiling and tracing instead of making assumptions.
+
+**[Templates Directory](templates/README.md)** - Complete configuration guide
+
+### System-Wide Configuration
+```bash
+# Teach Claude to use runtime analysis for ALL PHP projects
+cp templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUDE.md
+```
+
+### Project-Specific Configuration
+```bash
+# Teach Claude to use runtime analysis for this project
+cp templates/CLAUDE_DEBUG_PRINCIPLES.md ./
+echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
+```
+
+**Result**: Transform development from code+error guessing to runtime data analysis:
+
+- **Before**: "This code might be slow" (AI guessing)
+- **After**: "fibonacci() consumed 3,772μs (27.6% of total) with 24 recursive calls" (AI analyzing real data)
+
 ## Links
 
+- [Templates & Deployment Guide](templates/README.md)
 - [Xdebug Docs](https://xdebug.org/docs/)
 - [MCP Specification](https://modelcontextprotocol.io/)
 - [Claude Desktop MCP](https://docs.anthropic.com/claude/docs/mcp)

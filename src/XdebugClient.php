@@ -1,9 +1,9 @@
 <?php
 
-namespace XdebugMcp;
+namespace Koriym\XdebugMcp;
 
-use XdebugMcp\Exceptions\SocketException;
-use XdebugMcp\Exceptions\XdebugConnectionException;
+use Koriym\XdebugMcp\Exceptions\SocketException;
+use Koriym\XdebugMcp\Exceptions\XdebugConnectionException;
 
 class XdebugClient
 {

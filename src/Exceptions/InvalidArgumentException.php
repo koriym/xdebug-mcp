@@ -1,6 +1,6 @@
 <?php
 
-namespace XdebugMcp\Exceptions;
+namespace Koriym\XdebugMcp\Exceptions;
 
 use RuntimeException;
 
