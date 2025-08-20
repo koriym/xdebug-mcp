@@ -129,6 +129,7 @@ php $XDEBUG_OPTS vendor/bin/phpunit "${PHPUNIT_ARGS[@]}"
 if [ "$MODE" = "profile" ]; then
     LATEST_PROFILES=$(ls -t /tmp/cachegrind.out.* 2>/dev/null | head -3)
     if [ -n "$LATEST_PROFILES" ]; then
+        FIRST_PROFILE=$(echo "$LATEST_PROFILES" | head -n1)
         echo ""
         echo "Profile files generated:"
         echo "$LATEST_PROFILES" | while read profile_file; do
@@ -139,8 +140,13 @@ if [ "$MODE" = "profile" ]; then
         done
         echo ""
         echo "Analyze profiles with:"
-        echo "  ./bin/xdebug-profile $profile_file"
-        echo "  kcachegrind $profile_file"
+        if [ -n "$FIRST_PROFILE" ]; then
+            echo "  ./bin/xdebug-profile $FIRST_PROFILE"
+            echo "  kcachegrind $FIRST_PROFILE"
+        else
+            echo "  ./bin/xdebug-profile <profile_file>"
+            echo "  kcachegrind <profile_file>"
+        fi
     else
         echo "No profile files found (pattern may not have matched any tests)"
     fi

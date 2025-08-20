@@ -11,7 +11,7 @@ MCP server enabling AI control of PHP Xdebug debugging, profiling, and coverage 
 - **42 Xdebug Tools**: Complete debugging, profiling, and coverage automation
 - **Trace-based Debugging**: AI analyzes runtime execution data (no var_dump needed)
 - **IDE Compatible**: Port 9004 avoids conflicts with PhpStorm/VS Code (9003)
-- **Command Line Tools**: 5 standalone debugging utilities
+- **Command Line Tools**: 6 standalone debugging utilities
 
 ## Tool Categories
 
