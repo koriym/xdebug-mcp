@@ -26,7 +26,7 @@ class TraceHelper
         }
 
         if (!extension_loaded('xdebug')) {
-            echo "WARNING: Xdebug extension not loaded, tracing disabled\n";
+            fwrite(STDERR, "WARNING: Xdebug extension not loaded, tracing disabled\n");
             self::$initialized = true;
             return;
         }
@@ -34,7 +34,7 @@ class TraceHelper
         // Parse target tests
         self::$targetTests = array_map('trim', explode(',', $traceEnv));
         
-        echo "TRACE: Configured to trace tests matching: " . implode(', ', self::$targetTests) . "\n";
+        fwrite(STDERR, "TRACE: Configured to trace tests matching: " . implode(', ', self::$targetTests) . "\n");
         self::$initialized = true;
     }
 
@@ -75,7 +75,7 @@ class TraceHelper
         xdebug_start_trace(rtrim(self::$traceFile, '.xt'));
         self::$traceActive = true;
 
-        echo "TRACE: Started tracing {$testName} -> " . self::$traceFile . "\n";
+        fwrite(STDERR, "TRACE: Started tracing {$testName} -> " . self::$traceFile . "\n");
     }
 
     public static function stopTrace(string $testName): void
@@ -100,7 +100,7 @@ class TraceHelper
 
         if ($traceFile && file_exists($traceFile)) {
             $size = filesize($traceFile);
-            echo "TRACE: Completed tracing {$testName} -> " . $traceFile . " ({$size} bytes)\n";
+            fwrite(STDERR, "TRACE: Completed tracing {$testName} -> " . $traceFile . " ({$size} bytes)\n");
         }
 
         self::$traceFile = null;

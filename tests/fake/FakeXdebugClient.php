@@ -1,9 +1,9 @@
 <?php
 
-namespace XdebugMcp\Tests\Fake;
+namespace Koriym\XdebugMcp\Tests\Fake;
 
-use XdebugMcp\XdebugClient;
-use XdebugMcp\Exceptions\XdebugConnectionException;
+use Koriym\XdebugMcp\XdebugClient;
+use Koriym\XdebugMcp\Exceptions\XdebugConnectionException;
 
 class FakeXdebugClient extends XdebugClient
 {
