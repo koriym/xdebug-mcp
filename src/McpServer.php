@@ -901,45 +901,94 @@ class McpServer
 
     private function parseProfileFile(string $profileFile, int $topFunctions): array
     {
-        $content = file_get_contents($profileFile);
-        if ($content === false) {
-            throw new FileNotFoundException("Failed to read profile file: {$profileFile}");
+        // Handle gzipped files
+        if (str_ends_with($profileFile, '.gz')) {
+            $content = gzfile($profileFile);
+            if ($content === false) {
+                throw new FileNotFoundException("Failed to read gzipped profile file: {$profileFile}");
+            }
+            $content = implode('', $content);
+        } else {
+            $content = file_get_contents($profileFile);
+            if ($content === false) {
+                throw new FileNotFoundException("Failed to read profile file: {$profileFile}");
+            }
         }
 
         $lines = explode("\n", $content);
         $functions = [];
         $totalTime = 0;
+        $currentFunction = null;
+        $functionMap = [];
 
         foreach ($lines as $line) {
-            if (empty($line) || strpos($line, 'fl=') === 0 || strpos($line, 'fn=') === 0) {
+            $line = trim($line);
+            if (empty($line)) {
                 continue;
             }
 
-            if (preg_match('/^(\d+)\s+(\d+)$/', $line, $matches)) {
-                $calls = (int)$matches[1];
-                $time = (int)$matches[2];
-                $totalTime += $time;
-            } elseif (preg_match('/^fn=(.+)$/', $line, $matches)) {
-                $currentFunction = $matches[1];
-            } elseif (isset($currentFunction) && preg_match('/^\d+\s+(\d+)$/', $line, $matches)) {
-                $time = (int)$matches[1];
-                if (!isset($functions[$currentFunction])) {
-                    $functions[$currentFunction] = ['calls' => 0, 'time' => 0];
+            // Parse function definitions: fn=(123) function_name
+            if (preg_match('/^fn=\((\d+)\)\s*(.*)$/', $line, $matches)) {
+                $functionId = $matches[1];
+                $functionName = $matches[2] ?: "function_{$functionId}";
+                $functionMap[$functionId] = $functionName;
+                $currentFunction = $functionName;
+                if (!isset($functions[$functionName])) {
+                    $functions[$functionName] = [
+                        'calls' => 0,
+                        'time' => 0,
+                        'memory' => 0,
+                        'self_time' => 0
+                    ];
                 }
-                $functions[$currentFunction]['calls']++;
-                $functions[$currentFunction]['time'] += $time;
+                continue;
+            }
+
+            // Parse cost lines: line_number time memory
+            if ($currentFunction && preg_match('/^(\d+)\s+(\d+)(?:\s+(\d+))?/', $line, $matches)) {
+                $time = (int)$matches[2];
+                $memory = isset($matches[3]) ? (int)$matches[3] : 0;
+                
+                $functions[$currentFunction]['self_time'] += $time;
+                $functions[$currentFunction]['memory'] += $memory;
+                $totalTime += $time;
+                continue;
+            }
+
+            // Parse call lines: calls=X Y Z
+            if (preg_match('/^calls=(\d+)\s+(\d+)\s+(\d+)/', $line, $matches)) {
+                if ($currentFunction) {
+                    $functions[$currentFunction]['calls'] += (int)$matches[1];
+                }
+                continue;
+            }
+
+            // Parse summary line
+            if (preg_match('/^summary:\s*(\d+)\s+(\d+)/', $line, $matches)) {
+                $totalTime = max($totalTime, (int)$matches[1]);
+                continue;
             }
         }
 
-        arsort($functions);
-        $topFunctions = array_slice($functions, 0, $topFunctions, true);
+        // Calculate inclusive time (self_time for now, could be enhanced)
+        foreach ($functions as $name => $data) {
+            $functions[$name]['time'] = $data['self_time'];
+        }
+
+        // Sort by inclusive time
+        uasort($functions, function($a, $b) {
+            return $b['time'] <=> $a['time'];
+        });
+
+        $topFunctionsList = array_slice($functions, 0, $topFunctions, true);
 
         return [
             'total_time' => $totalTime,
             'total_functions' => count($functions),
-            'top_functions' => $topFunctions,
+            'top_functions' => $topFunctionsList,
             'file' => $profileFile,
-            'size' => filesize($profileFile)
+            'size' => filesize($profileFile) ?: 0,
+            'format' => 'cachegrind'
         ];
     }
 

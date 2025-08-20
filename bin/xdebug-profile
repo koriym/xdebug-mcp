@@ -42,7 +42,8 @@ XDEBUG_OPTS="-dzend_extension=xdebug \
     -dxdebug.mode=profile \
     -dxdebug.start_with_request=yes \
     -dxdebug.output_dir=/tmp \
-    -dxdebug.profiler_output_name=cachegrind.out.%t"
+    -dxdebug.profiler_output_name=cachegrind.out.%t \
+    -dxdebug.use_compression=0"
 
 echo "📊 Profiling: $TARGET_FILE"
 
