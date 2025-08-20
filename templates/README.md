@@ -1,4 +1,4 @@
-te# AI Debugging Configuration Templates
+# AI Debugging Configuration Templates
 
 This directory contains templates to configure Claude Code to use runtime analysis instead of traditional debugging methods for PHP projects.
 

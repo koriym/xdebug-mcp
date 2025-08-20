@@ -63,9 +63,9 @@ class TraceHelper
             return;
         }
 
-        $timestamp = date('Y-m-d_H-i-s-') . substr(microtime(), 2, 6);
+        $uniqueId = uniqid(date('Ymd_His_'), true);
         $safeTestName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $testName);
-        self::$traceFile = "/tmp/trace_{$safeTestName}_{$timestamp}.xt";
+        self::$traceFile = "/tmp/trace_{$safeTestName}_{$uniqueId}.xt";
 
         // Configure Xdebug tracing
         ini_set('xdebug.trace_output_dir', '/tmp');
@@ -84,12 +84,23 @@ class TraceHelper
             return;
         }
 
+        $traceFile = null;
+        if (function_exists('xdebug_get_tracefile_name')) {
+            $traceFile = xdebug_get_tracefile_name();
+        } elseif (self::$traceFile) {
+            // Try to find the file using glob in case xdebug changed the name
+            $files = glob(self::$traceFile . '*');
+            if ($files && count($files) > 0) {
+                $traceFile = $files[0];
+            }
+        }
+
         xdebug_stop_trace();
         self::$traceActive = false;
 
-        if (self::$traceFile && file_exists(self::$traceFile)) {
-            $size = filesize(self::$traceFile);
-            echo "TRACE: Completed tracing {$testName} -> " . self::$traceFile . " ({$size} bytes)\n";
+        if ($traceFile && file_exists($traceFile)) {
+            $size = filesize($traceFile);
+            echo "TRACE: Completed tracing {$testName} -> " . $traceFile . " ({$size} bytes)\n";
         }
 
         self::$traceFile = null;
@@ -102,10 +113,9 @@ class TraceHelper
             return true;
         }
 
-        // Simple wildcard support
-        if (strpos($pattern, '*') !== false) {
-            $regex = '/^' . str_replace(['*', '\\'], ['.*', '\\\\'], preg_quote($pattern, '/')) . '$/';
-            return preg_match($regex, $testName) === 1;
+        // Wildcard and pattern matching using fnmatch for reliability
+        if (fnmatch($pattern, $testName)) {
+            return true;
         }
 
         // Contains match (for class names)
