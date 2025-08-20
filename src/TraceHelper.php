@@ -31,8 +31,8 @@ class TraceHelper
             return;
         }
 
-        // Parse target tests
-        self::$targetTests = array_map('trim', explode(',', $traceEnv));
+        // Parse target tests and filter out empty patterns
+        self::$targetTests = array_values(array_filter(array_map('trim', explode(',', $traceEnv)), 'strlen'));
         
         fwrite(STDERR, "TRACE: Configured to trace tests matching: " . implode(', ', self::$targetTests) . "\n");
         self::$initialized = true;
