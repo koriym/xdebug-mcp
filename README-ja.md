@@ -23,19 +23,9 @@ PHP Xdebug のデバッグ、プロファイル、カバレッジ分析をAIが�
 ## クイックスタート
 
 ```bash
-# インストール
 composer install
-
-# サーバー起動
-./bin/xdebug-server
-
-# ツールテスト
-./bin/xdebug-trace test/debug_test.php
-./bin/xdebug-profile test/debug_test.php  
-./bin/xdebug-coverage test/debug_test.php
-
-# Claude Desktop連携
 claude mcp add xdebug php "$(pwd)/bin/xdebug-mcp"
+./bin/xdebug-profile test/debug_test.php
 ```
 
 ## セットアップ
@@ -211,27 +201,6 @@ claude --print "test/debug_test.phpをデバッグして、15行目でbreakし�
 - **xdebug_set_feature**: 特定のXdebug機能値を設定
 - **xdebug_get_feature**: 特定のXdebug機能値を取得
 
-## 使用例
-
-Claudeに自然言語で依頼:
-
-**デバッグ:**
-- 「PHPスクリプトのデバッグを開始してください」
-- 「user.phpの25行目にブレークポイントを設定して」
-- 「現在のスタックトレースを表示して」
-- 「$user_data変数の値は何ですか？」
-- 「次の行にステップオーバーして」
-
-**パフォーマンス分析:**  
-- 「このPHPスクリプトのパフォーマンスをプロファイルして」
-- 「メモリ使用量の統計を表示して」
-- 「最も時間がかかっている関数はどれ？」
-
-**コードカバレッジ:**
-- 「コードのどの部分がテストでカバーされていない？」
-- 「src/User.phpのカバーされていない行を表示して」
-- 「テストが必要な箇所を見るためのHTMLカバレッジレポートを生成して」
-- 「全体のテストカバレッジ率は？」
 
 ## トラブルシューティング
 

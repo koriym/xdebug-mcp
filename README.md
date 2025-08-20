@@ -23,19 +23,9 @@ MCP server enabling AI control of PHP Xdebug debugging, profiling, and coverage 
 ## Quick Start
 
 ```bash
-# Install
 composer install
-
-# Start server
-./bin/xdebug-server
-
-# Test tools
-./bin/xdebug-trace test/debug_test.php
-./bin/xdebug-profile test/debug_test.php  
-./bin/xdebug-coverage test/debug_test.php
-
-# Claude Desktop integration
 claude mcp add xdebug php "$(pwd)/bin/xdebug-mcp"
+./bin/xdebug-profile test/debug_test.php
 ```
 
 ## Setup
@@ -211,27 +201,6 @@ claude --print "Debug test/debug_test.php, break at line 15 and show variable va
 - **xdebug_set_feature**: Set a specific Xdebug feature value
 - **xdebug_get_feature**: Get a specific Xdebug feature value
 
-## Usage Examples
-
-Ask Claude in natural language:
-
-**Debugging:**
-- "Start debugging my PHP script"
-- "Set a breakpoint at line 25 in user.php"
-- "Show me the current stack trace"
-- "What's the value of $user_data variable?"
-- "Step over to the next line"
-
-**Performance Analysis:**  
-- "Profile this PHP script's performance"
-- "Show me memory usage statistics"
-- "Which functions are taking the most time?"
-
-**Code Coverage:**
-- "Which parts of my code aren't covered by tests?"
-- "Show me the uncovered lines in src/User.php"
-- "Generate HTML coverage report to see what needs testing"
-- "What's the overall test coverage percentage?"
 
 ## Troubleshooting
 
