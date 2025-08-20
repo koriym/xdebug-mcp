@@ -10,7 +10,7 @@ class XdebugClient
     private int $transactionId = 1;
     private bool $connected = false;
 
-    public function __construct(string $host = '127.0.0.1', int $port = 9003)
+    public function __construct(string $host = '127.0.0.1', int $port = 9004)
     {
         $this->host = $host;
         $this->port = $port;

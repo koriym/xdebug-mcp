@@ -37,21 +37,20 @@ fi
 PROFILE_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 PROFILE_FILE="/tmp/xdebug_profile_${PROFILE_TIMESTAMP}.out"
 
-# Xdebug profiling configuration
+# Xdebug profiling configuration (Xdebug 3.x format)
 XDEBUG_OPTS="-dzend_extension=xdebug \
     -dxdebug.mode=profile \
-    -dxdebug.start_with_request=trigger \
-    -dxdebug.trigger_value=PROFILE \
-    -dxdebug.profiler_output_dir=/tmp \
-    -dxdebug.profiler_output_name=xdebug_profile_${PROFILE_TIMESTAMP}.out"
+    -dxdebug.start_with_request=yes \
+    -dxdebug.output_dir=/tmp \
+    -dxdebug.profiler_output_name=cachegrind.out.%t"
 
 echo "📊 Profiling: $TARGET_FILE"
 
 # Execute with profiling
-XDEBUG_TRIGGER=PROFILE php $XDEBUG_OPTS "$TARGET_FILE" 2>/dev/null
+php $XDEBUG_OPTS "$TARGET_FILE" 2>/dev/null
 
-# Find the generated profile file
-LATEST_PROFILE=$(ls -t /tmp/*profile*${PROFILE_TIMESTAMP}*.out 2>/dev/null | head -1)
+# Find the generated profile file (Cachegrind format)
+LATEST_PROFILE=$(ls -t /tmp/cachegrind.out.* 2>/dev/null | head -1)
 
 if [ -f "$LATEST_PROFILE" ]; then
     echo "✅ Profile complete: $LATEST_PROFILE"

@@ -8,6 +8,8 @@ This MCP server provides **complete coverage of 42 Xdebug features**, enabling A
 
 **🎯 Key Innovation:** Revolutionary **trace-based debugging** approach that eliminates the need for var_dump modifications. AI analyzes actual runtime execution data instead of static code.
 
+**🔌 IDE Compatibility:** Uses port 9004 to avoid conflicts with PhpStorm/VS Code (port 9003), enabling simultaneous use.
+
 **Specifications:**
 - **MCP 2025-03-26** (Latest specification)
 - **Xdebug 3.x** Full support
@@ -81,9 +83,9 @@ composer install
 ./bin/xdebug-server
 
 # 3. Test debugging tools
-./bin/xdebug-trace test/debug_test.php      # Trace execution
-./bin/xdebug-profile test/debug_test.php    # Profile performance  
-./bin/xdebug-coverage test/debug_test.php   # Analyze coverage
+./bin/xdebug-trace test/debug_test.php      # ⭐ AI-optimized trace analysis
+./bin/xdebug-profile test/debug_test.php    # 📊 Performance profiling  
+./bin/xdebug-coverage test/debug_test.php   # 📈 90% code coverage analysis
 ```
 
 ### Option 2: Claude Desktop Integration
@@ -115,7 +117,7 @@ zend_extension=xdebug
 xdebug.mode=debug,profile,coverage  ; Enable debug, profile, and coverage
 xdebug.start_with_request=yes
 xdebug.client_host=127.0.0.1
-xdebug.client_port=9003
+xdebug.client_port=9004
 ; Optional profiling settings
 xdebug.output_dir=/tmp
 xdebug.profiler_output_name=cachegrind.out.%p
@@ -199,10 +201,10 @@ xdebug-mcp provides 5 command-line tools for comprehensive PHP debugging:
 ### 1. `xdebug-server` - MCP Server with Xdebug Configuration
 Start the MCP server with automatic Xdebug setup:
 ```bash
-./bin/xdebug-server                    # Default configuration
-./bin/xdebug-server --port 9000        # Custom port
-./bin/xdebug-server --mode debug,trace # Custom modes
-./bin/xdebug-server --help             # Show all options
+./bin/xdebug-server                    # Start with debug, profile, coverage, trace modes
+# 🚀 Starting Xdebug MCP Server...
+# 📡 Listening on port 9004 for Xdebug connections (IDE-conflict-free)
+# 🛑 Press Ctrl+C to stop
 ```
 
 ### 2. `xdebug-mcp` - Pure MCP Server
@@ -215,7 +217,10 @@ echo '{"method":"tools/list"}' | php bin/xdebug-mcp  # Test communication
 ### 3. `xdebug-trace` - Execution Tracing ⭐ AI Optimized
 Analyze runtime execution flow and variable states for AI debugging:
 ```bash
-./bin/xdebug-trace script.php          # Generate trace file for AI analysis
+./bin/xdebug-trace test/debug_test.php  # Generate trace file for AI analysis
+# ✅ Trace complete: /tmp/xdebug_trace_20250820_182010.xt
+# 📊 3,247 lines generated
+
 ./bin/xdebug-trace --help              # Usage information
 
 # Output: /tmp/xdebug_trace_YYYYMMDD_HHMMSS.xt
@@ -226,21 +231,30 @@ Analyze runtime execution flow and variable states for AI debugging:
 ### 4. `xdebug-profile` - Performance Profiling
 Generate detailed performance profiles:
 ```bash
-./bin/xdebug-profile script.php        # Generate Cachegrind profile
+./bin/xdebug-profile test/debug_test.php # Generate Cachegrind profile
+# ✅ Profile complete: /tmp/cachegrind.out.1755681890.gz
+# 📊 Size: 520B
+# 📈 Functions: 47
+# 📞 Calls: 156
+
 ./bin/xdebug-profile --help            # Usage information
 
-# Output: /tmp/xdebug_profile_YYYYMMDD_HHMMSS.out
 # View with: kcachegrind or qcachegrind
 ```
 
 ### 5. `xdebug-coverage` - Code Coverage Analysis
 Analyze code coverage with detailed reports:
 ```bash
-./bin/xdebug-coverage script.php       # Text summary
-./bin/xdebug-coverage script.php --html # HTML report
-./bin/xdebug-coverage --help           # Usage information
+./bin/xdebug-coverage test/debug_test.php # Text summary
+# 📊 Coverage Summary:
+#    Total lines: 20
+#    Covered lines: 18
+#    Coverage: 90.00%
 
-# Generates coverage reports in /tmp/xdebug_coverage_*/
+./bin/xdebug-coverage test/debug_test.php --html # HTML report
+# ✅ HTML coverage report generated in: /tmp/xdebug_coverage_*/html
+
+./bin/xdebug-coverage --help           # Usage information
 ```
 
 ## Usage
@@ -292,7 +306,7 @@ Step over to the next line and examine the $user_data variable
 
 2. Connect to Xdebug session
 ```json
-{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "xdebug_connect", "arguments": {"host": "127.0.0.1", "port": 9003}}}
+{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "xdebug_connect", "arguments": {"host": "127.0.0.1", "port": 9004}}}
 ```
 
 3. Set breakpoint
@@ -337,7 +351,7 @@ With proper MCP server setup, you can have natural language interactions in Clau
 
 ### Start Debug Session
 ```
-User: I want to start PHP debugging. Please listen on 127.0.0.1:9003
+User: I want to start PHP debugging. Please listen on 127.0.0.1:9004
 
 Claude: I'll connect to the Xdebug session for you.
 [Executes xdebug_connect tool]
@@ -552,7 +566,17 @@ claude mcp add xdebug php "$(pwd)/bin/xdebug-mcp"
 ### Cannot Connect to Xdebug
 1. Verify Xdebug is properly installed
 2. Check php.ini configuration
-3. Ensure port 9003 is available
+3. **Port Configuration**:
+   ```bash
+   # xdebug-mcp uses port 9004 (IDE-conflict-free)
+   # IDEs typically use port 9003
+   # Check what's using ports:
+   lsof -i :9003  # IDE port
+   lsof -i :9004  # MCP port
+   
+   # If still having issues, verify PHP configuration:
+   php -i | grep xdebug.client_port
+   ```
 
 ### MCP Server Won't Start
 1. Verify PHP path is correctly configured

@@ -36,7 +36,7 @@ class McpServer
                     'type' => 'object',
                     'properties' => [
                         'host' => ['type' => 'string', 'default' => '127.0.0.1'],
-                        'port' => ['type' => 'integer', 'default' => 9003]
+                        'port' => ['type' => 'integer', 'default' => 9004]
                     ]
                 ]
             ],
