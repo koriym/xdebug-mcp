@@ -1,0 +1,79 @@
+#!/bin/bash
+
+# Xdebug Profile Testing Script
+cd "$(dirname "$0")/.."
+PROJECT_ROOT=$(pwd)
+
+# Check for help flag or missing argument
+if [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ -z "$1" ]; then
+    echo "Usage: $0 PHP_FILE"
+    echo ""
+    echo "Runs Xdebug profiling on the specified PHP file."
+    echo ""
+    echo "Arguments:"
+    echo "  PHP_FILE    Path to PHP file to profile (required)"
+    echo ""
+    echo "Examples:"
+    echo "  $0 test/debug_test.php       # Profile test file"
+    echo "  $0 my_script.php             # Profile specific file"
+    echo "  $0 tests/Unit/SomeTest.php   # Profile test file"
+    echo ""
+    if [ -z "$1" ]; then
+        echo "❌ Error: PHP file argument is required"
+        exit 1
+    fi
+    exit 0
+fi
+
+# Check target file exists
+TARGET_FILE="$1"
+if [ ! -f "$TARGET_FILE" ]; then
+    echo "❌ Error: File '$TARGET_FILE' not found"
+    echo "Use '$0 --help' for usage information"
+    exit 1
+fi
+
+# Generate unique profile filename
+PROFILE_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+PROFILE_FILE="/tmp/xdebug_profile_${PROFILE_TIMESTAMP}.out"
+
+# Xdebug profiling configuration
+XDEBUG_OPTS="-dzend_extension=xdebug \
+    -dxdebug.mode=profile \
+    -dxdebug.start_with_request=trigger \
+    -dxdebug.trigger_value=PROFILE \
+    -dxdebug.profiler_output_dir=/tmp \
+    -dxdebug.profiler_output_name=xdebug_profile_${PROFILE_TIMESTAMP}.out"
+
+echo "📊 Profiling: $TARGET_FILE"
+
+# Execute with profiling
+XDEBUG_TRIGGER=PROFILE php $XDEBUG_OPTS "$TARGET_FILE" 2>/dev/null
+
+# Find the generated profile file
+LATEST_PROFILE=$(ls -t /tmp/*profile*${PROFILE_TIMESTAMP}*.out 2>/dev/null | head -1)
+
+if [ -f "$LATEST_PROFILE" ]; then
+    echo "✅ Profile complete: $LATEST_PROFILE"
+    echo "📊 Size: $(ls -lh "$LATEST_PROFILE" | awk '{print $5}')"
+    
+    # Display basic profile info if available
+    if command -v grep >/dev/null 2>&1; then
+        FUNCTION_COUNT=$(grep -c "^fn=" "$LATEST_PROFILE" 2>/dev/null || echo "0")
+        CALL_COUNT=$(grep -c "^calls=" "$LATEST_PROFILE" 2>/dev/null || echo "0")
+        echo "📈 Functions: $FUNCTION_COUNT"
+        echo "📞 Calls: $CALL_COUNT"
+    fi
+    
+    echo ""
+    echo "💡 Analyze with KCachegrind:"
+    echo "   kcachegrind $LATEST_PROFILE"
+    echo ""
+    echo "💡 Or use qcachegrind on macOS:"
+    echo "   qcachegrind $LATEST_PROFILE"
+else
+    echo "❌ No profile file generated. Check Xdebug configuration."
+    echo "💡 Ensure Xdebug is installed and profiling is enabled:"
+    echo "   php -m | grep xdebug"
+    exit 1
+fi
