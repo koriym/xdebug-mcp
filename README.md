@@ -116,18 +116,45 @@ Add to your `phpunit.xml`:
 
 ## Usage Examples
 
+### 1. Execution Tracing
 ```bash
-# Natural language requests - AI automatically selects and runs appropriate tools
 claude --print "Run test/debug_test.php and analyze the execution patterns"
 # AI automatically chooses ./bin/xdebug-trace and provides analysis:
 # ✅ Trace complete: /tmp/xdebug_trace_20250821_044930.xt (64 lines)
 # 📊 Analysis: O(2^n) Fibonacci inefficiency, stable memory usage, microsecond-level metrics
+```
 
+### 2. Performance Profiling
+```bash
 claude --print "Profile the performance of test/debug_test.php"
 # AI automatically uses ./bin/xdebug-profile:
 # ✅ Profile complete: /tmp/cachegrind.out.1755719364
 # 📊 Size: 1.9K, Functions: 29, Calls: 28, identifies bottlenecks
+```
 
+### 3. Code Coverage Analysis
+```bash
+claude --print "Analyze code coverage for test/debug_test.php"
+# AI automatically uses ./bin/xdebug-coverage:
+# ✅ Coverage complete: HTML report generated
+# 📊 Coverage: 85.2% lines, 92.1% functions, identifies untested code paths
+```
+
+### 4. Step Debugging
+```bash
+claude --print "Debug test/debug_test.php, break at line 15 and show variable values"
+# AI sets breakpoint and provides debugging session:
+# ✅ Breakpoint set at test/debug_test.php:15
+# 📊 Variables at breakpoint:
+# | Variable | Type   | Value                    |
+# |----------|--------|--------------------------|
+# | $n       | int    | 6                        |
+# | $result  | int    | 8                        |
+# | $user    | array  | ['name'=>'John','age'=>30] |
+```
+
+### 5. PHPUnit Testing
+```bash
 # Debug PHPUnit tests (after adding TraceExtension to phpunit.xml)
 ./bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
 ```
