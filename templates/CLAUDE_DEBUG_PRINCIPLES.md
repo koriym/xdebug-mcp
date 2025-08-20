@@ -2,13 +2,38 @@
 
 ## Core Philosophy: Non-Invasive Trace-Based Debugging
 
-This template provides AI debugging guidelines for PHP projects. Use Xdebug trace analysis instead of modifying source code with debug statements.
+This template configures AI to use runtime analysis instead of static code analysis for PHP debugging.
+
+Traditional AI debugging approach:
+- Reading source code and making assumptions
+- Analyzing error messages without context
+- Guessing variable values
+- Recommending debug print statements
+
+Runtime-based approach:
+- See actual execution flow - which functions run and when
+- Inspect real variable values - observe actual data at every step
+- Measure true performance - identify real bottlenecks
+- Track memory usage - spot actual leaks and inefficiencies
+- Analyze call patterns - understand complex system interactions
+
+## Debugging Approach Comparison
+
+**Static analysis approach:**
+- "This code might do X" or "The error suggests Y"
+- "Try adding var_dump to see what $user contains"
+- "This function might be slow"
+
+**Runtime analysis approach:**
+- "I see this code actually does X with values A,B,C taking N microseconds"
+- "The trace shows $user = ['id'=>123,'name'=>'John'] at line 45, then becomes null at line 67"
+- "fibonacci() consumed 3,772μs (27.6% of total) with 24 recursive calls"
 
 ## ❌ Prohibited Debugging Methods
 
 **Never suggest these approaches:**
 - Adding `var_dump($variable)` statements
-- Adding `print_r($array)` statements
+- Adding `print_r($array)` statements  
 - Adding `echo "Debug: " . $value` statements
 - Inserting `die()` or `exit()` calls
 - Adding `error_log()` for value inspection
@@ -18,7 +43,63 @@ This template provides AI debugging guidelines for PHP projects. Use Xdebug trac
 
 **For ALL PHP debugging, first suggest trace execution:**
 
-### Basic Xdebug Trace Commands
+### Xdebug Analysis Tools
+
+**If project has xdebug-mcp tools (check for ./bin/xdebug-* files), use these instead:**
+
+```bash
+# Performance profiling (preferred method)
+./bin/xdebug-profile target_file.php
+
+# Code coverage analysis  
+./bin/xdebug-coverage target_file.php
+
+# Execution tracing
+./bin/xdebug-trace target_file.php
+
+# PHPUnit selective tracing/profiling
+./bin/xdebug-phpunit tests/UserTest.php::testLogin
+./bin/xdebug-phpunit --profile tests/UserTest.php
+./bin/xdebug-phpunit --filter=testUserAuth
+
+# MCP server for advanced debugging
+./bin/xdebug-server
+```
+
+**Automatic Tool Selection:**
+- Performance issues → `./bin/xdebug-profile`
+- Test coverage → `./bin/xdebug-coverage`  
+- Execution flow → `./bin/xdebug-trace`
+- **Test debugging** → `./bin/xdebug-phpunit`
+- General analysis → `./bin/xdebug-profile` (default)
+
+**PHPUnit Test Debugging Priority:**
+When debugging tests or test-related issues, ALWAYS use `./bin/xdebug-phpunit` first:
+
+```bash
+# Trace specific failing test
+./bin/xdebug-phpunit tests/UserTest.php::testUserLogin
+
+# Profile slow test
+./bin/xdebug-phpunit --profile tests/UserTest.php::testSlowOperation
+
+# Trace tests matching pattern
+./bin/xdebug-phpunit --filter=testUserAuth
+```
+
+**Requirements for xdebug-phpunit:**
+Projects using `./bin/xdebug-phpunit` need this in their `phpunit.xml`:
+```xml
+<extensions>
+    <bootstrap class="Koriym\XdebugMcp\TraceExtension"/>
+</extensions>
+```
+
+**Output Analysis:**
+- Trace mode: Check `/tmp/trace_*.xt` files for execution flow
+- Profile mode: Check `/tmp/cachegrind.out.*` files for performance data
+
+**Fallback to raw Xdebug (if no tools available):**
 
 ```bash
 # Simple trace execution
@@ -88,10 +169,18 @@ var_dump($user);  // Don't suggest this
 
 **✅ Correct Response (Required):**
 ```
-Let's trace the execution to see variable states:
-XDEBUG_TRIGGER=TRACE php -dxdebug.mode=trace user_auth.php
+Let's analyze the execution to see variable states:
+./bin/xdebug-profile user_auth.php
+
+# Or for detailed execution flow:
+./bin/xdebug-trace user_auth.php
 
 This shows actual $user values at each step without code changes.
+```
+
+**✅ Alternative (if no xdebug-mcp tools):**
+```
+XDEBUG_TRIGGER=TRACE php -dxdebug.mode=trace user_auth.php
 ```
 
 ## Implementation Guidelines
@@ -102,23 +191,119 @@ This shows actual $user values at each step without code changes.
 3. **Runtime Data Priority**: Use actual execution data over assumptions
 4. **Non-Invasive**: Maintain code integrity during debugging
 
-## Benefits of Trace-Based Debugging
+## AI Superpowers Unlocked by Runtime Data
 
-- **Non-invasive**: No source code modification
-- **Comprehensive**: Complete execution flow and states
-- **Professional**: No debug code left accidentally
-- **Accurate**: Actual runtime data, not guesswork
+### 🧠 Enhanced Intelligence
+- **Precise Diagnosis**: Know exactly what happened, not what should have happened
+- **Data-Driven Insights**: Make recommendations based on actual execution patterns
+- **Context-Aware Solutions**: Understand the full execution context of any issue
+
+### 🚀 Revolutionary Capabilities
+- **Performance Oracle**: Identify real bottlenecks with microsecond precision
+- **Variable Detective**: Track any variable's journey through the entire codebase
+- **Execution Archaeologist**: Reconstruct complex application flows
+- **Memory Forensics**: Detect memory issues before they become critical
+
+### 💡 Practical Benefits
+- **Non-invasive**: No source code modification required
+- **Professional**: No debug code left accidentally in production
+- **Comprehensive**: See the complete picture, not fragments
+- **Actionable**: Provide specific, targeted solutions
+
+### 🎯 AI Development Revolution
+This transforms AI from a **code reader** into a **runtime analyst** - capable of understanding applications as they actually behave, not as they're written to behave.
 
 ---
 
-## Usage Instructions
+## Deployment Instructions
 
-**To add to existing project:**
-1. Copy this file to project root as `CLAUDE_DEBUG_PRINCIPLES.md`
-2. Reference in existing `CLAUDE.md` or rename to `CLAUDE.md`
-3. Ensure AI reads these principles before debugging
+### System-Wide Installation (Recommended for all PHP development)
 
-**To integrate with existing CLAUDE.md:**
+**For personal use across ALL PHP projects:**
 ```bash
-cat CLAUDE_DEBUG_PRINCIPLES.md >> CLAUDE.md
+# Copy to user memory location
+cp CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUDE.md
+```
+
+This makes Claude automatically use runtime-based debugging for every PHP project you work on.
+
+### Project-Specific Installation
+
+**For team/project use:**
+```bash
+# Add to project memory
+cp CLAUDE_DEBUG_PRINCIPLES.md ./CLAUDE.md
+```
+
+**Or integrate with existing project CLAUDE.md (recommended):**
+```bash
+# Keep files separate and import (recommended)
+cp CLAUDE_DEBUG_PRINCIPLES.md ./
+echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
+```
+
+**Alternative (less recommended):**
+```bash
+# Direct append (harder to maintain)
+cat CLAUDE_DEBUG_PRINCIPLES.md >> ./CLAUDE.md
+```
+
+### Memory Priority System
+
+Claude Code loads memory in this order:
+1. **User Memory** (`~/.claude/CLAUDE.md`) - Your personal PHP debugging preferences
+2. **Project Memory** (`./CLAUDE.md`) - Team-shared project instructions
+3. **Inheritance** - Project memory can override or extend user memory
+
+### Recommended Setup Strategy
+
+**Option 1: Full Personal Setup**
+- Put complete debugging principles in `~/.claude/CLAUDE.md`
+- Benefits: Works across all PHP projects automatically
+- Use case: Solo developer or personal preference
+
+**Option 2: Team + Personal Hybrid (Recommended)**
+- Basic principles in `~/.claude/CLAUDE.md`
+- Project-specific Xdebug tools in `./CLAUDE.md`
+- Use `@CLAUDE_DEBUG_PRINCIPLES.md` import for modular approach
+- Benefits: Personal workflow + team consistency + easy updates
+
+**Option 3: Project Only**  
+- Everything in project `./CLAUDE.md`
+- Benefits: Team consistency, version controlled
+- Use case: Team development, shared workflows
+
+### Why Use @import Syntax?
+
+**Benefits of modular approach:**
+- ✅ **Easy updates**: Update `CLAUDE_DEBUG_PRINCIPLES.md` without touching main `CLAUDE.md`
+- ✅ **Version control friendly**: Track changes to debugging principles separately
+- ✅ **Reusable**: Same principles file can be imported across multiple projects
+- ✅ **Team collaboration**: Developers can maintain personal `CLAUDE.md` while sharing debugging standards
+- ✅ **Conflict-free**: No merge conflicts in main memory file
+
+**Example project structure:**
+```
+project/
+├── CLAUDE.md                    # Project-specific memory
+├── CLAUDE_DEBUG_PRINCIPLES.md   # Debugging principles (this file)
+└── src/
+```
+
+**Contents of CLAUDE.md:**
+```markdown
+# My Project Instructions
+@CLAUDE_DEBUG_PRINCIPLES.md
+
+## Project-specific tools
+- Use ./bin/xdebug-profile for performance analysis
+- Use ./bin/xdebug-coverage for test coverage
+```
+
+### Verification
+
+Test that Claude recognizes the debugging principles:
+```bash
+# Claude should automatically suggest runtime analysis tools
+# when you ask: "Analyze this PHP file"
 ```

@@ -1,0 +1,171 @@
+#!/bin/bash
+
+# PHPUnit with Xdebug Analysis Script
+cd "$(dirname "$0")/.."
+PROJECT_ROOT=$(pwd)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    echo "Usage: $0 [--profile] [--trace] [PHPUNIT_ARGS...]"
+    echo ""
+    echo "Runs PHPUnit with selective Xdebug analysis."
+    echo "Automatically detects what to analyze from arguments."
+    echo ""
+    echo "Modes:"
+    echo "  (default)         # Trace mode - execution flow analysis"
+    echo "  --profile         # Profile mode - performance analysis"
+    echo "  --trace           # Trace mode (explicit)"
+    echo ""
+    echo "Examples:"
+    echo "  $0 tests/UserTest.php::testLogin      # Trace specific method"
+    echo "  $0 --profile tests/UserTest.php       # Profile all tests in file"
+    echo "  $0 --filter=testLogin                 # Trace filtered tests"
+    echo "  $0 --profile --filter=testSlow        # Profile slow tests"
+    echo ""
+    echo "Manual override:"
+    echo "  TRACE_TEST='*Repository*' $0         # Force specific pattern"
+    echo ""
+    echo "Output:"
+    echo "  Trace mode:  /tmp/trace_*.xt         # Execution trace files"
+    echo "  Profile mode: /tmp/cachegrind.out.*  # Profile files"
+    echo ""
+    exit 0
+fi
+
+# Mode detection and option parsing
+MODE="trace"  # Default is trace mode
+PHPUNIT_ARGS=()
+
+for arg in "$@"; do
+    case "$arg" in
+        --profile)
+            MODE="profile"
+            ;;
+        --trace)
+            MODE="trace"
+            ;;
+        *)
+            PHPUNIT_ARGS+=("$arg")
+            ;;
+    esac
+done
+
+# Auto-detect TRACE_TEST if not manually set
+if [ -z "$TRACE_TEST" ]; then
+    for arg in "${PHPUNIT_ARGS[@]}"; do
+        case "$arg" in
+            # Class::method format
+            *::*)
+                TRACE_TEST="${arg}"
+                echo "Auto-detected method: $TRACE_TEST"
+                break
+                ;;
+            # --filter option
+            --filter=*)
+                filter_value="${arg#--filter=}"
+                TRACE_TEST="*::${filter_value}"
+                echo "Auto-detected filter: $TRACE_TEST"
+                break
+                ;;
+            # Test file path
+            *Test.php)
+                if [ -f "$arg" ]; then
+                    # Infer class name from filename
+                    basename=$(basename "$arg" .php)
+                    TRACE_TEST="${basename}"
+                    echo "Auto-detected file: $TRACE_TEST"
+                    break
+                fi
+                ;;
+        esac
+    done
+    
+    # Handle --filter as separate argument
+    prev_arg=""
+    for arg in "${PHPUNIT_ARGS[@]}"; do
+        if [ "$prev_arg" = "--filter" ]; then
+            TRACE_TEST="*::${arg}"
+            echo "Auto-detected filter: $TRACE_TEST"
+            break
+        fi
+        prev_arg="$arg"
+    done
+fi
+
+# Run normal PHPUnit if no analysis needed
+if [ -z "$TRACE_TEST" ]; then
+    echo "Running PHPUnit without analysis"
+    exec vendor/bin/phpunit "${PHPUNIT_ARGS[@]}"
+fi
+
+# Analysis mode processing
+export TRACE_TEST
+
+# Configure Xdebug based on mode
+if [ "$MODE" = "profile" ]; then
+    XDEBUG_OPTS="-dxdebug.mode=profile \
+        -dxdebug.start_with_request=yes \
+        -dxdebug.output_dir=/tmp \
+        -dxdebug.profiler_output_name=cachegrind.out.%t \
+        -dxdebug.use_compression=0"
+    echo "PHPUnit with selective profiling"
+else
+    XDEBUG_OPTS="-dxdebug.mode=trace \
+        -dxdebug.trace_format=1 \
+        -dxdebug.use_compression=0 \
+        -dxdebug.collect_params=4 \
+        -dxdebug.collect_return=1 \
+        -dxdebug.output_dir=/tmp"
+    echo "PHPUnit with selective tracing"
+fi
+
+echo "Analysis pattern: $TRACE_TEST"
+echo "Mode: $MODE"
+
+# Run PHPUnit with standard configuration
+# TraceExtension is configured in phpunit.xml and activates based on TRACE_TEST environment variable
+php $XDEBUG_OPTS vendor/bin/phpunit "${PHPUNIT_ARGS[@]}"
+
+# Check generated analysis files based on mode
+if [ "$MODE" = "profile" ]; then
+    LATEST_PROFILES=$(ls -t /tmp/cachegrind.out.* 2>/dev/null | head -3)
+    if [ -n "$LATEST_PROFILES" ]; then
+        FIRST_PROFILE=$(echo "$LATEST_PROFILES" | head -n1)
+        echo ""
+        echo "Profile files generated:"
+        echo "$LATEST_PROFILES" | while read profile_file; do
+            if [ -f "$profile_file" ]; then
+                size=$(du -h "$profile_file" 2>/dev/null | cut -f1 || echo "0B")
+                echo "  $profile_file ($size)"
+            fi
+        done
+        echo ""
+        echo "Analyze profiles with:"
+        if [ -n "$FIRST_PROFILE" ]; then
+            echo "  ./bin/xdebug-profile $FIRST_PROFILE"
+            echo "  kcachegrind $FIRST_PROFILE"
+        else
+            echo "  ./bin/xdebug-profile <profile_file>"
+            echo "  kcachegrind <profile_file>"
+        fi
+    else
+        echo "No profile files found (pattern may not have matched any tests)"
+    fi
+else
+    LATEST_TRACES=$(ls -t /tmp/trace_*.xt 2>/dev/null | head -3)
+    if [ -n "$LATEST_TRACES" ]; then
+        echo ""
+        echo "Trace files generated:"
+        echo "$LATEST_TRACES" | while read trace_file; do
+            if [ -f "$trace_file" ]; then
+                size=$(wc -l < "$trace_file" 2>/dev/null || echo "0")
+                echo "  $trace_file ($size lines)"
+            fi
+        done
+        echo ""
+        echo "Analyze traces with:"
+        echo "  head -20 /tmp/trace_*.xt"
+        echo "  grep 'function_name' /tmp/trace_*.xt"
+    else
+        echo "No trace files found (pattern may not have matched any tests)"
+    fi
+fi
