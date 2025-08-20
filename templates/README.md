@@ -29,8 +29,10 @@ Complete debugging principles template featuring:
 Apply debugging principles to all PHP projects:
 
 ```bash
-# Install globally for all projects  
-cp CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUDE.md
+# Install globally for all projects
+mkdir -p ~/.claude
+cp templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/
+echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ~/.claude/CLAUDE.md
 ```
 
 Benefits: Claude automatically uses runtime analysis across every PHP project
@@ -53,7 +55,9 @@ echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
 **Option 3: Hybrid Personal + Team**
 ```bash
 # Personal principles in user memory
-cp templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUDE.md
+mkdir -p ~/.claude
+cp templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/
+echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ~/.claude/CLAUDE.md
 
 # Project-specific tools in project memory
 echo "## Project Xdebug Tools" >> ./CLAUDE.md
@@ -139,8 +143,10 @@ git add CLAUDE.md  # Contains @CLAUDE_DEBUG_PRINCIPLES.md
 
 ### For PHP Developers (Personal Use)
 ```bash
-# 1. Install globally 
-cp CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUDE.md
+# 1. Install globally
+mkdir -p ~/.claude
+cp templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/
+echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ~/.claude/CLAUDE.md
 
 # 2. Test with any PHP file
 # Claude now automatically suggests: ./bin/xdebug-profile script.php
