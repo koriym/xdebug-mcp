@@ -72,7 +72,7 @@ class TraceHelper
         ini_set('xdebug.trace_format', '1');
         ini_set('xdebug.use_compression', '0');
 
-        xdebug_start_trace(rtrim(self::$traceFile, '.xt'));
+        self::$traceFile = xdebug_start_trace(rtrim(self::$traceFile, '.xt'));
         self::$traceActive = true;
 
         fwrite(STDERR, "TRACE: Started tracing {$testName} -> " . self::$traceFile . "\n");
