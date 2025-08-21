@@ -188,6 +188,8 @@ XML;
 
     /**
      * Clean up temporary files
+     *
+     * @param array<string> $tempFiles
      */
     public function cleanup(array $tempFiles): void
     {
