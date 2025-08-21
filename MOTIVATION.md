@@ -45,11 +45,11 @@ AI analyzes execution traces → Identifies exact failure point → Provides pre
 
 Xdebug is incredibly powerful but has a steep learning curve. Most developers use maybe 10% of its capabilities. Meanwhile, AI assistants suggest `var_dump()` because they lack access to better tools.
 
-xdebug-mcp bridges this gap through the Model Context Protocol, giving AI direct access to:
+xdebug-mcp bridges this gap, transforming AI from a guesser to a detective:
 
-1. **Execution traces** - See exactly what happened, when, and why
-2. **Performance profiles** - Identify real bottlenecks, not guessed ones  
-3. **Live debugging** - Set breakpoints and step through execution
+- **Traces execution** to pinpoint exact failure points
+- **Profiles performance** to find real bottlenecks
+- **Debugs live sessions** without touching source code
 
 No more modifying source code. No more forgotten debug statements in production. Just clean, professional debugging powered by real runtime data.
 
@@ -67,10 +67,10 @@ The implications extend far beyond PHP:
 ## The Vision
 
 I envision a world where:
-- Debugging with print statements feels as archaic as using punch cards
+- Debugging becomes systematic and data-driven, not trial-and-error
+- Print statements feel as archaic as using punch cards
 - Every developer has access to professional debugging workflows
 - AI assistants routinely use execution traces to solve problems
-- Debugging becomes systematic and data-driven, not trial-and-error
 
 ## The Bigger Picture
 
