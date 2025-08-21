@@ -2,14 +2,9 @@
 
 ## The Moment of Clarity
 
-When Claude Code was announced, I was thrilled. Finally, an AI assistant that could help with real development work! But my excitement quickly turned to disbelief when I saw how it approached PHP debugging:
+When Claude Code was announced, I was thrilled. Finally, an AI assistant that could help with real development work! But my excitement quickly turned to disbelief when I watched it debug PHP code:
 
-```
-Human: "This function isn't working correctly"
-AI: "Add var_dump($variable) at line 23 and refresh your browser"
-Human: "OK, it shows an empty array"
-AI: "Now add another var_dump() at line 15..."
-```
+I saw the AI literally type `var_dump($variable)` into my code, ask me to refresh the browser, analyze the output, then dutifully remove the var_dump and add another one elsewhere. Over and over.
 
 It struck me: this sophisticated AI, capable of understanding complex architectural patterns, was debugging like it was 1995.
 
