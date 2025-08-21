@@ -16,6 +16,7 @@ use function escapeshellarg;
 use function filemtime;
 use function filesize;
 use function fwrite;
+use function getenv;
 use function glob;
 use function implode;
 use function in_array;
@@ -43,7 +44,11 @@ class XdebugPhpunitCommand
     private bool $verbose = false;
     private bool $dryRun = false;
     private string $mode = 'trace'; // trace or profile
+
+    /** @var array<string> */
     private array $phpunitArgs = [];
+
+    /** @var array<string> */
     private array $tempFiles = [];
 
     public function __construct(string $projectRoot, string $xdebugOutputDir)
@@ -56,6 +61,8 @@ class XdebugPhpunitCommand
 
     /**
      * Parse command line arguments and execute
+     *
+     * @param array<string> $argv
      */
     public function __invoke(array $argv): int
     {
@@ -79,6 +86,8 @@ class XdebugPhpunitCommand
 
     /**
      * Parse command line arguments
+     *
+     * @param array<string> $argv
      */
     private function parseArguments(array $argv): void
     {
@@ -126,7 +135,7 @@ class XdebugPhpunitCommand
      */
     private function detectTracePattern(): string|null
     {
-        $pattern = $_ENV['TRACE_TEST'] ?? null;
+        $pattern = getenv('TRACE_TEST') ?: null;
         if ($pattern) {
             $this->log("Using TRACE_TEST environment variable: $pattern");
 

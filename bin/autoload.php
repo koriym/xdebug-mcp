@@ -19,5 +19,6 @@ foreach ($autoloadPaths as $autoloadPath) {
     }
 }
 
-fwrite(STDERR, "Error: Composer autoloader not found. Run 'composer install' first.\n");
+$searchPaths = implode("\n  ", $autoloadPaths);
+fwrite(STDERR, "Error: Composer autoloader not found. Run 'composer install' first.\nSearched paths:\n  $searchPaths\n");
 exit(1);
