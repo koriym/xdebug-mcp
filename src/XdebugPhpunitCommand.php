@@ -29,13 +29,13 @@ class XdebugPhpunitCommand
         try {
             $this->parseArguments($argv);
             $this->configManager = new PhpunitConfigManager($this->projectRoot, $this->verbose);
-            
+
             register_shutdown_function([$this, 'cleanup']);
-            
+
             if ($this->dryRun) {
                 return $this->showConfig();
             }
-            
+
             return $this->executePhpunit();
         } catch (RuntimeException $e) {
             $this->error($e->getMessage());
@@ -49,7 +49,7 @@ class XdebugPhpunitCommand
     private function parseArguments(array $argv): void
     {
         $scriptName = array_shift($argv);
-        
+
         if (empty($argv) || in_array($argv[0], ['--help', '-h'])) {
             $this->showHelp($scriptName);
             exit(0);
@@ -57,24 +57,24 @@ class XdebugPhpunitCommand
 
         while (!empty($argv)) {
             $arg = array_shift($argv);
-            
+
             switch ($arg) {
                 case '--verbose':
                     $this->verbose = true;
                     break;
-                    
+
                 case '--dry-run':
                     $this->dryRun = true;
                     break;
-                    
+
                 case '--profile':
                     $this->mode = 'profile';
                     break;
-                    
+
                 case '--trace':
                     $this->mode = 'trace';
                     break;
-                    
+
                 default:
                     $this->phpunitArgs[] = $arg;
                     break;
@@ -92,22 +92,22 @@ class XdebugPhpunitCommand
             $this->log("Using TRACE_TEST environment variable: $pattern");
             return $pattern;
         }
-        
+
         foreach ($this->phpunitArgs as $i => $arg) {
             // Class::method format
-            if (strpos($arg, '::') !== false) {
+            if (str_contains($arg, '::')) {
                 $this->log("Auto-detected method pattern: $arg");
                 return $arg;
             }
-            
+
             // --filter=pattern
-            if (strpos($arg, '--filter=') === 0) {
+            if (str_starts_with($arg, '--filter=')) {
                 $filter = substr($arg, 9);
                 $pattern = "*::$filter";
                 $this->log("Auto-detected filter pattern: $pattern");
                 return $pattern;
             }
-            
+
             // --filter pattern (separate argument)
             if ($arg === '--filter' && isset($this->phpunitArgs[$i + 1])) {
                 $filter = $this->phpunitArgs[$i + 1];
@@ -115,7 +115,7 @@ class XdebugPhpunitCommand
                 $this->log("Auto-detected filter pattern: $pattern");
                 return $pattern;
             }
-            
+
             // Test file path
             if (preg_match('/(.+Test)\.php$/', $arg, $matches)) {
                 $className = basename($matches[1]);
@@ -123,7 +123,7 @@ class XdebugPhpunitCommand
                 return $className;
             }
         }
-        
+
         return null;
     }
 
@@ -133,28 +133,28 @@ class XdebugPhpunitCommand
     private function showConfig(): int
     {
         $this->log("Showing effective PHPUnit configuration:");
-        
+
         $originalConfig = $this->configManager->findConfigFile();
         $effectiveConfig = $this->configManager->getEffectiveConfig($originalConfig);
-        
+
         echo "Effective PHPUnit configuration:\n";
         echo "================================\n";
         echo $effectiveConfig;
-        
+
         if ($originalConfig) {
             echo "\nSource: $originalConfig\n";
         } else {
             echo "\nSource: Generated minimal config\n";
         }
-        
+
         $pattern = $this->detectTracePattern();
         if ($pattern) {
             echo "TRACE_TEST pattern: $pattern\n";
-            echo "Analysis mode: {$this->mode}\n";
+            echo "Analysis mode: " . $this->mode . "\n";
         } else {
             echo "No TRACE_TEST pattern detected - would run PHPUnit normally\n";
         }
-        
+
         return 0;
     }
 
@@ -164,37 +164,37 @@ class XdebugPhpunitCommand
     private function executePhpunit(): int
     {
         $pattern = $this->detectTracePattern();
-        
+
         if (!$pattern) {
             $this->log("No TRACE_TEST pattern detected, running PHPUnit normally");
             return $this->runPhpunitNormally();
         }
-        
+
         // Set environment for TraceExtension
         $_ENV['TRACE_TEST'] = $pattern;
         putenv("TRACE_TEST=$pattern");
-        
+
         echo "Tracing: $pattern\n";
-        
+
         // Create config with TraceExtension
         $originalConfig = $this->configManager->findConfigFile();
         $effectiveConfig = $this->configManager->createConfigWithExtension($originalConfig);
         $this->tempFiles[] = $effectiveConfig;
-        
+
         // Configure Xdebug
         $xdebugOpts = $this->getXdebugOptions();
-        
+
         // Build command
         $cmd = $this->buildPhpunitCommand($effectiveConfig, $xdebugOpts);
-        
+
         $this->log("Executing: $cmd");
-        
+
         // Execute PHPUnit
         passthru($cmd, $exitCode);
-        
+
         // Report generated files
         $this->reportGeneratedFiles();
-        
+
         return $exitCode;
     }
 
@@ -205,11 +205,11 @@ class XdebugPhpunitCommand
     {
         $originalConfig = $this->configManager->findConfigFile();
         $configArg = $originalConfig ? "--configuration " . escapeshellarg($originalConfig) : "";
-        
+
         $cmd = "vendor/bin/phpunit $configArg " . implode(' ', array_map('escapeshellarg', $this->phpunitArgs));
-        
+
         $this->log("Executing normal PHPUnit: $cmd");
-        
+
         passthru($cmd, $exitCode);
         return $exitCode;
     }
@@ -225,14 +225,14 @@ class XdebugPhpunitCommand
                    "-dxdebug.output_dir=/tmp " .
                    "-dxdebug.profiler_output_name=cachegrind.out.%t " .
                    "-dxdebug.use_compression=0";
-        } else {
-            return "-dxdebug.mode=trace " .
-                   "-dxdebug.trace_format=1 " .
-                   "-dxdebug.use_compression=0 " .
-                   "-dxdebug.collect_params=4 " .
-                   "-dxdebug.collect_return=1 " .
-                   "-dxdebug.output_dir=/tmp";
         }
+
+        return "-dxdebug.mode=trace " .
+               "-dxdebug.trace_format=1 " .
+               "-dxdebug.use_compression=0 " .
+               "-dxdebug.collect_params=4 " .
+               "-dxdebug.collect_return=1 " .
+               "-dxdebug.output_dir=/tmp";
     }
 
     /**
@@ -251,9 +251,10 @@ class XdebugPhpunitCommand
     {
         if ($this->mode === 'profile') {
             $this->reportProfileFiles();
-        } else {
-            $this->reportTraceFiles();
+            return;
         }
+
+        $this->reportTraceFiles();
     }
 
     /**
@@ -266,20 +267,20 @@ class XdebugPhpunitCommand
             echo "No profile files found (pattern may not have matched any tests)\n";
             return;
         }
-        
+
         // Sort by modification time, newest first
         usort($files, fn($a, $b) => filemtime($b) <=> filemtime($a));
         $files = array_slice($files, 0, 3);
-        
+
         echo "\nProfile files generated:\n";
         foreach ($files as $file) {
             $size = $this->formatFileSize(filesize($file));
             echo "  $file ($size)\n";
         }
-        
+
         echo "\nAnalyze profiles with:\n";
-        echo "  ./bin/xdebug-profile {$files[0]}\n";
-        echo "  kcachegrind {$files[0]}\n";
+        echo "  ./bin/xdebug-profile " . $files[0] . "\n";
+        echo "  kcachegrind " . $files[0] . "\n";
     }
 
     /**
@@ -292,20 +293,20 @@ class XdebugPhpunitCommand
             echo "No trace files found (pattern may not have matched any tests)\n";
             return;
         }
-        
+
         // Sort by modification time, newest first
         usort($files, fn($a, $b) => filemtime($b) <=> filemtime($a));
         $files = array_slice($files, 0, 3);
-        
+
         echo "\nTrace files generated:\n";
         foreach ($files as $file) {
             $lines = count(file($file));
             echo "  $file ($lines lines)\n";
         }
-        
+
         echo "\nAnalyze traces with:\n";
-        echo "  head -20 {$files[0]}\n";
-        echo "  grep 'function_name' {$files[0]}\n";
+        echo "  head -20 " . $files[0] . "\n";
+        echo "  grep 'function_name' " . $files[0] . "\n";
     }
 
     /**
@@ -313,7 +314,7 @@ class XdebugPhpunitCommand
      */
     public function cleanup(): void
     {
-        $this->configManager?->cleanup($this->tempFiles);
+        $this->configManager->cleanup($this->tempFiles);
     }
 
     /**
@@ -347,11 +348,13 @@ class XdebugPhpunitCommand
     {
         if ($bytes >= 1024 * 1024) {
             return round($bytes / (1024 * 1024), 1) . 'M';
-        } elseif ($bytes >= 1024) {
-            return round($bytes / 1024, 1) . 'K';
-        } else {
-            return $bytes . 'B';
         }
+        
+        if ($bytes >= 1024) {
+            return round($bytes / 1024, 1) . 'K';
+        }
+        
+        return $bytes . 'B';
     }
 
     /**
