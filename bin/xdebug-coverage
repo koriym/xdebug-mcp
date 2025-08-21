@@ -9,14 +9,13 @@ $projectRoot = require __DIR__ . '/autoload.php';
 // Parse command line arguments
 function showHelp(string $scriptName): void {
     echo "Usage: $scriptName PHP_FILE [OPTIONS] [-- PHP_ARGS...]\n";
-    echo "       $scriptName -- PHP_BINARY SCRIPT_FILE [SCRIPT_ARGS...]\n";
+    echo "       $scriptName -- SCRIPT_FILE [SCRIPT_ARGS...]\n";
     echo "\n";
     echo "Runs Xdebug code coverage analysis on the specified PHP file or command.\n";
     echo "\n";
     echo "Arguments:\n";
     echo "  PHP_FILE      Path to PHP file to analyze (required)\n";
     echo "  PHP_ARGS      Arguments to pass to the PHP script (after --)\n";
-    echo "  PHP_BINARY    Custom PHP binary path (when using -- prefix)\n";
     echo "  SCRIPT_FILE   PHP script to analyze (when using -- prefix)\n";
     echo "  SCRIPT_ARGS   Arguments for the script (when using -- prefix)\n";
     echo "\n";
@@ -30,14 +29,13 @@ function showHelp(string $scriptName): void {
     echo "  $scriptName my_script.php --html                  # Generate HTML report\n";
     echo "  $scriptName bin/page.php --text -- get /          # Coverage with arguments\n";
     echo "\n";
-    echo "  # Custom PHP binary:\n";
-    echo "  $scriptName -- php bin/page.php get /             # Natural PHP command style\n";
-    echo "  $scriptName -- /usr/bin/php8.3 script.php args   # Specific PHP version\n";
+    echo "  # Direct script execution:\n";
+    echo "  $scriptName -- bin/page.php get /                 # Natural command style\n";
     echo "\n";
 }
 
 // Find -- separator to limit help flag checking
-$separatorIndex = array_search('--', $argv);
+$separatorIndex = array_search('--', $argv, true);
 $argsToCheck = $separatorIndex !== false 
     ? array_slice($argv, 0, $separatorIndex)  // Args before --
     : $argv;                                   // All args if no --
@@ -55,10 +53,17 @@ if (in_array('--help', $argsToCheck) || in_array('-h', $argsToCheck) || count($a
 // Load common argument parser
 $parse = require __DIR__ . '/parse.php';
 
-// Parse base arguments - coverage has special option handling
+// Parse base arguments - coverage has simplified pattern handling  
 if ($argv[1] === '--') {
-    // Pattern 2: -- php script.php args (text format only)
-    [$phpBinary, $targetFile, $phpArgs] = $parse($argv);
+    // Pattern 2: -- script.php args (text format only)
+    if (count($argv) < 3) {
+        fwrite(STDERR, "❌ Error: Script file required after --\n");
+        fwrite(STDERR, "Use '{$argv[0]} --help' for usage information\n");
+        exit(1);
+    }
+    $phpBinary = PHP_BINARY;
+    $targetFile = $argv[2];
+    $phpArgs = array_slice($argv, 3);
     $outputFormat = 'text';
 } else {
     // Pattern 1: script.php [--html|--text] [-- args]
@@ -88,7 +93,7 @@ if (!file_exists($targetFile)) {
 }
 
 // Generate unique coverage filename
-$coverageTimestamp = date('Ymd_His');
+$coverageTimestamp = date('Ymd_His') . '_' . getmypid();
 $coverageDir = "/tmp/xdebug_coverage_$coverageTimestamp";
 
 // Create coverage directory
@@ -110,8 +115,16 @@ xdebug_start_code_coverage(XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
 // Capture arguments for the target script
 \$targetArgs = " . var_export($phpArgs, true) . ";
 if (!empty(\$targetArgs)) {
-    \$_SERVER['argv'] = array_merge(['" . addslashes($targetFile) . "'], \$targetArgs);
-    \$_SERVER['argc'] = count(\$_SERVER['argv']);
+    \$newArgv = array_merge(['" . addslashes($targetFile) . "'], \$targetArgs);
+    \$newArgc = count(\$newArgv);
+    
+    // Update all argument accessors
+    \$_SERVER['argv'] = \$newArgv;
+    \$_SERVER['argc'] = \$newArgc;
+    \$GLOBALS['argv'] = \$newArgv;
+    \$GLOBALS['argc'] = \$newArgc;
+    \$argv = \$newArgv;
+    \$argc = \$newArgc;
 }
 
 // Include and execute the target file

@@ -35,7 +35,7 @@ function showHelp(string $scriptName): void {
 }
 
 // Find -- separator to limit help flag checking
-$separatorIndex = array_search('--', $argv);
+$separatorIndex = array_search('--', $argv, true);
 $argsToCheck = $separatorIndex !== false 
     ? array_slice($argv, 0, $separatorIndex)  // Args before --
     : $argv;                                   // All args if no --
@@ -61,7 +61,9 @@ if (!file_exists($targetFile)) {
 }
 
 // Generate unique profile filename
-$profileTimestamp = date('Ymd_His');
+$profileTimestamp = date('Ymd_His') . '_' . getmypid();
+$profileFileName = "cachegrind.out.{$profileTimestamp}";
+$profilePath = "/tmp/{$profileFileName}";
 
 // Build Xdebug options (Xdebug 3.x format)
 $xdebugOpts = [
@@ -69,7 +71,7 @@ $xdebugOpts = [
     '-dxdebug.mode=profile',
     '-dxdebug.start_with_request=yes',
     '-dxdebug.output_dir=/tmp',
-    '-dxdebug.profiler_output_name=cachegrind.out.%t',
+    "-dxdebug.profiler_output_name={$profileFileName}",
     '-dxdebug.use_compression=0'
 ];
 
@@ -124,23 +126,15 @@ if (is_resource($process)) {
     }
 }
 
-// Find the generated profile file (Cachegrind format)
-$profileFiles = glob('/tmp/cachegrind.out.*');
-
-if (!empty($profileFiles)) {
-    // Sort by modification time (newest first)
-    usort($profileFiles, function($a, $b) {
-        return filemtime($b) - filemtime($a);
-    });
+// Check for the generated profile file
+if (file_exists($profilePath)) {
+    $fileSize = formatBytes(filesize($profilePath));
     
-    $latestProfile = $profileFiles[0];
-    $fileSize = formatBytes(filesize($latestProfile));
-    
-    echo "✅ Profile complete: $latestProfile\n";
+    echo "✅ Profile complete: $profilePath\n";
     echo "📊 Size: $fileSize\n";
     
     // Display basic profile info if available
-    $content = file_get_contents($latestProfile);
+    $content = file_get_contents($profilePath);
     $functionCount = substr_count($content, "\nfn=");
     $callCount = substr_count($content, "\ncalls=");
     
@@ -148,10 +142,10 @@ if (!empty($profileFiles)) {
     echo "📞 Calls: $callCount\n";
     echo "\n";
     echo "💡 Analyze with KCachegrind:\n";
-    echo "   kcachegrind $latestProfile\n";
+    echo "   kcachegrind $profilePath\n";
     echo "\n";
     echo "💡 Or use qcachegrind on macOS:\n";
-    echo "   qcachegrind $latestProfile\n";
+    echo "   qcachegrind $profilePath\n";
 } else {
     echo "❌ No profile file generated. Check Xdebug configuration.\n";
     echo "💡 Ensure Xdebug is installed and profiling is enabled:\n";
