@@ -168,7 +168,7 @@ $command = [PHP_BINARY];
 $command = array_merge($command, $xdebugOpts);
 $command[] = $wrapperScript;
 
-// Execute and suppress stderr
+// Execute with proper output handling
 $descriptors = [
     0 => ['pipe', 'r'],  // stdin
     1 => ['pipe', 'w'],  // stdout
@@ -181,19 +181,29 @@ if (is_resource($process)) {
     // Close stdin
     fclose($pipes[0]);
     
-    // Read stdout
+    // Read and forward stdout
     $stdout = stream_get_contents($pipes[1]);
     fclose($pipes[1]);
     
-    // Read and ignore stderr
+    // Read and forward stderr
     $stderr = stream_get_contents($pipes[2]);
     fclose($pipes[2]);
     
-    // Wait for process to finish
+    // Wait for process to finish and get exit code
     $returnCode = proc_close($process);
     
-    // Output the results
-    echo $stdout;
+    // Forward child process output
+    if ($stdout !== '') {
+        echo $stdout;
+    }
+    if ($stderr !== '') {
+        fwrite(STDERR, $stderr);
+    }
+    
+    // Propagate child process exit code
+    if ($returnCode !== 0) {
+        exit($returnCode);
+    }
 }
 
 // Cleanup wrapper script
