@@ -81,6 +81,11 @@ class XdebugPhpunitCommand
                     $this->mode = 'trace';
                     break;
 
+                case '--':
+                    // Stop option parsing, remaining args are for PHPUnit
+                    $this->phpunitArgs = array_merge($this->phpunitArgs, $argv);
+                    break 2;
+
                 default:
                     $this->phpunitArgs[] = $arg;
                     break;
