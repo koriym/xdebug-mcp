@@ -1,4 +1,4 @@
-# Why I Built xdebug-mcp
+# Feeding the Beast: Why AI Needs Runtime Data
 
 ## The Moment of Clarity
 
@@ -16,11 +16,6 @@ I was giving Claude static code and expecting dynamic insights. It was like aski
 
 This revealed a fundamental flaw in how we think about AI collaboration. We treat AI as a magical oracle: throw in some code, get perfect answers. But we're starving it of the data it needs to truly help us.
 
-## My Personal Journey
-
-I've spent years building PHP applications, watching talented developers burn out tracking elusive bugs with primitive methods. I've seen how debugging challenges compound as codebases grow. And I've always wondered: why do we accept this as normal?
-
-When AI coding assistants emerged, I saw an opportunity. Not to replace human debugging skills, but to democratize access to professional debugging tools through AI guidance.
 
 ## A New Paradigm: Feed the Beast
 
@@ -53,12 +48,10 @@ Xdebug is incredibly powerful but has a steep learning curve. Most developers us
 xdebug-mcp bridges this gap through the Model Context Protocol, giving AI direct access to:
 
 1. **Execution traces** - See exactly what happened, when, and why
-2. **Variable inspection** - Examine state at any point in execution
-3. **Performance profiles** - Identify real bottlenecks, not guessed ones
-4. **Code coverage** - Know which paths are actually tested
-5. **Live debugging** - Set breakpoints and step through execution
+2. **Performance profiles** - Identify real bottlenecks, not guessed ones  
+3. **Live debugging** - Set breakpoints and step through execution
 
-No more modifying source code. No more forgotten debug statements in production. Just clean, professional debugging.
+No more modifying source code. No more forgotten debug statements in production. Just clean, professional debugging powered by real runtime data.
 
 ## Beyond Debugging
 
@@ -89,6 +82,6 @@ Every time an AI uses `xdebug_start_trace()` instead of suggesting `var_dump()`,
 
 ---
 
-*Let's stop showing AI maps. Let's take the journey together.*
+*It's time to let AI see how our code truly runs.*
 
 — Akihito Koriyama
