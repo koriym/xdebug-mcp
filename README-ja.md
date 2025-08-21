@@ -102,7 +102,7 @@ echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
 
 ### xdebug-phpunit 使用方法
 
-PHPUnitテストで自動Xdebugトレース・プロファイルを実行：
+ゼロ設定でPHPUnitテストの自動Xdebugトレース・プロファイルを実行：
 
 ```bash
 # 特定テストメソッドのトレース（デフォルトモード）
@@ -114,21 +114,18 @@ PHPUnitテストで自動Xdebugトレース・プロファイルを実行：
 # フィルター条件でのトレース
 ./bin/xdebug-phpunit --filter=testUserAuth
 
-# 遅いテストのプロファイル
-./bin/xdebug-phpunit --profile --filter=testSlow
+# 有効設定の表示（透明性確保）
+./bin/xdebug-phpunit --dry-run tests/UserTest.php
+
+# 詳細ログ表示（デバッグ用）
+./bin/xdebug-phpunit --verbose tests/UserTest.php
 ```
+
+**自動注入:** TraceExtensionが一時phpunit.xmlに自動注入されます（手動設定不要）
 
 **出力:**
 - トレースモード: `/tmp/trace_*.xt` (実行トレース)
 - プロファイルモード: `/tmp/cachegrind.out.*` (パフォーマンスデータ)
-
-**設定要件:**
-`phpunit.xml`に追加：
-```xml
-<extensions>
-    <bootstrap class="Koriym\XdebugMcp\TraceExtension"/>
-</extensions>
-```
 
 ## 使用例
 
@@ -171,7 +168,7 @@ claude --print "test/debug_test.phpをデバッグして、15行目でbreakし�
 
 ### 5. PHPUnitテスト
 ```bash
-# PHPUnitテストのデバッグ（phpunit.xmlにTraceExtension追加後）
+# PHPUnitテストのデバッグ（ゼロ設定で即座に実行）
 ./bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
 ```
 
