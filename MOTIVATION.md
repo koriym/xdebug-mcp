@@ -1,32 +1,65 @@
 # Why I Built xdebug-mcp
 
-## The Problem That Frustrated Me
+## The Moment That Changed Everything
 
-As a PHP developer for over two decades, I've watched countless developers struggle with debugging. Despite having powerful tools like Xdebug at our disposal, the debugging workflow remained fragmented and inefficient.
+When Claude Code was announced, I was thrilled. Finally, an AI assistant that could actually help with real development work! But as I started using it for PHP debugging, I was stunned to see this pattern:
 
-**The pattern I kept seeing:**
+**What Claude Code would suggest:**
 1. Developer encounters a bug
-2. Adds `var_dump()` or `echo` statements throughout the code
-3. Refreshes browser or runs script multiple times
-4. Manually analyzes scattered output
-5. Forgets to remove debug statements (they end up in production!)
-6. Repeats this cycle for every issue
+2. Claude suggests adding `var_dump()` or `echo` statements throughout the code
+3. "Refresh browser or run script to see the output"
+4. "Analyze the output and let me know what you find"
+5. Often forgetting to suggest removing debug statements afterwards
+6. Repeating this cycle for every debugging session
 
-Even experienced developers fell into this trap. Why? Because setting up proper debugging tools felt like overhead when you "just need to check one variable quickly."
+I was shocked. Here was this incredibly sophisticated AI, capable of understanding complex code patterns and architectural decisions, yet it was debugging like a junior developer from 1995.
 
-## The AI Opportunity
+## The Realization
 
-When AI coding assistants became mainstream, I got excited. Finally, we could have intelligent help with debugging! But I quickly noticed AI was making the same mistakes we humans make:
+But then I stepped back and thought: "Of course it does this. What else could it do?"
 
-**AI would suggest:**
-```php
-// Add this to debug
-var_dump($user);
-echo "Debug: reached checkpoint A";
-print_r($_POST);
+Claude Code was working with extremely limited information - just the source code and error messages I provided. It couldn't see the runtime execution, couldn't inspect memory states, couldn't trace function calls, couldn't profile performance. It was like asking a detective to solve a crime while blindfolded.
+
+This wasn't a flaw in the AI - it was a fundamental limitation of the human-AI collaboration model we were using.
+
+## Questioning the "Generative AI" Paradigm
+
+This experience crystallized a doubt I'd been having about the entire "generative AI" approach. We were treating AI like a magical black box:
+- Give it a goal
+- Expect perfect results
+- Provide minimal context
+
+Whether we called it an "assistant," "servant," or "copilot," we were fundamentally asking AI to work with incomplete information and then wondering why the results weren't optimal.
+
+## A Different Vision: True Partnership
+
+I realized we needed to move beyond the goal-oriented, output-focused relationship with AI. Instead of just showing AI the destination, we need to invite it on the entire journey.
+
+True partnership means sharing **everything** humans have access to:
+- Not just code and error messages
+- But runtime execution data
+- Variable states and memory snapshots  
+- Performance metrics and bottlenecks
+- Test coverage and execution paths
+- The complete context of how software actually behaves
+
+## From Limited Context to Full Transparency
+
+This is why xdebug-mcp exists. It's not just about debugging PHP code - it's about fundamentally changing how AI and humans collaborate on software development.
+
+Instead of:
+```
+Human: "Here's broken code, fix it"
+AI: "Try adding var_dump() here"
 ```
 
-The AI was perpetuating our bad debugging habits because it didn't have access to proper debugging tools. It was like giving a master carpenter a plastic hammer.
+We can have:
+```
+Human: "Something's wrong with this function"
+AI: "Let me trace its execution... I see the issue in the call graph at line 47"
+```
+
+When AI has access to the same debugging tools and runtime data that experienced developers use, it can provide the same quality of assistance.
 
 ## The Vision
 
