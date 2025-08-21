@@ -45,6 +45,8 @@ True partnership means sharing **everything** humans have access to:
 
 The key insight: AI needs to understand not just what the code says, but how it actually behaves when running. Trace data provides this deep understanding - showing the exact sequence of function calls, parameter values, execution times, and state changes that led to any given outcome.
 
+Think of it this way: AI is always hungry, waiting to be fed data. We've been giving it static code snippets - like showing a map instead of taking the journey together. What AI truly needs is the full journey data: not just "where we want to go" but "how we're getting there" and "what's happening along the way."
+
 ## From Limited Context to Full Transparency
 
 This is why xdebug-mcp exists. It's not just about debugging PHP code - it's about fundamentally changing how AI and humans collaborate on software development.
@@ -62,6 +64,8 @@ AI: "Let me trace its execution... I see the issue in the call graph at line 47"
 ```
 
 When AI has access to trace data showing exactly how code executes - every function call, every parameter value, every state change - it can provide the same deep understanding and assistance that experienced developers rely on.
+
+In fact, AI might be even better than humans at analyzing trace data. Humans get overwhelmed by thousands of function calls and execution paths, but AI can process and find patterns in massive trace files instantly. We're giving AI the kind of rich, structured data it excels at analyzing.
 
 ## The Vision
 
