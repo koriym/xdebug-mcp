@@ -15,8 +15,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Koriym\\XdebugMcp\\": "src/",
-            "Koriym\\XdebugMcp\\Tests\\Fake\\": "tests/fake/"
+            "Koriym\\XdebugMcp\\": "src/"
         }
     },
     "autoload-dev": {
