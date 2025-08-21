@@ -82,15 +82,15 @@ cp vendor/koriym/xdebug-mcp/templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUD
 ```bash
 # AIに推測ではなく実行時データ分析をさせる
 claude --print "test/debug_test.phpをトレースしてパフォーマンスボトルネックを特定して"
-# ✅ 期待結果: AIが自動的にxdebug-traceを実行してデータドリブン分析を提供
+# ✅ Expected: AI automatically runs xdebug-trace and provides data-driven analysis
 
 # AIにパフォーマンスプロファイリングをさせる
 claude --print "test/debug_test.phpをプロファイルして最も遅い関数を表示して"
-# ✅ 期待結果: AIがxdebug-profileを実行してcachegrind出力を分析
+# ✅ Expected: AI runs xdebug-profile and analyzes cachegrind output
 
 # AIにカバレッジ分析をさせる  
 claude --print "test/debug_test.phpのコードカバレッジを分析して"
-# ✅ 期待結果: AIがxdebug-coverageを実行して未テストコードパスを報告
+# ✅ Expected: AI runs xdebug-coverage and reports untested code paths
 ```
 
 **手動検証（オプション）:**
@@ -102,10 +102,10 @@ claude --print "test/debug_test.phpのコードカバレッジを分析して"
 ```
 
 **確認すべき内容:**
-- 関数呼び出しの正確なシーケンスと変数値を示すトレースファイル
-- O(2^n) fibonacci非効率性を明らかにするパフォーマンスデータ
-- 未テストコードパスをハイライトするカバレッジレポート
-- 静的コード推測ではなくデータドリブン分析を提供するAI
+- Trace files showing exact function call sequences and variable values
+- Performance data revealing O(2^n) fibonacci inefficiency 
+- Coverage reports highlighting untested code paths
+- AI providing data-driven analysis instead of static code guessing
 
 ## 使用方法
 
@@ -164,33 +164,33 @@ php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script
 ```bash
 claude --print "test/debug_test.phpを実行して実行パターンを分析して"
 # AIが自動的に./vendor/bin/xdebug-traceを選択して分析を提供：
-# ✅ トレース完了: /tmp/trace_20250821_044930.xt (64行)
-# 📊 分析: O(2^n) Fibonacci非効率性、安定メモリ使用、マイクロ秒レベル計測
+# ✅ Trace complete: /tmp/trace_20250821_044930.xt (64 lines)
+# 📊 Analysis: O(2^n) Fibonacci inefficiency, stable memory usage, microsecond-level metrics
 ```
 
 ### 2. パフォーマンスプロファイル
 ```bash
 claude --print "test/debug_test.phpのパフォーマンスをプロファイルして"
 # AIが自動的に./vendor/bin/xdebug-profileを使用：
-# ✅ プロファイル完了: /tmp/cachegrind.out.1755719364
-# 📊 サイズ: 1.9K、関数: 29、呼び出し: 28、ボトルネック特定
+# ✅ Profile complete: /tmp/cachegrind.out.1755719364
+# 📊 Size: 1.9K, Functions: 29, Calls: 28, identifies bottlenecks
 ```
 
 ### 3. コードカバレッジ分析
 ```bash
 claude --print "test/debug_test.phpのコードカバレッジを分析して"
 # AIが自動的に./vendor/bin/xdebug-coverageを使用：
-# ✅ カバレッジ完了: HTMLレポート生成
-# 📊 カバレッジ: 85.2% 行、92.1% 関数、未テストコードパス特定
+# ✅ Coverage complete: HTML report generated
+# 📊 Coverage: 85.2% lines, 92.1% functions, identifies untested code paths
 ```
 
 ### 4. ステップデバッグ
 ```bash
 claude --print "test/debug_test.phpをデバッグして、15行目でbreakして変数値を表示して"
 # AIがブレークポイントを設定してデバッグセッションを提供：
-# ✅ ブレークポイント設定: test/debug_test.php:15
-# 📊 ブレークポイントでの変数値:
-# | 変数     | 型     | 値                       |
+# ✅ Breakpoint set at test/debug_test.php:15
+# 📊 Variables at breakpoint:
+# | Variable | Type   | Value                    |
 # |----------|--------|--------------------------|
 # | $n       | int    | 6                        |
 # | $result  | int    | 8                        |
