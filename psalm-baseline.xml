@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<files psalm-version="6.13.1@1e3b7f0a8ab32b23197b91107adc0a7ed8a05b51">
+  <file src="src/Exceptions/XdebugNotAvailableException.php">
+    <UnusedClass>
+      <code><![CDATA[XdebugNotAvailableException]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/McpServer.php">
+    <AssignmentToVoid>
+      <code><![CDATA[$filename]]></code>
+      <code><![CDATA[$filename]]></code>
+    </AssignmentToVoid>
+    <FalsableReturnStatement>
+      <code><![CDATA[$report]]></code>
+      <code><![CDATA[json_encode($info, JSON_PRETTY_PRINT)]]></code>
+      <code><![CDATA[ob_get_clean()]]></code>
+    </FalsableReturnStatement>
+    <InvalidCast>
+      <code><![CDATA[$filename]]></code>
+      <code><![CDATA[$filename]]></code>
+    </InvalidCast>
+    <TooFewArguments>
+      <code><![CDATA[xdebug_start_trace()]]></code>
+    </TooFewArguments>
+    <UndefinedConstant>
+      <code><![CDATA[XDEBUG_CC_UNUSED]]></code>
+    </UndefinedConstant>
+    <UnusedClass>
+      <code><![CDATA[McpServer]]></code>
+    </UnusedClass>
+    <UnusedFunctionCall>
+      <code><![CDATA[xdebug_print_function_stack]]></code>
+    </UnusedFunctionCall>
+    <UnusedVariable>
+      <code><![CDATA[$decoded]]></code>
+      <code><![CDATA[$depth]]></code>
+      <code><![CDATA[$file]]></code>
+      <code><![CDATA[$filename]]></code>
+      <code><![CDATA[$filename]]></code>
+      <code><![CDATA[$functionMap]]></code>
+      <code><![CDATA[$lineNumber]]></code>
+    </UnusedVariable>
+  </file>
+  <file src="src/PhpunitConfigManager.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[hasTraceExtension]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/TraceExtension.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function bootstrap(Configuration $configuration, Facade $facade, ParameterCollection $parameters): void]]></code>
+      <code><![CDATA[public function notify(AfterTestMethodCalled $event): void]]></code>
+      <code><![CDATA[public function notify(BeforeTestMethodCalled $event): void]]></code>
+    </MissingOverrideAttribute>
+    <UndefinedMethod>
+      <code><![CDATA[testMethod]]></code>
+      <code><![CDATA[testMethod]]></code>
+    </UndefinedMethod>
+    <UnusedClass>
+      <code><![CDATA[TraceExtension]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/TraceHelper.php">
+    <InvalidPropertyAssignmentValue>
+      <code><![CDATA[xdebug_start_trace(rtrim(self::$traceFile, '.xt'))]]></code>
+    </InvalidPropertyAssignmentValue>
+  </file>
+  <file src="src/TraceListener.php">
+    <PossiblyUnusedParam>
+      <code><![CDATA[$test]]></code>
+      <code><![CDATA[$test]]></code>
+      <code><![CDATA[$time]]></code>
+    </PossiblyUnusedParam>
+    <UndefinedClass>
+      <code><![CDATA[TestListener]]></code>
+    </UndefinedClass>
+    <UnusedClass>
+      <code><![CDATA[TraceListener]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/XdebugClient.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[getBreakpointInfo]]></code>
+      <code><![CDATA[getCoverage]]></code>
+      <code><![CDATA[getCoverageInfo]]></code>
+      <code><![CDATA[getProperty]]></code>
+      <code><![CDATA[getStatus]]></code>
+      <code><![CDATA[setProperty]]></code>
+      <code><![CDATA[startCoverage]]></code>
+      <code><![CDATA[stopCoverage]]></code>
+    </PossiblyUnusedMethod>
+    <PossiblyUnusedParam>
+      <code><![CDATA[$type]]></code>
+    </PossiblyUnusedParam>
+    <UndefinedConstant>
+      <code><![CDATA[XDEBUG_CC_UNUSED]]></code>
+    </UndefinedConstant>
+    <UnusedFunctionCall>
+      <code><![CDATA[socket_read]]></code>
+    </UnusedFunctionCall>
+  </file>
+  <file src="src/XdebugPhpunitCommand.php">
+    <UnusedClass>
+      <code><![CDATA[XdebugPhpunitCommand]]></code>
+    </UnusedClass>
+  </file>
+</files>

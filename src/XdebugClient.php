@@ -1,22 +1,55 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Koriym\XdebugMcp;
 
 use Koriym\XdebugMcp\Exceptions\SocketException;
 use Koriym\XdebugMcp\Exceptions\XdebugConnectionException;
+use SimpleXMLElement;
+use Throwable;
+
+use function array_map;
+use function base64_encode;
+use function function_exists;
+use function implode;
+use function ini_get;
+use function is_array;
+use function libxml_get_errors;
+use function libxml_use_internal_errors;
+use function phpversion;
+use function simplexml_load_string;
+use function socket_accept;
+use function socket_bind;
+use function socket_close;
+use function socket_create;
+use function socket_last_error;
+use function socket_listen;
+use function socket_read;
+use function socket_set_option;
+use function socket_strerror;
+use function socket_write;
+use function strlen;
+use function trim;
+
+use const AF_INET;
+use const LIBXML_NOERROR;
+use const LIBXML_NONET;
+use const LIBXML_NOWARNING;
+use const SO_RCVTIMEO;
+use const SO_REUSEADDR;
+use const SOCK_STREAM;
+use const SOL_SOCKET;
+use const SOL_TCP;
 
 class XdebugClient
 {
-    private string $host;
-    private int $port;
     private $socket = null;
     private int $transactionId = 1;
     private bool $connected = false;
 
-    public function __construct(string $host = '127.0.0.1', int $port = 9004)
+    public function __construct(private string $host = '127.0.0.1', private int $port = 9004)
     {
-        $this->host = $host;
-        $this->port = $port;
     }
 
     public function connect(): array
@@ -29,14 +62,14 @@ class XdebugClient
         socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
         socket_set_option($this->socket, SOL_SOCKET, SO_RCVTIMEO, ['sec' => 30, 'usec' => 0]);
 
-        if (!socket_bind($this->socket, $this->host, $this->port)) {
+        if (! socket_bind($this->socket, $this->host, $this->port)) {
             throw new SocketException('Failed to bind socket');
         }
 
-        if (!socket_listen($this->socket, 1)) {
+        if (! socket_listen($this->socket, 1)) {
             throw new SocketException('Failed to listen on socket');
         }
-        
+
         $clientSocket = socket_accept($this->socket);
         if ($clientSocket === false) {
             throw new SocketException('Failed to accept connection');
@@ -47,7 +80,7 @@ class XdebugClient
 
         $initData = $this->readResponse();
         $this->connected = true;
-        
+
         return $this->parseXml($initData);
     }
 
@@ -64,29 +97,27 @@ class XdebugClient
     public function setBreakpoint(string $filename, int $line, string $condition = ''): string
     {
         $this->ensureConnected();
-        
+
         $args = [
             't' => 'line',
             'f' => $filename,
-            'n' => $line
+            'n' => $line,
         ];
-        
-        if (!empty($condition)) {
+
+        if (! empty($condition)) {
             $args['--'] = base64_encode($condition);
         }
 
         $response = $this->sendCommand('breakpoint_set', $args);
         $parsed = $this->parseXml($response);
-        
-        $breakpointId = $parsed['@attributes']['id'] ?? 'unknown';
-        
-        return $breakpointId;
+
+        return $parsed['@attributes']['id'] ?? 'unknown';
     }
 
     public function removeBreakpoint(string $breakpointId): void
     {
         $this->ensureConnected();
-        
+
         $this->sendCommand('breakpoint_remove', ['d' => $breakpointId]);
     }
 
@@ -94,6 +125,7 @@ class XdebugClient
     {
         $this->ensureConnected();
         $response = $this->sendCommand('step_into');
+
         return $this->parseXml($response);
     }
 
@@ -101,6 +133,7 @@ class XdebugClient
     {
         $this->ensureConnected();
         $response = $this->sendCommand('step_over');
+
         return $this->parseXml($response);
     }
 
@@ -108,6 +141,7 @@ class XdebugClient
     {
         $this->ensureConnected();
         $response = $this->sendCommand('step_out');
+
         return $this->parseXml($response);
     }
 
@@ -115,6 +149,7 @@ class XdebugClient
     {
         $this->ensureConnected();
         $response = $this->sendCommand('run');
+
         return $this->parseXml($response);
     }
 
@@ -122,6 +157,7 @@ class XdebugClient
     {
         $this->ensureConnected();
         $response = $this->sendCommand('stack_get');
+
         return $this->parseXml($response);
     }
 
@@ -129,6 +165,7 @@ class XdebugClient
     {
         $this->ensureConnected();
         $response = $this->sendCommand('context_get', ['c' => $context]);
+
         return $this->parseXml($response);
     }
 
@@ -136,6 +173,7 @@ class XdebugClient
     {
         $this->ensureConnected();
         $response = $this->sendCommand('eval', ['--' => base64_encode($expression)]);
+
         return $this->parseXml($response);
     }
 
@@ -143,6 +181,7 @@ class XdebugClient
     {
         $this->ensureConnected();
         $response = $this->sendCommand('status');
+
         return $this->parseXml($response);
     }
 
@@ -150,7 +189,7 @@ class XdebugClient
     {
         $this->ensureConnected();
         $features = [];
-        
+
         $commonFeatures = [
             'language_supports_threads',
             'language_name',
@@ -164,7 +203,7 @@ class XdebugClient
             'multiple_sessions',
             'max_children',
             'max_data',
-            'max_depth'
+            'max_depth',
         ];
 
         foreach ($commonFeatures as $feature) {
@@ -172,7 +211,7 @@ class XdebugClient
                 $response = $this->sendCommand('feature_get', ['n' => $feature]);
                 $parsed = $this->parseXml($response);
                 $features[$feature] = $parsed['#text'] ?? $parsed['@attributes']['supported'] ?? null;
-            } catch (\Exception $e) {
+            } catch (Throwable) {
                 // Skip failed features
             }
         }
@@ -182,7 +221,7 @@ class XdebugClient
 
     private function ensureConnected(): void
     {
-        if (!$this->connected || !$this->socket) {
+        if (! $this->connected || ! $this->socket) {
             throw new XdebugConnectionException('Not connected to Xdebug session');
         }
     }
@@ -190,9 +229,9 @@ class XdebugClient
     private function sendCommand(string $command, array $args = []): string
     {
         $transactionId = $this->transactionId++;
-        
+
         $commandString = "{$command} -i {$transactionId}";
-        
+
         foreach ($args as $key => $value) {
             if ($key === '--') {
                 $commandString .= " -- {$value}";
@@ -202,8 +241,7 @@ class XdebugClient
         }
 
         $commandString .= "\0";
-        
-        
+
         $bytesWritten = socket_write($this->socket, $commandString, strlen($commandString));
         if ($bytesWritten === false) {
             throw new SocketException('Failed to send command: ' . socket_strerror(socket_last_error($this->socket)));
@@ -216,38 +254,39 @@ class XdebugClient
     {
         $lengthData = '';
         $char = '';
-        
+
         while ($char !== "\0") {
             $result = socket_read($this->socket, 1);
             if ($result === false) {
                 throw new SocketException('Failed to read from socket: ' . socket_strerror(socket_last_error($this->socket)));
             }
+
             $char = $result;
             if ($char !== "\0") {
                 $lengthData .= $char;
             }
         }
 
-        $length = (int)$lengthData;
+        $length = (int) $lengthData;
         if ($length <= 0) {
             throw new XdebugConnectionException('Invalid response length: ' . $length);
         }
 
         $response = '';
         $bytesRead = 0;
-        
+
         while ($bytesRead < $length) {
             $chunk = socket_read($this->socket, $length - $bytesRead);
             if ($chunk === false) {
                 throw new SocketException('Failed to read response data: ' . socket_strerror(socket_last_error($this->socket)));
             }
+
             $response .= $chunk;
             $bytesRead += strlen($chunk);
         }
 
         socket_read($this->socket, 1);
 
-        
         return $response;
     }
 
@@ -255,43 +294,45 @@ class XdebugClient
     {
         $previousUseErrors = libxml_use_internal_errors(true);
         $xmlDoc = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
-        
+
         if ($xmlDoc === false) {
             $errors = libxml_get_errors();
             libxml_use_internal_errors($previousUseErrors);
-            throw new XdebugConnectionException('Failed to parse XML response: ' . implode(', ', array_map(fn($e) => $e->message, $errors)));
+
+            throw new XdebugConnectionException('Failed to parse XML response: ' . implode(', ', array_map(static fn ($e) => $e->message, $errors)));
         }
-        
+
         libxml_use_internal_errors($previousUseErrors);
-        
+
         return $this->xmlToArray($xmlDoc);
     }
 
-    private function xmlToArray(\SimpleXMLElement $xml): array
+    private function xmlToArray(SimpleXMLElement $xml): array
     {
         $result = [];
-        
+
         foreach ($xml->attributes() as $key => $value) {
-            $result['@attributes'][$key] = (string)$value;
+            $result['@attributes'][$key] = (string) $value;
         }
 
         if ($xml->count() > 0) {
             foreach ($xml->children() as $child) {
                 $childArray = $this->xmlToArray($child);
                 $childName = $child->getName();
-                
+
                 if (isset($result[$childName])) {
-                    if (!is_array($result[$childName]) || !isset($result[$childName][0])) {
+                    if (! is_array($result[$childName]) || ! isset($result[$childName][0])) {
                         $result[$childName] = [$result[$childName]];
                     }
+
                     $result[$childName][] = $childArray;
                 } else {
                     $result[$childName] = $childArray;
                 }
             }
         } else {
-            $content = trim((string)$xml);
-            if (!empty($content)) {
+            $content = trim((string) $xml);
+            if (! empty($content)) {
                 $result['#text'] = $content;
             }
         }
@@ -303,6 +344,7 @@ class XdebugClient
     {
         $this->ensureConnected();
         $this->sendCommand('profiler_enable');
+
         return ['status' => 'profiling_started', 'output_file' => $outputFile];
     }
 
@@ -310,6 +352,7 @@ class XdebugClient
     {
         $this->ensureConnected();
         $this->sendCommand('profiler_disable');
+
         return ['status' => 'profiling_stopped'];
     }
 
@@ -318,14 +361,14 @@ class XdebugClient
         return [
             'profiler_status' => 'active',
             'output_dir' => ini_get('xdebug.output_dir'),
-            'output_name' => ini_get('xdebug.profiler_output_name')
+            'output_name' => ini_get('xdebug.profiler_output_name'),
         ];
     }
 
     public function startCoverage(array $options = []): array
     {
         $flags = XDEBUG_CC_UNUSED;
-        if (isset($options['track_unused']) && !$options['track_unused']) {
+        if (isset($options['track_unused']) && ! $options['track_unused']) {
             $flags = 0;
         }
 
@@ -359,7 +402,7 @@ class XdebugClient
         return [
             'coverage_enabled' => function_exists('xdebug_start_code_coverage'),
             'xdebug_version' => phpversion('xdebug'),
-            'coverage_mode' => ini_get('xdebug.mode')
+            'coverage_mode' => ini_get('xdebug.mode'),
         ];
     }
 
@@ -367,37 +410,38 @@ class XdebugClient
     {
         $this->ensureConnected();
         $response = $this->sendCommand('breakpoint_list');
+
         return $this->parseXml($response);
     }
 
     public function setExceptionBreakpoint(string $exceptionName, string $state = 'enabled'): string
     {
         $this->ensureConnected();
-        
+
         $args = [
             't' => 'exception',
             'x' => $exceptionName,
-            's' => $state
+            's' => $state,
         ];
 
         $response = $this->sendCommand('breakpoint_set', $args);
         $parsed = $this->parseXml($response);
-        
+
         return $parsed['@attributes']['id'] ?? 'unknown';
     }
 
     public function setWatchBreakpoint(string $expression, string $type = 'write'): string
     {
         $this->ensureConnected();
-        
+
         $args = [
             't' => 'watch',
-            '--' => base64_encode($expression)
+            '--' => base64_encode($expression),
         ];
 
         $response = $this->sendCommand('breakpoint_set', $args);
         $parsed = $this->parseXml($response);
-        
+
         return $parsed['@attributes']['id'] ?? 'unknown';
     }
 
@@ -405,6 +449,7 @@ class XdebugClient
     {
         $this->ensureConnected();
         $response = $this->sendCommand('breakpoint_get', ['d' => $breakpointId]);
+
         return $this->parseXml($response);
     }
 
@@ -414,8 +459,9 @@ class XdebugClient
         $response = $this->sendCommand('property_set', [
             'n' => $name,
             'c' => $context,
-            '--' => base64_encode($value)
+            '--' => base64_encode($value),
         ]);
+
         return $this->parseXml($response);
     }
 
@@ -424,8 +470,9 @@ class XdebugClient
         $this->ensureConnected();
         $response = $this->sendCommand('property_get', [
             'n' => $name,
-            'c' => $context
+            'c' => $context,
         ]);
+
         return $this->parseXml($response);
     }
 
@@ -434,8 +481,9 @@ class XdebugClient
         $this->ensureConnected();
         $response = $this->sendCommand('feature_set', [
             'n' => $featureName,
-            'v' => $value
+            'v' => $value,
         ]);
+
         return $this->parseXml($response);
     }
 
@@ -443,6 +491,7 @@ class XdebugClient
     {
         $this->ensureConnected();
         $response = $this->sendCommand('feature_get', ['n' => $featureName]);
+
         return $this->parseXml($response);
     }
 

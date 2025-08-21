@@ -1,8 +1,11 @@
 #!/usr/bin/env php
 <?php
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/autoload.php';
 
-use XdebugMcp\McpServer;
+use Koriym\XdebugMcp\McpServer;
 
-(new McpServer())();
+$server = new McpServer();
+fwrite(STDERR, "Xdebug MCP Server started.\n");
+$server();
+// This is a long-running server, it will not return to the caller.

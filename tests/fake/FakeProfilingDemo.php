@@ -1,10 +1,10 @@
 <?php
 
-namespace XdebugMcp\Tests\Fake;
+namespace Koriym\XdebugMcp\Tests\Fake;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
-use XdebugMcp\Tests\Fake\FakeMcpServer;
+use Koriym\XdebugMcp\Tests\Fake\FakeMcpServer;
 
 /**
  * プロファイリングとカバレッジ機能のデモ

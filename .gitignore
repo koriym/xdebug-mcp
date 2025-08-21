@@ -6,14 +6,6 @@ composer.lock
 .phpunit.cache/
 *.log
 
-## Development files
-debug_mcp_server.php
-test_integration.php
-test_mcp.php
-test_profiling_coverage.php
-test_with_xdebug.php
-run_all_tests.php
-
 ## IDE
 .vscode/
 .idea/
@@ -23,7 +15,7 @@ run_all_tests.php
 Thumbs.db
 
 ## Local configs
-claude_desktop_config_example.json
+claude_desktop_config.json
 mcp.json
 
 ## Home directory
