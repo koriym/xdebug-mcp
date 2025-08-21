@@ -15,7 +15,7 @@ composer.lock
 Thumbs.db
 
 ## Local configs
-claude_desktop_config_example.json
+claude_desktop_config.json
 mcp.json
 
 ## Home directory
