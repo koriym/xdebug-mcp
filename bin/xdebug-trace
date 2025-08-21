@@ -3,19 +3,9 @@
 
 declare(strict_types=1);
 
-// Load autoloader and determine project root
-$autoloadPath = require __DIR__ . '/autoload.php';
-
-// Determine project root from autoloader path
-$normalized = str_replace('\\', '/', $autoloadPath);
-$projectRoot = str_ends_with($normalized, '/vendor/autoload.php')
-    ? dirname($autoloadPath, 2)
-    : dirname($autoloadPath);
-
-if (!file_exists($projectRoot . '/composer.json')) {
-    fwrite(STDERR, "Error: Could not determine project root from autoloader path: $autoloadPath\n");
-    exit(1);
-}
+// Load autoloader and get project root
+$paths = require __DIR__ . '/autoload.php';
+$projectRoot = $paths['project_root'];
 
 // Parse command line arguments
 function showHelp(string $scriptName): void {
