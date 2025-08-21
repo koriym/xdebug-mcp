@@ -1,6 +1,6 @@
 # PHP Xdebug MCP サーバー
 
-> AIが私たちのようにXdebugを使って開発
+> AIが私たちのようにXdebugを使ってPHPデバッグ
 
 <img width="256" alt="xdebug-mcp" src="https://koriym.github.io/xdebug-mcp/logo.jpeg" />
 
@@ -39,18 +39,23 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
 claude mcp list
 ```
 
-### Xdebug設定（オプション）
+### Xdebug設定（推奨）
 
-**php.ini: Xdebugをコメントアウト（パフォーマンス向上）**
+**php.ini: 最適なパフォーマンスのためXdebugをコメントアウト**
 ```ini
-# php.ini でパフォーマンス向上のためコメントアウト
+# 推奨: php.ini でパフォーマンス向上のためコメントアウト
 ;zend_extension=xdebug
 # その他のXdebug設定はvendor/bin/xdebug-*コマンドで自動処理されます
 ```
 
+**なぜ推奨されるか:**
+- Xdebugを常時有効にするとPHP実行速度が50-80%低下します
+- vendor/bin/xdebug-*コマンドは必要時のみXdebugを読み込みます
+- 本番環境では決してXdebugを永続的に有効にすべきではありません
+
 ### AI設定（推奨）
 
-**Claudeに推測ではなく実行時解析を使わせる:**
+**AIに推測ではなく実行時解析を使わせる:**
 
 ```bash
 # プロジェクト固有: デバッグ原則をプロジェクトにコピー
@@ -69,28 +74,39 @@ cp vendor/koriym/xdebug-mcp/templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUD
 - AIが代わりに`./vendor/bin/xdebug-trace`を使うようになる
 - 実際の実行トレースからデータドリブン分析が可能
 
-## デモ & 検証
+## クイックスタート
 
-**MCPサーバーを起動:**
+**1. MCPサーバー起動:**
 ```bash
-# Xdebug MCP サーバーを起動
 ./vendor/bin/xdebug-server
-# ✅ 期待結果: サーバーがポート9004で起動し、AIコマンドを受付可能
+# ✅ サーバーがポート9004で起動し、AIコマンドを受付可能
 ```
 
-**AI統合をテスト（別ターミナルで）:**
+**2. AIにランタイムデータ分析を依頼:**
 ```bash
-# AIに推測ではなく実行時データ分析をさせる
+# 別ターミナルで - AIに推測ではなく実際の実行データを分析させる
 claude --print "test/debug_test.phpをトレースしてパフォーマンスボトルネックを特定して"
-# ✅ Expected: AI automatically runs xdebug-trace and provides data-driven analysis
+# ✅ AIが自動的にxdebug-traceを実行してデータドリブン分析を提供
+```
 
-# AIにパフォーマンスプロファイリングをさせる
+**3. ゼロ設定PHPUnitデバッグ（ゲームチェンジャー）:**
+```bash
+# AI支援テストデバッグ - phpunit.xml変更不要！
+./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
+# ✅ TraceExtension自動注入、特定テストメソッドをトレース、全PHPUnitプロジェクトで動作
+```
+
+## 検証
+
+**AI統合をテスト:**
+```bash
+# パフォーマンスプロファイリング
 claude --print "test/debug_test.phpをプロファイルして最も遅い関数を表示して"
-# ✅ Expected: AI runs xdebug-profile and analyzes cachegrind output
+# ✅ AIがxdebug-profileを実行してcachegrind出力を分析
 
-# AIにカバレッジ分析をさせる  
+# カバレッジ分析  
 claude --print "test/debug_test.phpのコードカバレッジを分析して"
-# ✅ Expected: AI runs xdebug-coverage and reports untested code paths
+# ✅ AIがxdebug-coverageを実行してテストされていないコードパスを報告
 ```
 
 **手動検証（オプション）:**
@@ -133,32 +149,7 @@ claude --print "test/debug_test.phpのコードカバレッジを分析して"
 php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script.php
 ```
 
-### xdebug-phpunit 使用方法
-
-ゼロ設定でPHPUnitテストの自動Xdebugトレース・プロファイルを実行：
-
-```bash
-# 特定テストメソッドのトレース（デフォルトモード）
-./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
-
-# テストファイル全体のプロファイル
-./vendor/bin/xdebug-phpunit --profile tests/UserTest.php
-
-# フィルター条件でのトレース
-./vendor/bin/xdebug-phpunit --filter=testUserAuth
-
-# 有効設定の表示（透明性確保）
-./vendor/bin/xdebug-phpunit --dry-run tests/UserTest.php
-
-# 詳細ログ表示（デバッグ用）
-./vendor/bin/xdebug-phpunit --verbose tests/UserTest.php
-```
-
-**自動注入:** TraceExtensionが一時phpunit.xmlに自動注入されます（手動設定不要）
-
-**出力:**
-- トレースモード: `/tmp/trace_*.xt` (実行トレース)
-- プロファイルモード: `/tmp/cachegrind.out.*` (パフォーマンスデータ)
+### AI活用例
 
 ### 1. 実行トレース
 ```bash
@@ -202,6 +193,33 @@ claude --print "test/debug_test.phpをデバッグして、15行目でbreakし�
 # PHPUnitテストのデバッグ（ゼロ設定で即座に実行）
 ./vendor/bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
 ```
+
+### xdebug-phpunit 使用方法 - 究極のPHPUnitデバッグソリューション
+
+**ゼロ設定** でPHPUnitの自動Xdebugトレース・プロファイルを実行 - **phpunit.xmlを変更せずに既存のPHPUnitプロジェクトで動作**：
+
+```bash
+# 特定テストメソッドのトレース（デフォルトモード）
+./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
+
+# テストファイル全体のプロファイル
+./vendor/bin/xdebug-phpunit --profile tests/UserTest.php
+
+# フィルター条件でのトレース
+./vendor/bin/xdebug-phpunit --filter=testUserAuth
+
+# 有効設定の表示（透明性確保）
+./vendor/bin/xdebug-phpunit --dry-run tests/UserTest.php
+
+# 詳細ログ表示（デバッグ用）
+./vendor/bin/xdebug-phpunit --verbose tests/UserTest.php
+```
+
+**自動注入:** TraceExtensionが一時phpunit.xmlに自動注入されます（手動設定不要）
+
+**出力:**
+- トレースモード: `/tmp/trace_*.xt` (実行トレース)
+- プロファイルモード: `/tmp/cachegrind.out.*` (パフォーマンスデータ)
 
 ## 利用できる42ツール
 
