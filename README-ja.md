@@ -20,78 +20,96 @@ PHP Xdebug のデバッグ、プロファイル、カバレッジ分析をAIが�
 - **カバレッジ**: 行/関数カバレッジ、HTML/XMLレポート、PHPUnit連携
 - **拡張**: メモリ統計、エラー収集、トレース、高度なブレークポイント
 
-## クイックスタート
+## インストール
 
 ```bash
-composer install
-claude mcp add xdebug php "$(pwd)/bin/xdebug-mcp"
-./bin/xdebug-profile test/debug_test.php
+# 開発依存としてインストール
+composer require --dev koriym/xdebug-mcp:1.x-dev
 ```
 
 ## セットアップ
-
-```bash
-composer install
-```
-
-**推奨: bin/xdebug-* コマンドを使用**
-```bash
-# 最良のアプローチ - ツールがXdebugを自動処理
-./bin/xdebug-trace script.php
-./bin/xdebug-profile script.php
-./bin/xdebug-coverage script.php
-```
-
-**手動アプローチ（上記と同等）**
-```bash
-# binコマンドと同じだが手動
-php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script.php
-```
-
-**php.ini: Xdebugをコメントアウト（パフォーマンス向上）**
-```ini
-# php.ini でパフォーマンス向上のためコメントアウト
-;zend_extension=xdebug
-# その他のXdebug設定はbin/xdebug-*コマンドで自動処理されます
-```
 
 ### MCP設定
 
 ```bash
 # Claude Desktop
-claude mcp add xdebug php "$(pwd)/bin/xdebug-mcp"
+claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
 
 # 確認
 claude mcp list
 ```
 
-### AIに推測ではなく実行時解析を使わせる
+### Xdebug設定（オプション）
 
-**問題**: 従来のAI開発は静的コード分析とエラーメッセージに依存しており、PHPアプリケーションで何が起こっているかをAIは推測するしかありません。
-
-**解決策**: これらのテンプレートはClaudeに推測ではなく、Xdebugプロファイリングとトレースからの実際の実行データを使用することを教えます。
-
-**[テンプレートディレクトリ](templates/README.md)** - 完全設定ガイド
-
-#### システム全体設定
-```bash
-# 全PHPプロジェクトでClaudeに実行時解析を使用させる
-cp templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUDE.md
+**php.ini: Xdebugをコメントアウト（パフォーマンス向上）**
+```ini
+# php.ini でパフォーマンス向上のためコメントアウト
+;zend_extension=xdebug
+# その他のXdebug設定はvendor/bin/xdebug-*コマンドで自動処理されます
 ```
 
-#### プロジェクト固有設定
+### AI設定（推奨）
+
+**Claudeに推測ではなく実行時解析を使わせる:**
+
 ```bash
-# このプロジェクトでClaudeに実行時解析を使用させる
-cp templates/CLAUDE_DEBUG_PRINCIPLES.md ./
+# プロジェクト固有: デバッグ原則をプロジェクトにコピー
+cp vendor/koriym/xdebug-mcp/templates/CLAUDE_DEBUG_PRINCIPLES.md ./
 echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
 ```
 
-**結果**: コード+エラー推測から実行時データ分析への開発変革:
+**システム全体（オプション）:**
+```bash
+# 全PHPプロジェクトに適用
+cp vendor/koriym/xdebug-mcp/templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUDE.md
+```
 
-- **前**: 「このコードは遅いかもしれません」（AI推測）
-- **後**: 「fibonacci()は3,772μs（全体の27.6%）を24回の再帰呼び出しで消費」（AIが実データを分析）
+**これによりできること:**
+- AIが`var_dump()`や`echo`をデバッグに使わなくなる
+- AIが代わりに`./vendor/bin/xdebug-trace`を使うようになる
+- 実際の実行トレースからデータドリブン分析が可能
 
-## コマンドラインツール
+## デモ & 検証
+
+**MCPサーバーを起動:**
+```bash
+# Xdebug MCP サーバーを起動
+./vendor/bin/xdebug-server
+# ✅ 期待結果: サーバーがポート9004で起動し、AIコマンドを受付可能
+```
+
+**AI統合をテスト（別ターミナルで）:**
+```bash
+# AIに推測ではなく実行時データ分析をさせる
+claude --print "test/debug_test.phpをトレースしてパフォーマンスボトルネックを特定して"
+# ✅ 期待結果: AIが自動的にxdebug-traceを実行してデータドリブン分析を提供
+
+# AIにパフォーマンスプロファイリングをさせる
+claude --print "test/debug_test.phpをプロファイルして最も遅い関数を表示して"
+# ✅ 期待結果: AIがxdebug-profileを実行してcachegrind出力を分析
+
+# AIにカバレッジ分析をさせる  
+claude --print "test/debug_test.phpのコードカバレッジを分析して"
+# ✅ 期待結果: AIがxdebug-coverageを実行して未テストコードパスを報告
+```
+
+**手動検証（オプション）:**
+```bash
+# 必要に応じて直接ツールを実行することも可能
+./vendor/bin/xdebug-trace test/debug_test.php
+./vendor/bin/xdebug-profile test/debug_test.php  
+./vendor/bin/xdebug-coverage test/debug_test.php
+```
+
+**確認すべき内容:**
+- 関数呼び出しの正確なシーケンスと変数値を示すトレースファイル
+- O(2^n) fibonacci非効率性を明らかにするパフォーマンスデータ
+- 未テストコードパスをハイライトするカバレッジレポート
+- 静的コード推測ではなくデータドリブン分析を提供するAI
+
+## 使用方法
+
+### コマンドラインツール
 
 - `xdebug-server` - MCPサーバー起動（ポート9004）
 - `xdebug-mcp` - コアMCPサーバー 
@@ -100,25 +118,40 @@ echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
 - `xdebug-coverage` - コードカバレッジ分析
 - `xdebug-phpunit` - PHPUnit選択的Xdebug分析
 
+### 基本コマンド
+
+```bash
+# 推奨: vendor/bin/xdebug-* コマンドを使用
+./vendor/bin/xdebug-trace script.php
+./vendor/bin/xdebug-profile script.php
+./vendor/bin/xdebug-coverage script.php
+```
+
+**手動アプローチ（上記と同等）:**
+```bash
+# 同じ処理だが手動
+php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script.php
+```
+
 ### xdebug-phpunit 使用方法
 
 ゼロ設定でPHPUnitテストの自動Xdebugトレース・プロファイルを実行：
 
 ```bash
 # 特定テストメソッドのトレース（デフォルトモード）
-./bin/xdebug-phpunit tests/UserTest.php::testLogin
+./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
 
 # テストファイル全体のプロファイル
-./bin/xdebug-phpunit --profile tests/UserTest.php
+./vendor/bin/xdebug-phpunit --profile tests/UserTest.php
 
 # フィルター条件でのトレース
-./bin/xdebug-phpunit --filter=testUserAuth
+./vendor/bin/xdebug-phpunit --filter=testUserAuth
 
 # 有効設定の表示（透明性確保）
-./bin/xdebug-phpunit --dry-run tests/UserTest.php
+./vendor/bin/xdebug-phpunit --dry-run tests/UserTest.php
 
 # 詳細ログ表示（デバッグ用）
-./bin/xdebug-phpunit --verbose tests/UserTest.php
+./vendor/bin/xdebug-phpunit --verbose tests/UserTest.php
 ```
 
 **自動注入:** TraceExtensionが一時phpunit.xmlに自動注入されます（手動設定不要）
@@ -127,20 +160,18 @@ echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
 - トレースモード: `/tmp/trace_*.xt` (実行トレース)
 - プロファイルモード: `/tmp/cachegrind.out.*` (パフォーマンスデータ)
 
-## 使用例
-
 ### 1. 実行トレース
 ```bash
 claude --print "test/debug_test.phpを実行して実行パターンを分析して"
-# AIが自動的に./bin/xdebug-traceを選択して分析を提供：
-# ✅ トレース完了: /tmp/xdebug_trace_20250821_044930.xt (64行)
+# AIが自動的に./vendor/bin/xdebug-traceを選択して分析を提供：
+# ✅ トレース完了: /tmp/trace_20250821_044930.xt (64行)
 # 📊 分析: O(2^n) Fibonacci非効率性、安定メモリ使用、マイクロ秒レベル計測
 ```
 
 ### 2. パフォーマンスプロファイル
 ```bash
 claude --print "test/debug_test.phpのパフォーマンスをプロファイルして"
-# AIが自動的に./bin/xdebug-profileを使用：
+# AIが自動的に./vendor/bin/xdebug-profileを使用：
 # ✅ プロファイル完了: /tmp/cachegrind.out.1755719364
 # 📊 サイズ: 1.9K、関数: 29、呼び出し: 28、ボトルネック特定
 ```
@@ -148,7 +179,7 @@ claude --print "test/debug_test.phpのパフォーマンスをプロファイル
 ### 3. コードカバレッジ分析
 ```bash
 claude --print "test/debug_test.phpのコードカバレッジを分析して"
-# AIが自動的に./bin/xdebug-coverageを使用：
+# AIが自動的に./vendor/bin/xdebug-coverageを使用：
 # ✅ カバレッジ完了: HTMLレポート生成
 # 📊 カバレッジ: 85.2% 行、92.1% 関数、未テストコードパス特定
 ```
@@ -169,7 +200,7 @@ claude --print "test/debug_test.phpをデバッグして、15行目でbreakし�
 ### 5. PHPUnitテスト
 ```bash
 # PHPUnitテストのデバッグ（ゼロ設定で即座に実行）
-./bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
+./vendor/bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
 ```
 
 ## 利用できる42ツール
