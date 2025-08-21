@@ -9,22 +9,30 @@ $projectRoot = require __DIR__ . '/autoload.php';
 // Parse command line arguments
 function showHelp(string $scriptName): void {
     echo "Usage: $scriptName PHP_FILE [OPTIONS] [-- PHP_ARGS...]\n";
+    echo "       $scriptName -- PHP_BINARY SCRIPT_FILE [SCRIPT_ARGS...]\n";
     echo "\n";
     echo "Runs Xdebug code coverage analysis on the specified PHP file or command.\n";
     echo "\n";
     echo "Arguments:\n";
-    echo "  PHP_FILE    Path to PHP file to analyze (required)\n";
-    echo "  PHP_ARGS    Arguments to pass to the PHP script (after --)\n";
+    echo "  PHP_FILE      Path to PHP file to analyze (required)\n";
+    echo "  PHP_ARGS      Arguments to pass to the PHP script (after --)\n";
+    echo "  PHP_BINARY    Custom PHP binary path (when using -- prefix)\n";
+    echo "  SCRIPT_FILE   PHP script to analyze (when using -- prefix)\n";
+    echo "  SCRIPT_ARGS   Arguments for the script (when using -- prefix)\n";
     echo "\n";
     echo "Options:\n";
-    echo "  --html      Generate HTML coverage report\n";
-    echo "  --text      Generate text coverage summary (default)\n";
+    echo "  --html        Generate HTML coverage report\n";
+    echo "  --text        Generate text coverage summary (default)\n";
     echo "\n";
     echo "Examples:\n";
+    echo "  # Standard usage:\n";
     echo "  $scriptName test/debug_test.php                    # Basic coverage analysis\n";
     echo "  $scriptName my_script.php --html                  # Generate HTML report\n";
     echo "  $scriptName bin/page.php --text -- get /          # Coverage with arguments\n";
-    echo "  $scriptName bin/console.php --html -- cache:clear --env=dev  # Console command coverage\n";
+    echo "\n";
+    echo "  # Custom PHP binary:\n";
+    echo "  $scriptName -- php bin/page.php get /             # Natural PHP command style\n";
+    echo "  $scriptName -- /usr/bin/php8.3 script.php args   # Specific PHP version\n";
     echo "\n";
 }
 
@@ -44,20 +52,39 @@ if (in_array('--help', $argsToCheck) || in_array('-h', $argsToCheck) || count($a
     exit(0);
 }
 
-// Parse arguments
-$targetFile = $argv[1];
-$outputFormat = 'text';
-$phpArgs = [];
-
-// Parse options and find -- separator
-for ($i = 2; $i < count($argv); $i++) {
-    if ($argv[$i] === '--') {
-        $phpArgs = array_slice($argv, $i + 1);
-        break;
-    } elseif ($argv[$i] === '--html') {
-        $outputFormat = 'html';
-    } elseif ($argv[$i] === '--text') {
-        $outputFormat = 'text';
+// Parse arguments - handle both patterns:
+// Pattern 1: script.php [--html|--text] [-- args]
+// Pattern 2: -- php script.php args (always text format)
+if ($argv[1] === '--') {
+    // Pattern 2: -- php script.php args
+    if (count($argv) < 3) {
+        fwrite(STDERR, "❌ Error: PHP command and script required after --\n");
+        fwrite(STDERR, "Use '{$argv[0]} --help' for usage information\n");
+        exit(1);
+    }
+    $phpBinary = PHP_BINARY; // Use detected PHP for Xdebug execution
+    $customPhpBinary = $argv[2]; // Custom PHP for target script
+    $targetFile = $argv[3] ?? '';
+    $phpArgs = array_slice($argv, 4);
+    $outputFormat = 'text'; // Default for -- pattern
+} else {
+    // Pattern 1: script.php [--html|--text] [-- args]
+    $phpBinary = PHP_BINARY;
+    $customPhpBinary = null;
+    $targetFile = $argv[1];
+    $outputFormat = 'text';
+    $phpArgs = [];
+    
+    // Parse options and find -- separator
+    for ($i = 2; $i < count($argv); $i++) {
+        if ($argv[$i] === '--') {
+            $phpArgs = array_slice($argv, $i + 1);
+            break;
+        } elseif ($argv[$i] === '--html') {
+            $outputFormat = 'html';
+        } elseif ($argv[$i] === '--text') {
+            $outputFormat = 'text';
+        }
     }
 }
 
@@ -169,8 +196,8 @@ if (empty($phpArgs)) {
 }
 echo "📁 Output format: $outputFormat\n";
 
-// Build and execute command
-$command = [PHP_BINARY];
+// Build and execute command  
+$command = [$phpBinary];
 $command = array_merge($command, $xdebugOpts);
 $command[] = $wrapperScript;
 
