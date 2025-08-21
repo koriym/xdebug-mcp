@@ -308,7 +308,7 @@ class XdebugPhpunitCommand
 
         echo "\nTrace files generated:\n";
         foreach ($files as $file) {
-            $lines = count(file($file));
+            $lines = $this->countFileLines($file);
             echo "  $file ($lines lines)\n";
         }
 
@@ -381,5 +381,15 @@ class XdebugPhpunitCommand
     private function error(string $message): void
     {
         fwrite(STDERR, "Error: $message\n");
+    }
+
+    /**
+     * Count lines in file efficiently without loading into memory
+     */
+    private function countFileLines(string $path): int
+    {
+        $file = new \SplFileObject($path);
+        $file->seek(PHP_INT_MAX);
+        return $file->key() + 1;
     }
 }
