@@ -1,6 +1,31 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Koriym\XdebugMcp;
+
+use function array_filter;
+use function array_map;
+use function array_values;
+use function count;
+use function date;
+use function explode;
+use function extension_loaded;
+use function file_exists;
+use function filesize;
+use function fnmatch;
+use function function_exists;
+use function fwrite;
+use function getenv;
+use function glob;
+use function implode;
+use function ini_set;
+use function preg_replace;
+use function rtrim;
+use function strpos;
+use function uniqid;
+
+use const STDERR;
 
 /**
  * PHPUnit Selective Trace Helper
@@ -9,7 +34,7 @@ namespace Koriym\XdebugMcp;
 class TraceHelper
 {
     private static bool $traceActive = false;
-    private static ?string $traceFile = null;
+    private static string|null $traceFile = null;
     private static array $targetTests = [];
     private static bool $initialized = false;
 
@@ -20,27 +45,29 @@ class TraceHelper
         }
 
         $traceEnv = getenv('TRACE_TEST');
-        if (!$traceEnv) {
+        if (! $traceEnv) {
             self::$initialized = true;
+
             return;
         }
 
-        if (!extension_loaded('xdebug')) {
+        if (! extension_loaded('xdebug')) {
             fwrite(STDERR, "WARNING: Xdebug extension not loaded, tracing disabled\n");
             self::$initialized = true;
+
             return;
         }
 
         // Parse target tests and filter out empty patterns
         self::$targetTests = array_values(array_filter(array_map('trim', explode(',', $traceEnv)), 'strlen'));
-        
-        fwrite(STDERR, "TRACE: Configured to trace tests matching: " . implode(', ', self::$targetTests) . "\n");
+
+        fwrite(STDERR, 'TRACE: Configured to trace tests matching: ' . implode(', ', self::$targetTests) . "\n");
         self::$initialized = true;
     }
 
     public static function shouldTrace(string $testName): bool
     {
-        if (!self::$initialized) {
+        if (! self::$initialized) {
             self::init();
         }
 
@@ -59,7 +86,7 @@ class TraceHelper
 
     public static function startTrace(string $testName): void
     {
-        if (!function_exists('xdebug_start_trace')) {
+        if (! function_exists('xdebug_start_trace')) {
             return;
         }
 
@@ -80,7 +107,7 @@ class TraceHelper
 
     public static function stopTrace(string $testName): void
     {
-        if (!self::$traceActive || !function_exists('xdebug_stop_trace')) {
+        if (! self::$traceActive || ! function_exists('xdebug_stop_trace')) {
             return;
         }
 
@@ -119,10 +146,6 @@ class TraceHelper
         }
 
         // Contains match (for class names)
-        if (strpos($testName, $pattern) !== false) {
-            return true;
-        }
-
-        return false;
+        return strpos($testName, $pattern) !== false;
     }
 }
