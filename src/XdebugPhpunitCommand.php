@@ -343,8 +343,8 @@ class XdebugPhpunitCommand
         }
 
         echo "\nAnalyze profiles with:\n";
-        echo '  ./bin/xdebug-profile ' . $files[0] . "\n";
-        echo '  kcachegrind ' . $files[0] . "\n";
+        echo '  ./vendor/bin/xdebug-profile ' . escapeshellarg($files[0]) . "\n";
+        echo '  kcachegrind ' . escapeshellarg($files[0]) . "\n";
     }
 
     /**
@@ -370,8 +370,8 @@ class XdebugPhpunitCommand
         }
 
         echo "\nAnalyze traces with:\n";
-        echo '  head -20 ' . $files[0] . "\n";
-        echo "  grep 'function_name' " . $files[0] . "\n";
+        echo '  head -20 ' . escapeshellarg($files[0]) . "\n";
+        echo "  grep 'function_name' " . escapeshellarg($files[0]) . "\n";
     }
 
     /**
