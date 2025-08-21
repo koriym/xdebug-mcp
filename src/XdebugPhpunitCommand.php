@@ -15,10 +15,12 @@ class XdebugPhpunitCommand
     private string $mode = 'trace'; // trace or profile
     private array $phpunitArgs = [];
     private array $tempFiles = [];
+    private string $xdebugOutputDir = '/tmp';
 
-    public function __construct(string $projectRoot)
+    public function __construct(string $projectRoot, string $xdebugOutputDir = '/tmp')
     {
         $this->projectRoot = rtrim($projectRoot, '/');
+        $this->xdebugOutputDir = rtrim($xdebugOutputDir, '/');
     }
 
     /**
@@ -222,7 +224,7 @@ class XdebugPhpunitCommand
         if ($this->mode === 'profile') {
             return "-dxdebug.mode=profile " .
                    "-dxdebug.start_with_request=yes " .
-                   "-dxdebug.output_dir=/tmp " .
+                   "-dxdebug.output_dir=" . $this->xdebugOutputDir . " " .
                    "-dxdebug.profiler_output_name=cachegrind.out.%t " .
                    "-dxdebug.use_compression=0";
         }
@@ -232,7 +234,7 @@ class XdebugPhpunitCommand
                "-dxdebug.use_compression=0 " .
                "-dxdebug.collect_params=4 " .
                "-dxdebug.collect_return=1 " .
-               "-dxdebug.output_dir=/tmp";
+               "-dxdebug.output_dir=" . $this->xdebugOutputDir;
     }
 
     /**
@@ -262,7 +264,7 @@ class XdebugPhpunitCommand
      */
     private function reportProfileFiles(): void
     {
-        $files = glob('/tmp/cachegrind.out.*');
+        $files = glob($this->xdebugOutputDir . '/cachegrind.out.*');
         if (empty($files)) {
             echo "No profile files found (pattern may not have matched any tests)\n";
             return;
@@ -288,7 +290,7 @@ class XdebugPhpunitCommand
      */
     private function reportTraceFiles(): void
     {
-        $files = glob('/tmp/trace_*.xt');
+        $files = glob($this->xdebugOutputDir . '/trace_*.xt');
         if (empty($files)) {
             echo "No trace files found (pattern may not have matched any tests)\n";
             return;
@@ -349,11 +351,11 @@ class XdebugPhpunitCommand
         if ($bytes >= 1024 * 1024) {
             return round($bytes / (1024 * 1024), 1) . 'M';
         }
-        
+
         if ($bytes >= 1024) {
             return round($bytes / 1024, 1) . 'K';
         }
-        
+
         return $bytes . 'B';
     }
 
