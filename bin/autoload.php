@@ -2,7 +2,7 @@
 
 /**
  * Common autoloader and project root detection for bin scripts
- * Returns an array with 'autoload' and 'project_root' paths
+ * Returns the project root path
  */
 
 // Load autoloader and determine project root
@@ -27,10 +27,7 @@ foreach ($autoloadPaths as $autoloadPath) {
             exit(1);
         }
         
-        return [
-            'autoload' => $autoloadPath,
-            'project_root' => $projectRoot
-        ];
+        return $projectRoot;
     }
 }
 
