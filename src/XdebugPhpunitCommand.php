@@ -10,17 +10,21 @@ class XdebugPhpunitCommand
 {
     private PhpunitConfigManager $configManager;
     private string $projectRoot;
+    private string $phpunitBin;
+    private string $xdebugOutputDir;
+    private string $xdebugOutputDirEscaped;
     private bool $verbose = false;
     private bool $dryRun = false;
     private string $mode = 'trace'; // trace or profile
     private array $phpunitArgs = [];
     private array $tempFiles = [];
-    private string $xdebugOutputDir;
 
     public function __construct(string $projectRoot, string $xdebugOutputDir)
     {
         $this->projectRoot = rtrim($projectRoot, '/');
+        $this->phpunitBin = escapeshellarg($this->projectRoot . "/vendor/bin/phpunit");
         $this->xdebugOutputDir = rtrim($xdebugOutputDir, '/');
+        $this->xdebugOutputDirEscaped = escapeshellarg($this->xdebugOutputDir);
     }
 
     /**
@@ -211,7 +215,7 @@ class XdebugPhpunitCommand
         $originalConfig = $this->configManager->findConfigFile();
         $configArg = $originalConfig ? "--configuration " . escapeshellarg($originalConfig) : "";
 
-        $cmd = $this->projectRoot . "/vendor/bin/phpunit $configArg " . implode(' ', array_map('escapeshellarg', $this->phpunitArgs));
+        $cmd = "{$this->phpunitBin} $configArg " . implode(' ', array_map('escapeshellarg', $this->phpunitArgs));
 
         // Show the expanded command
         echo "Executing: $cmd\n";
@@ -230,7 +234,7 @@ class XdebugPhpunitCommand
         if ($this->mode === 'profile') {
             return "-dxdebug.mode=profile " .
                    "-dxdebug.start_with_request=yes " .
-                   "-dxdebug.output_dir=" . $this->xdebugOutputDir . " " .
+                   "-dxdebug.output_dir={$this->xdebugOutputDirEscaped} " .
                    "-dxdebug.profiler_output_name=cachegrind.out.%t " .
                    "-dxdebug.use_compression=0";
         }
@@ -240,7 +244,7 @@ class XdebugPhpunitCommand
                "-dxdebug.use_compression=0 " .
                "-dxdebug.collect_params=4 " .
                "-dxdebug.collect_return=1 " .
-               "-dxdebug.output_dir=" . $this->xdebugOutputDir;
+               "-dxdebug.output_dir={$this->xdebugOutputDirEscaped}";
     }
 
     /**
@@ -249,7 +253,7 @@ class XdebugPhpunitCommand
     private function buildPhpunitCommand(string $configFile, string $xdebugOpts): string
     {
         $phpunitArgs = implode(' ', array_map('escapeshellarg', $this->phpunitArgs));
-        return "php $xdebugOpts " . $this->projectRoot . "/vendor/bin/phpunit --configuration " . escapeshellarg($configFile) . " $phpunitArgs";
+        return "php $xdebugOpts {$this->phpunitBin} --configuration " . escapeshellarg($configFile) . " $phpunitArgs";
     }
 
     /**
