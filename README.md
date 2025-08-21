@@ -41,21 +41,23 @@ claude mcp list
 
 ### Xdebug Configuration (Recommended)
 
-**php.ini: Comment out Xdebug for optimal performance**
+#### php.ini: Comment out Xdebug for optimal performance
 ```ini
 # RECOMMENDED: Comment out in php.ini for better performance
 ;zend_extension=xdebug
 # Other Xdebug settings are handled automatically by bin/xdebug-* commands
 ```
 
-**Why this is recommended:**
-- Xdebug slows down PHP execution by ~50-80% when always enabled
-- The bin/xdebug-* commands load Xdebug only when needed
+#### Why this is recommended
+- Xdebug impacts performance when always enabled and is unnecessary for daily development
+- The bin/xdebug-* commands load Xdebug only when needed for debugging/profiling
 - Production environments should never have Xdebug permanently enabled
 
 ### AI Configuration (Recommended)
 
-**Teach AI to use runtime analysis instead of guesswork:**
+Note: The commands below target Claude Desktop. If you use a different AI client, adapt the MCP add/list commands and system prompt location accordingly.
+
+#### Teach AI to use runtime analysis instead of guesswork
 
 ```bash
 # Project-specific: Copy debugging principles to your project
@@ -144,9 +146,10 @@ claude --print "Analyze code coverage for test/debug_test.php"
 ./vendor/bin/xdebug-coverage script.php
 ```
 
-**Manual approach (equivalent to above):**
+**Manual approach (step debugging example):**
 ```bash
-# Same as bin commands but manual
+# Step debugging example (manual). For traces/profiles/coverage, prefer ./vendor/bin/xdebug-*
+# or set the appropriate xdebug.mode values and ini flags manually.
 php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script.php
 ```
 
