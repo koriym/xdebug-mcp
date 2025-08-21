@@ -84,16 +84,6 @@ I envision a world where:
 - AI assistants routinely use execution traces to solve problems
 - Debugging becomes systematic and data-driven, not trial-and-error
 
-## Why Open Source
-
-I could have kept this proprietary, but real impact comes from community adoption. When debugging practices improve across the entire ecosystem, everyone wins.
-
-I want developers to:
-- Use xdebug-mcp and share their experiences
-- Build similar tools for other languages
-- Help establish new standards for AI-assisted development
-- Join me in making professional debugging accessible to all
-
 ## The Bigger Picture
 
 We're at an inflection point. We can continue treating AI as a sophisticated search engine, or we can build true partnership through radical transparency—sharing not just our code, but our entire development context.
