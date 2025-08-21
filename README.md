@@ -91,11 +91,11 @@ claude --print "Trace test/debug_test.php and identify the performance bottlenec
 # ✅ AI automatically runs xdebug-trace and provides data-driven analysis
 ```
 
-**3. Zero-config PHPUnit debugging (Game Changer):**
+**3. Zero-config PHPUnit debugging:**
 ```bash
-# AI-assisted test debugging with automatic Xdebug setup - NO phpunit.xml changes needed!
+# AI-assisted test debugging with automatic Xdebug setup
 ./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
-# ✅ TraceExtension auto-injected, traces specific test method, works with ANY PHPUnit project
+# ✅ TraceExtension auto-injected, traces specific test method
 ```
 
 ## Verification
@@ -198,9 +198,9 @@ claude --print "Debug test/debug_test.php, break at line 15 and show variable va
 ./vendor/bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
 ```
 
-### xdebug-phpunit Usage - The Ultimate PHPUnit Debugging Solution
+### xdebug-phpunit Usage
 
-**Zero-configuration** PHPUnit with automatic Xdebug tracing or profiling - **works with ANY existing PHPUnit project without modifying your phpunit.xml**:
+Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
 
 ```bash
 # Trace specific test method (default mode)
