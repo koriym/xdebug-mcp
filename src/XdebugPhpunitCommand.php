@@ -208,7 +208,7 @@ class XdebugPhpunitCommand
         $originalConfig = $this->configManager->findConfigFile();
         $configArg = $originalConfig ? "--configuration " . escapeshellarg($originalConfig) : "";
 
-        $cmd = "vendor/bin/phpunit $configArg " . implode(' ', array_map('escapeshellarg', $this->phpunitArgs));
+        $cmd = $this->projectRoot . "/vendor/bin/phpunit $configArg " . implode(' ', array_map('escapeshellarg', $this->phpunitArgs));
 
         $this->log("Executing normal PHPUnit: $cmd");
 
@@ -243,7 +243,7 @@ class XdebugPhpunitCommand
     private function buildPhpunitCommand(string $configFile, string $xdebugOpts): string
     {
         $phpunitArgs = implode(' ', array_map('escapeshellarg', $this->phpunitArgs));
-        return "php $xdebugOpts vendor/bin/phpunit --configuration " . escapeshellarg($configFile) . " $phpunitArgs";
+        return "php $xdebugOpts " . $this->projectRoot . "/vendor/bin/phpunit --configuration " . escapeshellarg($configFile) . " $phpunitArgs";
     }
 
     /**

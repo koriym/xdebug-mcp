@@ -35,8 +35,7 @@ if (!$autoloaderFound) {
     exit(1);
 }
 
-// Change to project root directory
-chdir($projectRoot);
+// Note: Using absolute paths instead of chdir() for stability
 
 // Run the command
 use Koriym\XdebugMcp\XdebugPhpunitCommand;
