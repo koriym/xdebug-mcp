@@ -1,9 +1,16 @@
 <?php
 
-namespace XdebugMcp\Tests\Integration;
+declare(strict_types=1);
 
+namespace Koriym\XdebugMcp\Tests\Integration;
+
+use Koriym\XdebugMcp\McpServer;
 use PHPUnit\Framework\TestCase;
-use XdebugMcp\McpServer;
+use ReflectionClass;
+
+use function array_column;
+use function array_search;
+use function extension_loaded;
 
 class McpServerIntegrationTest extends TestCase
 {
@@ -24,8 +31,8 @@ class McpServerIntegrationTest extends TestCase
             'params' => [
                 'protocolVersion' => '2025-06-18',
                 'capabilities' => [],
-                'clientInfo' => ['name' => 'test-client', 'version' => '1.0.0']
-            ]
+                'clientInfo' => ['name' => 'test-client', 'version' => '1.0.0'],
+            ],
         ];
 
         $initResponse = $this->invokeMethod($this->server, 'handleRequest', [$initRequest]);
@@ -40,7 +47,7 @@ class McpServerIntegrationTest extends TestCase
         $toolsRequest = [
             'jsonrpc' => '2.0',
             'id' => 2,
-            'method' => 'tools/list'
+            'method' => 'tools/list',
         ];
 
         $toolsResponse = $this->invokeMethod($this->server, 'handleRequest', [$toolsRequest]);
@@ -73,7 +80,7 @@ class McpServerIntegrationTest extends TestCase
             'xdebug_stop_coverage',
             'xdebug_get_coverage',
             'xdebug_coverage_summary',
-            'xdebug_analyze_coverage'
+            'xdebug_analyze_coverage',
         ];
 
         foreach ($expectedTools as $toolName) {
@@ -83,7 +90,7 @@ class McpServerIntegrationTest extends TestCase
 
     public function testStandaloneProfilingWorkflow(): void
     {
-        if (!extension_loaded('xdebug')) {
+        if (! extension_loaded('xdebug')) {
             $this->markTestSkipped('Xdebug extension not loaded for standalone profiling test');
         }
 
@@ -94,8 +101,8 @@ class McpServerIntegrationTest extends TestCase
             'method' => 'tools/call',
             'params' => [
                 'name' => 'xdebug_start_profiling',
-                'arguments' => ['output_file' => '/tmp/test_profile.out']
-            ]
+                'arguments' => ['output_file' => '/tmp/test_profile.out'],
+            ],
         ];
 
         $startResponse = $this->invokeMethod($this->server, 'handleRequest', [$startRequest]);
@@ -112,8 +119,8 @@ class McpServerIntegrationTest extends TestCase
             'method' => 'tools/call',
             'params' => [
                 'name' => 'xdebug_get_profile_info',
-                'arguments' => []
-            ]
+                'arguments' => [],
+            ],
         ];
 
         $infoResponse = $this->invokeMethod($this->server, 'handleRequest', [$infoRequest]);
@@ -129,8 +136,8 @@ class McpServerIntegrationTest extends TestCase
             'method' => 'tools/call',
             'params' => [
                 'name' => 'xdebug_stop_profiling',
-                'arguments' => []
-            ]
+                'arguments' => [],
+            ],
         ];
 
         $stopResponse = $this->invokeMethod($this->server, 'handleRequest', [$stopRequest]);
@@ -155,7 +162,7 @@ class McpServerIntegrationTest extends TestCase
                 1 => 1,  // covered
                 2 => 1,  // covered
                 3 => 1,  // covered
-            ]
+            ],
         ];
 
         // Test coverage summary
@@ -165,8 +172,8 @@ class McpServerIntegrationTest extends TestCase
             'method' => 'tools/call',
             'params' => [
                 'name' => 'xdebug_coverage_summary',
-                'arguments' => ['coverage_data' => $mockCoverageData]
-            ]
+                'arguments' => ['coverage_data' => $mockCoverageData],
+            ],
         ];
 
         $summaryResponse = $this->invokeMethod($this->server, 'handleRequest', [$summaryRequest]);
@@ -174,7 +181,7 @@ class McpServerIntegrationTest extends TestCase
         $this->assertEquals('2.0', $summaryResponse['jsonrpc']);
         $this->assertEquals(6, $summaryResponse['id']);
         $this->assertArrayHasKey('result', $summaryResponse);
-        
+
         $responseText = $summaryResponse['result']['content'][0]['text'];
         $this->assertStringContainsString('Coverage Summary:', $responseText);
         $this->assertStringContainsString('"total_files": 2', $responseText);
@@ -183,7 +190,7 @@ class McpServerIntegrationTest extends TestCase
 
         // Test coverage analysis in different formats
         $formats = ['text', 'html', 'xml', 'json'];
-        
+
         foreach ($formats as $format) {
             $analysisRequest = [
                 'jsonrpc' => '2.0',
@@ -193,18 +200,18 @@ class McpServerIntegrationTest extends TestCase
                     'name' => 'xdebug_analyze_coverage',
                     'arguments' => [
                         'coverage_data' => $mockCoverageData,
-                        'format' => $format
-                    ]
-                ]
+                        'format' => $format,
+                    ],
+                ],
             ];
 
             $analysisResponse = $this->invokeMethod($this->server, 'handleRequest', [$analysisRequest]);
 
             $this->assertEquals('2.0', $analysisResponse['jsonrpc']);
             $this->assertArrayHasKey('result', $analysisResponse);
-            
+
             $responseText = $analysisResponse['result']['content'][0]['text'];
-            
+
             switch ($format) {
                 case 'text':
                     $this->assertStringContainsString('Code Coverage Report', $responseText);
@@ -230,7 +237,7 @@ class McpServerIntegrationTest extends TestCase
         $invalidRequest = [
             'jsonrpc' => '2.0',
             'id' => 11,
-            'method' => 'invalid/method'
+            'method' => 'invalid/method',
         ];
 
         $response = $this->invokeMethod($this->server, 'handleRequest', [$invalidRequest]);
@@ -248,8 +255,8 @@ class McpServerIntegrationTest extends TestCase
             'method' => 'tools/call',
             'params' => [
                 'name' => 'invalid_tool',
-                'arguments' => []
-            ]
+                'arguments' => [],
+            ],
         ];
 
         $response = $this->invokeMethod($this->server, 'handleRequest', [$invalidToolRequest]);
@@ -270,7 +277,7 @@ class McpServerIntegrationTest extends TestCase
             ['not json at all', false],
             ['{"nested": {"object": true}}', true],
             ['[{"array": true}]', true],
-            ['{"string": "value", "number": 123, "boolean": true}', true]
+            ['{"string": "value", "number": 123, "boolean": true}', true],
         ];
 
         foreach ($testCases as [$input, $expected]) {
@@ -281,9 +288,10 @@ class McpServerIntegrationTest extends TestCase
 
     private function invokeMethod(object $object, string $methodName, array $parameters = []): mixed
     {
-        $reflection = new \ReflectionClass($object);
+        $reflection = new ReflectionClass($object);
         $method = $reflection->getMethod($methodName);
         $method->setAccessible(true);
+
         return $method->invokeArgs($object, $parameters);
     }
 }

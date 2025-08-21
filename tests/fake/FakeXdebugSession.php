@@ -1,6 +1,6 @@
 <?php
 
-namespace XdebugMcp\Tests\Fake;
+namespace Koriym\XdebugMcp\Tests\Fake;
 
 class FakeXdebugSession
 {

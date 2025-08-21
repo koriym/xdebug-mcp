@@ -1,12 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Koriym\XdebugMcp;
 
-use PHPUnit\Framework\TestListener;
-use PHPUnit\Framework\TestListenerDefaultImplementation;
 use PHPUnit\Framework\Test;
 use PHPUnit\Framework\TestCase;
-use Koriym\XdebugMcp\TraceHelper;
+use PHPUnit\Framework\TestListener;
+use PHPUnit\Framework\TestListenerDefaultImplementation;
 
 /**
  * PHPUnit 9 Listener for selective tracing
@@ -23,8 +24,8 @@ class TraceListener implements TestListener
     public function startTest(Test $test): void
     {
         if ($test instanceof TestCase) {
-            $testName = get_class($test) . '::' . $test->getName();
-            
+            $testName = $test::class . '::' . $test->getName();
+
             if (TraceHelper::shouldTrace($testName)) {
                 TraceHelper::startTrace($testName);
             }
@@ -34,8 +35,8 @@ class TraceListener implements TestListener
     public function endTest(Test $test, float $time): void
     {
         if ($test instanceof TestCase) {
-            $testName = get_class($test) . '::' . $test->getName();
-            
+            $testName = $test::class . '::' . $test->getName();
+
             if (TraceHelper::shouldTrace($testName)) {
                 TraceHelper::stopTrace($testName);
             }

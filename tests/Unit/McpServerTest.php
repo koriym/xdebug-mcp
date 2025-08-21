@@ -1,10 +1,15 @@
 <?php
 
-namespace XdebugMcp\Tests\Unit;
+declare(strict_types=1);
 
+namespace Koriym\XdebugMcp\Tests\Unit;
+
+use Koriym\XdebugMcp\McpServer;
 use PHPUnit\Framework\TestCase;
-use XdebugMcp\McpServer;
-use XdebugMcp\XdebugClient;
+use ReflectionClass;
+
+use function array_column;
+use function extension_loaded;
 
 class McpServerTest extends TestCase
 {
@@ -24,8 +29,8 @@ class McpServerTest extends TestCase
             'params' => [
                 'protocolVersion' => '2024-11-05',
                 'capabilities' => [],
-                'clientInfo' => ['name' => 'test-client', 'version' => '1.0.0']
-            ]
+                'clientInfo' => ['name' => 'test-client', 'version' => '1.0.0'],
+            ],
         ];
 
         $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
@@ -45,7 +50,7 @@ class McpServerTest extends TestCase
         $request = [
             'jsonrpc' => '2.0',
             'id' => 2,
-            'method' => 'tools/list'
+            'method' => 'tools/list',
         ];
 
         $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
@@ -53,7 +58,7 @@ class McpServerTest extends TestCase
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('tools', $response['result']);
         $this->assertCount(42, $response['result']['tools']);
-        
+
         $toolNames = array_column($response['result']['tools'], 'name');
         $this->assertContains('xdebug_connect', $toolNames);
         $this->assertContains('xdebug_disconnect', $toolNames);
@@ -65,7 +70,7 @@ class McpServerTest extends TestCase
         $request = [
             'jsonrpc' => '2.0',
             'id' => 3,
-            'method' => 'unknown/method'
+            'method' => 'unknown/method',
         ];
 
         $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
@@ -91,8 +96,8 @@ class McpServerTest extends TestCase
             'method' => 'tools/call',
             'params' => [
                 'name' => 'xdebug_disconnect',
-                'arguments' => []
-            ]
+                'arguments' => [],
+            ],
         ];
 
         $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
@@ -110,8 +115,8 @@ class McpServerTest extends TestCase
             'method' => 'tools/call',
             'params' => [
                 'name' => 'unknown_tool',
-                'arguments' => []
-            ]
+                'arguments' => [],
+            ],
         ];
 
         $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
@@ -129,7 +134,7 @@ class McpServerTest extends TestCase
 
         $mockData = [
             '/path/file1.php' => [1 => 1, 2 => -1, 3 => 1],
-            '/path/file2.php' => [1 => 1, 2 => 1, 3 => 1, 4 => 1, 5 => 1, 6 => 1]
+            '/path/file2.php' => [1 => 1, 2 => 1, 3 => 1, 4 => 1, 5 => 1, 6 => 1],
         ];
 
         $result = $this->invokePrivateMethod($this->server, 'getCoverageSummary', [['coverage_data' => $mockData]]);
@@ -143,14 +148,14 @@ class McpServerTest extends TestCase
     public function testAnalyzeCoverageWithTextFormat(): void
     {
         $mockData = [
-            '/path/file1.php' => [1 => 1, 2 => -1, 3 => 1]
+            '/path/file1.php' => [1 => 1, 2 => -1, 3 => 1],
         ];
 
         $result = $this->invokePrivateMethod($this->server, 'analyzeCoverage', [
             [
                 'coverage_data' => $mockData,
-                'format' => 'text'
-            ]
+                'format' => 'text',
+            ],
         ]);
 
         $this->assertStringContainsString('Code Coverage Report', $result);
@@ -161,14 +166,14 @@ class McpServerTest extends TestCase
     public function testAnalyzeCoverageWithHtmlFormat(): void
     {
         $mockData = [
-            '/path/file1.php' => [1 => 1, 2 => -1, 3 => 1]
+            '/path/file1.php' => [1 => 1, 2 => -1, 3 => 1],
         ];
 
         $result = $this->invokePrivateMethod($this->server, 'analyzeCoverage', [
             [
                 'coverage_data' => $mockData,
-                'format' => 'html'
-            ]
+                'format' => 'html',
+            ],
         ]);
 
         $this->assertStringContainsString('<html>', $result);
@@ -178,9 +183,10 @@ class McpServerTest extends TestCase
 
     private function invokePrivateMethod(object $object, string $methodName, array $parameters = []): mixed
     {
-        $reflection = new \ReflectionClass($object);
+        $reflection = new ReflectionClass($object);
         $method = $reflection->getMethod($methodName);
         $method->setAccessible(true);
+
         return $method->invokeArgs($object, $parameters);
     }
 }

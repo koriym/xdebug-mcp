@@ -20,33 +20,26 @@ MCP server enabling AI control of PHP Xdebug debugging, profiling, and coverage 
 - **Coverage**: Line/function coverage, HTML/XML reports, PHPUnit integration
 - **Extended**: Memory stats, error collection, tracing, advanced breakpoints
 
-## Quick Start
+## Installation
 
 ```bash
-composer install
-claude mcp add xdebug php "$(pwd)/bin/xdebug-mcp"
-./bin/xdebug-profile test/debug_test.php
+# Install as development dependency
+composer require --dev koriym/xdebug-mcp:1.x-dev
 ```
 
 ## Setup
 
+### MCP Configuration
+
 ```bash
-composer install
+# Claude Desktop
+claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
+
+# Verify
+claude mcp list
 ```
 
-**Recommended: Use bin/xdebug-* commands**
-```bash
-# Best approach - tools handle Xdebug automatically
-./bin/xdebug-trace script.php
-./bin/xdebug-profile script.php
-./bin/xdebug-coverage script.php
-```
-
-**Manual approach (equivalent to above)**
-```bash
-# Same as bin commands but manual
-php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script.php
-```
+### Xdebug Configuration (Optional)
 
 **php.ini: Comment out Xdebug (better performance)**
 ```ini
@@ -55,43 +48,69 @@ php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script
 # Other Xdebug settings are handled automatically by bin/xdebug-* commands
 ```
 
-### MCP Configuration
+### AI Configuration (Recommended)
+
+**Teach Claude to use runtime analysis instead of guesswork:**
 
 ```bash
-# Claude Desktop
-claude mcp add xdebug php "$(pwd)/bin/xdebug-mcp"
-
-# Verify
-claude mcp list
-```
-
-### Tell AI to Use Runtime Analysis Instead of Guesswork
-
-**Problem**: AI development traditionally relies on static code analysis and error messages. AI can only guess what might be happening in your PHP application.
-
-**Solution**: These templates teach Claude to use actual execution data from Xdebug profiling and tracing instead of making assumptions.
-
-**[Templates Directory](templates/README.md)** - Complete configuration guide
-
-#### System-Wide Configuration
-```bash
-# Teach Claude to use runtime analysis for ALL PHP projects
-cp templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUDE.md
-```
-
-#### Project-Specific Configuration
-```bash
-# Teach Claude to use runtime analysis for this project
-cp templates/CLAUDE_DEBUG_PRINCIPLES.md ./
+# Project-specific: Copy debugging principles to your project
+cp vendor/koriym/xdebug-mcp/templates/CLAUDE_DEBUG_PRINCIPLES.md ./
 echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
 ```
 
-**Result**: Transform development from code+error guessing to runtime data analysis:
+**System-wide (optional):**
+```bash
+# Apply to ALL PHP projects
+cp vendor/koriym/xdebug-mcp/templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUDE.md
+```
 
-- **Before**: "This code might be slow" (AI guessing)
-- **After**: "fibonacci() consumed 3,772μs (27.6% of total) with 24 recursive calls" (AI analyzing real data)
+**What this does:**
+- Stops AI from using `var_dump()` or `echo` for debugging
+- Teaches AI to use `./vendor/bin/xdebug-trace` instead
+- Enables data-driven analysis from actual execution traces
 
-## Command Line Tools
+## Demo & Verification
+
+**Start MCP server:**
+```bash
+# Start the Xdebug MCP server
+./vendor/bin/xdebug-server
+# ✅ Expected: Server starts on port 9004, ready for AI commands
+```
+
+**Test AI integration (in another terminal):**
+```bash
+# Ask AI to analyze runtime data instead of guessing
+claude --print "Trace test/debug_test.php and identify the performance bottleneck"
+# ✅ Expected: AI automatically runs xdebug-trace and provides data-driven analysis
+
+# Ask AI for performance profiling
+claude --print "Profile test/debug_test.php and show the slowest functions"
+# ✅ Expected: AI runs xdebug-profile and analyzes cachegrind output
+
+# Ask AI for coverage analysis  
+claude --print "Analyze code coverage for test/debug_test.php"
+# ✅ Expected: AI runs xdebug-coverage and reports untested code paths
+```
+
+**Manual verification (optional):**
+```bash
+# You can also run tools directly if needed
+./vendor/bin/xdebug-trace test/debug_test.php
+./vendor/bin/xdebug-profile test/debug_test.php  
+./vendor/bin/xdebug-coverage test/debug_test.php
+```
+
+**What you should see:**
+- Trace files showing exact function call sequences and variable values
+- Performance data revealing O(2^n) fibonacci inefficiency 
+- Coverage reports highlighting untested code paths
+- AI providing data-driven analysis instead of static code guessing
+
+
+## Usage
+
+### Command Line Tools
 
 - `xdebug-server` - Start MCP server (port 9004)
 - `xdebug-mcp` - Core MCP server 
@@ -100,42 +119,54 @@ echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
 - `xdebug-coverage` - Code coverage analysis
 - `xdebug-phpunit` - PHPUnit with selective Xdebug analysis
 
+### Basic Commands
+
+```bash
+# Recommended: Use bin/xdebug-* commands
+./vendor/bin/xdebug-trace script.php
+./vendor/bin/xdebug-profile script.php
+./vendor/bin/xdebug-coverage script.php
+```
+
+**Manual approach (equivalent to above):**
+```bash
+# Same as bin commands but manual
+php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script.php
+```
+
 ### xdebug-phpunit Usage
 
-Run PHPUnit tests with automatic Xdebug tracing or profiling:
+Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
 
 ```bash
 # Trace specific test method (default mode)
-./bin/xdebug-phpunit tests/UserTest.php::testLogin
+./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
 
 # Profile entire test file
-./bin/xdebug-phpunit --profile tests/UserTest.php
+./vendor/bin/xdebug-phpunit --profile tests/UserTest.php
 
 # Trace tests matching filter
-./bin/xdebug-phpunit --filter=testUserAuth
+./vendor/bin/xdebug-phpunit --filter=testUserAuth
 
-# Profile slow tests
-./bin/xdebug-phpunit --profile --filter=testSlow
+# Show effective configuration (transparency)
+./vendor/bin/xdebug-phpunit --dry-run tests/UserTest.php
+
+# Verbose logging for debugging
+./vendor/bin/xdebug-phpunit --verbose tests/UserTest.php
 ```
+
+**Auto-injection:** TraceExtension is automatically injected into a temporary phpunit.xml (no manual setup required)
 
 **Output:**
 - Trace mode: `/tmp/trace_*.xt` (execution traces)
 - Profile mode: `/tmp/cachegrind.out.*` (performance data)
 
-**Requirements:**
-Add to your `phpunit.xml`:
-```xml
-<extensions>
-    <bootstrap class="Koriym\XdebugMcp\TraceExtension"/>
-</extensions>
-```
-
-## Usage Examples
+### AI-Powered Examples
 
 ### 1. Execution Tracing
 ```bash
 claude --print "Run test/debug_test.php and analyze the execution patterns"
-# AI automatically chooses ./bin/xdebug-trace and provides analysis:
+# AI automatically chooses ./vendor/bin/xdebug-trace and provides analysis:
 # ✅ Trace complete: /tmp/xdebug_trace_20250821_044930.xt (64 lines)
 # 📊 Analysis: O(2^n) Fibonacci inefficiency, stable memory usage, microsecond-level metrics
 ```
@@ -143,7 +174,7 @@ claude --print "Run test/debug_test.php and analyze the execution patterns"
 ### 2. Performance Profiling
 ```bash
 claude --print "Profile the performance of test/debug_test.php"
-# AI automatically uses ./bin/xdebug-profile:
+# AI automatically uses ./vendor/bin/xdebug-profile:
 # ✅ Profile complete: /tmp/cachegrind.out.1755719364
 # 📊 Size: 1.9K, Functions: 29, Calls: 28, identifies bottlenecks
 ```
@@ -151,7 +182,7 @@ claude --print "Profile the performance of test/debug_test.php"
 ### 3. Code Coverage Analysis
 ```bash
 claude --print "Analyze code coverage for test/debug_test.php"
-# AI automatically uses ./bin/xdebug-coverage:
+# AI automatically uses ./vendor/bin/xdebug-coverage:
 # ✅ Coverage complete: HTML report generated
 # 📊 Coverage: 85.2% lines, 92.1% functions, identifies untested code paths
 ```
@@ -171,8 +202,8 @@ claude --print "Debug test/debug_test.php, break at line 15 and show variable va
 
 ### 5. PHPUnit Testing
 ```bash
-# Debug PHPUnit tests (after adding TraceExtension to phpunit.xml)
-./bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
+# Debug PHPUnit tests (zero configuration required)
+./vendor/bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
 ```
 
 ## 42 Available Tools
