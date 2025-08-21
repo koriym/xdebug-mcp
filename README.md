@@ -102,7 +102,7 @@ echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
 
 ### xdebug-phpunit Usage
 
-Run PHPUnit tests with automatic Xdebug tracing or profiling:
+Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
 
 ```bash
 # Trace specific test method (default mode)
@@ -114,21 +114,18 @@ Run PHPUnit tests with automatic Xdebug tracing or profiling:
 # Trace tests matching filter
 ./bin/xdebug-phpunit --filter=testUserAuth
 
-# Profile slow tests
-./bin/xdebug-phpunit --profile --filter=testSlow
+# Show effective configuration (transparency)
+./bin/xdebug-phpunit --dry-run tests/UserTest.php
+
+# Verbose logging for debugging
+./bin/xdebug-phpunit --verbose tests/UserTest.php
 ```
+
+**Auto-injection:** TraceExtension is automatically injected into a temporary phpunit.xml (no manual setup required)
 
 **Output:**
 - Trace mode: `/tmp/trace_*.xt` (execution traces)
 - Profile mode: `/tmp/cachegrind.out.*` (performance data)
-
-**Requirements:**
-Add to your `phpunit.xml`:
-```xml
-<extensions>
-    <bootstrap class="Koriym\XdebugMcp\TraceExtension"/>
-</extensions>
-```
 
 ## Usage Examples
 
@@ -171,7 +168,7 @@ claude --print "Debug test/debug_test.php, break at line 15 and show variable va
 
 ### 5. PHPUnit Testing
 ```bash
-# Debug PHPUnit tests (after adding TraceExtension to phpunit.xml)
+# Debug PHPUnit tests (zero configuration required)
 ./bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
 ```
 
