@@ -52,25 +52,17 @@ if (in_array('--help', $argsToCheck) || in_array('-h', $argsToCheck) || count($a
     exit(0);
 }
 
-// Parse arguments - handle both patterns:
-// Pattern 1: script.php [--html|--text] [-- args]
-// Pattern 2: -- php script.php args (always text format)
+// Load common argument parser
+$parse = require __DIR__ . '/parse.php';
+
+// Parse base arguments - coverage has special option handling
 if ($argv[1] === '--') {
-    // Pattern 2: -- php script.php args
-    if (count($argv) < 3) {
-        fwrite(STDERR, "❌ Error: PHP command and script required after --\n");
-        fwrite(STDERR, "Use '{$argv[0]} --help' for usage information\n");
-        exit(1);
-    }
-    $phpBinary = PHP_BINARY; // Use detected PHP for Xdebug execution
-    $customPhpBinary = $argv[2]; // Custom PHP for target script
-    $targetFile = $argv[3] ?? '';
-    $phpArgs = array_slice($argv, 4);
-    $outputFormat = 'text'; // Default for -- pattern
+    // Pattern 2: -- php script.php args (text format only)
+    [$phpBinary, $targetFile, $phpArgs] = $parse($argv);
+    $outputFormat = 'text';
 } else {
     // Pattern 1: script.php [--html|--text] [-- args]
     $phpBinary = PHP_BINARY;
-    $customPhpBinary = null;
     $targetFile = $argv[1];
     $outputFormat = 'text';
     $phpArgs = [];
