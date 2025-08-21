@@ -95,7 +95,7 @@ class PhpunitConfigManager
 
         // Determine output path
         if (! $outputPath) {
-            $outputPath = tempnam(sys_get_temp_dir(), 'phpunit_xdebug_mcp_') . '.xml';
+            $outputPath = tempnam('/tmp', 'phpunit_xdebug_mcp_') . '.xml';
         }
 
         if (! $dom->save($outputPath)) {
