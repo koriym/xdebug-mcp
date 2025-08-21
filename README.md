@@ -1,6 +1,6 @@
 # PHP Xdebug MCP Server
 
-> Enable AI to develop using Xdebug like we do
+> Enable AI to use Xdebug for PHP debugging like we do
 
 <img width="256" alt="xdebug-mcp" src="https://koriym.github.io/xdebug-mcp/logo.jpeg" />
 
@@ -39,18 +39,25 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
 claude mcp list
 ```
 
-### Xdebug Configuration (Optional)
+### Xdebug Configuration (Recommended)
 
-**php.ini: Comment out Xdebug (better performance)**
+#### php.ini: Comment out Xdebug for optimal performance
 ```ini
-# Comment out in php.ini for better performance
+# RECOMMENDED: Comment out in php.ini for better performance
 ;zend_extension=xdebug
 # Other Xdebug settings are handled automatically by bin/xdebug-* commands
 ```
 
+#### Why this is recommended
+- Xdebug impacts performance when always enabled and is unnecessary for daily development
+- The bin/xdebug-* commands load Xdebug only when needed for debugging/profiling
+- Production environments should never have Xdebug permanently enabled
+
 ### AI Configuration (Recommended)
 
-**Teach Claude to use runtime analysis instead of guesswork:**
+Note: The commands below target Claude Desktop. If you use a different AI client, adapt the MCP add/list commands and system prompt location accordingly.
+
+#### Teach AI to use runtime analysis instead of guesswork
 
 ```bash
 # Project-specific: Copy debugging principles to your project
@@ -69,39 +76,50 @@ cp vendor/koriym/xdebug-mcp/templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUD
 - Teaches AI to use `./vendor/bin/xdebug-trace` instead
 - Enables data-driven analysis from actual execution traces
 
-## Demo & Verification
+## Quick Start
 
-**Start MCP server:**
+**1. Start MCP server:**
 ```bash
-# Start the Xdebug MCP server
 ./vendor/bin/xdebug-server
-# ✅ Expected: Server starts on port 9004, ready for AI commands
+# ✅ Server starts on port 9004, ready for AI commands
 ```
 
-**Test AI integration (in another terminal):**
+**2. Ask AI to debug with runtime data:**
 ```bash
-# Ask AI to analyze runtime data instead of guessing
+# In another terminal - AI analyzes actual execution instead of guessing
 claude --print "Trace test/debug_test.php and identify the performance bottleneck"
-# ✅ Expected: AI automatically runs xdebug-trace and provides data-driven analysis
+# ✅ AI automatically runs xdebug-trace and provides data-driven analysis
+```
 
-# Ask AI for performance profiling
+**3. Zero-config PHPUnit debugging:**
+```bash
+# AI-assisted test debugging with automatic Xdebug setup
+./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
+# ✅ TraceExtension auto-injected, traces specific test method
+```
+
+## Verification
+
+**Test AI integration:**
+```bash
+# Performance profiling
 claude --print "Profile test/debug_test.php and show the slowest functions"
-# ✅ Expected: AI runs xdebug-profile and analyzes cachegrind output
+# ✅ AI runs xdebug-profile and analyzes cachegrind output
 
-# Ask AI for coverage analysis  
+# Coverage analysis  
 claude --print "Analyze code coverage for test/debug_test.php"
-# ✅ Expected: AI runs xdebug-coverage and reports untested code paths
+# ✅ AI runs xdebug-coverage and reports untested code paths
 ```
 
 **Manual verification (optional):**
 ```bash
-# You can also run tools directly if needed
+# Direct tool usage
 ./vendor/bin/xdebug-trace test/debug_test.php
 ./vendor/bin/xdebug-profile test/debug_test.php  
 ./vendor/bin/xdebug-coverage test/debug_test.php
 ```
 
-**What you should see:**
+**Expected results:**
 - Trace files showing exact function call sequences and variable values
 - Performance data revealing O(2^n) fibonacci inefficiency 
 - Coverage reports highlighting untested code paths
@@ -128,38 +146,12 @@ claude --print "Analyze code coverage for test/debug_test.php"
 ./vendor/bin/xdebug-coverage script.php
 ```
 
-**Manual approach (equivalent to above):**
+**Manual approach (step debugging example):**
 ```bash
-# Same as bin commands but manual
+# Step debugging example (manual). For traces/profiles/coverage, prefer ./vendor/bin/xdebug-*
+# or set the appropriate xdebug.mode values and ini flags manually.
 php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script.php
 ```
-
-### xdebug-phpunit Usage
-
-Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
-
-```bash
-# Trace specific test method (default mode)
-./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
-
-# Profile entire test file
-./vendor/bin/xdebug-phpunit --profile tests/UserTest.php
-
-# Trace tests matching filter
-./vendor/bin/xdebug-phpunit --filter=testUserAuth
-
-# Show effective configuration (transparency)
-./vendor/bin/xdebug-phpunit --dry-run tests/UserTest.php
-
-# Verbose logging for debugging
-./vendor/bin/xdebug-phpunit --verbose tests/UserTest.php
-```
-
-**Auto-injection:** TraceExtension is automatically injected into a temporary phpunit.xml (no manual setup required)
-
-**Output:**
-- Trace mode: `/tmp/trace_*.xt` (execution traces)
-- Profile mode: `/tmp/cachegrind.out.*` (performance data)
 
 ### AI-Powered Examples
 
@@ -205,6 +197,33 @@ claude --print "Debug test/debug_test.php, break at line 15 and show variable va
 # Debug PHPUnit tests (zero configuration required)
 ./vendor/bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
 ```
+
+### xdebug-phpunit Usage
+
+Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
+
+```bash
+# Trace specific test method (default mode)
+./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
+
+# Profile entire test file
+./vendor/bin/xdebug-phpunit --profile tests/UserTest.php
+
+# Trace tests matching filter
+./vendor/bin/xdebug-phpunit --filter=testUserAuth
+
+# Show effective configuration (transparency)
+./vendor/bin/xdebug-phpunit --dry-run tests/UserTest.php
+
+# Verbose logging for debugging
+./vendor/bin/xdebug-phpunit --verbose tests/UserTest.php
+```
+
+**Auto-injection:** TraceExtension is automatically injected into a temporary phpunit.xml (no manual setup required)
+
+**Output:**
+- Trace mode: `/tmp/trace_*.xt` (execution traces)
+- Profile mode: `/tmp/cachegrind.out.*` (performance data)
 
 ## 42 Available Tools
 
