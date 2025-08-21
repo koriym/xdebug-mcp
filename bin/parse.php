@@ -28,7 +28,7 @@ return function (array $argv): array {
         $phpArgs = [];
         
         // Find -- separator
-        $separatorIndex = array_search('--', $argv);
+        $separatorIndex = array_search('--', $argv, true);
         if ($separatorIndex !== false) {
             $phpArgs = array_slice($argv, $separatorIndex + 1);
         }
