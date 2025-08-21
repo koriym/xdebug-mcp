@@ -4,7 +4,7 @@
 
 When Claude Code was announced, I was thrilled. Finally, an AI assistant that could help with real development work! But my excitement quickly turned to disbelief when I watched it debug PHP code:
 
-I saw the AI literally type `var_dump($variable)` into my code, ask me to refresh the browser, analyze the output, then dutifully remove the var_dump and add another one elsewhere. Over and over.
+I saw the AI literally type `var_dump($variable)` into my code, run the PHPUnit tests to see the output, analyze the results, then dutifully remove the var_dump and add another one elsewhere. Over and over.
 
 It struck me: this sophisticated AI, capable of understanding complex architectural patterns, was debugging like it was 1995.
 
