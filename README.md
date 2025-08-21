@@ -23,14 +23,18 @@ MCP server enabling AI control of PHP Xdebug debugging, profiling, and coverage 
 ## Quick Start
 
 ```bash
-composer install
-claude mcp add xdebug php "$(pwd)/bin/xdebug-mcp"
-./bin/xdebug-profile test/debug_test.php
+composer require --dev koriym/xdebug-mcp:1.x-dev
+claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
+./vendor/bin/xdebug-profile test/debug_test.php
 ```
 
 ## Setup
 
 ```bash
+# Install as development dependency
+composer require --dev koriym/xdebug-mcp:1.x-dev
+
+# Or for development setup
 composer install
 ```
 
