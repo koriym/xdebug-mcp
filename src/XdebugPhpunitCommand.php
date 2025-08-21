@@ -189,6 +189,9 @@ class XdebugPhpunitCommand
         // Build command
         $cmd = $this->buildPhpunitCommand($effectiveConfig, $xdebugOpts);
 
+        // Show the expanded command
+        echo "Executing: $cmd\n";
+        
         $this->log("Executing: $cmd");
 
         // Execute PHPUnit
@@ -210,6 +213,9 @@ class XdebugPhpunitCommand
 
         $cmd = $this->projectRoot . "/vendor/bin/phpunit $configArg " . implode(' ', array_map('escapeshellarg', $this->phpunitArgs));
 
+        // Show the expanded command
+        echo "Executing: $cmd\n";
+        
         $this->log("Executing normal PHPUnit: $cmd");
 
         passthru($cmd, $exitCode);

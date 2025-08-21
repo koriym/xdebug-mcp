@@ -3,35 +3,16 @@
 
 declare(strict_types=1);
 
-// Find the project root (where composer.json is located)
-$projectRoot = __DIR__ . '/..';
+// Load autoloader and determine project root
+$autoloadPath = require __DIR__ . '/autoload.php';
+
+// Determine project root from autoloader path
+$projectRoot = str_contains($autoloadPath, '/vendor/autoload.php') 
+    ? dirname($autoloadPath, 2)
+    : dirname($autoloadPath);
+
 if (!file_exists($projectRoot . '/composer.json')) {
-    // If running from vendor/bin, go up more levels
-    $projectRoot = dirname(dirname(dirname(__DIR__)));
-    if (!file_exists($projectRoot . '/composer.json')) {
-        fwrite(STDERR, "Error: Could not find project root (composer.json not found)\n");
-        exit(1);
-    }
-}
-
-// Load autoloader
-$autoloadPaths = [
-    $projectRoot . '/vendor/autoload.php',
-    __DIR__ . '/../vendor/autoload.php',
-    __DIR__ . '/../../../autoload.php', // When installed via composer
-];
-
-$autoloaderFound = false;
-foreach ($autoloadPaths as $autoloadPath) {
-    if (file_exists($autoloadPath)) {
-        require_once $autoloadPath;
-        $autoloaderFound = true;
-        break;
-    }
-}
-
-if (!$autoloaderFound) {
-    fwrite(STDERR, "Error: Composer autoloader not found. Run 'composer install' first.\n");
+    fwrite(STDERR, "Error: Could not determine project root from autoloader path.\n");
     exit(1);
 }
 
