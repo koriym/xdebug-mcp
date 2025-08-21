@@ -41,7 +41,7 @@ chdir($projectRoot);
 // Run the command
 use Koriym\XdebugMcp\XdebugPhpunitCommand;
 
-$command = new XdebugPhpunitCommand($projectRoot);
+$command = new XdebugPhpunitCommand($projectRoot, '/tmp');
 $exitCode = $command($argv);
 
 exit($exitCode);
