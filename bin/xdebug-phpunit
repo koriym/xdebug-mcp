@@ -13,7 +13,7 @@ $projectRoot = str_ends_with($normalized, '/vendor/autoload.php')
     : dirname($autoloadPath);
 
 if (!file_exists($projectRoot . '/composer.json')) {
-    fwrite(STDERR, "Error: Could not determine project root from autoloader path.\n");
+    fwrite(STDERR, "Error: Could not determine project root from autoloader path: $autoloadPath\n");
     exit(1);
 }
 
