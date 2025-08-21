@@ -9,18 +9,25 @@ $projectRoot = require __DIR__ . '/autoload.php';
 // Parse command line arguments
 function showHelp(string $scriptName): void {
     echo "Usage: $scriptName PHP_FILE [-- PHP_ARGS...]\n";
+    echo "       $scriptName -- PHP_BINARY SCRIPT_FILE [SCRIPT_ARGS...]\n";
     echo "\n";
     echo "Runs Xdebug trace testing on the specified PHP file or command.\n";
     echo "\n";
     echo "Arguments:\n";
-    echo "  PHP_FILE    Path to PHP file to trace (required)\n";
-    echo "  PHP_ARGS    Arguments to pass to the PHP script (after --)\n";
+    echo "  PHP_FILE      Path to PHP file to trace (required)\n";
+    echo "  PHP_ARGS      Arguments to pass to the PHP script (after --)\n";
+    echo "  PHP_BINARY    Custom PHP binary path (when using -- prefix)\n";
+    echo "  SCRIPT_FILE   PHP script to trace (when using -- prefix)\n";
+    echo "  SCRIPT_ARGS   Arguments for the script (when using -- prefix)\n";
     echo "\n";
     echo "Examples:\n";
+    echo "  # Standard usage:\n";
     echo "  $scriptName test/debug_test.php                    # Trace test file\n";
-    echo "  $scriptName my_script.php                         # Trace specific file\n";
     echo "  $scriptName bin/page.php -- get /                 # Trace with arguments\n";
-    echo "  $scriptName bin/console.php -- cache:clear --env=dev  # Trace console command\n";
+    echo "\n";
+    echo "  # Custom PHP binary:\n";
+    echo "  $scriptName -- php bin/page.php get /             # Natural PHP command style\n";
+    echo "  $scriptName -- /usr/bin/php8.3 script.php args   # Specific PHP version\n";
     echo "\n";
 }
 
@@ -40,14 +47,30 @@ if (in_array('--help', $argsToCheck) || in_array('-h', $argsToCheck) || count($a
     exit(0);
 }
 
-// Parse arguments - separate PHP file from PHP arguments
-$targetFile = $argv[1];
-$phpArgs = [];
-
-// Find -- separator
-$separatorIndex = array_search('--', $argv);
-if ($separatorIndex !== false) {
-    $phpArgs = array_slice($argv, $separatorIndex + 1);
+// Parse arguments - handle both patterns:
+// Pattern 1: script.php -- args
+// Pattern 2: -- php script.php args
+if ($argv[1] === '--') {
+    // Pattern 2: -- php script.php args
+    if (count($argv) < 3) {
+        fwrite(STDERR, "❌ Error: PHP command and script required after --\n");
+        fwrite(STDERR, "Use '{$argv[0]} --help' for usage information\n");
+        exit(1);
+    }
+    $phpBinary = $argv[2];
+    $targetFile = $argv[3] ?? '';
+    $phpArgs = array_slice($argv, 4);
+} else {
+    // Pattern 1: script.php -- args
+    $phpBinary = PHP_BINARY;
+    $targetFile = $argv[1];
+    $phpArgs = [];
+    
+    // Find -- separator
+    $separatorIndex = array_search('--', $argv);
+    if ($separatorIndex !== false) {
+        $phpArgs = array_slice($argv, $separatorIndex + 1);
+    }
 }
 
 // Check target file exists
@@ -74,7 +97,7 @@ $xdebugOpts = [
 ];
 
 // Build command
-$command = [PHP_BINARY];
+$command = [$phpBinary];
 $command = array_merge($command, $xdebugOpts);
 $command[] = $targetFile;
 $command = array_merge($command, $phpArgs);
