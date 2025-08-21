@@ -24,7 +24,7 @@ class XdebugPhpunitCommand
     /**
      * Parse command line arguments and execute
      */
-    public function run(array $argv): int
+    public function __invoke(array $argv): int
     {
         try {
             $this->parseArguments($argv);
