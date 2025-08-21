@@ -1,79 +1,149 @@
-#!/bin/bash
+#!/usr/bin/env php
+<?php
 
-# Xdebug Profile Testing Script
-cd "$(dirname "$0")/.."
-PROJECT_ROOT=$(pwd)
+declare(strict_types=1);
 
-# Check for help flag or missing argument
-if [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ -z "$1" ]; then
-    echo "Usage: $0 PHP_FILE"
-    echo ""
-    echo "Runs Xdebug profiling on the specified PHP file."
-    echo ""
-    echo "Arguments:"
-    echo "  PHP_FILE    Path to PHP file to profile (required)"
-    echo ""
-    echo "Examples:"
-    echo "  $0 test/debug_test.php       # Profile test file"
-    echo "  $0 my_script.php             # Profile specific file"
-    echo "  $0 tests/Unit/SomeTest.php   # Profile test file"
-    echo ""
-    if [ -z "$1" ]; then
-        echo "❌ Error: PHP file argument is required"
-        exit 1
-    fi
-    exit 0
-fi
+// Load autoloader and get project root
+$paths = require __DIR__ . '/autoload.php';
+$projectRoot = $paths['project_root'];
 
-# Check target file exists
-TARGET_FILE="$1"
-if [ ! -f "$TARGET_FILE" ]; then
-    echo "❌ Error: File '$TARGET_FILE' not found"
-    echo "Use '$0 --help' for usage information"
-    exit 1
-fi
+// Parse command line arguments
+function showHelp(string $scriptName): void {
+    echo "Usage: $scriptName PHP_FILE [-- PHP_ARGS...]\n";
+    echo "\n";
+    echo "Runs Xdebug profiling on the specified PHP file or command.\n";
+    echo "\n";
+    echo "Arguments:\n";
+    echo "  PHP_FILE    Path to PHP file to profile (required)\n";
+    echo "  PHP_ARGS    Arguments to pass to the PHP script (after --)\n";
+    echo "\n";
+    echo "Examples:\n";
+    echo "  $scriptName test/debug_test.php                    # Profile test file\n";
+    echo "  $scriptName my_script.php                         # Profile specific file\n";
+    echo "  $scriptName bin/page.php -- get /                 # Profile with arguments\n";
+    echo "  $scriptName bin/console.php -- cache:clear --env=dev  # Profile console command\n";
+    echo "\n";
+}
 
-# Generate unique profile filename
-PROFILE_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-PROFILE_FILE="/tmp/xdebug_profile_${PROFILE_TIMESTAMP}.out"
+// Check for help flag or missing argument
+if (in_array('--help', $argv) || in_array('-h', $argv) || count($argv) < 2) {
+    showHelp($argv[0]);
+    if (count($argv) < 2) {
+        fwrite(STDERR, "❌ Error: PHP file argument is required\n");
+        exit(1);
+    }
+    exit(0);
+}
 
-# Xdebug profiling configuration (Xdebug 3.x format)
-XDEBUG_OPTS="-dzend_extension=xdebug \
-    -dxdebug.mode=profile \
-    -dxdebug.start_with_request=yes \
-    -dxdebug.output_dir=/tmp \
-    -dxdebug.profiler_output_name=cachegrind.out.%t \
-    -dxdebug.use_compression=0"
+// Parse arguments - separate PHP file from PHP arguments
+$targetFile = $argv[1];
+$phpArgs = [];
 
-echo "📊 Profiling: $TARGET_FILE"
+// Find -- separator
+$separatorIndex = array_search('--', $argv);
+if ($separatorIndex !== false) {
+    $phpArgs = array_slice($argv, $separatorIndex + 1);
+}
 
-# Execute with profiling
-php $XDEBUG_OPTS "$TARGET_FILE" 2>/dev/null
+// Check target file exists
+if (!file_exists($targetFile)) {
+    fwrite(STDERR, "❌ Error: File '$targetFile' not found\n");
+    fwrite(STDERR, "Use '{$argv[0]} --help' for usage information\n");
+    exit(1);
+}
 
-# Find the generated profile file (Cachegrind format)
-LATEST_PROFILE=$(ls -t /tmp/cachegrind.out.* 2>/dev/null | head -1)
+// Generate unique profile filename
+$profileTimestamp = date('Ymd_His');
 
-if [ -f "$LATEST_PROFILE" ]; then
-    echo "✅ Profile complete: $LATEST_PROFILE"
-    echo "📊 Size: $(ls -lh "$LATEST_PROFILE" | awk '{print $5}')"
+// Build Xdebug options (Xdebug 3.x format)
+$xdebugOpts = [
+    '-dzend_extension=xdebug',
+    '-dxdebug.mode=profile',
+    '-dxdebug.start_with_request=yes',
+    '-dxdebug.output_dir=/tmp',
+    '-dxdebug.profiler_output_name=cachegrind.out.%t',
+    '-dxdebug.use_compression=0'
+];
+
+// Build command
+$command = ['php'];
+$command = array_merge($command, $xdebugOpts);
+$command[] = $targetFile;
+$command = array_merge($command, $phpArgs);
+
+// Execute command
+if (empty($phpArgs)) {
+    echo "📊 Profiling: $targetFile\n";
+} else {
+    echo "📊 Profiling: $targetFile with arguments: " . implode(' ', $phpArgs) . "\n";
+}
+
+// Execute and suppress stderr
+$descriptors = [
+    0 => ['pipe', 'r'],  // stdin
+    1 => ['pipe', 'w'],  // stdout
+    2 => ['pipe', 'w'],  // stderr
+];
+
+$process = proc_open($command, $descriptors, $pipes);
+
+if (is_resource($process)) {
+    // Close stdin
+    fclose($pipes[0]);
     
-    # Display basic profile info if available
-    if command -v grep >/dev/null 2>&1; then
-        FUNCTION_COUNT=$(grep -c "^fn=" "$LATEST_PROFILE" 2>/dev/null || echo "0")
-        CALL_COUNT=$(grep -c "^calls=" "$LATEST_PROFILE" 2>/dev/null || echo "0")
-        echo "📈 Functions: $FUNCTION_COUNT"
-        echo "📞 Calls: $CALL_COUNT"
-    fi
+    // Read stdout (if needed for debugging)
+    $stdout = stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
     
-    echo ""
-    echo "💡 Analyze with KCachegrind:"
-    echo "   kcachegrind $LATEST_PROFILE"
-    echo ""
-    echo "💡 Or use qcachegrind on macOS:"
-    echo "   qcachegrind $LATEST_PROFILE"
-else
-    echo "❌ No profile file generated. Check Xdebug configuration."
-    echo "💡 Ensure Xdebug is installed and profiling is enabled:"
-    echo "   php -m | grep xdebug"
-    exit 1
-fi
+    // Read and ignore stderr
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[2]);
+    
+    // Wait for process to finish
+    $returnCode = proc_close($process);
+}
+
+// Find the generated profile file (Cachegrind format)
+$profileFiles = glob('/tmp/cachegrind.out.*');
+
+if (!empty($profileFiles)) {
+    // Sort by modification time (newest first)
+    usort($profileFiles, function($a, $b) {
+        return filemtime($b) - filemtime($a);
+    });
+    
+    $latestProfile = $profileFiles[0];
+    $fileSize = formatBytes(filesize($latestProfile));
+    
+    echo "✅ Profile complete: $latestProfile\n";
+    echo "📊 Size: $fileSize\n";
+    
+    // Display basic profile info if available
+    $content = file_get_contents($latestProfile);
+    $functionCount = substr_count($content, "\nfn=");
+    $callCount = substr_count($content, "\ncalls=");
+    
+    echo "📈 Functions: $functionCount\n";
+    echo "📞 Calls: $callCount\n";
+    echo "\n";
+    echo "💡 Analyze with KCachegrind:\n";
+    echo "   kcachegrind $latestProfile\n";
+    echo "\n";
+    echo "💡 Or use qcachegrind on macOS:\n";
+    echo "   qcachegrind $latestProfile\n";
+} else {
+    echo "❌ No profile file generated. Check Xdebug configuration.\n";
+    echo "💡 Ensure Xdebug is installed and profiling is enabled:\n";
+    echo "   php -m | grep xdebug\n";
+    exit(1);
+}
+
+function formatBytes(int $bytes, int $precision = 1): string {
+    $units = ['B', 'K', 'M', 'G'];
+    
+    for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+        $bytes /= 1024;
+    }
+    
+    return round($bytes, $precision) . $units[$i];
+}

@@ -1,93 +1,114 @@
-#!/bin/bash
-
-# Xdebug Coverage Testing Script
-cd "$(dirname "$0")/.."
-PROJECT_ROOT=$(pwd)
-
-# Check for help flag or missing argument
-if [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ -z "$1" ]; then
-    echo "Usage: $0 PHP_FILE [OPTIONS]"
-    echo ""
-    echo "Runs Xdebug code coverage analysis on the specified PHP file."
-    echo ""
-    echo "Arguments:"
-    echo "  PHP_FILE    Path to PHP file to analyze (required)"
-    echo ""
-    echo "Options:"
-    echo "  --html      Generate HTML coverage report"
-    echo "  --text      Generate text coverage summary (default)"
-    echo ""
-    echo "Examples:"
-    echo "  $0 test/debug_test.php           # Basic coverage analysis"
-    echo "  $0 my_script.php --html          # Generate HTML report"
-    echo "  $0 tests/Unit/SomeTest.php       # Coverage for test file"
-    echo ""
-    if [ -z "$1" ]; then
-        echo "❌ Error: PHP file argument is required"
-        exit 1
-    fi
-    exit 0
-fi
-
-# Parse arguments
-TARGET_FILE="$1"
-OUTPUT_FORMAT="text"
-
-# Check for output format option
-if [ "$2" = "--html" ]; then
-    OUTPUT_FORMAT="html"
-elif [ "$2" = "--text" ]; then
-    OUTPUT_FORMAT="text"
-fi
-
-# Check target file exists
-if [ ! -f "$TARGET_FILE" ]; then
-    echo "❌ Error: File '$TARGET_FILE' not found"
-    echo "Use '$0 --help' for usage information"
-    exit 1
-fi
-
-# Generate unique coverage filename
-COVERAGE_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-COVERAGE_DIR="/tmp/xdebug_coverage_${COVERAGE_TIMESTAMP}"
-
-# Create coverage directory
-mkdir -p "$COVERAGE_DIR"
-
-# Xdebug coverage configuration
-XDEBUG_OPTS="-dzend_extension=xdebug \
-    -dxdebug.mode=coverage \
-    -dxdebug.start_with_request=yes"
-
-echo "📊 Coverage Analysis: $TARGET_FILE"
-echo "📁 Output format: $OUTPUT_FORMAT"
-
-# Create a simple coverage wrapper script
-WRAPPER_SCRIPT="/tmp/coverage_wrapper_${COVERAGE_TIMESTAMP}.php"
-cat > "$WRAPPER_SCRIPT" << EOF
+#!/usr/bin/env php
 <?php
+
+declare(strict_types=1);
+
+// Load autoloader and get project root
+$paths = require __DIR__ . '/autoload.php';
+$projectRoot = $paths['project_root'];
+
+// Parse command line arguments
+function showHelp(string $scriptName): void {
+    echo "Usage: $scriptName PHP_FILE [OPTIONS] [-- PHP_ARGS...]\n";
+    echo "\n";
+    echo "Runs Xdebug code coverage analysis on the specified PHP file or command.\n";
+    echo "\n";
+    echo "Arguments:\n";
+    echo "  PHP_FILE    Path to PHP file to analyze (required)\n";
+    echo "  PHP_ARGS    Arguments to pass to the PHP script (after --)\n";
+    echo "\n";
+    echo "Options:\n";
+    echo "  --html      Generate HTML coverage report\n";
+    echo "  --text      Generate text coverage summary (default)\n";
+    echo "\n";
+    echo "Examples:\n";
+    echo "  $scriptName test/debug_test.php                    # Basic coverage analysis\n";
+    echo "  $scriptName my_script.php --html                  # Generate HTML report\n";
+    echo "  $scriptName bin/page.php --text -- get /          # Coverage with arguments\n";
+    echo "  $scriptName bin/console.php --html -- cache:clear --env=dev  # Console command coverage\n";
+    echo "\n";
+}
+
+// Check for help flag or missing argument
+if (in_array('--help', $argv) || in_array('-h', $argv) || count($argv) < 2) {
+    showHelp($argv[0]);
+    if (count($argv) < 2) {
+        fwrite(STDERR, "❌ Error: PHP file argument is required\n");
+        exit(1);
+    }
+    exit(0);
+}
+
+// Parse arguments
+$targetFile = $argv[1];
+$outputFormat = 'text';
+$phpArgs = [];
+
+// Parse options and find -- separator
+for ($i = 2; $i < count($argv); $i++) {
+    if ($argv[$i] === '--') {
+        $phpArgs = array_slice($argv, $i + 1);
+        break;
+    } elseif ($argv[$i] === '--html') {
+        $outputFormat = 'html';
+    } elseif ($argv[$i] === '--text') {
+        $outputFormat = 'text';
+    }
+}
+
+// Check target file exists
+if (!file_exists($targetFile)) {
+    fwrite(STDERR, "❌ Error: File '$targetFile' not found\n");
+    fwrite(STDERR, "Use '{$argv[0]} --help' for usage information\n");
+    exit(1);
+}
+
+// Generate unique coverage filename
+$coverageTimestamp = date('Ymd_His');
+$coverageDir = "/tmp/xdebug_coverage_$coverageTimestamp";
+
+// Create coverage directory
+mkdir($coverageDir, 0755, true);
+
+// Build Xdebug options
+$xdebugOpts = [
+    '-dzend_extension=xdebug',
+    '-dxdebug.mode=coverage',
+    '-dxdebug.start_with_request=yes'
+];
+
+// Create a coverage wrapper script
+$wrapperScript = "/tmp/coverage_wrapper_$coverageTimestamp.php";
+$wrapperContent = "<?php
 // Coverage analysis wrapper
 xdebug_start_code_coverage(XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
 
+// Capture arguments for the target script
+\$targetArgs = " . var_export($phpArgs, true) . ";
+if (!empty(\$targetArgs)) {
+    \$_SERVER['argv'] = array_merge(['" . addslashes($targetFile) . "'], \$targetArgs);
+    \$_SERVER['argc'] = count(\$_SERVER['argv']);
+}
+
 // Include and execute the target file
-include '$TARGET_FILE';
+include '" . addslashes($targetFile) . "';
 
 // Get coverage data
 \$coverage = xdebug_get_code_coverage();
 xdebug_stop_code_coverage();
 
 // Generate report based on format
-if ('$OUTPUT_FORMAT' === 'html') {
-    \$htmlDir = '$COVERAGE_DIR/html';
+if ('" . $outputFormat . "' === 'html') {
+    \$htmlDir = '" . addslashes($coverageDir) . "/html';
     mkdir(\$htmlDir, 0755, true);
     
     foreach (\$coverage as \$file => \$lines) {
         \$filename = basename(\$file);
         \$htmlFile = \$htmlDir . '/' . \$filename . '.html';
         
-        \$html = "<html><head><title>Coverage: \$filename</title></head><body>";
-        \$html .= "<h1>Coverage Report: \$filename</h1>";
-        \$html .= "<table border='1'><tr><th>Line</th><th>Status</th></tr>";
+        \$html = '<html><head><title>Coverage: ' . htmlspecialchars(\$filename) . '</title></head><body>';
+        \$html .= '<h1>Coverage Report: ' . htmlspecialchars(\$filename) . '</h1>';
+        \$html .= '<table border=\"1\"><tr><th>Line</th><th>Code</th><th>Status</th></tr>';
         
         \$fileLines = file(\$file);
         foreach (\$fileLines as \$lineNum => \$line) {
@@ -96,53 +117,94 @@ if ('$OUTPUT_FORMAT' === 'html') {
             if (isset(\$lines[\$lineNum])) {
                 \$status = \$lines[\$lineNum] === 1 ? 'covered' : 'not covered';
             }
-            \$color = \$status === 'covered' ? 'green' : (\$status === 'not covered' ? 'red' : 'gray');
-            \$html .= "<tr style='background-color: \$color'>";
-            \$html .= "<td>\$lineNum</td><td>\$status</td></tr>";
+            \$color = \$status === 'covered' ? '#90EE90' : (\$status === 'not covered' ? '#FFB6C1' : '#D3D3D3');
+            \$html .= '<tr style=\"background-color: ' . \$color . '\">';
+            \$html .= '<td>' . \$lineNum . '</td>';
+            \$html .= '<td><pre>' . htmlspecialchars(rtrim(\$line)) . '</pre></td>';
+            \$html .= '<td>' . \$status . '</td></tr>';
         }
-        \$html .= "</table></body></html>";
+        \$html .= '</table></body></html>';
         
         file_put_contents(\$htmlFile, \$html);
     }
     
-    echo "✅ HTML coverage report generated in: \$htmlDir\n";
-    echo "📂 Open: \$htmlDir/index.html\n";
+    echo \"✅ HTML coverage report generated in: \$htmlDir\\n\";
+    echo \"📂 Open: \$htmlDir/\\n\";
 } else {
     // Text format
     \$totalLines = 0;
     \$coveredLines = 0;
     
     foreach (\$coverage as \$file => \$lines) {
-        echo "File: \$file\n";
+        echo \"File: \$file\\n\";
         foreach (\$lines as \$line => \$count) {
             \$totalLines++;
             if (\$count > 0) \$coveredLines++;
             \$status = \$count > 0 ? 'COVERED' : 'NOT COVERED';
-            echo "  Line \$line: \$status (\$count)\n";
+            echo \"  Line \$line: \$status (\$count)\\n\";
         }
-        echo "\n";
+        echo \"\\n\";
     }
     
     \$percentage = \$totalLines > 0 ? (\$coveredLines / \$totalLines) * 100 : 0;
-    echo "📊 Coverage Summary:\n";
-    echo "   Total lines: \$totalLines\n";
-    echo "   Covered lines: \$coveredLines\n";
-    echo "   Coverage: " . number_format(\$percentage, 2) . "%\n";
+    echo \"📊 Coverage Summary:\\n\";
+    echo \"   Total lines: \$totalLines\\n\";
+    echo \"   Covered lines: \$coveredLines\\n\";
+    echo \"   Coverage: \" . number_format(\$percentage, 2) . \"%\\n\";
 }
-EOF
+";
 
-# Execute with coverage
-php $XDEBUG_OPTS "$WRAPPER_SCRIPT"
+file_put_contents($wrapperScript, $wrapperContent);
 
-# Cleanup wrapper script
-rm -f "$WRAPPER_SCRIPT"
+// Execute command
+if (empty($phpArgs)) {
+    echo "📊 Coverage Analysis: $targetFile\n";
+} else {
+    echo "📊 Coverage Analysis: $targetFile with arguments: " . implode(' ', $phpArgs) . "\n";
+}
+echo "📁 Output format: $outputFormat\n";
 
-echo ""
-echo "✅ Coverage analysis complete!"
+// Build and execute command
+$command = ['php'];
+$command = array_merge($command, $xdebugOpts);
+$command[] = $wrapperScript;
 
-if [ "$OUTPUT_FORMAT" = "html" ]; then
-    echo "💡 View HTML report:"
-    echo "   open $COVERAGE_DIR/html/"
-else
-    echo "💡 Coverage data saved to: $COVERAGE_DIR"
-fi
+// Execute and suppress stderr
+$descriptors = [
+    0 => ['pipe', 'r'],  // stdin
+    1 => ['pipe', 'w'],  // stdout
+    2 => ['pipe', 'w'],  // stderr
+];
+
+$process = proc_open($command, $descriptors, $pipes);
+
+if (is_resource($process)) {
+    // Close stdin
+    fclose($pipes[0]);
+    
+    // Read stdout
+    $stdout = stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    
+    // Read and ignore stderr
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[2]);
+    
+    // Wait for process to finish
+    $returnCode = proc_close($process);
+    
+    // Output the results
+    echo $stdout;
+}
+
+// Cleanup wrapper script
+unlink($wrapperScript);
+
+echo "\n✅ Coverage analysis complete!\n";
+
+if ($outputFormat === 'html') {
+    echo "💡 View HTML report:\n";
+    echo "   open $coverageDir/html/\n";
+} else {
+    echo "💡 Coverage data saved to: $coverageDir\n";
+}
