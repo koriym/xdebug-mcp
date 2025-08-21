@@ -164,7 +164,7 @@ if (empty($phpArgs)) {
 echo "📁 Output format: $outputFormat\n";
 
 // Build and execute command
-$command = ['php'];
+$command = [PHP_BINARY];
 $command = array_merge($command, $xdebugOpts);
 $command[] = $wrapperScript;
 
