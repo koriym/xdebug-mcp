@@ -7,7 +7,8 @@ declare(strict_types=1);
 $autoloadPath = require __DIR__ . '/autoload.php';
 
 // Determine project root from autoloader path
-$projectRoot = str_contains($autoloadPath, '/vendor/autoload.php') 
+$normalized = str_replace('\\', '/', $autoloadPath);
+$projectRoot = str_ends_with($normalized, '/vendor/autoload.php')
     ? dirname($autoloadPath, 2)
     : dirname($autoloadPath);
 
