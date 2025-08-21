@@ -37,11 +37,13 @@ I realized we needed to move beyond the goal-oriented, output-focused relationsh
 
 True partnership means sharing **everything** humans have access to:
 - Not just code and error messages
-- But runtime execution data
-- Variable states and memory snapshots  
-- Performance metrics and bottlenecks
-- Test coverage and execution paths
-- The complete context of how software actually behaves
+- But deep understanding of how code actually executes through trace data
+- Variable states and memory snapshots at every step
+- Performance metrics showing where time is actually spent
+- Test coverage revealing which paths are truly exercised
+- The complete context of runtime behavior, not static analysis
+
+The key insight: AI needs to understand not just what the code says, but how it actually behaves when running. Trace data provides this deep understanding - showing the exact sequence of function calls, parameter values, execution times, and state changes that led to any given outcome.
 
 ## From Limited Context to Full Transparency
 
@@ -59,7 +61,7 @@ Human: "Something's wrong with this function"
 AI: "Let me trace its execution... I see the issue in the call graph at line 47"
 ```
 
-When AI has access to the same debugging tools and runtime data that experienced developers use, it can provide the same quality of assistance.
+When AI has access to trace data showing exactly how code executes - every function call, every parameter value, every state change - it can provide the same deep understanding and assistance that experienced developers rely on.
 
 ## The Vision
 
