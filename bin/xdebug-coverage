@@ -28,8 +28,14 @@ function showHelp(string $scriptName): void {
     echo "\n";
 }
 
-// Check for help flag or missing argument
-if (in_array('--help', $argv) || in_array('-h', $argv) || count($argv) < 2) {
+// Find -- separator to limit help flag checking
+$separatorIndex = array_search('--', $argv);
+$argsToCheck = $separatorIndex !== false 
+    ? array_slice($argv, 0, $separatorIndex)  // Args before --
+    : $argv;                                   // All args if no --
+
+// Check for help flag or missing argument (only in pre-separator args)
+if (in_array('--help', $argsToCheck) || in_array('-h', $argsToCheck) || count($argv) < 2) {
     showHelp($argv[0]);
     if (count($argv) < 2) {
         fwrite(STDERR, "❌ Error: PHP file argument is required\n");
