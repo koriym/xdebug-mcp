@@ -15,9 +15,9 @@ class XdebugPhpunitCommand
     private string $mode = 'trace'; // trace or profile
     private array $phpunitArgs = [];
     private array $tempFiles = [];
-    private string $xdebugOutputDir = '/tmp';
+    private string $xdebugOutputDir;
 
-    public function __construct(string $projectRoot, string $xdebugOutputDir = '/tmp')
+    public function __construct(string $projectRoot, string $xdebugOutputDir)
     {
         $this->projectRoot = rtrim($projectRoot, '/');
         $this->xdebugOutputDir = rtrim($xdebugOutputDir, '/');
