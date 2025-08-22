@@ -10,7 +10,7 @@ declare(strict_types=1);
 echo "🔧 Starting Xdebug debugging session...\n";
 echo "💡 This script will run for 5 minutes to allow MCP tool testing\n";
 echo "🔌 Debug session should be available on port 9004\n";
-echo "📝 In another terminal, run: ./bin/test-with-session\n\n";
+echo "📝 In another terminal, run: ./bin/test-working-tools.php --with-session\n\n";
 
 $startTime = time();
 $counter = 0;
