@@ -1,18 +1,21 @@
 # MCP Tools Testing Guide
 
-This guide explains how to test the 25 confirmed working tools of the Xdebug MCP Server.
+This guide explains how to test the 24 confirmed working tools of the Xdebug MCP Server.
 
 ## 📋 Quick Start
 
 ### Working Tools Test (Recommended)
 ```bash
-# Test the 25 confirmed working tools
+# Test the 24 confirmed working tools
 ./bin/test-all.sh
+
+# Alternative: Use the new refactored test runner directly
+./bin/test-working-tools.php
 ```
 
 This method tests the following tools:
 - ✅ Profiling Tools (4 tools)
-- ✅ Coverage Tools (6 tools)  
+- ✅ Coverage Tools (5 tools)  
 - ✅ Statistics Tools (5 tools)
 - ✅ Error Collection Tools (3 tools)
 - ✅ Tracing Tools (5 tools)
@@ -42,16 +45,16 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"xdebug_get
 | Category | Tool Count | Description |
 |----------|------------|-------------|
 | **Profiling** | 4 | Performance analysis, function timing |
-| **Coverage** | 6 | Code coverage, report generation |
+| **Coverage** | 5 | Code coverage, report generation |
 | **Statistics** | 5 | Memory usage, stack information |
 | **Error Collection** | 3 | PHP error tracking |
 | **Tracing** | 5 | Function call tracing |
 | **Configuration** | 2 | Xdebug settings management |
-| **Total** | **25** | Confirmed working tools |
+| **Total** | **24** | Confirmed working tools |
 
 ### Limitations
 
-**Unavailable Tools (17 tools):**
+**Unavailable Tools (18 tools):**
 - Session management: connect, disconnect
 - Breakpoints: set/remove/list breakpoints  
 - Step execution: step_into, step_over, step_out, continue
@@ -70,7 +73,7 @@ $ ./bin/test-all.sh
 
 ✅ Xdebug is not loaded (good - as recommended)
 
-🧪 Testing 25 Working MCP Tools
+🧪 Testing 24 Working MCP Tools
 ===================================================
 
 ⚡ Profiling Tools (4 tools)
@@ -79,7 +82,7 @@ $ ./bin/test-all.sh
   xdebug_get_profile_info             ... PASS
   xdebug_analyze_profile              ... PASS
 
-📊 Coverage Tools (6 tools)
+📊 Coverage Tools (5 tools)
   xdebug_start_coverage               ... PASS
   xdebug_stop_coverage                ... PASS
   xdebug_get_coverage                 ... PASS
@@ -93,7 +96,7 @@ $ ./bin/test-all.sh
   xdebug_get_time_index               ... PASS
   xdebug_info                         ... PASS
 
-🚨 Error Handling Tools (3 tools)
+🚨 Error Collection Tools (3 tools)
   xdebug_start_error_collection       ... PASS
   xdebug_stop_error_collection        ... PASS
   xdebug_get_collected_errors         ... PASS
@@ -112,8 +115,8 @@ $ ./bin/test-all.sh
 ===================================================
 📋 Final Results
 ===================================================
-Total tools tested: 25/25
-✅ Passed: 25
+Total tools tested: 24/24
+✅ Passed: 24
 ❌ Failed: 0
 Pass rate: 100%
 
@@ -135,7 +138,7 @@ php -dzend_extension=xdebug.so -m | grep xdebug
 1. **Install dependencies**: `composer install`
 2. **Check environment**: `./bin/check-xdebug-status`  
 3. **Run working tools test**: `./bin/test-all.sh`
-4. **Review results**: All 25 tools should pass
+4. **Review results**: All 24 tools should pass
 
 ## 🚀 Individual Tool Categories
 
@@ -146,7 +149,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"xdebug_sta
 echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"xdebug_stop_profiling","arguments":{}}}' | php -dzend_extension=xdebug.so bin/xdebug-mcp
 ```
 
-### Coverage Tools (6 tools)
+### Coverage Tools (5 tools)
 Test code coverage tracking:
 ```bash
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"xdebug_start_coverage","arguments":{"track_unused":true}}}' | php -dzend_extension=xdebug.so bin/xdebug-mcp
