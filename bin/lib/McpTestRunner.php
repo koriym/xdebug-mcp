@@ -86,15 +86,63 @@ class McpTestRunner
         $command = sprintf('echo %s | timeout 5s %s 2>/dev/null || echo "timeout"', escapeshellarg($testRequest), $this->xdebugMcp);
         $output = shell_exec($command);
         
-        if ($output && !str_contains($output, 'timeout')) {
-            $this->sessionAvailable = true;
-            echo self::GREEN . "✅ Debug session connected successfully\n" . self::RESET;
-            return true;
-        } else {
-            echo self::RED . "❌ Debug session not available\n" . self::RESET;
+        // Trim output and check for timeout first
+        $output = trim($output ?? '');
+        
+        if (str_contains($output, 'timeout')) {
+            echo self::RED . "❌ Debug session not available (timeout)\n" . self::RESET;
             echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
             return false;
         }
+        
+        if (empty($output)) {
+            echo self::RED . "❌ Debug session not available (no output)\n" . self::RESET;
+            echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
+            return false;
+        }
+        
+        // Extract JSON line from output
+        $lines = explode("\n", $output);
+        $jsonLine = '';
+        foreach ($lines as $line) {
+            if (str_starts_with($line, '{"jsonrpc"')) {
+                $jsonLine = $line;
+                break;
+            }
+        }
+        
+        if (empty($jsonLine)) {
+            echo self::RED . "❌ Debug session not available (no valid JSON response)\n" . self::RESET;
+            echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
+            return false;
+        }
+        
+        // Attempt to decode JSON and validate response
+        $response = json_decode($jsonLine, true);
+        if ($response === null) {
+            echo self::RED . "❌ Debug session not available (invalid JSON)\n" . self::RESET;
+            echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
+            return false;
+        }
+        
+        // Check for error in response
+        if (isset($response['error'])) {
+            echo self::RED . "❌ Debug session not available (error: {$response['error']['message']})\n" . self::RESET;
+            echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
+            return false;
+        }
+        
+        // Check for result field indicating success
+        if (!isset($response['result'])) {
+            echo self::RED . "❌ Debug session not available (no result field)\n" . self::RESET;
+            echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
+            return false;
+        }
+        
+        // All checks passed - session is available
+        $this->sessionAvailable = true;
+        echo self::GREEN . "✅ Debug session connected successfully\n" . self::RESET;
+        return true;
     }
 
     public function testMcpTool(string $toolName, array $arguments = [], bool $requiresSession = false): string
