@@ -1,17 +1,10 @@
-#!/usr/bin/env php
-<?php
+#!/bin/sh
 
-declare(strict_types=1);
+# POSIX shell wrapper to maintain compatibility with existing test-all.sh usage
+# Delegates to the refactored test-working-tools.php
 
-/**
- * Wrapper script to maintain compatibility with existing test-all.sh usage
- * Delegates to the refactored test-working-tools.php
- */
+# Get script directory
+script_dir="$(dirname "$0")"
 
-// Forward all arguments to the new refactored script
-$args = implode(' ', array_slice($argv, 1));
-$command = __DIR__ . '/test-working-tools.php ' . $args;
-
-// Execute and preserve exit code
-passthru($command, $exitCode);
-exit($exitCode);
+# Execute PHP script with all arguments forwarded safely
+exec php -f "$script_dir/test-working-tools.php" -- "$@"
