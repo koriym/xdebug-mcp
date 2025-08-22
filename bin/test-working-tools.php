@@ -4,7 +4,7 @@
 declare(strict_types=1);
 
 /**
- * Simplified test script for 24 working MCP tools using the refactored test runner
+ * Simplified test script for working MCP tools using the refactored test runner
  * Replaces the monolithic test-all.sh with a clean, maintainable approach
  */
 
@@ -33,12 +33,12 @@ if (!$testRunner->checkPrerequisites()) {
 
 if (!$sessionMode) {
     echo "\n" . BLUE . "📖 Testing Mode Selection:\n" . RESET;
-    echo "  " . YELLOW . "Current: Basic testing (24 working tools)\n" . RESET;
+    echo "  " . YELLOW . "Current: Basic testing (" . McpTestRunner::TOTAL_WORKING_TOOLS . " working tools)\n" . RESET;
     echo "  " . GREEN . "Complete: Run with --with-session to attempt session tools\n" . RESET;
     echo "\n" . BLUE . "💡 For session testing (may fail):\n" . RESET;
     echo "  1. " . YELLOW . "Terminal 1:" . RESET . " ./bin/test-working-tools.php --with-session\n";
     echo "  2. " . YELLOW . "Terminal 2:" . RESET . " php -dzend_extension=xdebug.so -dxdebug.mode=debug -dxdebug.client_port=9004 -dxdebug.start_with_request=yes test/debug_session_test.php\n";
-    echo "\n" . BLUE . "📝 Running 24 working tools test now...\n" . RESET;
+    echo "\n" . BLUE . "📝 Running " . McpTestRunner::TOTAL_WORKING_TOOLS . " working tools test now...\n" . RESET;
 }
 
 // Test session connectivity if in session mode
