@@ -17,6 +17,15 @@ class McpTestRunner
     private const BLUE = "\033[34m";
     private const RESET = "\033[0m";
 
+    // Tool count constants for maintainability
+    public const TOTAL_WORKING_TOOLS = 24;
+    public const PROFILING_TOOLS = 4;
+    public const COVERAGE_TOOLS = 5;
+    public const STATISTICS_TOOLS = 5;
+    public const ERROR_COLLECTION_TOOLS = 3;
+    public const TRACING_TOOLS = 5;
+    public const CONFIGURATION_TOOLS = 2;
+
     private array $results = [
         'passed' => 0,
         'failed' => 0,
@@ -98,6 +107,15 @@ class McpTestRunner
         
         echo sprintf("  %-35s ... ", $toolName);
         
+        // Validate inputs
+        if (empty($toolName)) {
+            echo self::RED . "FAIL (invalid tool name)\n" . self::RESET;
+            $this->results['failed']++;
+            $this->results['failed_tools'][] = $toolName;
+            return 'failed';
+        }
+
+        // Create JSON request with error handling
         $request = json_encode([
             'jsonrpc' => '2.0',
             'id' => uniqid(),
@@ -106,11 +124,26 @@ class McpTestRunner
                 'name' => $toolName,
                 'arguments' => $arguments
             ]
-        ]);
+        ], JSON_THROW_ON_ERROR);
+
+        if ($request === false) {
+            echo self::RED . "FAIL (JSON encoding error)\n" . self::RESET;
+            $this->results['failed']++;
+            $this->results['failed_tools'][] = $toolName;
+            return 'failed';
+        }
         
         $timeoutCmd = $requiresSession ? 'timeout 10s ' : '';
         $command = sprintf('echo %s | %s%s 2>/dev/null', escapeshellarg($request), $timeoutCmd, $this->xdebugMcp);
-        $output = shell_exec($command);
+        
+        try {
+            $output = shell_exec($command);
+        } catch (Exception $e) {
+            echo self::RED . "FAIL (execution error: " . $e->getMessage() . ")\n" . self::RESET;
+            $this->results['failed']++;
+            $this->results['failed_tools'][] = $toolName;
+            return 'failed';
+        }
         
         if ($output === null || ($requiresSession && str_contains($command, 'timeout') && empty(trim($output)))) {
             echo self::RED . "FAIL (timeout/no output)\n" . self::RESET;
@@ -162,21 +195,25 @@ class McpTestRunner
 
     public function runProfilingTools(): void
     {
-        echo self::BLUE . "\n⚡ Profiling Tools (4 tools)\n" . self::RESET;
+        echo self::BLUE . "\n⚡ Profiling Tools (" . self::PROFILING_TOOLS . " tools)\n" . self::RESET;
         $this->testMcpTool('xdebug_start_profiling', []);
         $this->testMcpTool('xdebug_stop_profiling', []);
         $this->testMcpTool('xdebug_get_profile_info', []);
         
         // Create sample profile file for testing
-        $profileFile = '/tmp/test_profile.out';
-        file_put_contents($profileFile, "version: 1\ncmd: php\npart: 1\n\nfn=main\n0 100\n");
-        $this->testMcpTool('xdebug_analyze_profile', ['profile_file' => $profileFile, 'top_functions' => 5]);
-        @unlink($profileFile);
+        $profileFile = tempnam(sys_get_temp_dir(), 'test_profile_');
+        if ($profileFile === false) {
+            echo self::YELLOW . "  Warning: Could not create temporary profile file for testing\n" . self::RESET;
+        } else {
+            file_put_contents($profileFile, "version: 1\ncmd: php\npart: 1\n\nfn=main\n0 100\n");
+            $this->testMcpTool('xdebug_analyze_profile', ['profile_file' => $profileFile, 'top_functions' => 5]);
+            @unlink($profileFile);
+        }
     }
 
     public function runCoverageTools(): void
     {
-        echo self::BLUE . "\n📊 Coverage Tools (5 tools)\n" . self::RESET;
+        echo self::BLUE . "\n📊 Coverage Tools (" . self::COVERAGE_TOOLS . " tools)\n" . self::RESET;
         $this->testMcpTool('xdebug_start_coverage', ['track_unused' => true]);
         $this->testMcpTool('xdebug_stop_coverage', []);
         $this->testMcpTool('xdebug_get_coverage', ['format' => 'raw']);
@@ -189,7 +226,7 @@ class McpTestRunner
 
     public function runStatisticsTools(): void
     {
-        echo self::BLUE . "\n📈 Statistics Tools (5 tools)\n" . self::RESET;
+        echo self::BLUE . "\n📈 Statistics Tools (" . self::STATISTICS_TOOLS . " tools)\n" . self::RESET;
         $this->testMcpTool('xdebug_get_memory_usage', []);
         $this->testMcpTool('xdebug_get_peak_memory_usage', []);
         $this->testMcpTool('xdebug_get_stack_depth', []);
@@ -199,7 +236,7 @@ class McpTestRunner
 
     public function runErrorCollectionTools(): void
     {
-        echo self::BLUE . "\n🚨 Error Collection Tools (3 tools)\n" . self::RESET;
+        echo self::BLUE . "\n🚨 Error Collection Tools (" . self::ERROR_COLLECTION_TOOLS . " tools)\n" . self::RESET;
         $this->testMcpTool('xdebug_start_error_collection', []);
         $this->testMcpTool('xdebug_stop_error_collection', []);
         $this->testMcpTool('xdebug_get_collected_errors', ['clear' => false]);
@@ -207,7 +244,7 @@ class McpTestRunner
 
     public function runTracingTools(): void
     {
-        echo self::BLUE . "\n🔍 Tracing Tools (5 tools)\n" . self::RESET;
+        echo self::BLUE . "\n🔍 Tracing Tools (" . self::TRACING_TOOLS . " tools)\n" . self::RESET;
         $this->testMcpTool('xdebug_start_trace', []);
         $this->testMcpTool('xdebug_stop_trace', []);
         $this->testMcpTool('xdebug_get_tracefile_name', []);
@@ -217,14 +254,14 @@ class McpTestRunner
 
     public function runConfigurationTools(): void
     {
-        echo self::BLUE . "\n⚙️ Configuration Tools (2 tools)\n" . self::RESET;
+        echo self::BLUE . "\n⚙️ Configuration Tools (" . self::CONFIGURATION_TOOLS . " tools)\n" . self::RESET;
         $this->testMcpTool('xdebug_call_info', []);
         $this->testMcpTool('xdebug_print_function_stack', ['message' => 'Test Stack']);
     }
 
     public function runWorkingToolsTest(): void
     {
-        echo self::BLUE . "\n🧪 Testing 24 Working MCP Tools\n" . self::RESET;
+        echo self::BLUE . "\n🧪 Testing " . self::TOTAL_WORKING_TOOLS . " Working MCP Tools\n" . self::RESET;
         echo "=" . str_repeat("=", 50) . "\n";
 
         $this->runProfilingTools();
@@ -249,7 +286,7 @@ class McpTestRunner
         echo self::BLUE . "📋 Final Results\n" . self::RESET;
         echo "=" . str_repeat("=", 50) . "\n";
 
-        echo sprintf("Total tools tested: %d/24\n", $total);
+        echo sprintf("Total tools tested: %d/%d\n", $total, self::TOTAL_WORKING_TOOLS);
         echo sprintf(self::GREEN . "✅ Passed: %d\n" . self::RESET, $this->results['passed']);
         echo sprintf(self::RED . "❌ Failed: %d\n" . self::RESET, $this->results['failed']);
         echo sprintf(self::YELLOW . "⏭️  Skipped: %d\n" . self::RESET, $this->results['skipped']);
@@ -262,7 +299,7 @@ class McpTestRunner
             }
         }
 
-        if ($this->results['passed'] === 24 && $this->results['failed'] === 0 && !$this->sessionMode) {
+        if ($this->results['passed'] === self::TOTAL_WORKING_TOOLS && $this->results['failed'] === 0 && !$this->sessionMode) {
             echo "\n" . self::GREEN . "✅ All working tools functioning properly!\n" . self::RESET;
         } elseif ($this->results['passed'] > 20) {
             echo "\n" . self::GREEN . "✅ Most tools working excellently!\n" . self::RESET;
