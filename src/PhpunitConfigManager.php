@@ -13,7 +13,6 @@ use function file_exists;
 use function file_get_contents;
 use function fwrite;
 use function rtrim;
-use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
 

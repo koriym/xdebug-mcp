@@ -1,0 +1,125 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Test script that automatically loads Xdebug and runs comprehensive tests
+ */
+
+// Colors for output
+define('GREEN', "\033[32m");
+define('RED', "\033[31m");
+define('YELLOW', "\033[33m");
+define('BLUE', "\033[34m");
+define('RESET', "\033[0m");
+
+echo BLUE . "🚀 Comprehensive MCP Tools Test with Xdebug\n" . RESET;
+echo "=" . str_repeat("=", 60) . "\n\n";
+
+// Check if Xdebug is already loaded
+if (!extension_loaded('xdebug')) {
+    echo YELLOW . "⚠️  Xdebug not loaded, attempting to restart with Xdebug...\n" . RESET;
+    
+    // Restart this script with Xdebug enabled
+    $xdebugOptions = [
+        '-dzend_extension=xdebug.so',
+        '-dxdebug.mode=profile,coverage,trace',  // debug mode removed for testing
+        '-dxdebug.output_dir=/tmp'
+    ];
+    
+    $command = 'php ' . implode(' ', $xdebugOptions) . ' ' . __FILE__ . ' --with-xdebug';
+    echo "Executing: $command\n\n";
+    passthru($command);
+    exit;
+}
+
+// If we get here, Xdebug is loaded
+echo GREEN . "✅ Xdebug is loaded (v" . phpversion('xdebug') . ")\n" . RESET;
+echo "   Modes: " . ini_get('xdebug.mode') . "\n";
+echo "   Output dir: " . ini_get('xdebug.output_dir') . "\n\n";
+
+// Phase 1: Run smart tests with Xdebug
+echo BLUE . "📝 Phase 1: Running Smart Tests\n" . RESET;
+echo "-" . str_repeat("-", 40) . "\n";
+$xdebugCmd = 'php -dzend_extension=xdebug.so -dxdebug.mode=profile,coverage,trace ./bin/smart-test-tools';
+passthru($xdebugCmd);
+
+echo "\n" . BLUE . "📝 Phase 2: Testing CLI Tools\n" . RESET;
+echo "-" . str_repeat("-", 40) . "\n";
+
+// Create a test file
+$testFile = '/tmp/xdebug_test_script.php';
+file_put_contents($testFile, '<?php
+echo "=== Test Script for CLI Tools ===\n";
+$data = ["hello", "world", "xdebug"];
+foreach ($data as $index => $item) {
+    echo "Item $index: $item\n";
+    usleep(100000); // 0.1 second delay
+}
+
+function testFunction($param) {
+    return "Processed: " . $param;
+}
+
+$result = testFunction("test parameter");
+echo "Result: $result\n";
+echo "Memory usage: " . memory_get_usage() . " bytes\n";
+');
+
+// Test CLI tools
+echo "\n🔍 Testing xdebug-trace:\n";
+passthru("./bin/xdebug-trace $testFile");
+
+echo "\n📊 Testing xdebug-profile:\n";
+passthru("./bin/xdebug-profile $testFile");
+
+echo "\n📈 Testing xdebug-coverage:\n";
+passthru("./bin/xdebug-coverage $testFile --text");
+
+// Phase 3: Check for debug session capability
+echo "\n" . BLUE . "📝 Phase 3: Debug Session Test\n" . RESET;
+echo "-" . str_repeat("-", 40) . "\n";
+
+echo "💡 To test session-dependent tools, run in another terminal:\n";
+echo "   Terminal 1: php -dzend_extension=xdebug.so -dxdebug.mode=debug -dxdebug.client_port=9004 -dxdebug.start_with_request=yes test/debug_session_test.php\n";
+echo "   Terminal 2: ./bin/test-with-session\n\n";
+
+// Try a quick connection test
+echo "🔌 Testing if debug session is available...\n";
+$connection = @fsockopen('127.0.0.1', 9004, $errno, $errstr, 1);
+if ($connection) {
+    fclose($connection);
+    echo GREEN . "✅ Debug session detected on port 9004!\n" . RESET;
+    echo "🧪 Running session-dependent tests...\n\n";
+    $sessionCmd = 'php -dzend_extension=xdebug.so -dxdebug.mode=debug,profile,coverage,trace ./bin/test-with-session';
+    passthru($sessionCmd);
+} else {
+    echo YELLOW . "⚠️  No debug session detected on port 9004\n" . RESET;
+    echo "   Start a debug session to test the remaining tools\n";
+}
+
+// Phase 4: Summary
+echo "\n" . BLUE . "📋 Test Summary\n" . RESET;
+echo "=" . str_repeat("=", 60) . "\n";
+
+echo "✅ Completed comprehensive testing with Xdebug enabled\n";
+echo "📊 Tools tested across multiple categories:\n";
+echo "   - Memory & Statistics tools\n";
+echo "   - Profiling & Performance tools\n";  
+echo "   - Code Coverage tools\n";
+echo "   - Tracing & Function monitoring\n";
+echo "   - Error collection tools\n";
+echo "   - CLI debugging tools\n";
+
+if ($connection) {
+    echo "   - Session-dependent debugging tools\n";
+}
+
+echo "\n💡 For manual testing of specific tools:\n";
+echo "   echo '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"TOOL_NAME\",\"arguments\":{}}}' | php bin/xdebug-mcp\n";
+
+// Cleanup
+@unlink($testFile);
+
+echo "\n🎉 Testing complete!\n";

@@ -8,10 +8,10 @@ echo "=== Xdebug MCP Server Demo ===\n\n";
 
 $server = new FakeMcpServer();
 
-// デモ用のテストケース
+// Demo test cases
 $demoSteps = [
     [
-        'name' => '初期化',
+        'name' => 'Initialization',
         'request' => [
             'jsonrpc' => '2.0',
             'id' => 1,
@@ -20,7 +20,7 @@ $demoSteps = [
         ]
     ],
     [
-        'name' => 'Xdebugに接続',
+        'name' => 'Connect to Xdebug',
         'request' => [
             'jsonrpc' => '2.0',
             'id' => 2,
@@ -32,7 +32,7 @@ $demoSteps = [
         ]
     ],
     [
-        'name' => 'ブレークポイント設定',
+        'name' => 'Set breakpoint',
         'request' => [
             'jsonrpc' => '2.0',
             'id' => 3,
@@ -47,7 +47,7 @@ $demoSteps = [
         ]
     ],
     [
-        'name' => 'ステップオーバー実行',
+        'name' => 'Step over execution',
         'request' => [
             'jsonrpc' => '2.0',
             'id' => 4,
@@ -59,7 +59,7 @@ $demoSteps = [
         ]
     ],
     [
-        'name' => 'スタックトレース取得',
+        'name' => 'Get stack trace',
         'request' => [
             'jsonrpc' => '2.0',
             'id' => 5,
@@ -71,7 +71,7 @@ $demoSteps = [
         ]
     ],
     [
-        'name' => 'ローカル変数取得',
+        'name' => 'Get local variables',
         'request' => [
             'jsonrpc' => '2.0',
             'id' => 6,
@@ -83,7 +83,7 @@ $demoSteps = [
         ]
     ],
     [
-        'name' => 'PHP式の評価',
+        'name' => 'Evaluate PHP expression',
         'request' => [
             'jsonrpc' => '2.0',
             'id' => 7,
@@ -95,7 +95,7 @@ $demoSteps = [
         ]
     ],
     [
-        'name' => 'ステップイン実行',
+        'name' => 'Step into execution',
         'request' => [
             'jsonrpc' => '2.0',
             'id' => 8,
@@ -107,7 +107,7 @@ $demoSteps = [
         ]
     ],
     [
-        'name' => '実行継続',
+        'name' => 'Continue execution',
         'request' => [
             'jsonrpc' => '2.0',
             'id' => 9,
@@ -119,7 +119,7 @@ $demoSteps = [
         ]
     ],
     [
-        'name' => '配列の評価',
+        'name' => 'Evaluate array',
         'request' => [
             'jsonrpc' => '2.0',
             'id' => 10,
@@ -132,13 +132,13 @@ $demoSteps = [
     ]
 ];
 
-// リフレクションを使用してprivateメソッドにアクセス
+// Use reflection to access private methods
 $reflection = new ReflectionClass($server);
 $handleRequestMethod = $reflection->getMethod('handleRequest');
 $handleRequestMethod->setAccessible(true);
 
 foreach ($demoSteps as $i => $step) {
-    echo "--- ステップ " . ($i + 1) . ": {$step['name']} ---\n";
+    echo "--- Step " . ($i + 1) . ": {$step['name']} ---\n";
     
     try {
         $response = $handleRequestMethod->invoke($server, $step['request']);
@@ -149,14 +149,14 @@ foreach ($demoSteps as $i => $step) {
             echo json_encode($response, JSON_PRETTY_PRINT) . "\n";
         }
         
-        echo "✅ 成功\n\n";
+        echo "✅ Success\n\n";
         
-        // デモの進行を見やすくするため
-        usleep(500000); // 0.5秒待機
+        // Make demo progress more visible
+        usleep(500000); // Wait 0.5 seconds
         
     } catch (Exception $e) {
-        echo "❌ エラー: " . $e->getMessage() . "\n\n";
+        echo "❌ Error: " . $e->getMessage() . "\n\n";
     }
 }
 
-echo "=== デモ完了 ===\n";
+echo "=== Demo completed ===\n";
