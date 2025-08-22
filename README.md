@@ -8,7 +8,7 @@ MCP server enabling AI control of PHP Xdebug debugging, profiling, and coverage 
 
 ## Features
 
-- **25 Working MCP Tools**: Profiling, coverage, and non-session debugging automation
+- **24 Working MCP Tools**: Profiling, coverage, and non-session debugging automation
 - **Trace-based Debugging**: AI analyzes runtime execution data (no var_dump needed)
 - **IDE Compatible**: Port 9004 avoids conflicts with PhpStorm/VS Code (9003)
 - **Command Line Tools**: 6 standalone debugging utilities
@@ -16,7 +16,7 @@ MCP server enabling AI control of PHP Xdebug debugging, profiling, and coverage 
 ## Working Tool Categories
 
 - **Profiling**: Performance analysis, function timing, Cachegrind output (4 tools)
-- **Coverage**: Line/function coverage, HTML/XML reports, PHPUnit integration (6 tools)
+- **Coverage**: Line/function coverage, HTML/XML reports, PHPUnit integration (5 tools)
 - **Statistics**: Memory usage, stack depth, timing information (5 tools)
 - **Error Collection**: PHP error tracking and analysis (3 tools)
 - **Tracing**: Function call tracing and monitoring (5 tools)
@@ -229,7 +229,7 @@ Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
 - Trace mode: `/tmp/trace_*.xt` (execution traces)
 - Profile mode: `/tmp/cachegrind.out.*` (performance data)
 
-## 25 Working Tools
+## 24 Working Tools
 
 ### Profiling (4 tools)
 - **xdebug_start_profiling**: Start profiling execution
@@ -237,7 +237,7 @@ Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
 - **xdebug_get_profile_info**: Get current profiling information
 - **xdebug_analyze_profile**: Analyze profiling data from file
 
-### Coverage (6 tools)
+### Coverage (5 tools)
 - **xdebug_start_coverage**: Start code coverage tracking
 - **xdebug_stop_coverage**: Stop code coverage tracking
 - **xdebug_get_coverage**: Get code coverage data
@@ -269,7 +269,7 @@ Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
 
 ## Session-Dependent Tools (Not Available via CLI)
 
-The following 17 tools require active debugging sessions and are not currently available through simple command-line testing:
+The following 18 tools require active debugging sessions and are not currently available through simple command-line testing:
 
 - xdebug_connect, xdebug_disconnect
 - xdebug_set_breakpoint, xdebug_remove_breakpoint, xdebug_list_breakpoints
