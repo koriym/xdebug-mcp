@@ -1,63 +1,151 @@
-#!/bin/bash
+#!/usr/bin/env php
+<?php
 
-# Xdebug Trace Testing Script - Flexible Version
-cd "$(dirname "$0")/.."
-PROJECT_ROOT=$(pwd)
+declare(strict_types=1);
 
-# Check for help flag or missing argument
-if [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ -z "$1" ]; then
-    echo "Usage: $0 PHP_FILE"
-    echo ""
-    echo "Runs Xdebug trace testing on the specified PHP file."
-    echo ""
-    echo "Arguments:"
-    echo "  PHP_FILE    Path to PHP file to trace (required)"
-    echo ""
-    echo "Examples:"
-    echo "  $0 test/debug_test.php       # Trace test file"
-    echo "  $0 my_script.php             # Trace specific file"
-    echo "  $0 tests/Unit/SomeTest.php   # Trace test file"
-    echo ""
-    if [ -z "$1" ]; then
-        echo "❌ Error: PHP file argument is required"
-        exit 1
-    fi
-    exit 0
-fi
+// Load autoloader and get project root
+$projectRoot = require __DIR__ . '/autoload.php';
 
-# Check target file exists
-TARGET_FILE="$1"
-if [ ! -f "$TARGET_FILE" ]; then
-    echo "❌ Error: File '$TARGET_FILE' not found"
-    echo "Use '$0 --help' for usage information"
-    exit 1
-fi
+// Load common argument parser
+$parse = require __DIR__ . '/parse.php';
 
-# Generate unique trace filename
-TRACE_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-TRACE_FILE="/tmp/xdebug_trace_${TRACE_TIMESTAMP}"
+// Parse command line arguments
+function showHelp(string $scriptName): void {
+    echo "Usage: $scriptName PHP_FILE [-- PHP_ARGS...]\n";
+    echo "       $scriptName -- PHP_BINARY SCRIPT_FILE [SCRIPT_ARGS...]\n";
+    echo "\n";
+    echo "Runs Xdebug trace testing on the specified PHP file or command.\n";
+    echo "\n";
+    echo "Arguments:\n";
+    echo "  PHP_FILE      Path to PHP file to trace (required)\n";
+    echo "  PHP_ARGS      Arguments to pass to the PHP script (after --)\n";
+    echo "  PHP_BINARY    Custom PHP binary path (when using -- prefix)\n";
+    echo "  SCRIPT_FILE   PHP script to trace (when using -- prefix)\n";
+    echo "  SCRIPT_ARGS   Arguments for the script (when using -- prefix)\n";
+    echo "\n";
+    echo "Examples:\n";
+    echo "  # Standard usage:\n";
+    echo "  $scriptName test/debug_test.php                    # Trace test file\n";
+    echo "  $scriptName bin/page.php -- get /                 # Trace with arguments\n";
+    echo "\n";
+    echo "  # Custom PHP binary:\n";
+    echo "  $scriptName -- php bin/page.php get /             # Natural PHP command style\n";
+    echo "  $scriptName -- /usr/bin/php8.3 script.php args   # Specific PHP version\n";
+    echo "\n";
+}
 
-# Xdebug設定（圧縮を明示的に無効化）
-XDEBUG_OPTS="-dzend_extension=xdebug \
-    -dxdebug.mode=trace \
-    -dxdebug.start_with_request=trigger \
-    -dxdebug.trigger_value=TRACE \
-    -dxdebug.trace_format=1 \
-    -dxdebug.use_compression=0 \
-    -dxdebug.output_dir=/tmp \
-    -dxdebug.trace_output_name=xdebug_trace_${TRACE_TIMESTAMP}"
+// Find -- separator to limit help flag checking
+$separatorIndex = array_search('--', $argv);
+$argsToCheck = $separatorIndex !== false 
+    ? array_slice($argv, 0, $separatorIndex)  // Args before --
+    : $argv;                                   // All args if no --
 
-echo "🔍 Tracing: $TARGET_FILE"
-# Execute with trace
-XDEBUG_TRIGGER=TRACE php $XDEBUG_OPTS "$TARGET_FILE" 2>/dev/null
+// Check for help flag or missing argument (only in pre-separator args)
+if (in_array('--help', $argsToCheck) || in_array('-h', $argsToCheck) || count($argv) < 2) {
+    showHelp($argv[0]);
+    if (count($argv) < 2) {
+        fwrite(STDERR, "❌ Error: PHP file argument is required\n");
+        exit(1);
+    }
+    exit(0);
+}
 
-# Find the generated trace file
-LATEST_TRACE=$(ls -t /tmp/*trace*${TRACE_TIMESTAMP}*.xt 2>/dev/null | head -1)
+// Parse arguments using common function
+[$phpBinary, $targetFile, $phpArgs] = $parse($argv);
 
-if [ -f "$LATEST_TRACE" ]; then
-    echo "✅ Trace complete: $LATEST_TRACE"
-    echo "📊 $(wc -l < "$LATEST_TRACE") lines generated"
-else
-    echo "❌ No trace file generated. Check Xdebug configuration."
-    exit 1
-fi
+// Check target file exists
+if (!file_exists($targetFile)) {
+    fwrite(STDERR, "❌ Error: File '$targetFile' not found\n");
+    fwrite(STDERR, "Use '{$argv[0]} --help' for usage information\n");
+    exit(1);
+}
+
+// Generate unique trace filename
+$traceTimestamp = date('Ymd_His');
+$traceFile = "/tmp/xdebug_trace_$traceTimestamp";
+
+// Build Xdebug options
+$xdebugOpts = [
+    '-dzend_extension=xdebug',
+    '-dxdebug.mode=trace',
+    '-dxdebug.start_with_request=trigger',
+    '-dxdebug.trigger_value=TRACE',
+    '-dxdebug.trace_format=1',
+    '-dxdebug.use_compression=0',
+    '-dxdebug.output_dir=/tmp',
+    "-dxdebug.trace_output_name=xdebug_trace_$traceTimestamp"
+];
+
+// Build command
+$command = [$phpBinary];
+$command = array_merge($command, $xdebugOpts);
+$command[] = $targetFile;
+$command = array_merge($command, $phpArgs);
+
+// Set environment variable
+putenv('XDEBUG_TRIGGER=TRACE');
+
+// Execute command
+if (empty($phpArgs)) {
+    echo "🔍 Tracing: $targetFile\n";
+} else {
+    echo "🔍 Tracing: $targetFile with arguments: " . implode(' ', $phpArgs) . "\n";
+}
+
+// Execute with proper output handling
+$descriptors = [
+    0 => ['pipe', 'r'],  // stdin
+    1 => ['pipe', 'w'],  // stdout
+    2 => ['pipe', 'w'],  // stderr
+];
+
+$process = proc_open($command, $descriptors, $pipes);
+
+if (is_resource($process)) {
+    // Close stdin
+    fclose($pipes[0]);
+    
+    // Read and forward stdout
+    $stdout = stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    
+    // Read and forward stderr
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[2]);
+    
+    // Wait for process to finish and get exit code
+    $returnCode = proc_close($process);
+    
+    // Forward child process output
+    if ($stdout !== '') {
+        echo $stdout;
+    }
+    if ($stderr !== '') {
+        fwrite(STDERR, $stderr);
+    }
+    
+    // Propagate child process exit code
+    if ($returnCode !== 0) {
+        exit($returnCode);
+    }
+}
+
+// Find the generated trace file
+$tracePattern = "/tmp/*trace*{$traceTimestamp}*.xt";
+$traceFiles = glob($tracePattern);
+
+if (!empty($traceFiles)) {
+    // Sort by modification time (newest first)
+    usort($traceFiles, function($a, $b) {
+        return filemtime($b) - filemtime($a);
+    });
+    
+    $latestTrace = $traceFiles[0];
+    $lineCount = count(file($latestTrace));
+    
+    echo "✅ Trace complete: $latestTrace\n";
+    echo "📊 $lineCount lines generated\n";
+} else {
+    echo "❌ No trace file generated. Check Xdebug configuration.\n";
+    exit(1);
+}
