@@ -18,10 +18,10 @@ class McpTestRunner
     private const RESET = "\033[0m";
 
     // Tool count constants for maintainability
-    public const TOTAL_WORKING_TOOLS = 24;
+    public const TOTAL_WORKING_TOOLS = 25;
     public const PROFILING_TOOLS = 4;
     public const COVERAGE_TOOLS = 5;
-    public const STATISTICS_TOOLS = 5;
+    public const STATISTICS_TOOLS = 6;
     public const ERROR_COLLECTION_TOOLS = 3;
     public const TRACING_TOOLS = 5;
     public const CONFIGURATION_TOOLS = 2;
@@ -164,18 +164,18 @@ class McpTestRunner
         }
 
         // Create JSON request with error handling
-        $request = json_encode([
-            'jsonrpc' => '2.0',
-            'id' => uniqid(),
-            'method' => 'tools/call',
-            'params' => [
-                'name' => $toolName,
-                'arguments' => $arguments
-            ]
-        ], JSON_THROW_ON_ERROR);
-
-        if ($request === false) {
-            echo self::RED . "FAIL (JSON encoding error)\n" . self::RESET;
+        try {
+            $request = json_encode([
+                'jsonrpc' => '2.0',
+                'id' => uniqid(),
+                'method' => 'tools/call',
+                'params' => [
+                    'name' => $toolName,
+                    'arguments' => $arguments
+                ]
+            ], JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            echo self::RED . "FAIL (JSON encoding error: " . $e->getMessage() . ")\n" . self::RESET;
             $this->results['failed']++;
             $this->results['failed_tools'][] = $toolName;
             return 'failed';
@@ -279,6 +279,7 @@ class McpTestRunner
         $this->testMcpTool('xdebug_get_peak_memory_usage', []);
         $this->testMcpTool('xdebug_get_stack_depth', []);
         $this->testMcpTool('xdebug_get_time_index', []);
+        $this->testMcpTool('xdebug_get_function_stack', []);
         $this->testMcpTool('xdebug_info', ['format' => 'array']);
     }
 

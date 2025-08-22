@@ -1,12 +1,12 @@
 # MCP Tools Testing Guide
 
-This guide explains how to test the 24 confirmed working tools of the Xdebug MCP Server.
+This guide explains how to test the 25 confirmed working tools of the Xdebug MCP Server.
 
 ## 📋 Quick Start
 
 ### Working Tools Test (Recommended)
 ```bash
-# Test the 24 confirmed working tools
+# Test the 25 confirmed working tools
 ./bin/test-all.sh
 
 # Alternative: Use the new refactored test runner directly
