@@ -8,7 +8,7 @@ MCP server enabling AI control of PHP Xdebug debugging, profiling, and coverage 
 
 ## Features
 
-- **24 Working MCP Tools**: Profiling, coverage, and non-session debugging automation
+- **25 Working MCP Tools**: Profiling, coverage, and non-session debugging automation
 - **Trace-based Debugging**: AI analyzes runtime execution data (no var_dump needed)
 - **IDE Compatible**: Port 9004 avoids conflicts with PhpStorm/VS Code (9003)
 - **Command Line Tools**: 6 standalone debugging utilities
@@ -17,7 +17,7 @@ MCP server enabling AI control of PHP Xdebug debugging, profiling, and coverage 
 
 - **Profiling**: Performance analysis, function timing, Cachegrind output (4 tools)
 - **Coverage**: Line/function coverage, HTML/XML reports, PHPUnit integration (5 tools)
-- **Statistics**: Memory usage, stack depth, timing information (5 tools)
+- **Statistics**: Memory usage, stack depth, timing information, function stack (6 tools)
 - **Error Collection**: PHP error tracking and analysis (3 tools)
 - **Tracing**: Function call tracing and monitoring (5 tools)
 - **Configuration**: Xdebug settings and feature management (2 tools)
@@ -229,7 +229,7 @@ Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
 - Trace mode: `/tmp/trace_*.xt` (execution traces)
 - Profile mode: `/tmp/cachegrind.out.*` (performance data)
 
-## 24 Working Tools
+## 25 Working Tools
 
 ### Profiling (4 tools)
 - **xdebug_start_profiling**: Start profiling execution
@@ -244,11 +244,12 @@ Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
 - **xdebug_analyze_coverage**: Analyze coverage data and generate report
 - **xdebug_coverage_summary**: Get coverage summary statistics
 
-### Statistics (5 tools)
+### Statistics (6 tools)
 - **xdebug_get_memory_usage**: Get current memory usage information
 - **xdebug_get_peak_memory_usage**: Get peak memory usage information
 - **xdebug_get_stack_depth**: Get current stack depth level
 - **xdebug_get_time_index**: Get time index since script start
+- **xdebug_get_function_stack**: Get detailed function call stack with timing and memory data
 - **xdebug_info**: Get detailed Xdebug configuration and diagnostic information
 
 ### Error Collection (3 tools)
@@ -269,15 +270,14 @@ Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
 
 ## Session-Dependent Tools (Not Available via CLI)
 
-The following 18 tools require active debugging sessions and are not currently available through simple command-line testing:
+The following 17 tools require active debugging sessions and are not currently available through simple command-line testing:
 
 - xdebug_connect, xdebug_disconnect
 - xdebug_set_breakpoint, xdebug_remove_breakpoint, xdebug_list_breakpoints
 - xdebug_step_into, xdebug_step_over, xdebug_step_out, xdebug_continue
 - xdebug_get_stack, xdebug_get_variables, xdebug_eval
 - xdebug_set_exception_breakpoint, xdebug_set_watch_breakpoint
-- xdebug_get_function_stack, xdebug_get_features
-- xdebug_set_feature, xdebug_get_feature
+- xdebug_get_features, xdebug_set_feature, xdebug_get_feature
 
 
 ## Troubleshooting
