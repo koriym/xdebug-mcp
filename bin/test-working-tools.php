@@ -61,4 +61,4 @@ echo "   echo '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\
 
 // Exit with appropriate code
 $results = $testRunner->getResults();
-exit(($sessionMode && $results['failed'] > 0) ? 1 : 0);
+exit($results['failed'] > 0 ? 1 : 0);

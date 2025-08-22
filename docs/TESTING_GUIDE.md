@@ -16,7 +16,7 @@ This guide explains how to test the 25 confirmed working tools of the Xdebug MCP
 This method tests the following tools:
 - ✅ Profiling Tools (4 tools)
 - ✅ Coverage Tools (5 tools)  
-- ✅ Statistics Tools (5 tools)
+- ✅ Statistics Tools (6 tools)
 - ✅ Error Collection Tools (3 tools)
 - ✅ Tracing Tools (5 tools)
 - ✅ Configuration Tools (2 tools)
@@ -46,15 +46,15 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"xdebug_get
 |----------|------------|-------------|
 | **Profiling** | 4 | Performance analysis, function timing |
 | **Coverage** | 5 | Code coverage, report generation |
-| **Statistics** | 5 | Memory usage, stack information |
+| **Statistics** | 6 | Memory usage, stack information |
 | **Error Collection** | 3 | PHP error tracking |
 | **Tracing** | 5 | Function call tracing |
 | **Configuration** | 2 | Xdebug settings management |
-| **Total** | **24** | Confirmed working tools |
+| **Total** | **25** | Confirmed working tools |
 
 ### Limitations
 
-**Unavailable Tools (18 tools):**
+**Unavailable Tools (17 tools):**
 - Session management: connect, disconnect
 - Breakpoints: set/remove/list breakpoints  
 - Step execution: step_into, step_over, step_out, continue
@@ -73,7 +73,7 @@ $ ./bin/test-all.sh
 
 ✅ Xdebug is not loaded (good - as recommended)
 
-🧪 Testing 24 Working MCP Tools
+🧪 Testing 25 Working MCP Tools
 ===================================================
 
 ⚡ Profiling Tools (4 tools)
@@ -89,11 +89,12 @@ $ ./bin/test-all.sh
   xdebug_analyze_coverage             ... PASS
   xdebug_coverage_summary             ... PASS
 
-📈 Statistics Tools (5 tools)
+📈 Statistics Tools (6 tools)
   xdebug_get_memory_usage             ... PASS
   xdebug_get_peak_memory_usage        ... PASS
   xdebug_get_stack_depth              ... PASS
   xdebug_get_time_index               ... PASS
+  xdebug_get_function_stack           ... PASS
   xdebug_info                         ... PASS
 
 🚨 Error Collection Tools (3 tools)
@@ -115,8 +116,8 @@ $ ./bin/test-all.sh
 ===================================================
 📋 Final Results
 ===================================================
-Total tools tested: 24/24
-✅ Passed: 24
+Total tools tested: 25/25
+✅ Passed: 25
 ❌ Failed: 0
 Pass rate: 100%
 
@@ -138,7 +139,7 @@ php -dzend_extension=xdebug.so -m | grep xdebug
 1. **Install dependencies**: `composer install`
 2. **Check environment**: `./bin/check-xdebug-status`  
 3. **Run working tools test**: `./bin/test-all.sh`
-4. **Review results**: All 24 tools should pass
+4. **Review results**: All 25 tools should pass
 
 ## 🚀 Individual Tool Categories
 
@@ -156,7 +157,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"xdebug_sta
 echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"xdebug_stop_coverage","arguments":{}}}' | php -dzend_extension=xdebug.so bin/xdebug-mcp
 ```
 
-### Statistics Tools (5 tools)
+### Statistics Tools (6 tools)
 Test memory and timing information:
 ```bash
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"xdebug_get_memory_usage","arguments":{}}}' | php -dzend_extension=xdebug.so bin/xdebug-mcp
