@@ -119,21 +119,21 @@ class McpTestRunner
         
         // Attempt to decode JSON and validate response
         $response = json_decode($jsonLine, true);
-        if ($response === null) {
+        if ($response === null || !is_array($response)) {
             echo self::RED . "❌ Debug session not available (invalid JSON)\n" . self::RESET;
             echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
             return false;
         }
         
         // Check for error in response
-        if (isset($response['error'])) {
+        if (array_key_exists('error', $response)) {
             echo self::RED . "❌ Debug session not available (error: {$response['error']['message']})\n" . self::RESET;
             echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
             return false;
         }
         
-        // Check for result field indicating success
-        if (!isset($response['result'])) {
+        // Check for result field indicating success (null result is valid in JSON-RPC)
+        if (!array_key_exists('result', $response)) {
             echo self::RED . "❌ Debug session not available (no result field)\n" . self::RESET;
             echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
             return false;
