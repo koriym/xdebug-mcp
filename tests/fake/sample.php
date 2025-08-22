@@ -1,5 +1,5 @@
 <?php
-// デモ用サンプルPHPファイル
+// Sample PHP file for demo purposes
 $numbers = [1, 2, 3, 4, 5];
 $sum = calculate_sum($numbers);
 echo "Sum: $sum\n";
