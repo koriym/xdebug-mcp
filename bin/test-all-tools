@@ -1,0 +1,347 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Comprehensive test script for all 42 MCP Xdebug tools
+ * Tests each tool with appropriate parameters and validates responses
+ */
+
+// Colors for output
+define('GREEN', "\033[32m");
+define('RED', "\033[31m");
+define('YELLOW', "\033[33m");
+define('BLUE', "\033[34m");
+define('RESET', "\033[0m");
+
+class McpToolTester
+{
+    private string $mcpServerPath;
+    private array $testResults = [];
+    private int $passedTests = 0;
+    private int $failedTests = 0;
+    private int $skippedTests = 0;
+
+    public function __construct(string $mcpServerPath = 'bin/xdebug-mcp')
+    {
+        $this->mcpServerPath = $mcpServerPath;
+    }
+
+    public function runAllTests(): void
+    {
+        echo BLUE . "🚀 Starting comprehensive test of all 42 MCP Xdebug tools...\n" . RESET;
+        echo "=" . str_repeat("=", 70) . "\n\n";
+
+        // Pre-flight checks
+        if (!$this->preflightChecks()) {
+            echo YELLOW . "⚠️  Some tests will be skipped due to missing dependencies\n" . RESET;
+            echo "💡 Run ./bin/check-xdebug-status for detailed recommendations\n\n";
+        }
+
+        // Test tools by category
+        $this->testDebuggingTools();
+        $this->testProfilingTools();
+        $this->testCoverageTools();
+        $this->testStatisticsTools();
+        $this->testErrorHandlingTools();
+        $this->testTracingTools();
+        $this->testAdvancedDebuggingTools();
+        $this->testConfigurationTools();
+
+        $this->printSummary();
+    }
+
+    private function sendMcpRequest(string $method, array $params = []): array
+    {
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => uniqid(),
+            'method' => $method,
+            'params' => $params
+        ];
+
+        $command = sprintf(
+            'echo %s | php %s 2>/dev/null',
+            escapeshellarg(json_encode($request)),
+            escapeshellarg($this->mcpServerPath)
+        );
+
+        $output = shell_exec($command);
+        if ($output === null) {
+            return ['error' => 'Failed to execute command'];
+        }
+
+        // Extract JSON from output (skip "Xdebug MCP Server started." line)
+        $lines = explode("\n", trim($output));
+        $jsonLine = '';
+        foreach ($lines as $line) {
+            if (str_starts_with($line, '{"jsonrpc"')) {
+                $jsonLine = $line;
+                break;
+            }
+        }
+
+        if (empty($jsonLine)) {
+            return ['error' => 'No JSON response found', 'output' => $output];
+        }
+
+        $response = json_decode($jsonLine, true);
+        return $response ?? ['error' => 'Invalid JSON response'];
+    }
+
+    private function preflightChecks(): bool
+    {
+        echo BLUE . "🔍 Pre-flight checks...\n" . RESET;
+        
+        $allGood = true;
+        
+        // Check Xdebug extension
+        if (extension_loaded('xdebug')) {
+            echo GREEN . "✅ Xdebug extension loaded (v" . phpversion('xdebug') . ")\n" . RESET;
+        } else {
+            echo YELLOW . "⚠️  Xdebug extension not loaded (some tools will be skipped)\n" . RESET;
+            $allGood = false;
+        }
+        
+        // Check if port 9004 is listening (MCP debugging port)
+        $connection = @fsockopen('127.0.0.1', 9004, $errno, $errstr, 1);
+        if ($connection) {
+            fclose($connection);
+            echo GREEN . "✅ Port 9004 is available for debugging\n" . RESET;
+        } else {
+            echo YELLOW . "⚠️  Port 9004 not listening (debugging tools will be skipped)\n" . RESET;
+        }
+        
+        // Test MCP server basic response
+        $response = $this->sendMcpRequest('tools/list');
+        if (isset($response['result']['tools'])) {
+            $toolCount = count($response['result']['tools']);
+            echo GREEN . "✅ MCP Server responding ($toolCount tools available)\n" . RESET;
+        } else {
+            echo RED . "❌ MCP Server not responding properly\n" . RESET;
+            $allGood = false;
+        }
+        
+        echo "\n";
+        return $allGood;
+    }
+
+    private function testTool(string $toolName, array $arguments = [], bool $requiresConnection = false): void
+    {
+        echo sprintf("Testing %-30s ... ", $toolName);
+
+        if ($requiresConnection) {
+            echo YELLOW . "SKIP" . RESET . " (requires active Xdebug session)\n";
+            $this->skippedTests++;
+            $this->testResults[$toolName] = 'skipped';
+            return;
+        }
+
+        $response = $this->sendMcpRequest('tools/call', [
+            'name' => $toolName,
+            'arguments' => $arguments
+        ]);
+
+        if (isset($response['error'])) {
+            echo RED . "FAIL" . RESET . " - " . $response['error']['message'] . "\n";
+            $this->failedTests++;
+            $this->testResults[$toolName] = 'failed';
+        } elseif (isset($response['result'])) {
+            echo GREEN . "PASS" . RESET . "\n";
+            $this->passedTests++;
+            $this->testResults[$toolName] = 'passed';
+        } else {
+            echo RED . "FAIL" . RESET . " - Unexpected response format\n";
+            $this->failedTests++;
+            $this->testResults[$toolName] = 'failed';
+        }
+    }
+
+    private function testDebuggingTools(): void
+    {
+        echo BLUE . "\n📝 Testing Debugging Tools (11 tools)\n" . RESET;
+        echo "-" . str_repeat("-", 40) . "\n";
+
+        $this->testTool('xdebug_connect', ['host' => '127.0.0.1', 'port' => 9004]);
+        $this->testTool('xdebug_disconnect', [], true);
+        $this->testTool('xdebug_set_breakpoint', [
+            'filename' => '/tmp/test.php',
+            'line' => 10
+        ], true);
+        $this->testTool('xdebug_remove_breakpoint', ['breakpoint_id' => '1'], true);
+        $this->testTool('xdebug_step_into', [], true);
+        $this->testTool('xdebug_step_over', [], true);
+        $this->testTool('xdebug_step_out', [], true);
+        $this->testTool('xdebug_continue', [], true);
+        $this->testTool('xdebug_get_stack', [], true);
+        $this->testTool('xdebug_get_variables', ['context' => 0], true);
+        $this->testTool('xdebug_eval', ['expression' => '2 + 2'], true);
+    }
+
+    private function testProfilingTools(): void
+    {
+        echo BLUE . "\n⚡ Testing Profiling Tools (4 tools)\n" . RESET;
+        echo "-" . str_repeat("-", 40) . "\n";
+
+        $this->testTool('xdebug_start_profiling', ['output_file' => '']);
+        $this->testTool('xdebug_stop_profiling');
+        $this->testTool('xdebug_get_profile_info');
+        
+        // Create a sample profile file for testing
+        $profileFile = '/tmp/test_profile.xhprof';
+        file_put_contents($profileFile, "summary\nfn=main\n0 1000\n");
+        $this->testTool('xdebug_analyze_profile', [
+            'profile_file' => $profileFile,
+            'top_functions' => 5
+        ]);
+        @unlink($profileFile);
+    }
+
+    private function testCoverageTools(): void
+    {
+        echo BLUE . "\n📊 Testing Coverage Tools (6 tools)\n" . RESET;
+        echo "-" . str_repeat("-", 40) . "\n";
+
+        $this->testTool('xdebug_start_coverage', [
+            'include_patterns' => ['*.php'],
+            'exclude_patterns' => ['vendor/*'],
+            'track_unused' => true
+        ]);
+        $this->testTool('xdebug_stop_coverage');
+        $this->testTool('xdebug_get_coverage', ['format' => 'raw']);
+        
+        // Test coverage analysis with sample data
+        $sampleCoverage = [
+            '/tmp/test.php' => [
+                1 => 1,
+                2 => 1,
+                3 => 0,
+                4 => 1
+            ]
+        ];
+        $this->testTool('xdebug_analyze_coverage', [
+            'coverage_data' => $sampleCoverage,
+            'format' => 'text'
+        ]);
+        $this->testTool('xdebug_coverage_summary', [
+            'coverage_data' => $sampleCoverage
+        ]);
+    }
+
+    private function testStatisticsTools(): void
+    {
+        echo BLUE . "\n📈 Testing Statistics Tools (5 tools)\n" . RESET;
+        echo "-" . str_repeat("-", 40) . "\n";
+
+        $this->testTool('xdebug_get_memory_usage');
+        $this->testTool('xdebug_get_peak_memory_usage');
+        $this->testTool('xdebug_get_stack_depth');
+        $this->testTool('xdebug_get_time_index');
+        $this->testTool('xdebug_info', ['format' => 'array']);
+    }
+
+    private function testErrorHandlingTools(): void
+    {
+        echo BLUE . "\n🚨 Testing Error Handling Tools (3 tools)\n" . RESET;
+        echo "-" . str_repeat("-", 40) . "\n";
+
+        $this->testTool('xdebug_start_error_collection');
+        $this->testTool('xdebug_stop_error_collection');
+        $this->testTool('xdebug_get_collected_errors', ['clear' => false]);
+    }
+
+    private function testTracingTools(): void
+    {
+        echo BLUE . "\n🔍 Testing Tracing Tools (5 tools)\n" . RESET;
+        echo "-" . str_repeat("-", 40) . "\n";
+
+        $this->testTool('xdebug_start_trace', ['trace_file' => '', 'options' => 0]);
+        $this->testTool('xdebug_stop_trace');
+        $this->testTool('xdebug_get_tracefile_name');
+        $this->testTool('xdebug_start_function_monitor', [
+            'functions' => ['strlen', 'substr']
+        ]);
+        $this->testTool('xdebug_stop_function_monitor');
+    }
+
+    private function testAdvancedDebuggingTools(): void
+    {
+        echo BLUE . "\n🔧 Testing Advanced Debugging Tools (5 tools)\n" . RESET;
+        echo "-" . str_repeat("-", 40) . "\n";
+
+        $this->testTool('xdebug_list_breakpoints', [], true);
+        $this->testTool('xdebug_set_exception_breakpoint', [
+            'exception_name' => 'Exception',
+            'state' => 'all'
+        ], true);
+        $this->testTool('xdebug_set_watch_breakpoint', [
+            'expression' => '$var > 10',
+            'type' => 'write'
+        ], true);
+        $this->testTool('xdebug_get_function_stack', [
+            'include_args' => true,
+            'include_object' => true,
+            'limit' => 10
+        ]);
+        $this->testTool('xdebug_print_function_stack', [
+            'message' => 'Test Stack',
+            'options' => 0
+        ]);
+    }
+
+    private function testConfigurationTools(): void
+    {
+        echo BLUE . "\n⚙️ Testing Configuration Tools (3 tools)\n" . RESET;
+        echo "-" . str_repeat("-", 40) . "\n";
+
+        $this->testTool('xdebug_call_info');
+        $this->testTool('xdebug_get_features');
+        $this->testTool('xdebug_set_feature', [
+            'feature_name' => 'max_depth',
+            'value' => '256'
+        ], true);
+        $this->testTool('xdebug_get_feature', [
+            'feature_name' => 'max_depth'
+        ], true);
+    }
+
+    private function printSummary(): void
+    {
+        $total = $this->passedTests + $this->failedTests + $this->skippedTests;
+        
+        echo "\n" . "=" . str_repeat("=", 70) . "\n";
+        echo BLUE . "📋 Test Summary\n" . RESET;
+        echo "=" . str_repeat("=", 70) . "\n";
+        
+        echo sprintf("Total tools tested: %d\n", $total);
+        echo sprintf(GREEN . "✅ Passed: %d\n" . RESET, $this->passedTests);
+        echo sprintf(RED . "❌ Failed: %d\n" . RESET, $this->failedTests);
+        echo sprintf(YELLOW . "⏭️  Skipped: %d (require active debugging session)\n" . RESET, $this->skippedTests);
+        
+        $passRate = $total > 0 ? round(($this->passedTests / $total) * 100, 1) : 0;
+        echo sprintf("\nPass rate: %.1f%%\n", $passRate);
+        
+        if ($this->failedTests > 0) {
+            echo RED . "\n❌ Failed tests:\n" . RESET;
+            foreach ($this->testResults as $tool => $result) {
+                if ($result === 'failed') {
+                    echo "  - $tool\n";
+                }
+            }
+        }
+        
+        echo "\n" . BLUE . "💡 Note: Skipped tests require an active Xdebug debugging session.\n" . RESET;
+        echo BLUE . "   To test these, run a PHP script with Xdebug enabled and connect.\n" . RESET;
+        
+        if ($this->failedTests === 0) {
+            echo "\n" . GREEN . "🎉 All testable tools passed!\n" . RESET;
+        }
+    }
+}
+
+// Main execution
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_NAME'])) {
+    $tester = new McpToolTester();
+    $tester->runAllTests();
+}
