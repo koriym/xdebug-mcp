@@ -1,11 +1,12 @@
 <?php
 
 /**
- * Common autoloader and project root detection for bin scripts
- * Returns the project root path
+ * Common autoloader loader for bin scripts
+ * Loads the Composer autoloader from various possible locations
+ * Returns the best-guess project root (directory containing vendor/)
  */
 
-// Load autoloader and determine project root
+// Load autoloader from possible paths
 $autoloadPaths = [
     __DIR__ . '/../vendor/autoload.php',
     __DIR__ . '/../../autoload.php',
@@ -16,18 +17,11 @@ foreach ($autoloadPaths as $autoloadPath) {
     if (file_exists($autoloadPath)) {
         require_once $autoloadPath;
         
-        // Determine project root from autoloader path
+        // Return the directory containing vendor/ as project root
         $normalized = str_replace('\\', '/', $autoloadPath);
-        $projectRoot = str_ends_with($normalized, '/vendor/autoload.php')
-            ? dirname($autoloadPath, 2)
-            : dirname($autoloadPath);
-        
-        if (!file_exists($projectRoot . '/composer.json')) {
-            fwrite(STDERR, "Error: Could not determine project root from autoloader path: $autoloadPath\n");
-            exit(1);
-        }
-        
-        return $projectRoot;
+        return str_ends_with($normalized, '/vendor/autoload.php')
+            ? dirname($autoloadPath, 2)  // Go up from vendor/autoload.php to project root
+            : dirname($autoloadPath);    // For direct autoload.php paths
     }
 }
 
