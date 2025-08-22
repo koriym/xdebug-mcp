@@ -133,8 +133,8 @@ if ($xdebugInfo['loaded'] && str_contains($xdebugInfo['modes'], 'debug')) {
     echo "1. Test without debugging session:\n";
     echo "   ./bin/quick-test-tools\n\n";
     echo "2. Test with debugging session:\n";
-    echo "   Terminal 1: php -dxdebug.mode=debug -dxdebug.start_with_request=yes test/debug_test.php\n";
-    echo "   Terminal 2: ./bin/test-with-session\n\n";
+    echo "   Terminal 1: php -dxdebug.mode=debug -dxdebug.start_with_request=yes test/debug_session_test.php\n";
+    echo "   Terminal 2: ./bin/test-working-tools.php --with-session\n\n";
     echo "3. Test all CLI tools:\n";
     echo "   ./bin/xdebug-trace /tmp/test_args.php\n";
     echo "   ./bin/xdebug-profile /tmp/test_args.php\n";
