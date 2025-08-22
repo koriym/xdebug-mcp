@@ -8,17 +8,21 @@ MCP server enabling AI control of PHP Xdebug debugging, profiling, and coverage 
 
 ## Features
 
-- **42 Xdebug Tools**: Complete debugging, profiling, and coverage automation
+- **25 Working MCP Tools**: Profiling, coverage, and non-session debugging automation
 - **Trace-based Debugging**: AI analyzes runtime execution data (no var_dump needed)
 - **IDE Compatible**: Port 9004 avoids conflicts with PhpStorm/VS Code (9003)
 - **Command Line Tools**: 6 standalone debugging utilities
 
-## Tool Categories
+## Working Tool Categories
 
-- **Debugging**: Session management, breakpoints, step execution, variable inspection
-- **Profiling**: Performance analysis, function timing, Cachegrind output
-- **Coverage**: Line/function coverage, HTML/XML reports, PHPUnit integration
-- **Extended**: Memory stats, error collection, tracing, advanced breakpoints
+- **Profiling**: Performance analysis, function timing, Cachegrind output (4 tools)
+- **Coverage**: Line/function coverage, HTML/XML reports, PHPUnit integration (5 tools)
+- **Statistics**: Memory usage, stack depth, timing information, function stack (6 tools)
+- **Error Collection**: PHP error tracking and analysis (3 tools)
+- **Tracing**: Function call tracing and monitoring (5 tools)
+- **Configuration**: Xdebug settings and feature management (2 tools)
+
+**Note**: Session-dependent debugging tools (breakpoints, step execution, variable inspection) require additional integration work and are not currently available through simple command-line testing.
 
 ## Installation
 
@@ -225,57 +229,55 @@ Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
 - Trace mode: `/tmp/trace_*.xt` (execution traces)
 - Profile mode: `/tmp/cachegrind.out.*` (performance data)
 
-## 42 Available Tools
+## 25 Working Tools
 
-### Debug (11)
-- **xdebug_connect**: Connect to Xdebug session
-- **xdebug_disconnect**: Disconnect from Xdebug session
-- **xdebug_set_breakpoint**: Set a breakpoint at specified file and line
-- **xdebug_remove_breakpoint**: Remove a breakpoint by ID
-- **xdebug_step_into**: Step into the next function call
-- **xdebug_step_over**: Step over the current line
-- **xdebug_step_out**: Step out of the current function
-- **xdebug_continue**: Continue execution until next breakpoint
-- **xdebug_get_stack**: Get current stack trace
-- **xdebug_get_variables**: Get variables in current context
-- **xdebug_eval**: Evaluate PHP expression in current context
-
-### Profile (4)
+### Profiling (4 tools)
 - **xdebug_start_profiling**: Start profiling execution
 - **xdebug_stop_profiling**: Stop profiling and return results
 - **xdebug_get_profile_info**: Get current profiling information
 - **xdebug_analyze_profile**: Analyze profiling data from file
 
-### Coverage (6)
+### Coverage (5 tools)
 - **xdebug_start_coverage**: Start code coverage tracking
 - **xdebug_stop_coverage**: Stop code coverage tracking
 - **xdebug_get_coverage**: Get code coverage data
 - **xdebug_analyze_coverage**: Analyze coverage data and generate report
 - **xdebug_coverage_summary**: Get coverage summary statistics
 
-### Extended (21)
+### Statistics (6 tools)
 - **xdebug_get_memory_usage**: Get current memory usage information
 - **xdebug_get_peak_memory_usage**: Get peak memory usage information
 - **xdebug_get_stack_depth**: Get current stack depth level
 - **xdebug_get_time_index**: Get time index since script start
+- **xdebug_get_function_stack**: Get detailed function call stack with timing and memory data
 - **xdebug_info**: Get detailed Xdebug configuration and diagnostic information
+
+### Error Collection (3 tools)
 - **xdebug_start_error_collection**: Start collecting PHP errors, notices, and warnings
 - **xdebug_stop_error_collection**: Stop collecting errors and return collected data
 - **xdebug_get_collected_errors**: Get currently collected error messages
+
+### Tracing (5 tools)
 - **xdebug_start_trace**: Start function call tracing
 - **xdebug_stop_trace**: Stop function call tracing and return trace data
 - **xdebug_get_tracefile_name**: Get the filename of the current trace file
 - **xdebug_start_function_monitor**: Start monitoring specific functions
 - **xdebug_stop_function_monitor**: Stop function monitoring and return monitored calls
-- **xdebug_list_breakpoints**: List all active breakpoints
-- **xdebug_set_exception_breakpoint**: Set a breakpoint on exception
-- **xdebug_set_watch_breakpoint**: Set a watch/conditional breakpoint
-- **xdebug_get_function_stack**: Get detailed function stack with arguments and variables
-- **xdebug_print_function_stack**: Print formatted function stack trace
+
+### Configuration (2 tools)
 - **xdebug_call_info**: Get information about the calling context
-- **xdebug_get_features**: Get all available Xdebug features and their values
-- **xdebug_set_feature**: Set a specific Xdebug feature value
-- **xdebug_get_feature**: Get a specific Xdebug feature value
+- **xdebug_print_function_stack**: Print formatted function stack trace
+
+## Session-Dependent Tools (Not Available via CLI)
+
+The following 17 tools require active debugging sessions and are not currently available through simple command-line testing:
+
+- xdebug_connect, xdebug_disconnect
+- xdebug_set_breakpoint, xdebug_remove_breakpoint, xdebug_list_breakpoints
+- xdebug_step_into, xdebug_step_over, xdebug_step_out, xdebug_continue
+- xdebug_get_stack, xdebug_get_variables, xdebug_eval
+- xdebug_set_exception_breakpoint, xdebug_set_watch_breakpoint
+- xdebug_get_features, xdebug_set_feature, xdebug_get_feature
 
 
 ## Troubleshooting
