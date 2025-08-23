@@ -770,12 +770,16 @@ class XdebugClient
             $this->port = $state['port'];
 
             // Validate the existing socket connection is still active
-            if (! $this->validateSocketConnection($state)) {
-                // Socket is stale, remove state and return null to create new connection
-                $this->clearGlobalState();
+     private function validateSocketConnection(array $state): bool
+     {
+         // Check if we have socket information in the state
+         if (! isset($state['socket_info'])) {
+             return false;
+         }
 
-                return null;
-            }
+         // Use the same timeout as isSessionAlive() for consistency
+         return $this->isSessionAlive($state);
+     }
 
             // Socket is valid, mark as connected
             $this->connected = true;
