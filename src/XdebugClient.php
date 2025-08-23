@@ -31,6 +31,7 @@ use function socket_accept;
 use function socket_bind;
 use function socket_close;
 use function socket_create;
+use function socket_getpeername;
 use function socket_last_error;
 use function socket_listen;
 use function socket_read;
@@ -40,7 +41,6 @@ use function socket_set_option;
 use function socket_strerror;
 use function socket_write;
 use function spl_object_id;
-use function str_contains;
 use function strlen;
 use function time;
 use function trim;
@@ -55,6 +55,8 @@ use const MSG_PEEK;
 use const SO_RCVTIMEO;
 use const SO_REUSEADDR;
 use const SOCK_STREAM;
+use const SOCKET_ECONNRESET;
+use const SOCKET_EPIPE;
 use const SOL_SOCKET;
 use const SOL_TCP;
 
@@ -193,7 +195,7 @@ class XdebugClient
     private function getAffordances(array $response): array
     {
         if (! $this->connected) {
-            return ['reconnect'];
+            return ['connect'];
         }
 
         // Check debug session status from response
@@ -210,6 +212,8 @@ class XdebugClient
                     'get_variables',
                     'get_stack',
                     'eval_expression',
+                    'set_breakpoint',
+                    'list_breakpoints',
                 ];
 
             case 'running':
@@ -221,11 +225,17 @@ class XdebugClient
                 // Session ended
                 return ['reconnect'];
 
+            case 'disconnected':
+                // Not connected - can only connect
+                return ['connect'];
+
             default:
                 // Unknown state - offer basic actions
                 return [
                     'continue',
                     'get_variables',
+                    'get_stack',
+                    'set_breakpoint',
                     'disconnect',
                 ];
         }
@@ -237,7 +247,7 @@ class XdebugClient
             return [
                 'status' => 'disconnected',
                 'message' => 'No active debug session',
-                '_affordances' => ['connect'],
+                '_affordances' => $this->getAffordances(['@attributes' => ['status' => 'disconnected']]),
             ];
         }
 
@@ -247,15 +257,26 @@ class XdebugClient
             return [
                 'status' => 'disconnected',
                 'message' => 'Debug session lost',
-                '_affordances' => ['reconnect'],
+                '_affordances' => $this->getAffordances(['@attributes' => ['status' => 'disconnected']]),
             ];
         }
 
-        return [
-            'status' => 'connected',
-            'message' => 'Debug session active',
-            '_affordances' => ['step_into', 'step_over', 'continue', 'get_variables', 'disconnect'],
-        ];
+        // Get current debug state to determine proper affordances
+        try {
+            $statusResponse = $this->getStatus();
+
+            return [
+                'status' => 'connected',
+                'message' => 'Debug session active',
+                '_affordances' => $this->getAffordances($statusResponse),
+            ];
+        } catch (Throwable) {
+            return [
+                'status' => 'connected',
+                'message' => 'Debug session active',
+                '_affordances' => $this->getAffordances(['@attributes' => ['status' => 'unknown']]),
+            ];
+        }
     }
 
     public function setBreakpoint(string $filename, int $line, string $condition = ''): string
@@ -298,11 +319,11 @@ class XdebugClient
 
             return $result;
         } catch (SocketException $e) {
-            if (str_contains($e->getMessage(), 'Connection lost')) {
+            if ($e->isConnectionLost()) {
                 return [
                     'status' => 'disconnected',
                     'message' => 'Debug session ended',
-                    '_affordances' => ['reconnect'],
+                    '_affordances' => $this->getAffordances(['@attributes' => ['status' => 'disconnected']]),
                 ];
             }
 
@@ -429,13 +450,13 @@ class XdebugClient
             $errorMsg = socket_strerror($error);
 
             // If it's a broken pipe or connection reset, mark as disconnected
-            if ($error === 32 || $error === 54) { // EPIPE or ECONNRESET
+            if ($error === SOCKET_EPIPE || $error === SOCKET_ECONNRESET) {
                 $this->connected = false;
 
-                throw new SocketException("Connection lost: $errorMsg");
+                throw new SocketException("Connection lost: $errorMsg", 0, $error);
             }
 
-            throw new SocketException("Failed to send command: $errorMsg");
+            throw new SocketException("Failed to send command: $errorMsg", 0, $error);
         }
 
         return $this->readResponse();
@@ -755,6 +776,15 @@ class XdebugClient
         return time() - $state['last_activity'] < $maxAge;
     }
 
+    /**
+     * Retrieve session metadata from global state file.
+     *
+     * This method treats the global state file as metadata-only storage.
+     * It does NOT attempt to restore socket connections or set $this->connected,
+     * as socket resources cannot be restored across processes.
+     *
+     * @return array|null Session info metadata or null if no valid session exists
+     */
     private function reconnectToGlobalSession(): array|null
     {
         try {
@@ -762,38 +792,29 @@ class XdebugClient
             $state = json_decode($stateData, true);
 
             if (! $this->isValidGlobalState($state)) {
+                $this->clearGlobalState();
+
                 return null;
             }
 
-            // Update host/port from saved state
+            // Update host/port from saved state metadata
             $this->host = $state['host'];
             $this->port = $state['port'];
 
-            // Validate the existing socket connection is still active
-     private function validateSocketConnection(array $state): bool
-     {
-         // Check if we have socket information in the state
-         if (! isset($state['socket_info'])) {
-             return false;
-         }
+            // Check if session metadata is still valid (not expired)
+            if (! $this->isSessionAlive($state)) {
+                $this->clearGlobalState();
 
-         // Use the same timeout as isSessionAlive() for consistency
-         return $this->isSessionAlive($state);
-     }
+                return null;
+            }
 
-            // Socket is valid, mark as connected
-            $this->connected = true;
-
-            // Update last activity
-            $state['last_activity'] = time();
-            file_put_contents(self::GLOBAL_STATE_FILE, json_encode($state, JSON_PRETTY_PRINT));
+            // Return session metadata only - caller must establish fresh socket connection
+            // Do NOT set $this->connected = true here as no socket is actually restored
 
             return $state['session_info'];
         } catch (Throwable) {
-            // If reconnection fails, remove stale state
-            if (file_exists(self::GLOBAL_STATE_FILE)) {
-                unlink(self::GLOBAL_STATE_FILE);
-            }
+            // If metadata retrieval fails, remove stale state
+            $this->clearGlobalState();
 
             return null;
         }
@@ -857,21 +878,6 @@ class XdebugClient
         return $cleaned;
     }
 
-    private function validateSocketConnection(array $state): bool
-    {
-        // Check if we have socket information in the state
-        if (! isset($state['socket_info'])) {
-            return false;
-        }
-
-        // For now, use a simple timeout check
-        // In a complete implementation, we would try to ping the socket
-        $maxInactivity = 60; // 1 minute of inactivity before assuming socket is stale
-        $lastActivity = $state['last_activity'] ?? 0;
-
-        return time() - $lastActivity < $maxInactivity;
-    }
-
     private function saveSocketInfo(): void
     {
         if (! $this->socket || ! $this->connected) {
@@ -885,12 +891,31 @@ class XdebugClient
             $state = json_decode($stateData, true) ?: [];
         }
 
-        // Add socket information
-        $state['socket_info'] = [
-            'resource_id' => 'socket_' . spl_object_id($this->socket),
-            'connected_at' => time(),
-            'transaction_id' => $this->transactionId,
-        ];
+        // Add socket information with remote address/port tracking
+        $remoteAddress = null;
+        $remotePort = null;
+
+        if (socket_getpeername($this->socket, $remoteAddress, $remotePort)) {
+            $state['socket_info'] = [
+                'resource_id' => 'socket_' . spl_object_id($this->socket),
+                'connected_at' => time(),
+                'transaction_id' => $this->transactionId,
+                'remote_address' => $remoteAddress,
+                'remote_port' => $remotePort,
+                'local_host' => $this->host,
+                'local_port' => $this->port,
+            ];
+        } else {
+            // Fallback if getpeername fails
+            $state['socket_info'] = [
+                'resource_id' => 'socket_' . spl_object_id($this->socket),
+                'connected_at' => time(),
+                'transaction_id' => $this->transactionId,
+                'local_host' => $this->host,
+                'local_port' => $this->port,
+            ];
+        }
+
         $state['last_activity'] = time();
 
         file_put_contents(self::GLOBAL_STATE_FILE, json_encode($state, JSON_PRETTY_PRINT));
