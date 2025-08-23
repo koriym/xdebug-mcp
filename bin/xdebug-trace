@@ -36,7 +36,7 @@ function showHelp(string $scriptName): void {
 
 // Find -- separator to limit help flag checking
 $separatorIndex = array_search('--', $argv);
-$argsToCheck = $separatorIndex !== false 
+$argsToCheck = $separatorIndex !== false
     ? array_slice($argv, 0, $separatorIndex)  // Args before --
     : $argv;                                   // All args if no --
 
@@ -104,18 +104,18 @@ $process = proc_open($command, $descriptors, $pipes);
 if (is_resource($process)) {
     // Close stdin
     fclose($pipes[0]);
-    
+
     // Read and forward stdout
     $stdout = stream_get_contents($pipes[1]);
     fclose($pipes[1]);
-    
+
     // Read and forward stderr
     $stderr = stream_get_contents($pipes[2]);
     fclose($pipes[2]);
-    
+
     // Wait for process to finish and get exit code
     $returnCode = proc_close($process);
-    
+
     // Forward child process output
     if ($stdout !== '') {
         echo $stdout;
@@ -123,7 +123,7 @@ if (is_resource($process)) {
     if ($stderr !== '') {
         fwrite(STDERR, $stderr);
     }
-    
+
     // Propagate child process exit code
     if ($returnCode !== 0) {
         exit($returnCode);
@@ -139,10 +139,10 @@ if (!empty($traceFiles)) {
     usort($traceFiles, function($a, $b) {
         return filemtime($b) - filemtime($a);
     });
-    
+
     $latestTrace = $traceFiles[0];
     $lineCount = count(file($latestTrace));
-    
+
     echo "✅ Trace complete: $latestTrace\n";
     echo "📊 $lineCount lines generated\n";
 } else {
