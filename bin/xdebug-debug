@@ -1,0 +1,45 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Xdebug Debug Session Starter
+ * Starts a PHP script with Xdebug debugging enabled and waits for debugger connection
+ */
+
+if ($argc < 2) {
+    echo "Usage: ./bin/xdebug-debug <php-file>\n";
+    echo "Example: ./bin/xdebug-debug test-scripts/buggy_calculation_code.php\n";
+    exit(1);
+}
+
+$scriptPath = $argv[1];
+
+if (!file_exists($scriptPath)) {
+    echo "Error: File '$scriptPath' not found.\n";
+    exit(1);
+}
+
+echo "🐛 Starting Xdebug debugging session...\n";
+echo "📁 Target script: $scriptPath\n";
+echo "🔌 Xdebug will listen on 127.0.0.1:9004\n";
+echo "🎯 MCP tools can connect to debug this session\n\n";
+
+// Clean up any existing debug sessions for this script
+echo "🧹 Cleaning up existing debug sessions...\n";
+$scriptBasename = basename($scriptPath);
+exec("pkill -f 'xdebug.*mode=debug.*$scriptBasename' 2>/dev/null");
+usleep(500000); // Wait 0.5s for cleanup
+
+// Start PHP script with Xdebug debugging - BREAKS AT FIRST LINE
+$command = sprintf(
+    'XDEBUG_SESSION=1 php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_host=127.0.0.1 -dxdebug.client_port=9004 -dxdebug.start_with_request=yes %s',
+    escapeshellarg($scriptPath)
+);
+
+echo "🔄 Starting script - will BREAK AT FIRST LINE\n";
+echo "🚀 Command: $command\n";
+echo "════════════════════════════════════════\n\n";
+
+// Start process in foreground for proper Xdebug connection
+echo "Starting PHP script with Xdebug (will pause at first line)...\n";
+echo "Use Ctrl+C to stop if needed.\n\n";
+system($command);
