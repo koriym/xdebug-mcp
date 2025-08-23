@@ -1,0 +1,123 @@
+# Xdebug MCP Tools
+
+This directory contains various tools for PHP debugging, profiling, and analysis using Xdebug and MCP (Model Context Protocol).
+
+## User Tools (Direct Execution)
+
+These tools are designed for direct user interaction and analysis:
+
+### `./xdebug-debug <script.php>`
+Interactive step debugging with breakpoints and variable inspection.
+```bash
+# Prerequisites: Start XdebugClient listener first
+php test_new_xdebug_debug.php &
+lsof -i :9004  # Verify port is listening
+
+# Then run interactive debugging
+./xdebug-debug test-scripts/buggy_calculation_code.php
+```
+
+### `./xdebug-profile <script.php>`
+Performance profiling and bottleneck analysis.
+```bash
+./xdebug-profile src/MyClass.php
+# Generates cachegrind format profile files
+```
+
+### `./xdebug-coverage <script.php>`
+Code coverage analysis with multiple output formats.
+```bash
+./xdebug-coverage tests/MyTest.php
+# Generates HTML, XML, JSON, and text coverage reports
+```
+
+### `./xdebug-trace <script.php>`
+Execution flow tracing and function call analysis.
+```bash
+./xdebug-trace problematic_script.php
+# Generates detailed execution trace files (.xt format)
+```
+
+### `./xdebug-phpunit`
+PHPUnit integration with Xdebug features.
+```bash
+./xdebug-phpunit tests/
+```
+
+## System/Infrastructure Tools
+
+These tools provide background services and protocol handling:
+
+### `./debug-server`
+**Persistent debug server (AMPHP-based)**
+- Manages continuous Xdebug connections on port 9004
+- Handles control server on port 9005  
+- Single process architecture for improved reliability
+- Used internally by the debugging infrastructure
+
+### `./xdebug-server`
+**MCP server startup script**
+- Starts the main Xdebug MCP server
+- Listens on port 9004 for Xdebug connections
+- IDE-conflict-free (IDEs typically use port 9003)
+
+### `./xdebug-mcp`
+**MCP protocol handler**
+- Entry point for MCP (Model Context Protocol) communication
+- Processes JSON-RPC requests from AI clients
+- Delegates to XdebugClient for actual debugging operations
+
+## Port Configuration
+
+- **Port 9003**: Reserved for IDEs (VS Code, PhpStorm)  
+- **Port 9004**: Xdebug MCP Server (conflict-free)
+- **Port 9005**: Debug server control port
+
+## Usage Patterns
+
+### Quick Analysis
+```bash
+# For general debugging
+./xdebug-trace script.php
+
+# For performance issues
+./xdebug-profile slow_script.php
+
+# For test coverage
+./xdebug-coverage test_suite.php
+```
+
+### Interactive Debugging
+```bash
+# 1. Start listener
+php test_new_xdebug_debug.php &
+
+# 2. Verify connection
+lsof -i :9004
+
+# 3. Debug interactively
+./xdebug-debug buggy_script.php
+```
+
+### AI-Driven Analysis
+The MCP tools enable AI assistants to perform comprehensive PHP analysis:
+- Automatic tool selection based on analysis type
+- Runtime data collection and analysis
+- Non-invasive debugging without code modification
+
+## Tool Selection Guide
+
+**For Bug Investigation**: Start with `xdebug-trace`, escalate to `xdebug-debug` if interactive control needed
+
+**For Performance Issues**: Use `xdebug-profile` for bottleneck identification
+
+**For Test Quality**: Use `xdebug-coverage` for coverage analysis
+
+**For AI Integration**: MCP tools (`xdebug-server`, `xdebug-mcp`) provide seamless AI assistant integration
+
+## Architecture Notes
+
+- **Client-Server Model**: Xdebug acts as client, debug tools act as servers
+- **DBGp Protocol**: Standard debugging protocol over TCP sockets
+- **MCP Integration**: Enables AI assistants to perform runtime analysis
+- **Non-Invasive**: No source code modification required for analysis
