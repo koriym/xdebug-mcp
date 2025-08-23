@@ -24,27 +24,11 @@ echo "🔌 Xdebug will listen on 127.0.0.1:9004\n";
 echo "🎯 MCP tools can connect to debug this session\n\n";
 
 // Clean up any existing debug sessions for this script
-// Optional cleanup (disabled by default). Enable with --clean before the script path.
-$doClean = false;
-$args    = $argv;
-array_shift($args); // drop program name
-if (! empty($args) && $args[0] === '--clean') {
-    $doClean = true;
-    array_shift($args);
-    $scriptPath = $args[0] ?? $scriptPath;
-}
-
-if ($doClean) {
-    echo "🧹 Cleaning up existing debug sessions for: $scriptPath\n";
-    $pattern = sprintf(
-        'xdebug.*mode=debug.*%s',
-        preg_quote($scriptPath, '/')
-    );
-    $cmd = sprintf(
-        'pkill -f %s 2>/dev/null',
-        escapeshellarg($pattern)
-    );
-    @exec($cmd);
+$scriptBasename = basename($scriptPath);
+$checkCmd = "pgrep -f 'xdebug.*mode=debug.*" . escapeshellarg($scriptBasename) . "' > /dev/null 2>&1";
+if (exec($checkCmd) !== null) {
+    echo "🧹 Cleaning up existing debug sessions...\n";
+    exec("pkill -f 'xdebug.*mode=debug.*$scriptBasename' 2>/dev/null");
     usleep(500000); // Wait 0.5s for cleanup
 }
 // Start PHP script with Xdebug debugging - BREAKS AT FIRST LINE
@@ -54,10 +38,5 @@ $command = sprintf(
 );
 
 echo "🔄 Starting script - will BREAK AT FIRST LINE\n";
-echo "🚀 Command: $command\n";
-echo "════════════════════════════════════════\n\n";
-
-// Start process in foreground for proper Xdebug connection
-echo "Starting PHP script with Xdebug (will pause at first line)...\n";
-echo "Use Ctrl+C to stop if needed.\n\n";
+echo "🚀 Command: $command\n\n";
 system($command);
