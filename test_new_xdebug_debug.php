@@ -13,15 +13,11 @@ try {
         
         // Set a strategic breakpoint at the bug location
         echo "🎯 Setting breakpoint at line 17 (zero exclusion bug)...\n";
-        $targetFile = __DIR__ . '/test-scripts/buggy_calculation_code.php';
-        $resolvedPath = realpath($targetFile);
-        
-        if ($resolvedPath === false) {
-            error_log("❌ Error: Target file not found: $targetFile");
-            exit(1);
+        $buggyScript = realpath(__DIR__ . '/test-scripts/buggy_calculation_code.php');
+        if ($buggyScript === false) {
+            throw new RuntimeException('buggy_calculation_code.php not found relative to repo root.');
         }
-        
-        $bp1 = $client->setBreakpoint($resolvedPath, 17);
+        $bp1 = $client->setBreakpoint($buggyScript, 17);
         echo "Breakpoint ID: $bp1\n";
         
         // Continue to first breakpoint
