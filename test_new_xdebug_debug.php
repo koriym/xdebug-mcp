@@ -13,7 +13,15 @@ try {
         
         // Set a strategic breakpoint at the bug location
         echo "🎯 Setting breakpoint at line 17 (zero exclusion bug)...\n";
-        $bp1 = $client->setBreakpoint('/Users/akihito/git/xdebug-mcp/test-scripts/buggy_calculation_code.php', 17);
+        $targetFile = __DIR__ . '/test-scripts/buggy_calculation_code.php';
+        $resolvedPath = realpath($targetFile);
+        
+        if ($resolvedPath === false) {
+            error_log("❌ Error: Target file not found: $targetFile");
+            exit(1);
+        }
+        
+        $bp1 = $client->setBreakpoint($resolvedPath, 17);
         echo "Breakpoint ID: $bp1\n";
         
         // Continue to first breakpoint
