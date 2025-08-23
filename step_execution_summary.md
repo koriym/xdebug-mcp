@@ -64,7 +64,7 @@ run -i 2\0          # 実行継続
 ### シンプルなステップ実行
 ```bash
 # 1. サーバー起動
-php bin/amp-persistent-debug-server &
+./bin/debug-server &
 
 # 2. デバッグ対象スクリプト実行  
 php -dxdebug.mode=debug -dxdebug.client_port=9004 script.php &
