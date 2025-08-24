@@ -53,6 +53,8 @@ use function set_error_handler;
 use function sprintf;
 use function str_ends_with;
 use function str_repeat;
+use function strpos;
+use function strtolower;
 use function time;
 use function trim;
 use function uasort;
@@ -876,7 +878,18 @@ class McpServer
         }
 
         $this->xdebugClient->disconnect();
-        file_put_contents('/tmp/xdebug_session_global.json', json_encode(['connected' => false, 'sessionId' => $this->sessionId]));
+
+        $stateFile = '/tmp/xdebug_session_global.json';
+        $existingState = [];
+        if (file_exists($stateFile)) {
+            $json = file_get_contents($stateFile);
+            $existingState = json_decode($json, true) ?? [];
+        }
+
+        $existingState['connected'] = false;
+        $existingState['sessionId'] = $this->sessionId;
+        file_put_contents($stateFile, json_encode($existingState, JSON_PRETTY_PRINT));
+
         $this->xdebugClient = null;
 
         return 'Disconnected from Xdebug';
@@ -884,27 +897,38 @@ class McpServer
 
     protected function setBreakpoint(array $args): string
     {
-        // Try persistent server first
-        if ($this->persistentClient->isServerRunning()) {
-            $filename = $args['filename'];
-            $line = (int) $args['line'];
-            $response = $this->persistentClient->setBreakpoint($filename, $line);
-
-            return 'Persistent Server - Breakpoint: ' . $response;
-        }
-
-        // Fallback to direct connection
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug and persistent server not running');
-        }
-
         $filename = $args['filename'];
-        $line = $args['line'];
+        $line = (int) $args['line'];
         $condition = $args['condition'] ?? '';
 
-        $breakpointId = $this->xdebugClient->setBreakpoint($filename, $line, $condition);
+        // Try persistent server first
+        if ($this->persistentClient->isServerRunning()) {
+            try {
+                $response = $this->persistentClient->setBreakpoint($filename, $line);
 
-        return "Breakpoint set at {$filename}:{$line} (ID: {$breakpointId})";
+                // Check for error or unsuccessful response
+                if ($response && strpos(strtolower($response), 'error') === false) {
+                    return 'Persistent Server - Breakpoint: ' . $response;
+                }
+            } catch (Throwable $e) {
+                // Log or handle error if needed, fallback to direct connection
+                error_log('Persistent server breakpoint failed: ' . $e->getMessage());
+            }
+            // Fallback to direct connection if persistent server fails
+        }
+
+        // Fallback: try direct connection
+        if ($this->xdebugClient) {
+            try {
+                $breakpointId = $this->xdebugClient->setBreakpoint($filename, $line, $condition);
+
+                return "Direct Connection - Breakpoint set at {$filename}:{$line} (ID: {$breakpointId})";
+            } catch (Throwable $e) {
+                return 'Failed to set breakpoint via both persistent server and direct connection: ' . $e->getMessage();
+            }
+        }
+
+        return 'Failed to set breakpoint: No available debug client.';
     }
 
     protected function removeBreakpoint(array $args): string
