@@ -17,6 +17,14 @@
     <!-- Directories to be checked -->
     <file>src</file>
     <file>tests</file>
+    <file>bin</file>
+
+    <!-- Specific bin files without .php extension -->
+    <file>bin/xdebug-debug</file>
+    <file>bin/xdebug-trace</file>
+    <file>bin/xdebug-profile</file>
+    <file>bin/xdebug-coverage</file>
+    <file>bin/xdebug-mcp</file>
     <exclude-pattern>*/tmp/*</exclude-pattern>
     <exclude-pattern>*/Fake/*</exclude-pattern>
 

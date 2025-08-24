@@ -7,14 +7,12 @@ This directory contains various tools for PHP debugging, profiling, and analysis
 These tools are designed for direct user interaction and analysis:
 
 ### `./xdebug-debug <script.php>`
-Interactive step debugging with breakpoints and variable inspection.
+AMP-powered interactive step debugging with breakpoints and variable inspection.
 ```bash
-# Prerequisites: Start XdebugClient listener first
-php test_new_xdebug_debug.php &
-lsof -i :9004  # Verify port is listening
+# Single command execution (no manual setup required)
+./xdebug-debug test/debug_test.php
 
-# Then run interactive debugging
-./xdebug-debug test-scripts/buggy_calculation_code.php
+# Features: Step-by-step tracing, variable inspection, stack analysis
 ```
 
 ### `./xdebug-profile <script.php>`
@@ -42,24 +40,12 @@ Execution flow tracing and function call analysis.
 PHPUnit integration with Xdebug features.
 ```bash
 ./xdebug-phpunit tests/
+# Runs PHPUnit tests with Xdebug integration
 ```
 
 ## System/Infrastructure Tools
 
 These tools provide background services and protocol handling:
-
-### `./debug-server`
-**Persistent debug server (AMPHP-based)**
-- Manages continuous Xdebug connections on port 9004
-- Handles control server on port 9005  
-- Single process architecture for improved reliability
-- Used internally by the debugging infrastructure
-
-### `./xdebug-server`
-**MCP server startup script**
-- Starts the main Xdebug MCP server
-- Listens on port 9004 for Xdebug connections
-- IDE-conflict-free (IDEs typically use port 9003)
 
 ### `./xdebug-mcp`
 **MCP protocol handler**
@@ -71,7 +57,6 @@ These tools provide background services and protocol handling:
 
 - **Port 9003**: Reserved for IDEs (VS Code, PhpStorm)  
 - **Port 9004**: Xdebug MCP Server (conflict-free)
-- **Port 9005**: Debug server control port
 
 ## Usage Patterns
 
@@ -89,13 +74,7 @@ These tools provide background services and protocol handling:
 
 ### Interactive Debugging
 ```bash
-# 1. Start listener
-php test_new_xdebug_debug.php &
-
-# 2. Verify connection
-lsof -i :9004
-
-# 3. Debug interactively
+# Single command execution (no manual setup required)
 ./xdebug-debug buggy_script.php
 ```
 
@@ -113,7 +92,7 @@ The MCP tools enable AI assistants to perform comprehensive PHP analysis:
 
 **For Test Quality**: Use `xdebug-coverage` for coverage analysis
 
-**For AI Integration**: MCP tools (`xdebug-server`, `xdebug-mcp`) provide seamless AI assistant integration
+**For AI Integration**: MCP tool (`xdebug-mcp`) provides seamless AI assistant integration
 
 ## Architecture Notes
 
