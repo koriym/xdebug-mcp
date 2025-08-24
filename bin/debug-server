@@ -94,29 +94,10 @@ class AmpPersistentDebugServer
 
             echo "🔧 Session ready for debugging commands\n";
 
-            // セッションを維持（コマンドを待機）
+            // Keep session alive - let each command handler perform individual socket reads
+            echo "⏳ Waiting for MCP commands (session active)\n";
             while ($this->xdebugSocket && $this->running) {
-                try {
-                    $data = $socket->read();
-                    if ($data === null) {
-                        echo "❌ Xdebug connection closed\n";
-                        break;
-                    }
-                    
-                    if ($data !== '') {
-                        echo "📨 Xdebug data: " . trim($data) . "\n";
-                        
-                        if (strpos($data, 'status="stopping"') !== false) {
-                            echo "✅ Script execution completed\n";
-                            break;
-                        }
-                    }
-                    
-                    \Amp\delay(0.1);
-                } catch (\Exception $e) {
-                    echo "❌ Xdebug read error: " . $e->getMessage() . "\n";
-                    break;
-                }
+                \Amp\delay(1.0);
             }
         } catch (\Exception $e) {
             echo "❌ Xdebug session error: " . $e->getMessage() . "\n";
