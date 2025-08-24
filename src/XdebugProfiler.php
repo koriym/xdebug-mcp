@@ -123,9 +123,10 @@ class XdebugProfiler
                 $stats['creator'] = substr($line, 9);
             } elseif (strpos($line, 'cmd: ') === 0) {
                 $stats['command'] = substr($line, 5);
-                // Extract target file from command
-                $parts = explode(' ', $stats['command']);
-                $stats['target_file'] = end($parts);
+                // Extract target file from command using regex to find .php files
+                if (preg_match_all('/\b[\w\/\.-]+\.php\b/', $stats['command'], $matches)) {
+                    $stats['target_file'] = end($matches[0]);
+                }
             }
         }
 
