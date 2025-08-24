@@ -35,6 +35,95 @@ class AmpPersistentDebugServer
         echo "Control port: {$this->controlPort}\n";
     }
 
+    /**
+     * Convert a filesystem path to a consistent file:// URI
+     * 
+     * @param string $path File path to convert
+     * @return string Properly formatted file URI
+     */
+    private function pathToFileUri(string $path): string
+    {
+        // Resolve realpath/fallbacks for relative paths
+        $realPath = realpath($path);
+        if ($realPath === false) {
+            // Try with current directory for relative paths
+            $realPath = realpath(getcwd() . DIRECTORY_SEPARATOR . $path);
+        }
+        
+        if ($realPath === false) {
+            throw new \InvalidArgumentException("File '$path' not found");
+        }
+        
+        // Convert to forward slashes for consistent handling
+        $normalizedPath = str_replace('\\', '/', $realPath);
+        
+        // Check for Windows drive letter
+        if (preg_match('/^([A-Za-z]):\//', $normalizedPath, $matches)) {
+            // Windows path - preserve drive letter, don't encode the colon
+            $driveLetter = $matches[1];
+            $pathWithoutDrive = substr($normalizedPath, 3); // Remove "C:/"
+            
+            // Percent-encode only path segments
+            $pathParts = explode('/', $pathWithoutDrive);
+            $encodedParts = array_map('rawurlencode', $pathParts);
+            $encodedPath = implode('/', $encodedParts);
+            
+            return "file:///{$driveLetter}:/{$encodedPath}";
+        } else {
+            // POSIX path - percent-encode path segments
+            $pathParts = explode('/', ltrim($normalizedPath, '/'));
+            $encodedParts = array_map('rawurlencode', $pathParts);
+            $encodedPath = implode('/', $encodedParts);
+            
+            return "file:///{$encodedPath}";
+        }
+    }
+
+    /**
+     * Read a complete DBGp response frame from socket
+     * 
+     * @param ResourceSocket $socket Socket to read from
+     * @return string Complete response
+     */
+    private function readFrame(ResourceSocket $socket): string
+    {
+        // Read length header (terminated by null byte)
+        $lengthStr = '';
+        while (true) {
+            $char = $socket->read();
+            if ($char === null || $char === '') {
+                throw new \RuntimeException('Connection closed while reading length');
+            }
+            if ($char === "\0") {
+                break;
+            }
+            $lengthStr .= $char;
+        }
+        
+        $length = (int) $lengthStr;
+        if ($length <= 0) {
+            throw new \RuntimeException("Invalid response length: $length");
+        }
+        
+        // Read the response data
+        $response = '';
+        $remaining = $length;
+        
+        while ($remaining > 0) {
+            $chunk = $socket->read();
+            if ($chunk === null || $chunk === '') {
+                throw new \RuntimeException('Connection closed while reading response data');
+            }
+            $response .= $chunk;
+            $remaining -= strlen($chunk);
+        }
+        
+        // Read the trailing null byte
+        $socket->read();
+        
+        return $response;
+    }
+
     public function start(): void
     {
         // Xdebug connection server (port 9004)
@@ -188,24 +277,12 @@ class AmpPersistentDebugServer
         }
         $lineNumber = (int)$line;
         
-        // Handle relative paths via realpath fallback
-        $realPath = realpath($filename);
-        if ($realPath === false) {
-            // Try with current directory for relative paths
-            $realPath = realpath(getcwd() . DIRECTORY_SEPARATOR . $filename);
+        // Convert file path to proper URI using helper function
+        try {
+            $fileUri = $this->pathToFileUri($filename);
+        } catch (\InvalidArgumentException $e) {
+            return "ERROR: " . $e->getMessage() . "\n";
         }
-        
-        if ($realPath === false) {
-            return "ERROR: File '$filename' not found\n";
-        }
-        
-        // Always construct file URI with three slashes and percent-encoded path segments
-        $pathParts = explode(DIRECTORY_SEPARATOR, $realPath);
-        $encodedParts = array_map('rawurlencode', $pathParts);
-        $encodedPath = implode('/', $encodedParts);
-        
-        // Consistent file URI format for both Windows and POSIX
-        $fileUri = 'file:///' . $encodedPath;
         
         // Generate unique DBGp transaction ID
         $transactionId = $this->transactionId++;
@@ -214,7 +291,7 @@ class AmpPersistentDebugServer
         $this->xdebugSocket->write($command);
         
         try {
-            $response = $this->xdebugSocket->read();
+            $response = $this->readFrame($this->xdebugSocket);
             return "Breakpoint response: $response\n";
         } catch (\Exception $e) {
             return "Breakpoint error: " . $e->getMessage() . "\n";
@@ -231,7 +308,7 @@ class AmpPersistentDebugServer
         $this->xdebugSocket->write($command);
         
         try {
-            $response = $this->xdebugSocket->read();
+            $response = $this->readFrame($this->xdebugSocket);
             return "Continue response: $response\n";
         } catch (\Exception $e) {
             return "Continue error: " . $e->getMessage() . "\n";
@@ -248,7 +325,7 @@ class AmpPersistentDebugServer
         $this->xdebugSocket->write($command);
         
         try {
-            $response = $this->xdebugSocket->read();
+            $response = $this->readFrame($this->xdebugSocket);
             return "Step response: $response\n";
         } catch (\Exception $e) {
             return "Step error: " . $e->getMessage() . "\n";
@@ -276,7 +353,7 @@ class AmpPersistentDebugServer
         $this->xdebugSocket->write($command);
         
         try {
-            $response = $this->xdebugSocket->read();
+            $response = $this->readFrame($this->xdebugSocket);
             return "Variables response: $response\n";
         } catch (\Exception $e) {
             return "Variables error: " . $e->getMessage() . "\n";
@@ -293,7 +370,7 @@ class AmpPersistentDebugServer
         $this->xdebugSocket->write($command);
         
         try {
-            $response = $this->xdebugSocket->read();
+            $response = $this->readFrame($this->xdebugSocket);
             return "Step Over response: $response\n";
         } catch (\Exception $e) {
             return "Step Over error: " . $e->getMessage() . "\n";
@@ -310,7 +387,7 @@ class AmpPersistentDebugServer
         $this->xdebugSocket->write($command);
         
         try {
-            $response = $this->xdebugSocket->read();
+            $response = $this->readFrame($this->xdebugSocket);
             return "Step Out response: $response\n";
         } catch (\Exception $e) {
             return "Step Out error: " . $e->getMessage() . "\n";
