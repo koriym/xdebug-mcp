@@ -25,6 +25,7 @@ class AmpPersistentDebugServer
     private int $debugPort = 9004;
     private int $controlPort = 9005;
     private bool $running = true;
+    private int $transactionId = 1;
 
     public function __construct()
     {
@@ -36,19 +37,19 @@ class AmpPersistentDebugServer
 
     public function start(): void
     {
-        // Xdebug接続サーバー (9004ポート)
+        // Xdebug connection server (port 9004)
         $xdebugServer = listen("{$this->host}:{$this->debugPort}");
         echo "📡 Waiting for Xdebug connection on {$this->host}:{$this->debugPort}...\n";
 
-        // 制御コマンドサーバー (9005ポート) 
+        // Control command server (port 9005) 
         $controlServer = listen("{$this->host}:{$this->controlPort}");
         echo "🎛️  Control server ready on {$this->host}:{$this->controlPort}...\n";
 
-        // 両方のサーバーを並行処理
+        // Handle both servers concurrently
         \Amp\async(fn() => $this->handleXdebugConnections($xdebugServer));
         \Amp\async(fn() => $this->handleControlConnections($controlServer));
 
-        // メインループを維持
+        // Maintain main loop
         while ($this->running) {
             \Amp\delay(0.1);
         }
@@ -84,7 +85,7 @@ class AmpPersistentDebugServer
     private function handleXdebugSession(ResourceSocket $socket): void
     {
         try {
-            // 初期化データを読み込み
+            // Read initialization data
             $data = $socket->read();
             if ($data) {
                 echo "📨 Received: " . trim($data) . "\n";
@@ -165,18 +166,32 @@ class AmpPersistentDebugServer
             return "ERROR: No active Xdebug session\n";
         }
 
+        // Stricter argument validation - must contain exactly one colon
+        $colonCount = substr_count($args, ':');
+        if ($colonCount !== 1) {
+            return "ERROR: Invalid format. Expected 'filename:line', got $colonCount colons\n";
+        }
+
         // Parse: filename:line
         [$filename, $line] = explode(':', $args, 2);
         
-        // Validate and normalize filename
+        // Validate filename after trimming
+        $filename = trim($filename);
         if (empty($filename)) {
             return "ERROR: Filename cannot be empty\n";
         }
         
-        // Canonicalize path
+        // Validate line number - must be positive integer
+        $line = trim($line);
+        if (!ctype_digit($line) || (int)$line <= 0) {
+            return "ERROR: Line number must be a positive integer, got '$line'\n";
+        }
+        $lineNumber = (int)$line;
+        
+        // Handle relative paths via realpath fallback
         $realPath = realpath($filename);
         if ($realPath === false) {
-            // If realpath fails, try with current directory
+            // Try with current directory for relative paths
             $realPath = realpath(getcwd() . DIRECTORY_SEPARATOR . $filename);
         }
         
@@ -184,19 +199,18 @@ class AmpPersistentDebugServer
             return "ERROR: File '$filename' not found\n";
         }
         
-        // Build proper file:// URI with percent-encoded path components
+        // Always construct file URI with three slashes and percent-encoded path segments
         $pathParts = explode(DIRECTORY_SEPARATOR, $realPath);
         $encodedParts = array_map('rawurlencode', $pathParts);
         $encodedPath = implode('/', $encodedParts);
         
-        // Construct file URI (Windows needs file:///C:/ format)
-        if (PHP_OS_FAMILY === 'Windows') {
-            $fileUri = 'file:///' . $encodedPath;
-        } else {
-            $fileUri = 'file://' . $encodedPath;
-        }
+        // Consistent file URI format for both Windows and POSIX
+        $fileUri = 'file:///' . $encodedPath;
         
-        $command = "breakpoint_set -i 1 -t line -f $fileUri -n $line\0";
+        // Generate unique DBGp transaction ID
+        $transactionId = $this->transactionId++;
+        
+        $command = "breakpoint_set -i $transactionId -t line -f $fileUri -n $lineNumber\0";
         $this->xdebugSocket->write($command);
         
         try {
@@ -213,7 +227,7 @@ class AmpPersistentDebugServer
             return "ERROR: No active Xdebug session\n";
         }
 
-        $command = "run -i 2\0";
+        $command = "run -i " . $this->transactionId++ . "\0";
         $this->xdebugSocket->write($command);
         
         try {
@@ -230,7 +244,7 @@ class AmpPersistentDebugServer
             return "ERROR: No active Xdebug session\n";
         }
 
-        $command = "step_into -i 3\0";
+        $command = "step_into -i " . $this->transactionId++ . "\0";
         $this->xdebugSocket->write($command);
         
         try {
@@ -258,7 +272,7 @@ class AmpPersistentDebugServer
             return "ERROR: No active Xdebug session\n";
         }
 
-        $command = "context_get -i 4\0";
+        $command = "context_get -i " . $this->transactionId++ . "\0";
         $this->xdebugSocket->write($command);
         
         try {
@@ -275,7 +289,7 @@ class AmpPersistentDebugServer
             return "ERROR: No active Xdebug session\n";
         }
 
-        $command = "step_over -i 5\0";
+        $command = "step_over -i " . $this->transactionId++ . "\0";
         $this->xdebugSocket->write($command);
         
         try {
@@ -292,7 +306,7 @@ class AmpPersistentDebugServer
             return "ERROR: No active Xdebug session\n";
         }
 
-        $command = "step_out -i 6\0";
+        $command = "step_out -i " . $this->transactionId++ . "\0";
         $this->xdebugSocket->write($command);
         
         try {
@@ -307,10 +321,10 @@ class AmpPersistentDebugServer
     {
         echo "🔄 Resetting debug session...\n";
         
-        // 現在のXdebug接続を切断
+        // Disconnect current Xdebug connection
         if ($this->xdebugSocket) {
             try {
-                $this->xdebugSocket->write("detach -i 99\0");
+                $this->xdebugSocket->write("detach -i " . $this->transactionId++ . "\0");
                 $this->xdebugSocket->close();
             } catch (\Exception $e) {
                 echo "⚠️  Detach error: " . $e->getMessage() . "\n";
@@ -318,10 +332,10 @@ class AmpPersistentDebugServer
             $this->xdebugSocket = null;
         }
         
-        // セッション情報をクリア
+        // Clear session information
         $this->sessionInfo = [];
         
-        // 一時ファイルをクリア
+        // Clear temporary files
         $tempFiles = [
             '/tmp/amp_persistent_debug_session.json',
             '/tmp/xdebug_session_global.json'
@@ -343,8 +357,8 @@ class AmpPersistentDebugServer
         
         if ($this->xdebugSocket) {
             try {
-                // DBGpのstopコマンドでスクリプト実行も停止
-                $this->xdebugSocket->write("stop -i 98\0");
+                // Stop script execution with DBGp stop command
+                $this->xdebugSocket->write("stop -i " . $this->transactionId++ . "\0");
                 $this->xdebugSocket->close();
             } catch (\Exception $e) {
                 echo "⚠️  Stop error: " . $e->getMessage() . "\n";
@@ -361,10 +375,10 @@ class AmpPersistentDebugServer
     {
         echo "🛑 Shutting down server...\n";
         
-        // 現在の接続を適切にクリーンアップ
+        // Properly cleanup current connection
         if ($this->xdebugSocket) {
             try {
-                $this->xdebugSocket->write("detach -i 97\0");
+                $this->xdebugSocket->write("detach -i " . $this->transactionId++ . "\0");
                 $this->xdebugSocket->close();
             } catch (\Exception $e) {
                 echo "⚠️  Cleanup error: " . $e->getMessage() . "\n";
@@ -400,7 +414,7 @@ class AmpPersistentDebugServer
     }
 }
 
-// シグナルハンドリング
+// Signal handling
 pcntl_async_signals(true);
 pcntl_signal(SIGINT, function () {
     echo "\n🛑 Shutting down server...\n";
