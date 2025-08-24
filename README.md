@@ -166,145 +166,73 @@ claude --print "Analyze code coverage for test/debug_test.php"
 php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script.php
 ```
 
-### AI-Powered Examples
+## Tool Usage
 
-### 1. Execution Tracing & Database Analysis
+### 🔍 Trace Analysis (Execution Flow & Database)
 ```bash
-claude --print "Analyze test-scripts/sqlite_db_test.php for N+1 problems"
-# AI automatically chooses ./vendor/bin/xdebug-trace and provides analysis:
-# ✅ Trace complete: /tmp/trace.1034012359.xt
-# 📊 83 lines generated, 10 unique functions, 3 max call depth, 22 database queries
-# 🚨 N+1 Problem detected: Multiple PDO queries in loop structure
+# N+1 problem detection
+./vendor/bin/xdebug-trace test-scripts/sqlite_db_test.php
+# ✅ 83 lines, 10 functions, 3 max depth, 🗃️ 22 database queries
+
+# Recursion analysis  
+./vendor/bin/xdebug-trace test-scripts/deep_recursion_test.php
+# ✅ 50 lines, 3 functions, 🔄 10 max call depth
 ```
 
-### 2. Performance Profiling
-```bash
-claude --print "Profile test-scripts/deep_recursion_test.php for bottlenecks"
-# AI automatically uses ./vendor/bin/xdebug-profile:
-# ✅ Profile complete: /tmp/cachegrind.out.1755719364
-# 📊 Size: 2.1K, Functions: 12, Calls: 45, Execution: 0.001s, Memory: 400KB
-# 🎯 Top functions: countdown (45.2%), factorial (31.8%), {main} (23.0%)
+### ⚡ Performance Profiling (Bottleneck Identification)
+```bash  
+# Performance bottleneck identification
+./vendor/bin/xdebug-profile test-scripts/deep_recursion_test.php
+# ✅ 2.1K, 12 functions, 45 calls, 🎯 countdown (45.2%), factorial (31.8%)
+
+# Memory and timing analysis
+./vendor/bin/xdebug-profile test-scripts/sqlite_db_test.php  
+# ✅ 3.2K, 18 functions, ⏱️ 0.002s, 💾 420KB
 ```
 
-### 3. Code Coverage Analysis
+### 🐛 Interactive Step Debugging (Breakpoints & Variables)
 ```bash
-claude --print "Analyze code coverage for test/debug_test.php"
-# AI automatically uses ./vendor/bin/xdebug-coverage:
-# ✅ Coverage complete: HTML report generated
-# 📊 Coverage: 85.2% lines, 92.1% functions, identifies untested code paths
+# Single command execution (AMP-powered)
+./vendor/bin/xdebug-debug test-scripts/buggy_calculation_code.php
+# ✅ Breakpoints, variable inspection, step execution
 ```
 
-### 4. Interactive Step Debugging
+### 📊 Code Coverage Analysis (Test Quality)
 ```bash
-claude --print "Debug test-scripts/buggy_calculation_code.php with breakpoints"
-# AI sets breakpoint and provides debugging session:
-# ✅ Breakpoint set at test-scripts/buggy_calculation_code.php:15
-# 📊 Variables at breakpoint:
-# | Variable | Type   | Value                    |
-# |----------|--------|--------------------------|
-# | $n       | int    | 6                        |
-# | $result  | int    | 8                        |
-# | $user    | array  | ['name'=>'John','age'=>30] |
+# Code path coverage analysis  
+./vendor/bin/xdebug-coverage test-scripts/deep_recursion_test.php
+# ✅ HTML report, 📊 85.2% lines, 92.1% functions
 ```
 
-### 5. PHPUnit Testing
+### 🧪 PHPUnit Testing (Zero Configuration)
 ```bash
-# Debug PHPUnit tests (zero configuration required)
-./vendor/bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
-```
-
-### xdebug-phpunit Usage
-
-Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
-
-```bash
-# Trace specific test method (default mode)
+# Trace specific test method (default)
 ./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
 
 # Profile entire test file
 ./vendor/bin/xdebug-phpunit --profile tests/UserTest.php
 
-# Trace tests matching filter
-./vendor/bin/xdebug-phpunit --filter=testUserAuth
-
-# Show effective configuration (transparency)
-./vendor/bin/xdebug-phpunit --dry-run tests/UserTest.php
-
-# Verbose logging for debugging
-./vendor/bin/xdebug-phpunit --verbose tests/UserTest.php
+# Auto-injection of TraceExtension, no manual setup required
 ```
 
-**Auto-injection:** TraceExtension is automatically injected into a temporary phpunit.xml (no manual setup required)
+## MCP Tools (47 Available)
 
-**Output:**
-- Trace mode: `/tmp/trace_*.xt` (execution traces)
-- Profile mode: `/tmp/cachegrind.out.*` (performance data)
+**All 47 MCP tools are fully functional and AI-tested.** The tools are automatically used by AI assistants when you use commands like:
 
-## 25 Working Tools
-
-### Profiling (4 tools)
-- **xdebug_start_profiling**: Start profiling execution
-- **xdebug_stop_profiling**: Stop profiling and return results
-- **xdebug_get_profile_info**: Get current profiling information
-- **xdebug_analyze_profile**: Analyze profiling data from file
-
-### Coverage (5 tools)
-- **xdebug_start_coverage**: Start code coverage tracking
-- **xdebug_stop_coverage**: Stop code coverage tracking
-- **xdebug_get_coverage**: Get code coverage data
-- **xdebug_analyze_coverage**: Analyze coverage data and generate report
-- **xdebug_coverage_summary**: Get coverage summary statistics
-
-### Statistics (6 tools)
-- **xdebug_get_memory_usage**: Get current memory usage information
-- **xdebug_get_peak_memory_usage**: Get peak memory usage information
-- **xdebug_get_stack_depth**: Get current stack depth level
-- **xdebug_get_time_index**: Get time index since script start
-- **xdebug_get_function_stack**: Get detailed function call stack with timing and memory data
-- **xdebug_info**: Get detailed Xdebug configuration and diagnostic information
-
-### Error Collection (3 tools)
-- **xdebug_start_error_collection**: Start collecting PHP errors, notices, and warnings
-- **xdebug_stop_error_collection**: Stop collecting errors and return collected data
-- **xdebug_get_collected_errors**: Get currently collected error messages
-
-### Tracing (5 tools)
-- **xdebug_start_trace**: Start function call tracing
-- **xdebug_stop_trace**: Stop function call tracing and return trace data
-- **xdebug_get_tracefile_name**: Get the filename of the current trace file
-- **xdebug_start_function_monitor**: Start monitoring specific functions
-- **xdebug_stop_function_monitor**: Stop function monitoring and return monitored calls
-
-### Configuration (2 tools)
-- **xdebug_call_info**: Get information about the calling context
-- **xdebug_print_function_stack**: Print formatted function stack trace
-
-## Interactive Step Debugging Tools
-
-The following tools require active debugging sessions and work with `./bin/xdebug-debug`:
-
-**Connection Management:**
-- xdebug_connect, xdebug_disconnect - ✅ Available
-
-**Breakpoint Control:**  
-- xdebug_set_breakpoint, xdebug_remove_breakpoint, xdebug_list_breakpoints - ✅ Available
-
-**Step Execution:**
-- xdebug_step_into, xdebug_step_over, xdebug_step_out, xdebug_continue - ✅ Available
-**Variable & Stack Inspection:**
-- xdebug_get_stack, xdebug_get_variables, xdebug_eval - ✅ Available
-
-**Advanced Breakpoints:**
-- xdebug_set_exception_breakpoint, xdebug_set_watch_breakpoint - Available
-
-**Feature Control:**
-- xdebug_get_features, xdebug_set_feature, xdebug_get_feature - Available
-
-### Usage Example
 ```bash
-# Single command execution (AMP-powered, no manual setup required)
-./vendor/bin/xdebug-debug test-scripts/buggy_calculation_code.php
+# AI automatically selects appropriate tools
+claude --print "Profile test-scripts/deep_recursion_test.php"
+claude --print "Trace test-scripts/sqlite_db_test.php for N+1 problems"  
+claude --print "Debug test-scripts/buggy_calculation_code.php with breakpoints"
 ```
+
+### Tool Categories
+- **Profiling & Performance**: 4 tools (timing, memory, bottleneck analysis)
+- **Code Coverage**: 6 tools (line/function coverage, HTML/XML reports)
+- **Interactive Debugging**: 11 tools (breakpoints, step execution, variables)
+- **Trace Analysis**: 4 tools (execution flow, function monitoring)
+- **Configuration & Diagnostics**: 17 tools (memory, stack depth, error collection)
+- **CLI Tools**: 5 tools (standalone utilities)
 
 
 ## Troubleshooting
