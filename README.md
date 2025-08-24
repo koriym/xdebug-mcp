@@ -170,7 +170,7 @@ php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script
 
 ### Human CLI Usage (Direct Execution)
 
-### 🔍 Trace Analysis (Execution Flow & Database)
+### Trace Analysis (Execution Flow & Database)
 ```bash
 # N+1 problem detection - Human readable output
 ./vendor/bin/xdebug-trace -- php test-scripts/sqlite_db_test.php
@@ -183,7 +183,7 @@ php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script
 # 📊 50 lines generated, 3 unique functions, 🔄 10 max call depth
 ```
 
-### ⚡ Performance Profiling (Bottleneck Identification)
+### Performance Profiling (Bottleneck Identification)
 ```bash  
 # Performance bottleneck identification - Human readable output
 ./vendor/bin/xdebug-profile -- php test-scripts/deep_recursion_test.php
@@ -197,14 +197,14 @@ php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script
 # 📊 Size: 3.2K, Functions: 18, ⏱️ 0.002s, 💾 420KB
 ```
 
-### 🐛 Interactive Step Debugging (Breakpoints & Variables)
+### Interactive Step Debugging (Breakpoints & Variables)
 ```bash
 # Single command execution (AMP-powered, no manual setup)
 ./vendor/bin/xdebug-debug test-scripts/buggy_calculation_code.php
 # ✅ Interactive debugging session with breakpoints, variable inspection, step execution
 ```
 
-### 📊 Code Coverage Analysis (Test Quality)
+### Code Coverage Analysis (Test Quality)
 ```bash
 # Code path coverage analysis - Human readable output
 ./vendor/bin/xdebug-coverage -- php test-scripts/deep_recursion_test.php
@@ -226,7 +226,7 @@ claude --print "Profile test-scripts/deep_recursion_test.php performance"
 # AI receives: {"profile_file":"/tmp/cachegrind.out.123","size":"2.1K","functions":12,"calls":45}
 ```
 
-### 🧪 PHPUnit Testing (Zero Configuration)
+### PHPUnit Testing (Zero Configuration)
 ```bash
 # Trace specific test method (default)
 ./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
@@ -270,3 +270,4 @@ claude --print "Debug test-scripts/buggy_calculation_code.php with breakpoints"
 - [Xdebug Docs](https://xdebug.org/docs/)
 - [MCP Specification](https://modelcontextprotocol.io/)
 - [Claude Desktop MCP](https://docs.anthropic.com/claude/docs/mcp)
+R
