@@ -111,7 +111,7 @@ Interactive Debugging (11 tools) は特別な接続シーケンスが必要で�
 ```bash
 # ✅ 正しい手順（必須！）
 # Step 1: XdebugClient を先に起動（MUST BE FIRST!）
-php test_new_xdebug_debug.php &
+php test/debug_session_test.php &
 
 # Step 2: ポートが待機中であることを確認
 lsof -i :9004  # LISTEN状態を確認
@@ -197,7 +197,7 @@ php test_new_xdebug_debug.php &
 **✅ 正しい診断方法:**
 ```bash
 # 1. 接続確認: XdebugClient が実際に起動しているか？
-php test_new_xdebug_debug.php &
+php test/debug_session_test.php &
 sleep 2
 lsof -i :9004  # <- 必須: LISTEN が表示されるか？
 

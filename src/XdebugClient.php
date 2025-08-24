@@ -50,9 +50,12 @@ use function socket_write;
 use function spl_object_id;
 use function stream_get_contents;
 use function strlen;
+use function substr;
 use function time;
 use function trim;
+use function uniqid;
 use function unlink;
+use function usleep;
 
 use const AF_INET;
 use const JSON_PRETTY_PRINT;
@@ -73,9 +76,9 @@ use const SOL_TCP;
 
 class XdebugClient
 {
-    public const GLOBAL_STATE_FILE = '/tmp/xdebug_session_global.json';
-    public const DEFAULT_PORT = 9004;
-    public const DEFAULT_HOST = '127.0.0.1';
+    public const string GLOBAL_STATE_FILE = '/tmp/xdebug_session_global.json';
+    public const int DEFAULT_PORT = 9004;
+    public const string DEFAULT_HOST = '127.j0.0.1';
     private const int SOCKET_TIMEOUT_SEC = 5;
     private const int SESSION_TIMEOUT_SEC = 300; // 5 minutes
 
@@ -84,7 +87,7 @@ class XdebugClient
     private bool $connected = false;
     private string $sessionId;
 
-    public function __construct(private string $host = self::DEFAULT_HOST, private int $port = self::DEFAULT_PORT, ?string $sessionId = null)
+    public function __construct(private string $host = self::DEFAULT_HOST, private int $port = self::DEFAULT_PORT, string|null $sessionId = null)
     {
         $this->sessionId = $sessionId ?? uniqid('session_', true);
         $this->loadGlobalState();
@@ -348,6 +351,7 @@ class XdebugClient
         } catch (SocketException $e) {
             if ($e->isConnectionLost()) {
                 $this->connected = false;
+
                 return [
                     'status' => 'disconnected',
                     'message' => 'Debug session ended',
@@ -481,9 +485,9 @@ class XdebugClient
         while ($totalSent < $totalLength) {
             $remaining = $totalLength - $totalSent;
             $chunk = substr($commandString, $totalSent, $remaining);
-            
+
             $bytesWritten = socket_write($this->socket, $chunk, $remaining);
-            
+
             if ($bytesWritten === false) {
                 $error = socket_last_error($this->socket);
                 $errorMsg = socket_strerror($error);
@@ -491,6 +495,7 @@ class XdebugClient
                 // If it's a broken pipe or connection reset, mark as disconnected
                 if ($error === SOCKET_EPIPE || $error === SOCKET_ECONNRESET) {
                     $this->connected = false;
+
                     throw new SocketException("Connection lost: $errorMsg", 0, $error);
                 }
 
@@ -502,6 +507,7 @@ class XdebugClient
                 if ($consecutiveZeros >= $maxRetries) {
                     throw new SocketException("Write timeout: Unable to send data after {$maxRetries} attempts");
                 }
+
                 // Small delay to prevent busy waiting
                 usleep(1000); // 1ms
                 continue;
@@ -831,7 +837,6 @@ class XdebugClient
         // Check if session is too old (configurable timeout)
         return time() - $state['last_activity'] < self::SESSION_TIMEOUT_SEC;
     }
-
 
     public function clearGlobalState(): void
     {
