@@ -6,32 +6,32 @@ declare(strict_types=1);
 // Load autoloader and get project root
 $projectRoot = require __DIR__ . '/autoload.php';
 
-use XdebugMcp\XdebugProfiler;
+use Koriym\XdebugMcp\XdebugTracer;
 
 // Parse command line arguments
 function showHelp(string $scriptName): void {
-    echo "Usage: $scriptName [--claude] -- php script.php [args...]\n";
+    echo "Usage: $scriptName [--json] [--claude] -- php script.php [args...]\n";
     echo "\n";
-    echo "Traces execution of PHP scripts with Xdebug enabled.\n";
-    echo "Simply add '$scriptName --' before any existing php command!\n";
+    echo "Executes PHP scripts with Xdebug tracing and provides execution analysis.\n";
     echo "\n";
     echo "Options:\n";
+    echo "  --json    Output JSON format (for MCP/AI consumption)\n";
     echo "  --claude  Auto-analyze with Claude after tracing\n";
     echo "\n";
     echo "Examples:\n";
-    echo "  # Your existing command:\n";
-    echo "  php app.php\n";
-    echo "\n";
-    echo "  # Add trace:\n";
+    echo "  # Human-readable statistics (default):\n";
     echo "  $scriptName -- php app.php\n";
+    echo "\n";
+    echo "  # JSON output for AI/MCP:\n";
+    echo "  $scriptName --json -- php app.php\n";
     echo "\n";
     echo "  # Auto-analyze with Claude:\n";
     echo "  $scriptName --claude -- php app.php\n";
     echo "\n";
     echo "Output:\n";
-    echo "  - Trace files: /tmp/trace.*.xt\n";
-    echo "  - Comprehensive function call statistics\n";
-    echo "  - I/O operations, memory usage, and timing analysis\n";
+    echo "  - Default: Human-readable execution statistics\n";
+    echo "  - --json: JSON result with trace_file, total_lines, specification\n";
+    echo "  - Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-trace.json\n";
 }
 
 // Check for help flag (validation is handled by autoload.php)
@@ -41,10 +41,11 @@ if (isset($argv[1]) && ($argv[1] === '--help' || $argv[1] === '-h')) {
 }
 
 // Parse flags
+$jsonOutput = in_array('--json', $argv);
 $claudeAnalysis = in_array('--claude', $argv);
 
 // Remove flags and find target file
-$args = array_values(array_diff($argv, ['--claude', '--']));
+$args = array_values(array_diff($argv, ['--json', '--claude', '--']));
 array_shift($args); // remove script name
 
 // Skip 'php' if present
@@ -61,28 +62,46 @@ if (!file_exists($targetFile)) {
     exit(1);
 }
 
-// Execute trace and analyze results
+// Execute trace and generate output
 try {
-    $profiler = new XdebugProfiler();
-    $traceFile = $profiler->executeTrace($targetFile, $phpArgs);
-    $stats = $profiler->parseTraceFile($traceFile);
-    $formattedStats = $profiler->generateStatistics($stats);
-    $profiler->displayResults($formattedStats);
+    $tracer = new XdebugTracer();
+    $traceFile = $tracer->executeTrace($targetFile, $phpArgs);
+    $stats = $tracer->parseTraceFile($traceFile);
+    
+    if ($jsonOutput) {
+        // JSON output for MCP/AI consumption
+        $result = [
+            'trace_file' => $traceFile,
+            'total_lines' => $stats['total_lines'],
+            'unique_functions' => count($stats['unique_functions']),
+            'max_call_depth' => $stats['max_depth'],
+            'database_queries' => $stats['db_operations'],
+            'specification' => 'https://xdebug.org/docs/trace'
+        ];
+        echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+    } else {
+        // Simple trace metadata for CLI (consistent with profile style)
+        echo "✅ Trace complete: $traceFile\n";
+        echo "📊 {$stats['total_lines']} lines generated\n";
+        
+        $uniqueFunctionCount = count($stats['unique_functions']);
+        echo "📚 $uniqueFunctionCount unique functions\n";
+        echo "🔄 {$stats['max_depth']} max call depth\n";
+        
+        // Only show database queries if there are any
+        if ($stats['db_operations'] > 0) {
+            echo "🗃️ {$stats['db_operations']} database queries\n";
+        }
+        
+        echo "\n💡 claude \"Analyze $traceFile\"\n";
+    }
+    
+    if ($claudeAnalysis) {
+        $tracer->analyzeWithClaude($traceFile);
+    }
 } catch (Exception $e) {
-    echo "❌ Error: " . $e->getMessage() . "\n";
+    fwrite(STDERR, "❌ Error: " . $e->getMessage() . "\n");
     exit(1);
-}
-
-if ($claudeAnalysis) {
-    echo "\n🤖 Starting Claude Code analysis...\n";
-
-    $localeOutput = shell_exec('defaults read -g AppleLocale') ?: '';
-    $lang = str_contains($localeOutput, 'ja_JP') ? 'Japanese' : 'English';
-    $claudePrompt = "Read and analyze this Xdebug trace file. Look for performance bottlenecks, infinite loops, unexpected function calls, memory issues, and suggest optimizations. Explain the execution flow and highlight any problematic patterns: $traceFile. Answer in $lang.";
-
-    passthru('claude ' . escapeshellarg($claudePrompt));
-    echo "\n";
-    echo "🤖 Claude Code analysis completed. 'claude --continue' if you have follow-up questions.\n";
 }
 
 exit(0);
