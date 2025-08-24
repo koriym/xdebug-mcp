@@ -168,40 +168,62 @@ php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script
 
 ## Tool Usage
 
+### Human CLI Usage (Direct Execution)
+
 ### 🔍 Trace Analysis (Execution Flow & Database)
 ```bash
-# N+1 problem detection
-./vendor/bin/xdebug-trace test-scripts/sqlite_db_test.php
-# ✅ 83 lines, 10 functions, 3 max depth, 🗃️ 22 database queries
+# N+1 problem detection - Human readable output
+./vendor/bin/xdebug-trace -- php test-scripts/sqlite_db_test.php
+# ✅ Trace complete: /tmp/trace.1034012359.xt
+# 📊 83 lines generated, 10 unique functions, 3 max depth, 🗃️ 22 database queries
 
-# Recursion analysis  
-./vendor/bin/xdebug-trace test-scripts/deep_recursion_test.php
-# ✅ 50 lines, 3 functions, 🔄 10 max call depth
+# Recursion analysis - Human readable output
+./vendor/bin/xdebug-trace -- php test-scripts/deep_recursion_test.php
+# ✅ Trace complete: /tmp/trace.1034012360.xt  
+# 📊 50 lines generated, 3 unique functions, 🔄 10 max call depth
 ```
 
 ### ⚡ Performance Profiling (Bottleneck Identification)
 ```bash  
-# Performance bottleneck identification
-./vendor/bin/xdebug-profile test-scripts/deep_recursion_test.php
-# ✅ 2.1K, 12 functions, 45 calls, 🎯 countdown (45.2%), factorial (31.8%)
+# Performance bottleneck identification - Human readable output
+./vendor/bin/xdebug-profile -- php test-scripts/deep_recursion_test.php
+# ✅ Profile complete: /tmp/cachegrind.out.1755719364
+# 📊 Size: 2.1K, Functions: 12, Calls: 45
+# 🎯 Top functions: countdown (45.2%), factorial (31.8%), {main} (23.0%)
 
-# Memory and timing analysis
-./vendor/bin/xdebug-profile test-scripts/sqlite_db_test.php  
-# ✅ 3.2K, 18 functions, ⏱️ 0.002s, 💾 420KB
+# Memory and timing analysis - Human readable output
+./vendor/bin/xdebug-profile -- php test-scripts/sqlite_db_test.php  
+# ✅ Profile complete: /tmp/cachegrind.out.1755719365
+# 📊 Size: 3.2K, Functions: 18, ⏱️ 0.002s, 💾 420KB
 ```
 
 ### 🐛 Interactive Step Debugging (Breakpoints & Variables)
 ```bash
-# Single command execution (AMP-powered)
+# Single command execution (AMP-powered, no manual setup)
 ./vendor/bin/xdebug-debug test-scripts/buggy_calculation_code.php
-# ✅ Breakpoints, variable inspection, step execution
+# ✅ Interactive debugging session with breakpoints, variable inspection, step execution
 ```
 
 ### 📊 Code Coverage Analysis (Test Quality)
 ```bash
-# Code path coverage analysis  
-./vendor/bin/xdebug-coverage test-scripts/deep_recursion_test.php
-# ✅ HTML report, 📊 85.2% lines, 92.1% functions
+# Code path coverage analysis - Human readable output
+./vendor/bin/xdebug-coverage -- php test-scripts/deep_recursion_test.php
+# ✅ Coverage complete: HTML report generated  
+# 📊 Coverage: 85.2% lines, 92.1% functions, identifies untested code paths
+```
+
+### AI Usage (JSON Output for Analysis)
+
+**For AI Analysis - Tools automatically use --json flag when called by AI:**
+```bash
+# AI receives structured JSON data for precise analysis
+claude --print "Analyze test-scripts/sqlite_db_test.php for N+1 problems"
+# AI automatically runs: ./vendor/bin/xdebug-trace --json -- php test-scripts/sqlite_db_test.php
+# AI receives: {"trace_file":"/tmp/trace.xt","total_lines":83,"unique_functions":10,"max_call_depth":3,"database_queries":22}
+
+claude --print "Profile test-scripts/deep_recursion_test.php performance"  
+# AI automatically runs: ./vendor/bin/xdebug-profile --json -- php test-scripts/deep_recursion_test.php
+# AI receives: {"profile_file":"/tmp/cachegrind.out.123","size":"2.1K","functions":12,"calls":45}
 ```
 
 ### 🧪 PHPUnit Testing (Zero Configuration)

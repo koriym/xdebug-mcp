@@ -72,34 +72,62 @@ Perfect for regression testing, feature validation, and demonstrating AI debuggi
 
 ## Usage Examples
 
-### Trace Analysis
+### Human Usage (Direct CLI)
+
+**Trace Analysis - Human readable output:**
 ```bash
 # Recursion depth and function call analysis
-./bin/xdebug-trace test-scripts/deep_recursion_test.php
+./bin/xdebug-trace -- php test-scripts/deep_recursion_test.php
+# ✅ Trace complete: /tmp/trace.1034012359.xt
+# 📊 50 lines generated, 🔄 10 max call depth
 
 # N+1 database query detection  
-./bin/xdebug-trace test-scripts/sqlite_db_test.php
+./bin/xdebug-trace -- php test-scripts/sqlite_db_test.php
+# ✅ Trace complete: /tmp/trace.1034012360.xt  
+# 📊 83 lines generated, 🗃️ 22 database queries
 ```
 
-### Performance Profiling
+**Performance Profiling - Human readable output:**
 ```bash  
 # Recursion performance analysis
-./bin/xdebug-profile test-scripts/deep_recursion_test.php
+./bin/xdebug-profile -- php test-scripts/deep_recursion_test.php
+# ✅ Profile complete: /tmp/cachegrind.out.1755719364
+# 📊 Size: 2.1K, Functions: 12, Calls: 45, 🎯 Top functions: countdown, factorial
 
 # Database query performance
-./bin/xdebug-profile test-scripts/sqlite_db_test.php
+./bin/xdebug-profile -- php test-scripts/sqlite_db_test.php
+# ✅ Profile complete: /tmp/cachegrind.out.1755719365
+# 📊 Size: 3.2K, Functions: 18, ⏱️ 0.002s, 💾 420KB
 ```
 
-### Interactive Debugging
+**Interactive Debugging:**
 ```bash
-# Step debugging with breakpoints and variable inspection
+# Step debugging with breakpoints and variable inspection  
 ./bin/xdebug-debug test-scripts/buggy_calculation_code.php
+# ✅ Interactive debugging session with breakpoints
 ```
 
-### Coverage Analysis
+**Coverage Analysis - Human readable output:**
 ```bash
 # Code path coverage analysis
-./bin/xdebug-coverage test-scripts/deep_recursion_test.php
+./bin/xdebug-coverage -- php test-scripts/deep_recursion_test.php  
+# ✅ Coverage complete: HTML report generated
+# 📊 Coverage: 85.2% lines, 92.1% functions
+```
+
+### AI Usage (JSON Output for Analysis)
+
+**For AI Analysis - Always use --json flag:**
+```bash
+# AI receives structured JSON data for precise analysis
+./bin/xdebug-trace --json -- php test-scripts/sqlite_db_test.php
+# Returns: {"trace_file":"/tmp/trace.xt","total_lines":83,"unique_functions":10,"max_call_depth":3,"database_queries":22}
+
+./bin/xdebug-profile --json -- php test-scripts/deep_recursion_test.php  
+# Returns: {"profile_file":"/tmp/cachegrind.out.123","size":"2.1K","functions":12,"calls":45}
+
+./bin/xdebug-coverage --json -- php test-scripts/deep_recursion_test.php
+# Returns: {"lines_covered":85.2,"functions_covered":92.1,"untested_lines":[15,23,35]}
 ```
 
 ## Specialized Use Cases
