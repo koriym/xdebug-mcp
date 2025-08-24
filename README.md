@@ -92,8 +92,8 @@ cp vendor/koriym/xdebug-mcp/templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUD
 **2. Ask AI to debug with runtime data:**
 ```bash
 # In another terminal - AI analyzes actual execution instead of guessing
-claude --print "Trace test/debug_test.php and identify the performance bottleneck"
-# ✅ AI automatically runs xdebug-trace and provides data-driven analysis
+claude --print "Analyze test-scripts/sqlite_db_test.php for N+1 problems"
+# ✅ AI automatically runs xdebug-trace --json and provides data-driven analysis
 ```
 
 **3. Interactive step debugging with AI:**
@@ -115,27 +115,27 @@ claude --print "Debug test/buggy_script.php with breakpoints and step execution"
 **Test AI integration:**
 ```bash
 # Performance profiling
-claude --print "Profile test/debug_test.php and show the slowest functions"
-# ✅ AI runs xdebug-profile and analyzes cachegrind output
+claude --print "Profile test-scripts/deep_recursion_test.php and show bottlenecks"
+# ✅ AI runs xdebug-profile --json and analyzes performance data
 
-# Coverage analysis  
-claude --print "Analyze code coverage for test/debug_test.php"
-# ✅ AI runs xdebug-coverage and reports untested code paths
+# Database analysis
+claude --print "Check test-scripts/sqlite_db_test.php for N+1 query problems"
+# ✅ AI runs xdebug-trace --json and reports database query statistics
 ```
 
 **Manual verification (optional):**
 ```bash
-# Direct tool usage
-./vendor/bin/xdebug-trace test/debug_test.php
-./vendor/bin/xdebug-profile test/debug_test.php  
-./vendor/bin/xdebug-coverage test/debug_test.php
+# Direct tool usage with JSON output for AI analysis
+./vendor/bin/xdebug-trace --json -- php test-scripts/sqlite_db_test.php
+./vendor/bin/xdebug-profile --json -- php test-scripts/deep_recursion_test.php  
+./vendor/bin/xdebug-coverage --json -- php test-scripts/deep_recursion_test.php
 ```
 
 **Expected results:**
-- Trace files showing exact function call sequences and variable values
-- Performance data revealing O(2^n) fibonacci inefficiency 
-- Coverage reports highlighting untested code paths
-- AI providing data-driven analysis instead of static code guessing
+- JSON-structured trace data with database query counts and execution flow
+- Performance data with function costs and bottleneck identification
+- Coverage reports with line/function percentages and untested paths
+- AI providing data-driven analysis with precise metrics instead of static code guessing
 
 
 ## Usage
