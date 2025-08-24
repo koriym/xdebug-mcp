@@ -19,6 +19,7 @@ use function fwrite;
 use function getenv;
 use function glob;
 use function implode;
+use function ini_get;
 use function ini_set;
 use function preg_replace;
 use function rtrim;
