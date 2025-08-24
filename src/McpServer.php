@@ -112,7 +112,7 @@ class McpServer
                 && $state['sessionId'] === $this->sessionId && $state['connected']
             ) {
                 try {
-                    $tempClient = new XdebugClient($state['host'], $state['port']);
+                    $tempClient = new XdebugClient($state['host'], $state['port'], $this->sessionId);
                     $tempClient->disconnect(); // 前のセッションを終了
                     $this->debugLog('Cleaned up previous session', $state);
                 } catch (Throwable $e) {
@@ -134,7 +134,7 @@ class McpServer
             $state = json_decode(file_get_contents($stateFile), true);
             if ($state && isset($state['host'], $state['port']) && $state['connected']) {
                 // グローバル状態から既存セッションを復元
-                $this->xdebugClient = new XdebugClient($state['host'], $state['port']);
+                $this->xdebugClient = new XdebugClient($state['host'], $state['port'], $this->sessionId);
                 // 既存セッションの情報をXdebugClientに設定
                 $this->debugLog('Loaded existing session from global state', $state);
             }
@@ -850,7 +850,7 @@ class McpServer
         $host = $args['host'] ?? '127.0.0.1';
         $port = $args['port'] ?? 9004;
 
-        $this->xdebugClient = new XdebugClient($host, $port);
+        $this->xdebugClient = new XdebugClient($host, $port, $this->sessionId);
         try {
             $result = $this->xdebugClient->connect();
             $state = [

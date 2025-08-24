@@ -30,7 +30,8 @@
         "bin/xdebug-trace",
         "bin/xdebug-profile",
         "bin/xdebug-coverage",
-        "bin/xdebug-phpunit"
+        "bin/xdebug-phpunit",
+        "bin/xdebug-debug"
     ],
     "scripts": {
         "test": "phpunit",
