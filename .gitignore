@@ -19,13 +19,7 @@ Thumbs.db
 claude_desktop_config.json
 mcp.json
 
-## Test files and development scripts
-test-scripts/complex_test.php
-test-scripts/database_test.php
-test-scripts/deep_recursion_test.php
-test-scripts/real_db_test.php
-test-scripts/simple_comparison_test.php
-test-scripts/simple_test.php
+## Development scripts (outside test-scripts/)
 test/long_running_debug.php
 test_new_xdebug_debug.php
 test_src.php
