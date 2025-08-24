@@ -65,72 +65,56 @@ Perfect for regression testing, feature validation, and demonstrating AI debuggi
 
 ## PHP Test Scripts
 
-### Core Debugging Scripts
-- **`buggy_calculation_code.php`** - Basic calculation with intentional bugs for debugging practice
-- **`simple_test.php`** - Minimal PHP script for basic trace/profile testing
-
-### Recursion and Performance Testing
-- **`deep_recursion_test.php`** - Recursive functions (countdown, factorial) for depth analysis and stack tracing
-- **`complex_test.php`** - Complex execution flow with multiple function calls and nested operations
-
-### Database Query Analysis
-- **`sqlite_db_test.php`** - N+1 query problem demonstration with SQLite (in-memory database)
-- **`database_test.php`** - General database operation testing patterns
-- **`real_db_test.php`** - Real database connection testing scenarios
-
-### Comparative Analysis
-- **`simple_comparison_test.php`** - Simple script for comparing Profile vs Trace tool accuracy
+### Core Scripts (3 Files)
+- **`buggy_calculation_code.php`** - Basic calculation with intentional bugs for step debugging practice
+- **`deep_recursion_test.php`** - Recursive functions (countdown, factorial) for max depth analysis and trace validation  
+- **`sqlite_db_test.php`** - N+1 query problem demonstration with real SQLite PDO calls for database query counting
 
 ## Usage Examples
 
 ### Trace Analysis
 ```bash
-# Analyze execution flow and function calls
+# Recursion depth and function call analysis
 ./bin/xdebug-trace test-scripts/deep_recursion_test.php
 
-# Database query analysis (N+1 detection)
+# N+1 database query detection  
 ./bin/xdebug-trace test-scripts/sqlite_db_test.php
 ```
 
 ### Performance Profiling
-```bash
-# Performance bottleneck identification
-./bin/xdebug-profile test-scripts/complex_test.php
-
-# Memory and timing analysis
+```bash  
+# Recursion performance analysis
 ./bin/xdebug-profile test-scripts/deep_recursion_test.php
+
+# Database query performance
+./bin/xdebug-profile test-scripts/sqlite_db_test.php
 ```
 
 ### Interactive Debugging
 ```bash
-# Step-by-step debugging with breakpoints
+# Step debugging with breakpoints and variable inspection
 ./bin/xdebug-debug test-scripts/buggy_calculation_code.php
 ```
 
 ### Coverage Analysis
 ```bash
-# Code coverage analysis
-./bin/xdebug-coverage test-scripts/complex_test.php
+# Code path coverage analysis
+./bin/xdebug-coverage test-scripts/deep_recursion_test.php
 ```
 
-## Test Script Specializations
+## Specialized Use Cases
 
-**Database Analysis**: `sqlite_db_test.php`, `database_test.php`, `real_db_test.php`
-- N+1 query problem detection
-- Database function call counting
-- SQL performance analysis
+**`buggy_calculation_code.php`**
+- Step-by-step debugging practice
+- Variable state inspection
+- Breakpoint and execution control
 
-**Recursion Analysis**: `deep_recursion_test.php`
-- Maximum call depth tracking
-- Recursive pattern detection
-- Stack depth analysis
+**`deep_recursion_test.php`**  
+- Maximum call depth tracking (Profile vs Trace comparison)
+- Recursive pattern analysis
+- Function call counting accuracy validation
 
-**Performance Testing**: `complex_test.php`
-- Function call overhead analysis
-- Memory usage patterns
-- Execution timing analysis
-
-**Bug Demonstration**: `buggy_calculation_code.php`
-- Intentional logic errors for debugging practice
-- Variable state tracking
-- Error condition analysis
+**`sqlite_db_test.php`**
+- Real N+1 query problem demonstration  
+- Database function counting (PDO->exec, PDOStatement->execute)
+- SQL performance bottleneck identification
