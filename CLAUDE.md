@@ -2,6 +2,37 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL BEHAVIORAL RULE ⚠️
+
+**NEVER IMPLEMENT WITHOUT EXPLICIT PERMISSION**
+
+Claude has a systemic issue where it implements solutions immediately without asking. This wastes the user's time and disrupts their workflow.
+
+**REQUIRED WORKFLOW:**
+1. **PROPOSE** the solution/approach
+2. **ASK FOR PERMISSION** to implement
+3. **WAIT FOR EXPLICIT APPROVAL** 
+4. **THEN implement**
+
+**Examples:**
+❌ Wrong: "Let me add --stats option..." (starts implementing)
+✅ Correct: "Should I add --stats option as the default behavior? This would show detailed statistics instead of just JSON metadata."
+
+❌ Wrong: "I'll update the function to..." (starts coding)  
+✅ Correct: "Would you like me to update the function to handle this case?"
+
+**This applies to:**
+- Code changes
+- New features  
+- Refactoring
+- File modifications
+- Architecture changes
+- Any implementation work
+
+**Remember:** The user has decision authority. Claude is an implementer, not a decision maker.
+
+**Violation consequences:** User frustration, wasted time, wrong direction, repeated corrections.
+
 ## Project Overview
 
 This is a **universal PHP Xdebug MCP (Model Context Protocol) Server** that enables AI assistants to perform comprehensive PHP application analysis and debugging. The server acts as a bridge between AI clients and Xdebug, providing a standardized interface for:
