@@ -30,10 +30,22 @@ try {
         echo "\n🔧 Variables at breakpoint:\n";
         $vars = $client->getVariables();
         if (isset($vars['property'])) {
-            foreach ($vars['property'] as $prop) {
+            // Normalize single property into array
+            $props = isset($vars['property'][0]) ? $vars['property'] : [$vars['property']];
+            
+            foreach ($props as $prop) {
                 $name = $prop['@attributes']['name'] ?? 'unknown';
                 $type = $prop['@attributes']['type'] ?? 'unknown';
-                $value = $prop['#text'] ?? 'uninitialized';
+                $raw = $prop['#text'] ?? null;
+                
+                // Handle base64 encoded values
+                if ($raw !== null && ($prop['@attributes']['encoding'] ?? '') === 'base64') {
+                    $decoded = base64_decode($raw);
+                    $value = $decoded !== false ? $decoded : 'uninitialized';
+                } else {
+                    $value = $raw ?? 'uninitialized';
+                }
+                
                 echo "  📋 $name ($type): $value\n";
             }
         }
