@@ -104,7 +104,7 @@ class McpServer
 
     private function cleanupPreviousSession(): void
     {
-        $stateFile = '/tmp/xdebug_session_global.json';
+        $stateFile = XdebugClient::GLOBAL_STATE_FILE;
         if (file_exists($stateFile)) {
             $state = json_decode(file_get_contents($stateFile), true);
             if (
@@ -129,7 +129,7 @@ class McpServer
 
     private function loadExistingSession(): void
     {
-        $stateFile = '/tmp/xdebug_session_global.json';
+        $stateFile = XdebugClient::GLOBAL_STATE_FILE;
         if (file_exists($stateFile)) {
             $state = json_decode(file_get_contents($stateFile), true);
             if ($state && isset($state['host'], $state['port']) && $state['connected']) {
@@ -162,8 +162,8 @@ class McpServer
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'host' => ['type' => 'string', 'default' => '127.0.0.1'],
-                        'port' => ['type' => 'integer', 'default' => 9004],
+                        'host' => ['type' => 'string', 'default' => XdebugClient::DEFAULT_HOST],
+                        'port' => ['type' => 'integer', 'default' => XdebugClient::DEFAULT_PORT],
                     ],
                 ],
             ],
@@ -847,8 +847,8 @@ class McpServer
 
     protected function connectToXdebug(array $args): string
     {
-        $host = $args['host'] ?? '127.0.0.1';
-        $port = $args['port'] ?? 9004;
+        $host = $args['host'] ?? XdebugClient::DEFAULT_HOST;
+        $port = $args['port'] ?? XdebugClient::DEFAULT_PORT;
 
         $this->xdebugClient = new XdebugClient($host, $port, $this->sessionId);
         try {
@@ -861,7 +861,7 @@ class McpServer
                 'last_activity' => time(),
                 'session_info' => $result,
             ];
-            file_put_contents('/tmp/xdebug_session_global.json', json_encode($state, JSON_PRETTY_PRINT));
+            file_put_contents(XdebugClient::GLOBAL_STATE_FILE, json_encode($state, JSON_PRETTY_PRINT));
 
             return "Connected to new Xdebug session at {$host}:{$port}. Result: " . json_encode($result);
         } catch (Throwable $e) {
@@ -879,7 +879,7 @@ class McpServer
 
         $this->xdebugClient->disconnect();
 
-        $stateFile = '/tmp/xdebug_session_global.json';
+        $stateFile = XdebugClient::GLOBAL_STATE_FILE;
         $existingState = [];
         if (file_exists($stateFile)) {
             $json = file_get_contents($stateFile);
@@ -1649,7 +1649,8 @@ class McpServer
         }
 
         self::$tracingActive = true;
-        self::$traceFile = $traceFile ?: '/tmp/xdebug_custom_trace_' . uniqid() . '.xt';
+        $xdebugOutputDir = ini_get('xdebug.output_dir') ?: '/tmp';
+        self::$traceFile = $traceFile ?: $xdebugOutputDir . '/xdebug_custom_trace_' . uniqid() . '.xt';
 
         register_tick_function([$this, 'traceFunction']);
         declare(ticks=1);
