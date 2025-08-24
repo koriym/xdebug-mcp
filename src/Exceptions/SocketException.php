@@ -18,7 +18,7 @@ use const SOCKET_EPIPE;
  */
 class SocketException extends RuntimeException
 {
-    private const int CONNECTION_LOST_ERROR_CODES = [SOCKET_EPIPE, SOCKET_ECONNRESET];
+    private const array CONNECTION_LOST_ERROR_CODES = [SOCKET_EPIPE, SOCKET_ECONNRESET];
 
     public function __construct(string $message = '', int $code = 0, private int|null $socketErrorCode = null, Throwable|null $previous = null)
     {

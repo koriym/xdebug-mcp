@@ -12,11 +12,17 @@ use Throwable;
 use function array_map;
 use function base64_encode;
 use function date;
+use function defined;
 use function error_log;
+use function fclose;
+use function fflush;
 use function file_exists;
 use function file_get_contents;
-use function file_put_contents;
+use function flock;
+use function fopen;
+use function ftruncate;
 use function function_exists;
+use function fwrite;
 use function glob;
 use function implode;
 use function ini_get;
@@ -26,6 +32,7 @@ use function json_encode;
 use function libxml_get_errors;
 use function libxml_use_internal_errors;
 use function phpversion;
+use function rewind;
 use function simplexml_load_string;
 use function socket_accept;
 use function socket_bind;
@@ -41,6 +48,7 @@ use function socket_set_option;
 use function socket_strerror;
 use function socket_write;
 use function spl_object_id;
+use function stream_get_contents;
 use function strlen;
 use function time;
 use function trim;
@@ -51,6 +59,9 @@ use const JSON_PRETTY_PRINT;
 use const LIBXML_NOERROR;
 use const LIBXML_NONET;
 use const LIBXML_NOWARNING;
+use const LOCK_EX;
+use const LOCK_SH;
+use const LOCK_UN;
 use const MSG_PEEK;
 use const SO_RCVTIMEO;
 use const SO_REUSEADDR;
@@ -63,37 +74,29 @@ use const SOL_TCP;
 class XdebugClient
 {
     private const string GLOBAL_STATE_FILE = '/tmp/xdebug_session_global.json';
+    private const int DEFAULT_PORT = 9004;
+    private const string DEFAULT_HOST = '127.0.0.1';
+    private const int SOCKET_TIMEOUT_SEC = 5;
+    private const int SESSION_TIMEOUT_SEC = 300; // 5 minutes
 
     private $socket = null;
     private int $transactionId = 1;
     private bool $connected = false;
 
-    public function __construct(private string $host = '127.0.0.1', private int $port = 9004)
+    public function __construct(private string $host = self::DEFAULT_HOST, private int $port = self::DEFAULT_PORT)
     {
         $this->loadGlobalState();
     }
 
     public function connect(): array
     {
-        // Check for existing global session
-        if ($this->isGlobalSessionAvailable()) {
-            $sessionInfo = $this->reconnectToGlobalSession();
-            if ($sessionInfo !== null) {
-                return [
-                    'status' => 'reopened',
-                    'session' => $sessionInfo,
-                    'host' => $this->host,
-                    'port' => $this->port,
-                ];
-            }
-        }
-
-        // Create new connection
+        $status = $this->isGlobalSessionAvailable() ? 'reopened' : 'opened';
+        // Always open a fresh socket for DBGp
         $sessionInfo = $this->createNewConnection();
         $this->saveGlobalState($sessionInfo);
 
         return [
-            'status' => 'opened',
+            'status' => $status,
             'session' => $sessionInfo,
             'host' => $this->host,
             'port' => $this->port,
@@ -110,7 +113,7 @@ class XdebugClient
         }
 
         socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
-        socket_set_option($this->socket, SOL_SOCKET, SO_RCVTIMEO, ['sec' => 5, 'usec' => 0]);
+        socket_set_option($this->socket, SOL_SOCKET, SO_RCVTIMEO, ['sec' => self::SOCKET_TIMEOUT_SEC, 'usec' => 0]);
 
         error_log("[XdebugClient] Binding to {$this->host}:{$this->port}");
         if (! socket_bind($this->socket, $this->host, $this->port)) {
@@ -133,6 +136,8 @@ class XdebugClient
         }
 
         error_log('[XdebugClient] Xdebug connected! Reading initial data...');
+        // Apply the same read timeout to the accepted socket
+        socket_set_option($clientSocket, SOL_SOCKET, SO_RCVTIMEO, ['sec' => self::SOCKET_TIMEOUT_SEC, 'usec' => 0]);
         socket_close($this->socket);
         $this->socket = $clientSocket;
 
@@ -181,15 +186,35 @@ class XdebugClient
         $except = null;
         $result = socket_select($read, $write, $except, 0);
 
-        // If socket_select returns 0, no activity (good)
-        // If it returns 1 but socket_recv with PEEK returns 0, connection closed
+        // If socket_select returns false, it's an error
+        if ($result === false) {
+            return false;
+        }
+
+        // If socket_select returns 0, no activity (socket is still connected)
+        if ($result === 0) {
+            return true;
+        }
+
+        // If socket_select returns 1, there's data available - peek to check status
         if ($result === 1) {
             $peek = socket_recv($this->socket, $buffer, 1, MSG_PEEK);
 
-            return $peek !== 0; // 0 means connection closed
+            // socket_recv === false means error
+            if ($peek === false) {
+                return false;
+            }
+
+            // socket_recv === 0 means connection closed
+            if ($peek === 0) {
+                return false;
+            }
+
+            // socket_recv > 0 means data available (connected)
+            return true;
         }
 
-        return $result !== false; // false means error
+        return false; // Unexpected result
     }
 
     private function getAffordances(array $response): array
@@ -579,7 +604,8 @@ class XdebugClient
 
     public function startCoverage(array $options = []): array
     {
-        $flags = XDEBUG_CC_UNUSED;
+        // Use XDEBUG_CC_UNUSED constant if available, otherwise default to 1
+        $flags = defined('XDEBUG_CC_UNUSED') ? XDEBUG_CC_UNUSED : 1;
         if (isset($options['track_unused']) && ! $options['track_unused']) {
             $flags = 0;
         }
@@ -742,7 +768,7 @@ class XdebugClient
             'created_at' => date('Y-m-d H:i:s'),
         ];
 
-        file_put_contents(self::GLOBAL_STATE_FILE, json_encode($state, JSON_PRETTY_PRINT));
+        $this->writeStateWithLock($state);
     }
 
     private function isGlobalSessionAvailable(): bool
@@ -770,10 +796,8 @@ class XdebugClient
 
     private function isSessionAlive(array $state): bool
     {
-        // Check if session is too old (5 minutes timeout)
-        $maxAge = 300; // 5 minutes
-
-        return time() - $state['last_activity'] < $maxAge;
+        // Check if session is too old (configurable timeout)
+        return time() - $state['last_activity'] < self::SESSION_TIMEOUT_SEC;
     }
 
     /**
@@ -788,8 +812,7 @@ class XdebugClient
     private function reconnectToGlobalSession(): array|null
     {
         try {
-            $stateData = file_get_contents(self::GLOBAL_STATE_FILE);
-            $state = json_decode($stateData, true);
+            $state = $this->readStateWithLock();
 
             if (! $this->isValidGlobalState($state)) {
                 $this->clearGlobalState();
@@ -918,6 +941,53 @@ class XdebugClient
 
         $state['last_activity'] = time();
 
-        file_put_contents(self::GLOBAL_STATE_FILE, json_encode($state, JSON_PRETTY_PRINT));
+        $this->writeStateWithLock($state);
+    }
+
+    private function writeStateWithLock(array $state): void
+    {
+        $file = fopen(self::GLOBAL_STATE_FILE, 'c+');
+        if ($file === false) {
+            throw new SocketException('Failed to open global state file for writing');
+        }
+
+        if (flock($file, LOCK_EX)) {
+            // Truncate and write new data
+            ftruncate($file, 0);
+            rewind($file);
+            fwrite($file, json_encode($state, JSON_PRETTY_PRINT));
+            fflush($file);
+            flock($file, LOCK_UN);
+        } else {
+            throw new SocketException('Failed to acquire lock on global state file');
+        }
+
+        fclose($file);
+    }
+
+    private function readStateWithLock(): array|null
+    {
+        if (! file_exists(self::GLOBAL_STATE_FILE)) {
+            return null;
+        }
+
+        $file = fopen(self::GLOBAL_STATE_FILE, 'r');
+        if ($file === false) {
+            return null;
+        }
+
+        $state = null;
+        if (flock($file, LOCK_SH)) {
+            $contents = stream_get_contents($file);
+            if ($contents !== false) {
+                $state = json_decode($contents, true);
+            }
+
+            flock($file, LOCK_UN);
+        }
+
+        fclose($file);
+
+        return $state;
     }
 }

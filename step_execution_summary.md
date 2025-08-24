@@ -67,7 +67,7 @@ run -i 2\0          # 実行継続
 ./bin/debug-server &
 
 # 2. デバッグ対象スクリプト実行  
-php -dxdebug.mode=debug -dxdebug.client_port=9004 script.php &
+php -dxdebug.mode=debug -dxdebug.start_with_request=yes -dxdebug.client_port=9004 script.php &
 
 # 3. ステップ実行
 echo "step" | nc localhost 9005      # 次の行へ

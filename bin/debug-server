@@ -187,7 +187,35 @@ class AmpPersistentDebugServer
         // Parse: filename:line
         [$filename, $line] = explode(':', $args, 2);
         
-        $command = "breakpoint_set -i 1 -t line -f file://$filename -n $line\0";
+        // Validate and normalize filename
+        if (empty($filename)) {
+            return "ERROR: Filename cannot be empty\n";
+        }
+        
+        // Canonicalize path
+        $realPath = realpath($filename);
+        if ($realPath === false) {
+            // If realpath fails, try with current directory
+            $realPath = realpath(getcwd() . DIRECTORY_SEPARATOR . $filename);
+        }
+        
+        if ($realPath === false) {
+            return "ERROR: File '$filename' not found\n";
+        }
+        
+        // Build proper file:// URI with percent-encoded path components
+        $pathParts = explode(DIRECTORY_SEPARATOR, $realPath);
+        $encodedParts = array_map('rawurlencode', $pathParts);
+        $encodedPath = implode('/', $encodedParts);
+        
+        // Construct file URI (Windows needs file:///C:/ format)
+        if (PHP_OS_FAMILY === 'Windows') {
+            $fileUri = 'file:///' . $encodedPath;
+        } else {
+            $fileUri = 'file://' . $encodedPath;
+        }
+        
+        $command = "breakpoint_set -i 1 -t line -f $fileUri -n $line\0";
         $this->xdebugSocket->write($command);
         
         try {
@@ -392,7 +420,8 @@ class AmpPersistentDebugServer
 }
 
 // シグナルハンドリング
-pcntl_signal(SIGINT, function() {
+pcntl_async_signals(true);
+pcntl_signal(SIGINT, function () {
     echo "\n🛑 Shutting down server...\n";
     exit(0);
 });

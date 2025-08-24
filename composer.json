@@ -3,7 +3,7 @@
     "description": "MCP server for controlling PHP Xdebug debugging sessions",
     "type": "library",
     "require": {
-        "php": ">=8.0",
+        "php": "^8.1",
         "ext-sockets": "*",
         "ext-xml": "*",
         "symfony/polyfill-php83": "^1.33",
