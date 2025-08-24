@@ -1,0 +1,430 @@
+#!/usr/bin/env php
+<?php
+/**
+ * AMPHP-based Persistent Debug Server
+ * 単一プロセスでXdebug接続（9004）と制御サーバー（9005）を管理
+ * プロセス分離の問題を解決し、同一インスタンス内でXdebugソケットにアクセス可能
+ */
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use Koriym\XdebugMcp\XdebugClient;
+use Amp\Socket\ResourceSocket;
+use Amp\Socket\ResourceServerSocket;
+use Amp\Socket\SocketException;
+use function Amp\Socket\listen;
+
+class AmpPersistentDebugServer
+{
+    private ?ResourceSocket $xdebugSocket = null;
+    private XdebugClient $xdebugClient;
+    private array $sessionInfo = [];
+    private string $host = '127.0.0.1';
+    private int $debugPort = 9004;
+    private int $controlPort = 9005;
+    private bool $running = true;
+
+    public function __construct()
+    {
+        $this->xdebugClient = new XdebugClient($this->host, $this->debugPort);
+        echo "🚀 AMP Persistent Debug Server starting...\n";
+        echo "Xdebug port: {$this->debugPort}\n";
+        echo "Control port: {$this->controlPort}\n";
+    }
+
+    public function start(): void
+    {
+        // Xdebug接続サーバー (9004ポート)
+        $xdebugServer = listen("{$this->host}:{$this->debugPort}");
+        echo "📡 Waiting for Xdebug connection on {$this->host}:{$this->debugPort}...\n";
+
+        // 制御コマンドサーバー (9005ポート) 
+        $controlServer = listen("{$this->host}:{$this->controlPort}");
+        echo "🎛️  Control server ready on {$this->host}:{$this->controlPort}...\n";
+
+        // 両方のサーバーを並行処理
+        \Amp\async(fn() => $this->handleXdebugConnections($xdebugServer));
+        \Amp\async(fn() => $this->handleControlConnections($controlServer));
+
+        // メインループを維持
+        while ($this->running) {
+            \Amp\delay(0.1);
+        }
+    }
+
+    private function handleXdebugConnections(ResourceServerSocket $server): void
+    {
+        try {
+            while (true) {
+                $socket = $server->accept();
+                echo "✅ Xdebug connected!\n";
+                $this->xdebugSocket = $socket;
+                
+                \Amp\async(fn() => $this->handleXdebugSession($socket));
+            }
+        } catch (SocketException $e) {
+            echo "❌ Xdebug server error: " . $e->getMessage() . "\n";
+        }
+    }
+
+    private function handleControlConnections(ResourceServerSocket $server): void
+    {
+        try {
+            while (true) {
+                $socket = $server->accept();
+                \Amp\async(fn() => $this->handleControlClient($socket));
+            }
+        } catch (SocketException $e) {
+            echo "❌ Control server error: " . $e->getMessage() . "\n";
+        }
+    }
+
+    private function handleXdebugSession(ResourceSocket $socket): void
+    {
+        try {
+            // 初期化データを読み込み
+            $data = $socket->read();
+            if ($data) {
+                echo "📨 Received: " . trim($data) . "\n";
+                $this->sessionInfo = $this->parseSessionInfo($data);
+                $this->saveSessionState();
+            }
+
+            echo "🔧 Session ready for debugging commands\n";
+
+            // セッションを維持（コマンドを待機）
+            while ($this->xdebugSocket && $this->running) {
+                try {
+                    $data = $socket->read();
+                    if ($data === null) {
+                        echo "❌ Xdebug connection closed\n";
+                        break;
+                    }
+                    
+                    if ($data !== '') {
+                        echo "📨 Xdebug data: " . trim($data) . "\n";
+                        
+                        if (strpos($data, 'status="stopping"') !== false) {
+                            echo "✅ Script execution completed\n";
+                            break;
+                        }
+                    }
+                    
+                    \Amp\delay(0.1);
+                } catch (\Exception $e) {
+                    echo "❌ Xdebug read error: " . $e->getMessage() . "\n";
+                    break;
+                }
+            }
+        } catch (\Exception $e) {
+            echo "❌ Xdebug session error: " . $e->getMessage() . "\n";
+        } finally {
+            if ($this->xdebugSocket === $socket) {
+                $this->xdebugSocket = null;
+                echo "🔌 Xdebug session ended\n";
+            }
+            $socket->close();
+        }
+    }
+
+    private function handleControlClient(ResourceSocket $socket): void
+    {
+        try {
+            $command = trim($socket->read() ?? '');
+            if ($command) {
+                $response = $this->handleControlCommand($command);
+                $socket->write($response);
+            }
+        } catch (\Exception $e) {
+            echo "❌ Control client error: " . $e->getMessage() . "\n";
+        } finally {
+            $socket->close();
+        }
+    }
+
+    private function handleControlCommand(string $command): string
+    {
+        echo "🎮 Control command: $command\n";
+        
+        $parts = explode(' ', $command, 2);
+        $cmd = $parts[0];
+        $args = $parts[1] ?? '';
+
+        switch ($cmd) {
+            case 'breakpoint':
+                return $this->setBreakpoint($args);
+            case 'continue':
+                return $this->continueExecution();
+            case 'step':
+                return $this->stepInto();
+            case 'step_over':
+                return $this->stepOver();
+            case 'step_out':
+                return $this->stepOut();
+            case 'status':
+                return $this->getStatus();
+            case 'variables':
+                return $this->getVariables();
+            case 'reset':
+                return $this->resetSession();
+            case 'disconnect':
+                return $this->forceDisconnect();
+            case 'shutdown':
+                return $this->shutdownServer();
+            default:
+                return "Unknown command: $cmd\nAvailable: breakpoint, continue, step, step_over, step_out, status, variables, reset, disconnect, shutdown\n";
+        }
+    }
+
+    private function setBreakpoint(string $args): string
+    {
+        if (!$this->xdebugSocket) {
+            return "ERROR: No active Xdebug session\n";
+        }
+
+        // Parse: filename:line
+        [$filename, $line] = explode(':', $args, 2);
+        
+        // Validate and normalize filename
+        if (empty($filename)) {
+            return "ERROR: Filename cannot be empty\n";
+        }
+        
+        // Canonicalize path
+        $realPath = realpath($filename);
+        if ($realPath === false) {
+            // If realpath fails, try with current directory
+            $realPath = realpath(getcwd() . DIRECTORY_SEPARATOR . $filename);
+        }
+        
+        if ($realPath === false) {
+            return "ERROR: File '$filename' not found\n";
+        }
+        
+        // Build proper file:// URI with percent-encoded path components
+        $pathParts = explode(DIRECTORY_SEPARATOR, $realPath);
+        $encodedParts = array_map('rawurlencode', $pathParts);
+        $encodedPath = implode('/', $encodedParts);
+        
+        // Construct file URI (Windows needs file:///C:/ format)
+        if (PHP_OS_FAMILY === 'Windows') {
+            $fileUri = 'file:///' . $encodedPath;
+        } else {
+            $fileUri = 'file://' . $encodedPath;
+        }
+        
+        $command = "breakpoint_set -i 1 -t line -f $fileUri -n $line\0";
+        $this->xdebugSocket->write($command);
+        
+        try {
+            $response = $this->xdebugSocket->read();
+            return "Breakpoint response: $response\n";
+        } catch (\Exception $e) {
+            return "Breakpoint error: " . $e->getMessage() . "\n";
+        }
+    }
+
+    private function continueExecution(): string
+    {
+        if (!$this->xdebugSocket) {
+            return "ERROR: No active Xdebug session\n";
+        }
+
+        $command = "run -i 2\0";
+        $this->xdebugSocket->write($command);
+        
+        try {
+            $response = $this->xdebugSocket->read();
+            return "Continue response: $response\n";
+        } catch (\Exception $e) {
+            return "Continue error: " . $e->getMessage() . "\n";
+        }
+    }
+
+    private function stepInto(): string
+    {
+        if (!$this->xdebugSocket) {
+            return "ERROR: No active Xdebug session\n";
+        }
+
+        $command = "step_into -i 3\0";
+        $this->xdebugSocket->write($command);
+        
+        try {
+            $response = $this->xdebugSocket->read();
+            return "Step response: $response\n";
+        } catch (\Exception $e) {
+            return "Step error: " . $e->getMessage() . "\n";
+        }
+    }
+
+    private function getStatus(): string
+    {
+        $status = [
+            'xdebug_connected' => $this->xdebugSocket !== null,
+            'session_info' => $this->sessionInfo,
+            'server_running' => $this->running
+        ];
+        
+        return json_encode($status, JSON_PRETTY_PRINT) . "\n";
+    }
+
+    private function getVariables(): string
+    {
+        if (!$this->xdebugSocket) {
+            return "ERROR: No active Xdebug session\n";
+        }
+
+        $command = "context_get -i 4\0";
+        $this->xdebugSocket->write($command);
+        
+        try {
+            $response = $this->xdebugSocket->read();
+            return "Variables response: $response\n";
+        } catch (\Exception $e) {
+            return "Variables error: " . $e->getMessage() . "\n";
+        }
+    }
+
+    private function stepOver(): string
+    {
+        if (!$this->xdebugSocket) {
+            return "ERROR: No active Xdebug session\n";
+        }
+
+        $command = "step_over -i 5\0";
+        $this->xdebugSocket->write($command);
+        
+        try {
+            $response = $this->xdebugSocket->read();
+            return "Step Over response: $response\n";
+        } catch (\Exception $e) {
+            return "Step Over error: " . $e->getMessage() . "\n";
+        }
+    }
+
+    private function stepOut(): string
+    {
+        if (!$this->xdebugSocket) {
+            return "ERROR: No active Xdebug session\n";
+        }
+
+        $command = "step_out -i 6\0";
+        $this->xdebugSocket->write($command);
+        
+        try {
+            $response = $this->xdebugSocket->read();
+            return "Step Out response: $response\n";
+        } catch (\Exception $e) {
+            return "Step Out error: " . $e->getMessage() . "\n";
+        }
+    }
+
+    private function resetSession(): string
+    {
+        echo "🔄 Resetting debug session...\n";
+        
+        // 現在のXdebug接続を切断
+        if ($this->xdebugSocket) {
+            try {
+                $this->xdebugSocket->write("detach -i 99\0");
+                $this->xdebugSocket->close();
+            } catch (\Exception $e) {
+                echo "⚠️  Detach error: " . $e->getMessage() . "\n";
+            }
+            $this->xdebugSocket = null;
+        }
+        
+        // セッション情報をクリア
+        $this->sessionInfo = [];
+        
+        // 一時ファイルをクリア
+        $tempFiles = [
+            '/tmp/amp_persistent_debug_session.json',
+            '/tmp/xdebug_session_global.json'
+        ];
+        
+        foreach ($tempFiles as $file) {
+            if (file_exists($file)) {
+                unlink($file);
+            }
+        }
+        
+        echo "✅ Session reset completed\n";
+        return "OK: Session reset completed. Ready for new debug connection.\n";
+    }
+
+    private function forceDisconnect(): string
+    {
+        echo "💥 Force disconnecting Xdebug session...\n";
+        
+        if ($this->xdebugSocket) {
+            try {
+                // DBGpのstopコマンドでスクリプト実行も停止
+                $this->xdebugSocket->write("stop -i 98\0");
+                $this->xdebugSocket->close();
+            } catch (\Exception $e) {
+                echo "⚠️  Stop error: " . $e->getMessage() . "\n";
+            }
+            $this->xdebugSocket = null;
+        }
+        
+        $this->sessionInfo = [];
+        
+        return "OK: Xdebug session forcefully disconnected.\n";
+    }
+
+    private function shutdownServer(): string
+    {
+        echo "🛑 Shutting down server...\n";
+        
+        // 現在の接続を適切にクリーンアップ
+        if ($this->xdebugSocket) {
+            try {
+                $this->xdebugSocket->write("detach -i 97\0");
+                $this->xdebugSocket->close();
+            } catch (\Exception $e) {
+                echo "⚠️  Cleanup error: " . $e->getMessage() . "\n";
+            }
+        }
+        
+        $this->running = false;
+        
+        return "OK: Server shutdown initiated.\n";
+    }
+
+    private function parseSessionInfo(string $data): array
+    {
+        if (preg_match('/<init[^>]*fileuri="([^"]*)"[^>]*>/', $data, $matches)) {
+            return ['fileuri' => $matches[1], 'raw' => $data];
+        }
+        return ['raw' => $data];
+    }
+
+    private function saveSessionState(): void
+    {
+        $state = [
+            'connected' => true,
+            'host' => $this->host,
+            'debug_port' => $this->debugPort,
+            'control_port' => $this->controlPort,
+            'session_info' => $this->sessionInfo,
+            'timestamp' => time()
+        ];
+        
+        file_put_contents('/tmp/amp_persistent_debug_session.json', json_encode($state, JSON_PRETTY_PRINT));
+        echo "💾 Session state saved\n";
+    }
+}
+
+// シグナルハンドリング
+pcntl_async_signals(true);
+pcntl_signal(SIGINT, function () {
+    echo "\n🛑 Shutting down server...\n";
+    exit(0);
+});
+
+$server = new AmpPersistentDebugServer();
+$server->start();
