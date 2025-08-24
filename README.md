@@ -23,7 +23,7 @@ MCP server enabling AI control of PHP Xdebug debugging, profiling, and coverage 
 - **Configuration & Diagnostics**: Settings, memory usage, stack depth, error collection (17 tools) ✅ 100%
 - **CLI Tools**: Standalone debugging utilities (5 tools) ✅ 100%
 
-**All 47 tools are fully functional and AI-tested** with interactive step debugging now available through proper connection sequencing.
+**All 47 tools are fully functional and AI-tested** with specialized Profile (performance analysis) and Trace (execution flow & N+1 detection) tools providing AI-native JSON output.
 
 ## Installation
 
@@ -85,7 +85,7 @@ cp vendor/koriym/xdebug-mcp/templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUD
 
 **1. Start MCP server:**
 ```bash
-./vendor/bin/xdebug-server
+./vendor/bin/xdebug-mcp
 # ✅ Server starts on port 9004, ready for AI commands
 ```
 
@@ -142,11 +142,10 @@ claude --print "Analyze code coverage for test/debug_test.php"
 
 ### Command Line Tools
 
-- `xdebug-server` - Start MCP server (port 9004)
-- `xdebug-mcp` - Core MCP server 
+- `xdebug-mcp` - MCP server (port 9004)
 - `xdebug-debug` - Interactive step debugging with breakpoints
-- `xdebug-trace` - Generate execution traces
-- `xdebug-profile` - Performance profiling  
+- `xdebug-trace` - Execution flow tracing and N+1 database analysis
+- `xdebug-profile` - Performance profiling and bottleneck identification
 - `xdebug-coverage` - Code coverage analysis
 - `xdebug-phpunit` - PHPUnit with selective Xdebug analysis
 
@@ -169,20 +168,22 @@ php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script
 
 ### AI-Powered Examples
 
-### 1. Execution Tracing
+### 1. Execution Tracing & Database Analysis
 ```bash
-claude --print "Run test/debug_test.php and analyze the execution patterns"
+claude --print "Analyze test-scripts/sqlite_db_test.php for N+1 problems"
 # AI automatically chooses ./vendor/bin/xdebug-trace and provides analysis:
-# ✅ Trace complete: /tmp/xdebug_trace_20250821_044930.xt (64 lines)
-# 📊 Analysis: O(2^n) Fibonacci inefficiency, stable memory usage, microsecond-level metrics
+# ✅ Trace complete: /tmp/trace.1034012359.xt
+# 📊 83 lines generated, 10 unique functions, 3 max call depth, 22 database queries
+# 🚨 N+1 Problem detected: Multiple PDO queries in loop structure
 ```
 
 ### 2. Performance Profiling
 ```bash
-claude --print "Profile the performance of test/debug_test.php"
+claude --print "Profile test-scripts/deep_recursion_test.php for bottlenecks"
 # AI automatically uses ./vendor/bin/xdebug-profile:
 # ✅ Profile complete: /tmp/cachegrind.out.1755719364
-# 📊 Size: 1.9K, Functions: 29, Calls: 28, identifies bottlenecks
+# 📊 Size: 2.1K, Functions: 12, Calls: 45, Execution: 0.001s, Memory: 400KB
+# 🎯 Top functions: countdown (45.2%), factorial (31.8%), {main} (23.0%)
 ```
 
 ### 3. Code Coverage Analysis
@@ -193,11 +194,11 @@ claude --print "Analyze code coverage for test/debug_test.php"
 # 📊 Coverage: 85.2% lines, 92.1% functions, identifies untested code paths
 ```
 
-### 4. Step Debugging
+### 4. Interactive Step Debugging
 ```bash
-claude --print "Debug test/debug_test.php, break at line 15 and show variable values"
+claude --print "Debug test-scripts/buggy_calculation_code.php with breakpoints"
 # AI sets breakpoint and provides debugging session:
-# ✅ Breakpoint set at test/debug_test.php:15
+# ✅ Breakpoint set at test-scripts/buggy_calculation_code.php:15
 # 📊 Variables at breakpoint:
 # | Variable | Type   | Value                    |
 # |----------|--------|--------------------------|
@@ -301,11 +302,8 @@ The following tools require active debugging sessions and work with `./bin/xdebu
 
 ### Usage Example
 ```bash
-# 1. Start XdebugClient listener
-php test_new_xdebug_debug.php &
-
-# 2. Start interactive debugging session  
-./bin/xdebug-debug test-scripts/buggy_calculation_code.php
+# Single command execution (AMP-powered, no manual setup required)
+./vendor/bin/xdebug-debug test-scripts/buggy_calculation_code.php
 ```
 
 
