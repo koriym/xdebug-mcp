@@ -1,8 +1,8 @@
 # Test Scripts Directory
 
-This directory contains comprehensive test prompts for validating all 47 XdebugMCP server features.
+This directory contains comprehensive test prompts for validating all 47 XdebugMCP server features, plus various PHP test scripts for debugging analysis.
 
-## Available Tests
+## Comprehensive Test Suites
 
 ### `COMPREHENSIVE_MCP_TEST.md` (Japanese)
 Complete autonomous testing prompt for AI assistants to validate all 47 XdebugMCP features:
@@ -62,3 +62,75 @@ This represents the culmination of step debugging implementation work, providing
 - The project achieves its goal of AI-driven PHP runtime analysis
 
 Perfect for regression testing, feature validation, and demonstrating AI debugging capabilities.
+
+## PHP Test Scripts
+
+### Core Debugging Scripts
+- **`buggy_calculation_code.php`** - Basic calculation with intentional bugs for debugging practice
+- **`simple_test.php`** - Minimal PHP script for basic trace/profile testing
+
+### Recursion and Performance Testing
+- **`deep_recursion_test.php`** - Recursive functions (countdown, factorial) for depth analysis and stack tracing
+- **`complex_test.php`** - Complex execution flow with multiple function calls and nested operations
+
+### Database Query Analysis
+- **`sqlite_db_test.php`** - N+1 query problem demonstration with SQLite (in-memory database)
+- **`database_test.php`** - General database operation testing patterns
+- **`real_db_test.php`** - Real database connection testing scenarios
+
+### Comparative Analysis
+- **`simple_comparison_test.php`** - Simple script for comparing Profile vs Trace tool accuracy
+
+## Usage Examples
+
+### Trace Analysis
+```bash
+# Analyze execution flow and function calls
+./bin/xdebug-trace test-scripts/deep_recursion_test.php
+
+# Database query analysis (N+1 detection)
+./bin/xdebug-trace test-scripts/sqlite_db_test.php
+```
+
+### Performance Profiling
+```bash
+# Performance bottleneck identification
+./bin/xdebug-profile test-scripts/complex_test.php
+
+# Memory and timing analysis
+./bin/xdebug-profile test-scripts/deep_recursion_test.php
+```
+
+### Interactive Debugging
+```bash
+# Step-by-step debugging with breakpoints
+./bin/xdebug-debug test-scripts/buggy_calculation_code.php
+```
+
+### Coverage Analysis
+```bash
+# Code coverage analysis
+./bin/xdebug-coverage test-scripts/complex_test.php
+```
+
+## Test Script Specializations
+
+**Database Analysis**: `sqlite_db_test.php`, `database_test.php`, `real_db_test.php`
+- N+1 query problem detection
+- Database function call counting
+- SQL performance analysis
+
+**Recursion Analysis**: `deep_recursion_test.php`
+- Maximum call depth tracking
+- Recursive pattern detection
+- Stack depth analysis
+
+**Performance Testing**: `complex_test.php`
+- Function call overhead analysis
+- Memory usage patterns
+- Execution timing analysis
+
+**Bug Demonstration**: `buggy_calculation_code.php`
+- Intentional logic errors for debugging practice
+- Variable state tracking
+- Error condition analysis
