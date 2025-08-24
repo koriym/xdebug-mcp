@@ -471,19 +471,47 @@ class XdebugClient
 
         $commandString .= "\0";
 
-        $bytesWritten = socket_write($this->socket, $commandString, strlen($commandString));
-        if ($bytesWritten === false) {
-            $error = socket_last_error($this->socket);
-            $errorMsg = socket_strerror($error);
+        // Write loop to ensure all bytes are sent
+        $totalLength = strlen($commandString);
+        $totalSent = 0;
+        $maxRetries = 100; // Prevent infinite loops
+        $consecutiveZeros = 0;
 
-            // If it's a broken pipe or connection reset, mark as disconnected
-            if ($error === SOCKET_EPIPE || $error === SOCKET_ECONNRESET) {
-                $this->connected = false;
+        while ($totalSent < $totalLength) {
+            $remaining = $totalLength - $totalSent;
+            $chunk = substr($commandString, $totalSent, $remaining);
+            
+            $bytesWritten = socket_write($this->socket, $chunk, $remaining);
+            
+            if ($bytesWritten === false) {
+                $error = socket_last_error($this->socket);
+                $errorMsg = socket_strerror($error);
 
-                throw new SocketException("Connection lost: $errorMsg", 0, $error);
+                // If it's a broken pipe or connection reset, mark as disconnected
+                if ($error === SOCKET_EPIPE || $error === SOCKET_ECONNRESET) {
+                    $this->connected = false;
+                    throw new SocketException("Connection lost: $errorMsg", 0, $error);
+                }
+
+                throw new SocketException("Failed to send command: $errorMsg", 0, $error);
             }
 
-            throw new SocketException("Failed to send command: $errorMsg", 0, $error);
+            if ($bytesWritten === 0) {
+                $consecutiveZeros++;
+                if ($consecutiveZeros >= $maxRetries) {
+                    throw new SocketException("Write timeout: Unable to send data after {$maxRetries} attempts");
+                }
+                // Small delay to prevent busy waiting
+                usleep(1000); // 1ms
+                continue;
+            }
+
+            $totalSent += $bytesWritten;
+            $consecutiveZeros = 0; // Reset counter on successful write
+        }
+
+        if ($totalSent !== $totalLength) {
+            throw new SocketException("Incomplete write: sent {$totalSent}/{$totalLength} bytes");
         }
 
         return $this->readResponse();
