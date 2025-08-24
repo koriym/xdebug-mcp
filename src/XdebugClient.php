@@ -347,6 +347,7 @@ class XdebugClient
             return $result;
         } catch (SocketException $e) {
             if ($e->isConnectionLost()) {
+                $this->connected = false;
                 return [
                     'status' => 'disconnected',
                     'message' => 'Debug session ended',
