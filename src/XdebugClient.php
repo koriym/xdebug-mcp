@@ -82,9 +82,11 @@ class XdebugClient
     private $socket = null;
     private int $transactionId = 1;
     private bool $connected = false;
+    private string $sessionId;
 
-    public function __construct(private string $host = self::DEFAULT_HOST, private int $port = self::DEFAULT_PORT)
+    public function __construct(private string $host = self::DEFAULT_HOST, private int $port = self::DEFAULT_PORT, ?string $sessionId = null)
     {
+        $this->sessionId = $sessionId ?? uniqid('session_', true);
         $this->loadGlobalState();
     }
 
@@ -765,6 +767,7 @@ class XdebugClient
             'connected' => true,
             'last_activity' => time(),
             'session_info' => $sessionInfo,
+            'sessionId' => $this->sessionId,
             'created_at' => date('Y-m-d H:i:s'),
         ];
 
@@ -800,48 +803,6 @@ class XdebugClient
         return time() - $state['last_activity'] < self::SESSION_TIMEOUT_SEC;
     }
 
-    /**
-     * Retrieve session metadata from global state file.
-     *
-     * This method treats the global state file as metadata-only storage.
-     * It does NOT attempt to restore socket connections or set $this->connected,
-     * as socket resources cannot be restored across processes.
-     *
-     * @return array|null Session info metadata or null if no valid session exists
-     */
-    private function reconnectToGlobalSession(): array|null
-    {
-        try {
-            $state = $this->readStateWithLock();
-
-            if (! $this->isValidGlobalState($state)) {
-                $this->clearGlobalState();
-
-                return null;
-            }
-
-            // Update host/port from saved state metadata
-            $this->host = $state['host'];
-            $this->port = $state['port'];
-
-            // Check if session metadata is still valid (not expired)
-            if (! $this->isSessionAlive($state)) {
-                $this->clearGlobalState();
-
-                return null;
-            }
-
-            // Return session metadata only - caller must establish fresh socket connection
-            // Do NOT set $this->connected = true here as no socket is actually restored
-
-            return $state['session_info'];
-        } catch (Throwable) {
-            // If metadata retrieval fails, remove stale state
-            $this->clearGlobalState();
-
-            return null;
-        }
-    }
 
     public function clearGlobalState(): void
     {
