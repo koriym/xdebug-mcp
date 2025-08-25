@@ -48,7 +48,6 @@ use function socket_set_option;
 use function socket_strerror;
 use function socket_write;
 use function spl_object_id;
-use function stream_get_contents;
 use function strlen;
 use function substr;
 use function time;
@@ -63,7 +62,6 @@ use const LIBXML_NOERROR;
 use const LIBXML_NONET;
 use const LIBXML_NOWARNING;
 use const LOCK_EX;
-use const LOCK_SH;
 use const LOCK_UN;
 use const MSG_PEEK;
 use const SO_RCVTIMEO;
@@ -76,11 +74,11 @@ use const SOL_TCP;
 
 class XdebugClient
 {
-    public const string GLOBAL_STATE_FILE = '/tmp/xdebug_session_global.json';
-    public const int DEFAULT_PORT = 9004;
-    public const string DEFAULT_HOST = '127.j0.0.1';
-    private const int SOCKET_TIMEOUT_SEC = 5;
-    private const int SESSION_TIMEOUT_SEC = 300; // 5 minutes
+    public const GLOBAL_STATE_FILE = '/tmp/xdebug_session_global.json';
+    public const DEFAULT_PORT = 9004;
+    public const DEFAULT_HOST = '127.0.0.1';
+    private const SOCKET_TIMEOUT_SEC = 5;
+    private const SESSION_TIMEOUT_SEC = 300; // 5 minutes
 
     private $socket = null;
     private int $transactionId = 1;
@@ -956,6 +954,7 @@ class XdebugClient
                 if ($bytesWritten === false || $bytesWritten !== strlen($jsonData)) {
                     throw new SocketException('Failed to write complete data to global state file');
                 }
+
                 fflush($file);
             } else {
                 throw new SocketException('Failed to acquire lock on global state file');
@@ -966,5 +965,4 @@ class XdebugClient
             fclose($file);
         }
     }
-
 }

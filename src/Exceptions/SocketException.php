@@ -9,6 +9,7 @@ use Throwable;
 
 use function in_array;
 use function str_contains;
+use function strtolower;
 
 use const SOCKET_ECONNRESET;
 use const SOCKET_EPIPE;
@@ -40,13 +41,13 @@ class SocketException extends RuntimeException
             'connection refused',
             'connection aborted',
         ];
-        
+
         foreach ($connectionLostPatterns as $pattern) {
             if (str_contains($message, $pattern)) {
                 return true;
             }
         }
-        
+
         return false;
     }
 
