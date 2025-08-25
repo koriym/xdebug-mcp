@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp;
 
-use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
+use InvalidArgumentException;
 use RuntimeException;
 
 use function array_map;
@@ -22,7 +22,6 @@ use function ini_get;
 use function is_readable;
 use function json_encode;
 use function passthru;
-use function preg_match_all;
 use function round;
 use function shell_exec;
 use function str_contains;
@@ -118,10 +117,9 @@ class XdebugProfiler
                 $stats['creator'] = substr($line, 9);
             } elseif (strpos($line, 'cmd: ') === 0) {
                 $stats['command'] = substr($line, 5);
-                // Extract target file from command using regex to find .php files
-                if (preg_match_all('/\b[\w\/\.-]+\.php\b/', $stats['command'], $matches)) {
-                    $stats['target_file'] = end($matches[0]);
-                }
+                // Extract target file from command
+                $parts = explode(' ', $stats['command']);
+                $stats['target_file'] = end($parts);
             }
         }
 
