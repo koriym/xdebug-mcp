@@ -195,22 +195,43 @@ claude --print "Analyze code coverage for test/debug_test.php"
 # 📊 Coverage: 85.2% lines, 92.1% functions, identifies untested code paths
 ```
 
-### 4. Interactive Step Debugging
+### 4. Interactive Step Debugging with AI Analysis
 ```bash
-claude --print "Debug test/debug_test.php with step-by-step execution"
-# AI automatically detects first executable line and starts interactive session:
-# ✅ Auto-detected breakpoint at line 17 ($name = "World")
-# 🎮 Interactive session: s(tep), c(ontinue), p <var>, l(ist), q(uit)
-# ✅ Breakpoint set at test/debug_test.php:15
-# 📊 Variables at breakpoint:
-# | Variable | Type   | Value                    |
-# |----------|--------|--------------------------|
-# | $n       | int    | 6                        |
-# | $result  | int    | 8                        |
-# | $user    | array  | ['name'=>'John','age'=>30] |
+# Conditional breakpoint with integrated Claude analysis
+./bin/xdebug-debug --break=User.php:85:$id==0 -- php register.php
+
+# Interactive debugging session with claude command:
+[19:45:32] 🎮 Starting interactive debugging session
+[19:45:32] Available commands: s(tep), c(ontinue), p <var>, bt, l(ist), claude, q(uit)
+(Xdebug) claude
+🤖 Analyzing execution trace with Claude...
+📊 Claude Analysis Result:
+   ## Root Cause Analysis
+   - Call chain: main() → authenticate() → validateUser() → register($id=0)
+   - Variable $id initialized as empty string at User.php:23
+   - Empty string converted to 0 in register() parameter casting
+   ## Suggested Fix
+   - Add validation: if(empty($userId)) return false; at User.php:23
+
+(Xdebug) p $id
+$id = 0 (int)
+(Xdebug) s
+# Continue step debugging with AI insights
 ```
 
-### 5. PHPUnit Testing
+### 5. Conditional Debugging Workflow
+```bash
+# Target specific conditions for efficient debugging
+./bin/xdebug-debug --break=Auth.php:42:$token==null,User.php:85:$id==0 -- php app.php
+
+# Benefits:
+# ✅ Skip normal execution, stop only when problems occur
+# 📊 Complete trace history leading to the condition  
+# 🤖 AI analysis available with 'claude' command
+# 🎯 Focus debugging effort on actual problem scenarios
+```
+
+### 6. PHPUnit Testing
 ```bash
 # Debug PHPUnit tests (zero configuration required)
 ./vendor/bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
