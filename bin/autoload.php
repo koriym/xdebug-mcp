@@ -115,12 +115,19 @@ declare(strict_types=1);
         if (file_exists($autoloadPath)) {
             require_once $autoloadPath;
 
-            // Return the directory containing vendor/ as project root
-            $normalized = str_replace('\\', '/', $autoloadPath);
+            // Resolve absolute path to handle "../" segments properly
+            $resolvedPath = realpath($autoloadPath);
+            if ($resolvedPath === false) {
+                // Fallback to original path if realpath fails
+                $resolvedPath = $autoloadPath;
+            }
+            
+            // Normalize path separators for consistent comparison
+            $normalizedPath = str_replace('\\', '/', $resolvedPath);
 
-            return str_ends_with($normalized, '/vendor/autoload.php')
-                ? dirname($autoloadPath, 2)  // Go up from vendor/autoload.php to project root
-                : dirname($autoloadPath);    // For direct autoload.php paths
+            return str_ends_with($normalizedPath, '/vendor/autoload.php')
+                ? dirname($resolvedPath, 2)  // Go up from vendor/autoload.php to project root
+                : dirname($resolvedPath);    // For direct autoload.php paths
         }
     }
 
