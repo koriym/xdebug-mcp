@@ -58,10 +58,18 @@ class McpTestRunner
     ];
     private string $xdebugMcp;
     private bool $sessionAvailable = false;
+    private bool $timeoutAvailable = false;
 
     public function __construct(private bool $sessionMode = false)
     {
+        $this->checkTimeoutAvailability();
         $this->setupXdebugCommand();
+    }
+
+    private function checkTimeoutAvailability(): void
+    {
+        $result = shell_exec('command -v timeout 2>/dev/null');
+        $this->timeoutAvailable = !empty(trim($result ?? ''));
     }
 
     private function setupXdebugCommand(): void
@@ -106,7 +114,11 @@ class McpTestRunner
             ],
         ]);
 
-        $command = sprintf('echo %s | timeout 5s %s 2>/dev/null || echo "timeout"', escapeshellarg($testRequest), $this->xdebugMcp);
+        if ($this->timeoutAvailable) {
+            $command = sprintf('echo %s | timeout 5s %s || echo "timeout"', escapeshellarg($testRequest), $this->xdebugMcp);
+        } else {
+            $command = sprintf('echo %s | %s', escapeshellarg($testRequest), $this->xdebugMcp);
+        }
         $output = shell_exec($command);
 
         // Trim output and check for timeout first
@@ -214,8 +226,16 @@ class McpTestRunner
             return 'failed';
         }
 
-        $timeoutCmd = $requiresSession ? 'timeout 10s ' : '';
-        $command = sprintf('echo %s | %s%s 2>/dev/null', escapeshellarg($request), $timeoutCmd, $this->xdebugMcp);
+        $timeoutCmd = '';
+        if ($requiresSession) {
+            if ($this->timeoutAvailable) {
+                $timeoutCmd = 'timeout 10s ';
+            } else {
+                fwrite(STDERR, "Warning: timeout command not available, disabling session timeout enforcement\n");
+                $requiresSession = false;
+            }
+        }
+        $command = sprintf('echo %s | %s%s', escapeshellarg($request), $timeoutCmd, $this->xdebugMcp);
 
         try {
             $output = shell_exec($command);
@@ -227,7 +247,7 @@ class McpTestRunner
             return 'failed';
         }
 
-        if ($output === null || ($requiresSession && str_contains($command, 'timeout') && empty(trim($output)))) {
+        if ($output === null || ($this->timeoutAvailable && $requiresSession && empty(trim($output)))) {
             echo self::RED . "FAIL (timeout/no output)\n" . self::RESET;
             $this->results['failed']++;
             $this->results['failed_tools'][] = $toolName;
