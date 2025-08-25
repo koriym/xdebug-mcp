@@ -898,7 +898,14 @@ class McpServer
     protected function setBreakpoint(array $args): string
     {
         $filename = $args['filename'];
-        $line = (int) $args['line'];
+        $lineInput = $args['line'];
+        
+        // Validate line number input
+        if (! is_numeric($lineInput) || (int) $lineInput <= 0) {
+            throw new InvalidArgumentException("Invalid line number: '{$lineInput}'. Must be a positive integer.");
+        }
+        
+        $line = (int) $lineInput;
         $condition = $args['condition'] ?? '';
 
         // Try persistent server first
