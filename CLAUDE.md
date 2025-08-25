@@ -326,6 +326,7 @@ This project prioritizes **execution-time trace analysis** over traditional code
 - `./bin/xdebug-coverage` - Code coverage analysis  
 - `./bin/xdebug-trace` - Execution tracing
 - `./bin/xdebug-mcp` - MCP client interface
+- `./bin/debug-server` - Persistent debug server (AMPHP-based, background service)
 
 #### Automatic Tool Selection:
 
