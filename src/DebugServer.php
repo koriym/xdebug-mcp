@@ -1347,18 +1347,9 @@ final class DebugServer
                 foreach ($xml->property as $prop) {
                     $name = (string) $prop['name'];
                     $type = (string) $prop['type'];
-                    
-                    // Get the raw text content
-                    $rawValue = (string) $prop;
-                    
-                    // Check encoding attribute and decode if necessary
-                    $encoding = (string) $prop['encoding'];
-                    if ($encoding === 'base64') {
-                        $value = base64_decode($rawValue);
-                    } else {
-                        $value = $rawValue;
-                    }
-                    
+                    $encoding = (string) ($prop['encoding'] ?? '');
+                    $raw = (string) $prop; // element text content
+                    $value = $encoding === 'base64' ? base64_decode($raw) : $raw;
                     $variables[$name] = "{$type}: {$value}";
                 }
             }
