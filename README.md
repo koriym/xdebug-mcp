@@ -83,27 +83,21 @@ cp vendor/koriym/xdebug-mcp/templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUD
 
 ## Quick Start
 
-**1. Start MCP server:**
+**1. Ask AI to debug with runtime data:**
 ```bash
-./vendor/bin/xdebug-mcp
-# ✅ Server starts on port 9004, ready for AI commands
-```
-
-**2. Ask AI to debug with runtime data:**
-```bash
-# In another terminal - AI analyzes actual execution instead of guessing
+# AI analyzes actual execution instead of guessing
 claude --print "Analyze test-scripts/sqlite_db_test.php for N+1 problems"
 # ✅ AI automatically runs xdebug-trace --json and provides data-driven analysis
 ```
 
-**3. Interactive step debugging with AI:**
+**2. Interactive step debugging with AI:**
 ```bash
 # AI can now perform full interactive debugging
 claude --print "Debug test/buggy_script.php with breakpoints and step execution"
 # ✅ AI sets up XdebugClient, connects, sets breakpoints, and inspects variables
 ```
 
-**4. Zero-config PHPUnit debugging:**
+**3. Zero-config PHPUnit debugging:**
 ```bash
 # AI-assisted test debugging with automatic Xdebug setup
 ./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
@@ -256,6 +250,19 @@ claude --print "Debug test-scripts/buggy_calculation_code.php with breakpoints"
 - **Configuration & Diagnostics**: 17 tools (memory, stack depth, error collection)
 - **CLI Tools**: 5 tools (standalone utilities)
 
+
+## Development
+
+### MCP Tool Testing
+```bash
+# Test all MCP tools functionality
+./bin/test-all.sh
+```
+
+**macOS users:** If timeout command is not available, install GNU coreutils:
+```bash
+brew install coreutils
+```
 
 ## Troubleshooting
 
