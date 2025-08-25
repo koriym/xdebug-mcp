@@ -9,7 +9,7 @@ MCP server enabling AI control of PHP Xdebug debugging, profiling, and coverage 
 ## Features
 
 - **47 Working MCP Tools**: Complete AI-driven PHP debugging suite (100% tested)
-- **Interactive Step Debugging**: Full breakpoint, step execution, and variable inspection
+- **Interactive Step Debugging**: Auto-breakpoint detection, step execution, and variable inspection
 - **Trace-based Debugging**: AI analyzes runtime execution data (no var_dump needed)
 - **IDE Compatible**: Port 9004 avoids conflicts with PhpStorm/VS Code (9003)
 - **Command Line Tools**: 5 standalone debugging utilities
@@ -144,7 +144,7 @@ claude --print "Analyze code coverage for test/debug_test.php"
 
 - `xdebug-server` - Start MCP server (port 9004)
 - `xdebug-mcp` - Core MCP server 
-- `xdebug-debug` - Interactive step debugging with breakpoints
+- `xdebug-debug` - Interactive step debugging with auto-breakpoint detection
 - `xdebug-trace` - Generate execution traces
 - `xdebug-profile` - Performance profiling  
 - `xdebug-coverage` - Code coverage analysis
@@ -154,10 +154,12 @@ claude --print "Analyze code coverage for test/debug_test.php"
 
 ```bash
 # Recommended: Use bin/xdebug-* commands
-./vendor/bin/xdebug-debug script.php    # Interactive debugging with breakpoints
-./vendor/bin/xdebug-trace script.php    # Execution tracing
-./vendor/bin/xdebug-profile script.php  # Performance profiling
-./vendor/bin/xdebug-coverage script.php # Code coverage analysis
+./vendor/bin/xdebug-debug script.php                    # Auto-detect first executable line
+./vendor/bin/xdebug-debug script.php script.php 15     # Break at script.php:15
+./vendor/bin/xdebug-debug script.php other.php 23      # Break at other.php:23
+./vendor/bin/xdebug-trace script.php                    # Execution tracing
+./vendor/bin/xdebug-profile script.php                  # Performance profiling
+./vendor/bin/xdebug-coverage script.php                 # Code coverage analysis
 ```
 
 **Manual approach (step debugging example):**
@@ -193,10 +195,12 @@ claude --print "Analyze code coverage for test/debug_test.php"
 # 📊 Coverage: 85.2% lines, 92.1% functions, identifies untested code paths
 ```
 
-### 4. Step Debugging
+### 4. Interactive Step Debugging
 ```bash
-claude --print "Debug test/debug_test.php, break at line 15 and show variable values"
-# AI sets breakpoint and provides debugging session:
+claude --print "Debug test/debug_test.php with step-by-step execution"
+# AI automatically detects first executable line and starts interactive session:
+# ✅ Auto-detected breakpoint at line 17 ($name = "World")
+# 🎮 Interactive session: s(tep), c(ontinue), p <var>, l(ist), q(uit)
 # ✅ Breakpoint set at test/debug_test.php:15
 # 📊 Variables at breakpoint:
 # | Variable | Type   | Value                    |
