@@ -4,6 +4,7 @@ composer.lock
 
 ## Cache and logs
 .phpunit.cache/
+.phpcs-cache
 *.log
 
 ## IDE
@@ -17,6 +18,12 @@ Thumbs.db
 ## Local configs
 claude_desktop_config.json
 mcp.json
+
+## Development scripts (outside test-scripts/)
+test/long_running_debug.php
+test_new_xdebug_debug.php
+test_src.php
+src/DebugServer.php
 
 ## Home directory
 ~/

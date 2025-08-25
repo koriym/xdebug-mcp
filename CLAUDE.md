@@ -2,6 +2,37 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL BEHAVIORAL RULE ⚠️
+
+**NEVER IMPLEMENT WITHOUT EXPLICIT PERMISSION**
+
+Claude has a systemic issue where it implements solutions immediately without asking. This wastes the user's time and disrupts their workflow.
+
+**REQUIRED WORKFLOW:**
+1. **PROPOSE** the solution/approach
+2. **ASK FOR PERMISSION** to implement
+3. **WAIT FOR EXPLICIT APPROVAL** 
+4. **THEN implement**
+
+**Examples:**
+❌ Wrong: "Let me add --stats option..." (starts implementing)
+✅ Correct: "Should I add --stats option as the default behavior? This would show detailed statistics instead of just JSON metadata."
+
+❌ Wrong: "I'll update the function to..." (starts coding)  
+✅ Correct: "Would you like me to update the function to handle this case?"
+
+**This applies to:**
+- Code changes
+- New features  
+- Refactoring
+- File modifications
+- Architecture changes
+- Any implementation work
+
+**Remember:** The user has decision authority. Claude is an implementer, not a decision maker.
+
+**Violation consequences:** User frustration, wasted time, wrong direction, repeated corrections.
+
 ## Project Overview
 
 This is a **universal PHP Xdebug MCP (Model Context Protocol) Server** that enables AI assistants to perform comprehensive PHP application analysis and debugging. The server acts as a bridge between AI clients and Xdebug, providing a standardized interface for:
@@ -139,15 +170,22 @@ The server exposes 42 tools via MCP across three main categories:
 - Xdebug extension (with debug, profile, and coverage modes enabled)
 
 ## Xdebug Configuration
+
+**IMPORTANT: This project uses port 9004 (not 9003) to avoid conflicts with IDEs**
+
 For full functionality, configure php.ini:
 ```ini
 zend_extension=xdebug
 xdebug.mode=debug,profile,coverage  ; Enable all modes
 xdebug.start_with_request=yes
 xdebug.client_host=127.0.0.1
-xdebug.client_port=9003
+xdebug.client_port=9004             ; Uses 9004 (IDEs use 9003)
 xdebug.output_dir=/tmp              ; For profile files
 ```
+
+**Port Usage:**
+- **IDE/Editors (VS Code, PhpStorm)**: Port 9003
+- **This Xdebug MCP Server**: Port 9004 (conflict-free)
 
 ## Key Features Integration
 - **Without Xdebug session**: Profiling and coverage work standalone using Xdebug functions
@@ -314,37 +352,54 @@ This project prioritizes **execution-time trace analysis** over traditional code
 **IMPORTANT: When asked to analyze, debug, or understand any PHP file, ALWAYS use appropriate Xdebug tools automatically unless explicitly told otherwise.**
 
 #### Available Xdebug Tools:
-- `./bin/xdebug-profile` - Performance profiling
+- `./bin/xdebug-debug` - Interactive step debugging with breakpoints
+- `./bin/xdebug-profile` - Performance profiling (specialized for bottleneck identification)
 - `./bin/xdebug-coverage` - Code coverage analysis  
-- `./bin/xdebug-trace` - Execution tracing
-- `./bin/xdebug-server` - Start MCP server
-- `./bin/xdebug-mcp` - MCP client interface
+- `./bin/xdebug-trace` - Execution flow tracing and database analysis (specialized for N+1 detection)
+- `./bin/xdebug-mcp` - MCP server interface
 
-#### Automatic Tool Selection:
+#### **CRITICAL: Use --json Flag for AI Analysis**
+
+When AI needs structured data for analysis, ALWAYS use the `--json` flag:
 
 **For Performance Analysis:**
 - User: "Analyze performance", "Find bottlenecks", "Profile this code"
-- AI automatically runs: `./bin/xdebug-profile path/to/file.php`
+- AI automatically runs: `./bin/xdebug-profile --json -- php path/to/file.php`
+- AI receives JSON with performance metrics, function costs, timing data
+
+**For Execution Flow & Database Analysis:**
+- User: "Trace execution", "Show function calls", "Check for N+1 problems", "Database analysis"
+- AI automatically runs: `./bin/xdebug-trace --json -- php path/to/file.php`
+- AI receives JSON with execution flow, function counts, database query statistics
 
 **For Code Coverage:**
 - User: "Check test coverage", "Which lines are tested", "Coverage analysis"
-- AI automatically runs: `./bin/xdebug-coverage path/to/file.php`
+- AI automatically runs: `./bin/xdebug-coverage --json -- php path/to/file.php`
+- AI receives JSON with coverage metrics, untested lines
 
-**For Execution Flow Analysis:**
-- User: "Trace execution", "Show function calls", "Debug this script"
-- AI automatically runs: `./bin/xdebug-trace path/to/file.php`
+**For Interactive Step Debugging:**
+- User: "Debug this code", "Set breakpoints", "Step through execution", "Inspect variables"
+- AI automatically runs: `./bin/xdebug-debug path/to/file.php` (no --json needed, interactive)
 
 **For General Analysis (choose most appropriate):**
 - User: "Analyze this PHP file", "What does this code do"
-- AI automatically runs: `./bin/xdebug-profile path/to/file.php` (default choice)
-- Then optionally: `./bin/xdebug-trace path/to/file.php` for detailed flow
+- AI automatically runs: `./bin/xdebug-trace --json -- php path/to/file.php` (execution flow analysis)
+- Then optionally: `./bin/xdebug-profile --json -- php path/to/file.php` (performance analysis)
 
 **Example workflows:**
-1. User: "Analyze test/debug_test.php" → AI runs `./bin/xdebug-profile test/debug_test.php`
-2. User: "Check coverage of my tests" → AI runs `./bin/xdebug-coverage test/MyTest.php`
-3. User: "Trace this function execution" → AI runs `./bin/xdebug-trace src/MyClass.php`
+1. User: "Debug this buggy script" → AI runs `./bin/xdebug-debug test-scripts/buggy_calculation_code.php`
+2. User: "Analyze test-scripts/deep_recursion_test.php" → AI runs `./bin/xdebug-trace --json -- php test-scripts/deep_recursion_test.php`
+3. User: "Check for N+1 problems" → AI runs `./bin/xdebug-trace --json -- php test-scripts/sqlite_db_test.php`
+4. User: "Profile performance bottlenecks" → AI runs `./bin/xdebug-profile --json -- php test-scripts/deep_recursion_test.php`
+5. User: "Check test coverage" → AI runs `./bin/xdebug-coverage --json -- php test-scripts/deep_recursion_test.php`
 
-Always use these tools proactively to provide runtime insights rather than static code analysis alone.
+**JSON Output Benefits:**
+- AI receives structured data (trace_file, total_lines, unique_functions, max_call_depth, database_queries)
+- Enables precise analysis with specific metrics 
+- Follows AI-native architecture with emoji keys and metadata
+- Links to comprehensive JSON schemas for detailed analysis
+
+Always use these tools proactively with `--json` flag to provide runtime insights rather than static code analysis alone.
 
 ### ❌ Prohibited Debugging Methods
 
@@ -489,3 +544,78 @@ Before responding to PHP debugging requests, verify:
 - **Professional**: No debug code left in production accidentally
 
 Follow these principles for all PHP debugging tasks to ensure consistent, professional, and effective trace-based debugging practices.
+
+## Interactive Step Debugging Workflow
+
+### Critical Connection Requirements
+
+**IMPORTANT**: Interactive step debugging with `./bin/xdebug-debug` requires proper connection timing and setup.
+
+### Step Debugging Connection Protocol
+
+**Required Sequence for Step Debugging:**
+
+1. **Start XdebugClient first** (must be listening before script execution)
+   ```bash
+   php test_new_xdebug_debug.php &
+   ```
+
+2. **Verify port availability**
+   ```bash
+   lsof -i :9004  # Must show PHP process LISTENING
+   ```
+
+3. **Execute target script with Xdebug**
+   ```bash
+   ./bin/xdebug-debug target_script.php
+   ```
+
+### Connection Architecture
+
+**Xdebug Connection Model:**
+- **Xdebug (script)**: Acts as **client** - connects to debugger
+- **XdebugClient**: Acts as **server** - listens on port 9004
+- **Protocol**: DBGp over TCP socket
+- **Port**: 9004 (conflict-free with IDEs that use 9003)
+
+### Common Connection Failures
+
+**❌ Wrong Order:**
+```bash
+./bin/xdebug-debug script.php    # Script runs and exits
+php test_new_xdebug_debug.php &  # Too late - no connection
+```
+
+**✅ Correct Order:**
+```bash
+php test_new_xdebug_debug.php &  # XdebugClient listening
+lsof -i :9004                    # Verify LISTEN state  
+./bin/xdebug-debug script.php    # Script connects to waiting client
+```
+
+### Verification Steps
+
+**Successful Connection Indicators:**
+- XdebugClient shows: `[XdebugClient] Xdebug connected!`
+- Script pauses at first line waiting for debugger commands
+- Breakpoints can be set and variables inspected
+
+**Failed Connection Indicators:**
+- Script executes immediately without pausing
+- No connection messages in XdebugClient output
+- `Address already in use` errors when starting XdebugClient
+
+### Step Debugging vs Trace Analysis
+
+**When to use Interactive Step Debugging:**
+- Need to inspect specific variable states at breakpoints
+- Require step-by-step execution control (stepInto, stepOver)
+- Interactive analysis of execution flow
+
+**When to use Trace Analysis (preferred):**
+- General debugging and bug identification
+- Performance analysis  
+- Complete execution flow analysis
+- Non-invasive analysis without connection complexity
+
+**Default Recommendation**: Use trace-based debugging first, step debugging only when interactive control is specifically needed.
