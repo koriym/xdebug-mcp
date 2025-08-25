@@ -70,6 +70,7 @@ Runtime-based approach:
 - Performance issues → `./bin/xdebug-profile`
 - Test coverage → `./bin/xdebug-coverage`  
 - Execution flow → `./bin/xdebug-trace`
+- **Conditional debugging** → `./bin/xdebug-debug --break=file:line:condition`
 - **Test debugging** → `./bin/xdebug-phpunit`
 - General analysis → `./bin/xdebug-profile` (default)
 
@@ -119,6 +120,53 @@ php -dzend_extension=xdebug \
 ls -la /tmp/*trace*.xt
 cat /tmp/trace_filename.xt
 ```
+
+## ✅ Advanced: Conditional Debugging with AI Integration
+
+**For targeting specific problem conditions:**
+
+### Interactive Debugging with AI Analysis
+```bash
+# Stop execution only when specific conditions occur
+./bin/xdebug-debug --break=User.php:85:$id==0 -- php register.php
+./bin/xdebug-debug --break=Auth.php:42:$token==null -- php login.php
+
+# In interactive session, use 'claude' command for immediate AI analysis:
+(Xdebug) claude
+🤖 Analyzing execution trace with Claude...
+📊 Claude Analysis Result:
+   ## Root Cause Analysis
+   - Call chain leading to current breakpoint
+   - Variable state analysis and anomalies  
+   - Performance insights from trace data
+   ## Suggested Actions
+   - Specific code fixes based on runtime data
+   - Next debugging steps
+```
+
+### Conditional Debugging Workflow
+**1. Target Problem Conditions**
+```bash
+# Multiple conditions - stops at first match
+./bin/xdebug-debug --break=User.php:85:$id==0,Auth.php:20:empty($token) -- php app.php
+```
+
+**2. AI-Assisted Analysis**  
+- Use `claude` command during debugging session
+- Get immediate analysis of execution trace up to breakpoint
+- Receive specific recommendations based on actual runtime data
+
+**3. Benefits Over Traditional Debugging**
+- ✅ Skip normal execution paths, focus on problems
+- 📊 Complete execution history leading to condition
+- 🤖 AI analysis of real runtime data, not assumptions
+- 🎯 Efficient debugging - no manual trace reading
+
+### When to Use Conditional Debugging
+- **Bug Investigation**: `--break=calculateTotal.php:45:$result<0`
+- **Null Pointer Issues**: `--break=User.php:20:$user==null`  
+- **Authentication Problems**: `--break=Auth.php:15:empty($token)`
+- **Data Validation**: `--break=Validator.php:30:count($errors)>0`
 
 ### Error-Specific Debugging Approaches
 
