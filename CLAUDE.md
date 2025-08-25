@@ -2,37 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## ⚠️ CRITICAL BEHAVIORAL RULE ⚠️
-
-**NEVER IMPLEMENT WITHOUT EXPLICIT PERMISSION**
-
-Claude has a systemic issue where it implements solutions immediately without asking. This wastes the user's time and disrupts their workflow.
-
-**REQUIRED WORKFLOW:**
-1. **PROPOSE** the solution/approach
-2. **ASK FOR PERMISSION** to implement
-3. **WAIT FOR EXPLICIT APPROVAL** 
-4. **THEN implement**
-
-**Examples:**
-❌ Wrong: "Let me add --stats option..." (starts implementing)
-✅ Correct: "Should I add --stats option as the default behavior? This would show detailed statistics instead of just JSON metadata."
-
-❌ Wrong: "I'll update the function to..." (starts coding)  
-✅ Correct: "Would you like me to update the function to handle this case?"
-
-**This applies to:**
-- Code changes
-- New features  
-- Refactoring
-- File modifications
-- Architecture changes
-- Any implementation work
-
-**Remember:** The user has decision authority. Claude is an implementer, not a decision maker.
-
-**Violation consequences:** User frustration, wasted time, wrong direction, repeated corrections.
-
 ## Project Overview
 
 This is a **universal PHP Xdebug MCP (Model Context Protocol) Server** that enables AI assistants to perform comprehensive PHP application analysis and debugging. The server acts as a bridge between AI clients and Xdebug, providing a standardized interface for:
@@ -353,53 +322,44 @@ This project prioritizes **execution-time trace analysis** over traditional code
 
 #### Available Xdebug Tools:
 - `./bin/xdebug-debug` - Interactive step debugging with breakpoints
-- `./bin/xdebug-profile` - Performance profiling (specialized for bottleneck identification)
+- `./bin/xdebug-profile` - Performance profiling
 - `./bin/xdebug-coverage` - Code coverage analysis  
-- `./bin/xdebug-trace` - Execution flow tracing and database analysis (specialized for N+1 detection)
-- `./bin/xdebug-mcp` - MCP server interface
+- `./bin/xdebug-trace` - Execution tracing
+- `./bin/xdebug-server` - Start MCP server
+- `./bin/xdebug-mcp` - MCP client interface
+- `./bin/debug-server` - Persistent debug server (AMPHP-based, background service)
 
-#### **CRITICAL: Use --json Flag for AI Analysis**
-
-When AI needs structured data for analysis, ALWAYS use the `--json` flag:
+#### Automatic Tool Selection:
 
 **For Performance Analysis:**
 - User: "Analyze performance", "Find bottlenecks", "Profile this code"
-- AI automatically runs: `./bin/xdebug-profile --json -- php path/to/file.php`
-- AI receives JSON with performance metrics, function costs, timing data
-
-**For Execution Flow & Database Analysis:**
-- User: "Trace execution", "Show function calls", "Check for N+1 problems", "Database analysis"
-- AI automatically runs: `./bin/xdebug-trace --json -- php path/to/file.php`
-- AI receives JSON with execution flow, function counts, database query statistics
+- AI automatically runs: `./bin/xdebug-profile path/to/file.php`
 
 **For Code Coverage:**
 - User: "Check test coverage", "Which lines are tested", "Coverage analysis"
-- AI automatically runs: `./bin/xdebug-coverage --json -- php path/to/file.php`
-- AI receives JSON with coverage metrics, untested lines
+- AI automatically runs: `./bin/xdebug-coverage path/to/file.php`
 
 **For Interactive Step Debugging:**
 - User: "Debug this code", "Set breakpoints", "Step through execution", "Inspect variables"
-- AI automatically runs: `./bin/xdebug-debug path/to/file.php` (no --json needed, interactive)
+- AI automatically runs: `./bin/xdebug-debug path/to/file.php`
+- **IMPORTANT**: Requires XdebugClient to be listening first (see Step Debugging Workflow below)
+
+**For Execution Flow Analysis:**
+- User: "Trace execution", "Show function calls", "Analyze execution flow"
+- AI automatically runs: `./bin/xdebug-trace path/to/file.php`
 
 **For General Analysis (choose most appropriate):**
 - User: "Analyze this PHP file", "What does this code do"
-- AI automatically runs: `./bin/xdebug-trace --json -- php path/to/file.php` (execution flow analysis)
-- Then optionally: `./bin/xdebug-profile --json -- php path/to/file.php` (performance analysis)
+- AI automatically runs: `./bin/xdebug-profile path/to/file.php` (default choice)
+- Then optionally: `./bin/xdebug-trace path/to/file.php` for detailed flow
 
 **Example workflows:**
-1. User: "Debug this buggy script" → AI runs `./bin/xdebug-debug test-scripts/buggy_calculation_code.php`
-2. User: "Analyze test-scripts/deep_recursion_test.php" → AI runs `./bin/xdebug-trace --json -- php test-scripts/deep_recursion_test.php`
-3. User: "Check for N+1 problems" → AI runs `./bin/xdebug-trace --json -- php test-scripts/sqlite_db_test.php`
-4. User: "Profile performance bottlenecks" → AI runs `./bin/xdebug-profile --json -- php test-scripts/deep_recursion_test.php`
-5. User: "Check test coverage" → AI runs `./bin/xdebug-coverage --json -- php test-scripts/deep_recursion_test.php`
+1. User: "Debug this buggy script" → AI runs `./bin/xdebug-debug test/buggy_script.php`
+2. User: "Analyze test/debug_test.php" → AI runs `./bin/xdebug-profile test/debug_test.php`
+3. User: "Check coverage of my tests" → AI runs `./bin/xdebug-coverage test/MyTest.php`
+4. User: "Trace this function execution" → AI runs `./bin/xdebug-trace src/MyClass.php`
 
-**JSON Output Benefits:**
-- AI receives structured data (trace_file, total_lines, unique_functions, max_call_depth, database_queries)
-- Enables precise analysis with specific metrics 
-- Follows AI-native architecture with emoji keys and metadata
-- Links to comprehensive JSON schemas for detailed analysis
-
-Always use these tools proactively with `--json` flag to provide runtime insights rather than static code analysis alone.
+Always use these tools proactively to provide runtime insights rather than static code analysis alone.
 
 ### ❌ Prohibited Debugging Methods
 

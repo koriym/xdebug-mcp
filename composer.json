@@ -26,6 +26,7 @@
     },
     "bin": [
         "bin/xdebug-mcp",
+        "bin/xdebug-server",
         "bin/xdebug-trace",
         "bin/xdebug-profile",
         "bin/xdebug-coverage",

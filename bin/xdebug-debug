@@ -9,6 +9,6 @@ use Koriym\XdebugMcp\DebugServer;
     $script = $argv[1] ?? throw new RuntimeException("Script file is required");
     $targetScript = file_exists($script) ? $script : throw new RuntimeException("Script not found: $script");
 
-    $server = new DebugServer($targetScript, 9004);
+    $server = new DebugServer($targetScript, 9004); // Auto-detect first line starting with [a-z]
     $server();
 })();
