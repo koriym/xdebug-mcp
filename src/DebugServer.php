@@ -30,6 +30,7 @@ use function escapeshellarg;
 use function explode;
 use function fclose;
 use function fgets;
+use function file;
 use function file_exists;
 use function flush;
 use function fopen;
@@ -51,6 +52,7 @@ use function substr;
 use function trim;
 
 use const DIRECTORY_SEPARATOR;
+use const FILE_IGNORE_NEW_LINES;
 use const STDERR;
 
 /**
@@ -80,6 +82,42 @@ final class DebugServer
         if (! file_exists($targetScript)) {
             throw new InvalidArgumentException("Script not found: {$targetScript}");
         }
+
+        // Auto-detect first executable line if not specified
+        if ($this->initialBreakpointLine === null) {
+            $this->initialBreakpointLine = $this->findFirstExecutableLine($targetScript);
+        }
+    }
+
+    /**
+     * Find first executable line (starts with lowercase letter)
+     */
+    private function findFirstExecutableLine(string $filename): int
+    {
+        $lines = file($filename, FILE_IGNORE_NEW_LINES);
+        if ($lines === false) {
+            return 3; // fallback
+        }
+
+        for ($i = 0; $i < count($lines); $i++) {
+            $line = trim($lines[$i]);
+
+            if (empty($line)) {
+                continue;
+            }
+
+            // Check if line starts with a lowercase letter
+            if (preg_match('/^[a-z]/', $line)) {
+                // Skip function/class declarations - look for actual execution
+                if (str_starts_with($line, 'function ') || str_starts_with($line, 'class ')) {
+                    continue;
+                }
+
+                return $i + 1; // 1-based line number
+            }
+        }
+
+        return 3; // fallback if no executable line found
     }
 
     /**
@@ -460,9 +498,13 @@ final class DebugServer
      */
     private function continueExecution(): string
     {
+        $this->log('🔄 Sending continue command...');
         $response = $this->sendCommand('run');
+
         if ($response) {
             $this->log('✅ Continue response: ' . substr($response, 0, 100) . '...');
+        } else {
+            $this->log('⚠️ Continue response was empty');
         }
 
         return $response;
