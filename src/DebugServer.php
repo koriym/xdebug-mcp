@@ -20,6 +20,7 @@ use Throwable;
 use function Amp\async;
 use function Amp\Socket\listen;
 use function array_map;
+use function array_slice;
 use function base64_decode;
 use function base64_encode;
 use function basename;
@@ -32,15 +33,18 @@ use function fclose;
 use function fgets;
 use function file;
 use function file_exists;
+use function filemtime;
 use function flush;
 use function fopen;
 use function fwrite;
+use function glob;
 use function implode;
 use function libxml_clear_errors;
 use function libxml_get_errors;
 use function libxml_use_internal_errors;
 use function preg_match;
 use function realpath;
+use function shell_exec;
 use function simplexml_load_string;
 use function sprintf;
 use function str_contains;
@@ -50,6 +54,7 @@ use function strlen;
 use function strtolower;
 use function substr;
 use function trim;
+use function usort;
 
 use const DIRECTORY_SEPARATOR;
 use const FILE_IGNORE_NEW_LINES;
@@ -63,9 +68,9 @@ use const STDERR;
  */
 final class DebugServer
 {
-    private const float DEFAULT_CONNECTION_TIMEOUT = 30.0;  // Initial connection only
-    private const float DEFAULT_EXECUTION_TIMEOUT = 3600.0;  // 1 hour for long debugging sessions
-    private const float DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
+    private const DEFAULT_CONNECTION_TIMEOUT = 30.0;  // Initial connection only
+    private const DEFAULT_EXECUTION_TIMEOUT = 3600.0;  // 1 hour for long debugging sessions
+    private const DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
 
     private DeferredFuture|null $listenerReady = null;
     private DeferredFuture|null $xdebugConnected = null;
@@ -219,7 +224,7 @@ final class DebugServer
             $this->listenerReady->getFuture()->await($cancellation);
 
             // Check if custom command is provided
-            if (isset($this->options['command']) && !empty($this->options['command'])) {
+            if (isset($this->options['command']) && ! empty($this->options['command'])) {
                 $command = $this->options['command'];
                 // Insert Xdebug parameters into the php command
                 if ($command[0] === 'php') {
@@ -237,7 +242,7 @@ final class DebugServer
                         '-dxdebug.auto_trace=1 %s',
                         $this->debugPort,
                         $scriptName,
-                        implode(' ', array_map('escapeshellarg', array_slice($command, 1)))
+                        implode(' ', array_map('escapeshellarg', array_slice($command, 1))),
                     );
                     $this->traceFile = $traceFile;
                 } else {
@@ -1177,22 +1182,22 @@ final class DebugServer
         $scriptName = basename($this->targetScript, '.php');
         $tracePattern = '/tmp/trace-*-' . $scriptName . '.xt';
         $traceFiles = glob($tracePattern);
-        
-        if (!empty($traceFiles)) {
+
+        if (! empty($traceFiles)) {
             // Get the most recently modified trace file for this script
-            usort($traceFiles, fn($a, $b) => filemtime($b) <=> filemtime($a));
+            usort($traceFiles, static fn ($a, $b) => filemtime($b) <=> filemtime($a));
             $latestTrace = $traceFiles[0];
             $this->log("📊 Debug trace saved: {$latestTrace}");
             $this->log('💡 Analyze execution: claude --print "Analyze trace for ' . $scriptName . ' debugging insights"');
         } else {
             // Fallback: look for any recent trace files
             $allTraces = glob('/tmp/trace*.xt');
-            if (!empty($allTraces)) {
-                usort($allTraces, fn($a, $b) => filemtime($b) <=> filemtime($a));
+            if (! empty($allTraces)) {
+                usort($allTraces, static fn ($a, $b) => filemtime($b) <=> filemtime($a));
                 $this->log("📊 Debug trace may be available: {$allTraces[0]}");
             }
         }
-        
+
         $this->log('🧹 Cleanup completed');
     }
 
@@ -1202,33 +1207,32 @@ final class DebugServer
     private function handleClaudeCommand(string $args): void
     {
         $this->log('🤖 Analyzing execution trace with Claude...');
-        
+
         try {
             // Get current breakpoint context
             $context = $this->getCurrentDebugContext();
-            
+
             // Build analysis prompt
             $prompt = $this->buildClaudeAnalysisPrompt($context, $args);
-            
+
             // Execute Claude analysis
             $claudeCommand = 'claude --print ' . escapeshellarg($prompt);
             $this->log('💭 Executing: ' . $claudeCommand);
-            
+
             // Run Claude analysis in background and show output
             $output = shell_exec($claudeCommand . ' 2>&1');
-            
+
             if ($output) {
                 $this->log('📊 Claude Analysis Result:');
                 $lines = explode("\n", trim($output));
                 foreach ($lines as $line) {
-                    if (!empty(trim($line))) {
+                    if (! empty(trim($line))) {
                         $this->log('   ' . $line);
                     }
                 }
             } else {
                 $this->log('❌ Claude analysis failed or produced no output');
             }
-            
         } catch (Throwable $e) {
             $this->log('❌ Claude analysis error: ' . $e->getMessage());
         }
@@ -1249,20 +1253,20 @@ final class DebugServer
         // Try to get current variables if possible
         try {
             $variables = $this->getCurrentVariables();
-            if (!empty($variables)) {
+            if (! empty($variables)) {
                 $context['current_variables'] = $variables;
             }
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             // Variables not available, continue without them
         }
 
         // Try to get stack trace
         try {
             $stack = $this->getStackTrace();
-            if (!empty($stack)) {
+            if (! empty($stack)) {
                 $context['current_stack'] = $stack;
             }
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             // Stack not available, continue without it
         }
 
@@ -1275,14 +1279,14 @@ final class DebugServer
     private function buildClaudeAnalysisPrompt(array $context, string $userArgs): string
     {
         $targetScript = basename($context['target_script']);
-        
+
         $prompt = "Analyze PHP debugging session for {$targetScript}:\n\n";
-        
+
         // Add trace file analysis
-        if (!empty($context['trace_file']) && file_exists($context['trace_file'])) {
+        if (! empty($context['trace_file']) && file_exists($context['trace_file'])) {
             $prompt .= "## Trace Analysis\n";
             $prompt .= "Please analyze the execution trace: {$context['trace_file']}\n\n";
-            
+
             // Include last 20 lines of trace for context
             $traceLines = file($context['trace_file']);
             if ($traceLines && count($traceLines) > 0) {
@@ -1290,28 +1294,29 @@ final class DebugServer
                 $prompt .= "Recent trace data:\n```\n" . implode('', $lastLines) . "```\n\n";
             }
         }
-        
+
         // Add current variables if available
-        if (!empty($context['current_variables'])) {
+        if (! empty($context['current_variables'])) {
             $prompt .= "## Current Variables\n";
             foreach ($context['current_variables'] as $var => $value) {
                 $prompt .= "- \${$var} = {$value}\n";
             }
+
             $prompt .= "\n";
         }
-        
+
         // Add breakpoint context
-        if (!empty($context['breakpoint_line'])) {
+        if (! empty($context['breakpoint_line'])) {
             $prompt .= "## Breakpoint Context\n";
             $prompt .= "Stopped at line {$context['breakpoint_line']} in {$targetScript}\n\n";
         }
-        
+
         // Add user-specific analysis request
-        if (!empty($userArgs)) {
+        if (! empty($userArgs)) {
             $prompt .= "## Specific Analysis Request\n";
             $prompt .= $userArgs . "\n\n";
         }
-        
+
         $prompt .= "## Analysis Focus\n";
         $prompt .= "Please provide:\n";
         $prompt .= "1. Call chain analysis leading to current breakpoint\n";
@@ -1319,7 +1324,7 @@ final class DebugServer
         $prompt .= "3. Root cause identification if this is a bug investigation\n";
         $prompt .= "4. Performance insights from trace data\n";
         $prompt .= "5. Suggested next debugging steps or code fixes\n";
-        
+
         return $prompt;
     }
 
@@ -1331,24 +1336,35 @@ final class DebugServer
         try {
             // Send context_get command to get local variables
             $response = $this->sendCommand('context_get', ['c' => '0']); // Local context
-            
-            if (!$response) {
+
+            if (! $response) {
                 return [];
             }
-            
+
             $variables = [];
             $xml = simplexml_load_string($response);
             if ($xml && isset($xml->property)) {
                 foreach ($xml->property as $prop) {
-                    $name = (string)$prop['name'];
-                    $type = (string)$prop['type'];
-                    $value = isset($prop->value) ? base64_decode((string)$prop) : (string)$prop['value'];
+                    $name = (string) $prop['name'];
+                    $type = (string) $prop['type'];
+                    
+                    // Get the raw text content
+                    $rawValue = (string) $prop;
+                    
+                    // Check encoding attribute and decode if necessary
+                    $encoding = (string) $prop['encoding'];
+                    if ($encoding === 'base64') {
+                        $value = base64_decode($rawValue);
+                    } else {
+                        $value = $rawValue;
+                    }
+                    
                     $variables[$name] = "{$type}: {$value}";
                 }
             }
-            
+
             return $variables;
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             return [];
         }
     }
@@ -1360,24 +1376,24 @@ final class DebugServer
     {
         try {
             $response = $this->sendCommand('stack_get');
-            
-            if (!$response) {
+
+            if (! $response) {
                 return [];
             }
-            
+
             $stack = [];
             $xml = simplexml_load_string($response);
             if ($xml && isset($xml->stack)) {
                 foreach ($xml->stack as $frame) {
-                    $function = (string)$frame['where'];
-                    $file = (string)$frame['filename'];
-                    $line = (string)$frame['lineno'];
+                    $function = (string) $frame['where'];
+                    $file = (string) $frame['filename'];
+                    $line = (string) $frame['lineno'];
                     $stack[] = "{$function} at {$file}:{$line}";
                 }
             }
-            
+
             return $stack;
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             return [];
         }
     }
