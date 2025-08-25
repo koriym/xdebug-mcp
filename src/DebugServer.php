@@ -235,11 +235,9 @@ final class DebugServer
                         '-dxdebug.mode=debug,trace ' .
                         '-dxdebug.client_host=127.0.0.1 ' .
                         '-dxdebug.client_port=%d ' .
-                        '-dxdebug.start_with_request=yes ' .
                         '-dxdebug.start_with_request=trigger ' .
                         '-dxdebug.trace_output_name=trace-%s ' .
-                        '-dxdebug.trace_format=1 ' .
-                        '-dxdebug.auto_trace=1 %s',
+                        '-dxdebug.trace_format=1 %s',
                         $this->debugPort,
                         $scriptName,
                         implode(' ', array_map('escapeshellarg', array_slice($command, 1))),
@@ -257,11 +255,9 @@ final class DebugServer
                     '-dxdebug.mode=debug,trace ' .
                     '-dxdebug.client_host=127.0.0.1 ' .
                     '-dxdebug.client_port=%d ' .
-                    '-dxdebug.start_with_request=yes ' .
                     '-dxdebug.start_with_request=trigger ' .
                     '-dxdebug.trace_output_name=trace-%s ' .
-                    '-dxdebug.trace_format=1 ' .
-                    '-dxdebug.auto_trace=1 %s',
+                    '-dxdebug.trace_format=1 %s',
                     $this->debugPort,
                     $scriptName,
                     escapeshellarg($this->targetScript),
@@ -494,17 +490,19 @@ final class DebugServer
         // Handle Windows paths
         if (DIRECTORY_SEPARATOR === '\\') {
             $real = str_replace('\\', '/', $real);
-            // Windows drive letter handling
-            if (preg_match('/^([a-zA-Z]):\//', $real, $matches)) {
-                $real = '/' . $matches[1] . ':' . substr($real, 2);
+            if (preg_match('/^([a-zA-Z]):\/(.*)$/', $real, $m)) {
+                $drive = strtoupper($m[1]) . ':/';
+                $rest = $m[2];
+                $parts = explode('/', $rest);
+                $encoded = array_map('rawurlencode', $parts);
+                return 'file:///' . $drive . implode('/', $encoded);
             }
         }
 
-        // Encode path components
-        $parts = explode('/', $real);
+        // POSIX: encode each segment
+        $parts = explode('/', ltrim($real, '/'));
         $encoded = array_map('rawurlencode', $parts);
-
-        return 'file://' . implode('/', $encoded);
+        return 'file:///' . implode('/', $encoded);
     }
 
     /**
@@ -612,7 +610,7 @@ final class DebugServer
         // For complex expressions, use eval with proper encoding
         $encoded = base64_encode($expression);
 
-        return $this->sendCommand('eval', ['' => $encoded]);
+        return $this->sendCommand('eval', ['--' => $encoded]);
     }
 
     /**
