@@ -12,22 +12,27 @@ use Amp\Socket\ServerSocket;
 use Amp\Socket\SocketException;
 use Amp\TimeoutCancellation;
 use InvalidArgumentException;
+use Koriym\XdebugMcp\Exceptions\DebugSessionException;
 use RuntimeException;
 use SimpleXMLElement;
 use Throwable;
 
 use function Amp\async;
-use function Amp\delay;
 use function Amp\Socket\listen;
 use function array_map;
 use function base64_decode;
+use function base64_encode;
 use function basename;
 use function bin2hex;
 use function count;
 use function date;
 use function escapeshellarg;
 use function explode;
+use function fclose;
+use function fgets;
 use function file_exists;
+use function flush;
+use function fopen;
 use function fwrite;
 use function implode;
 use function libxml_clear_errors;
@@ -39,7 +44,9 @@ use function simplexml_load_string;
 use function sprintf;
 use function str_contains;
 use function str_replace;
+use function str_starts_with;
 use function strlen;
+use function strtolower;
 use function substr;
 use function trim;
 
@@ -47,26 +54,16 @@ use const DIRECTORY_SEPARATOR;
 use const STDERR;
 
 /**
- * Custom exceptions for better error handling
- */
-class DebugSessionException extends RuntimeException
-{
-}
-class ProcessException extends RuntimeException
-{
-}
-
-/**
  * AMP-based Interactive Debugger
  * Streamlined for single-use debugging sessions
+ *
+ * @see https://xdebug.org/docs/step_debug
  */
 final class DebugServer
 {
-    private const int MAX_STEPS = 20;
-    private const int DEFAULT_DEBUG_PORT = 9004;
-    private const float DEFAULT_CONNECTION_TIMEOUT = 15.0;
-    private const float DEFAULT_EXECUTION_TIMEOUT = 60.0;  // Increased from 30s
-    private const float DEFAULT_STEP_TIMEOUT = 10.0;  // Increased from 5s
+    private const float DEFAULT_CONNECTION_TIMEOUT = 30.0;  // Initial connection only
+    private const float DEFAULT_EXECUTION_TIMEOUT = 3600.0;  // 1 hour for long debugging sessions
+    private const float DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
 
     private DeferredFuture|null $listenerReady = null;
     private DeferredFuture|null $xdebugConnected = null;
@@ -76,7 +73,7 @@ final class DebugServer
 
     public function __construct(
         private string $targetScript,
-        private int $debugPort = self::DEFAULT_DEBUG_PORT,
+        private int $debugPort,
         private int|null $initialBreakpointLine = null,
         private array $options = [],
     ) {
@@ -187,6 +184,7 @@ final class DebugServer
                 '-dxdebug.mode=debug,trace ' .
                 '-dxdebug.client_host=127.0.0.1 ' .
                 '-dxdebug.client_port=%d ' .
+                '-dxdebug.start_with_request=yes ' .
                 '-dxdebug.start_with_request=trigger %s',
                 $this->debugPort,
                 escapeshellarg($this->targetScript),
@@ -265,35 +263,45 @@ final class DebugServer
                 if ($breakpointId !== 'error') {
                     $this->log("✅ Breakpoint set: ID {$breakpointId}");
                     $this->log('▶️ Continuing to first breakpoint...');
+                    $this->continueExecution();
                 } else {
                     $this->log('❌ Failed to set breakpoint');
+                    // Fall back to step_into from start
+                    $this->log('🚶 Starting with step_into from first line...');
+                    $response = $this->stepInto();
+                    if ($this->isExecutionComplete($response)) {
+                        $this->log('✅ Script completed');
+
+                        return;
+                    }
                 }
-
-                // Continue to first breakpoint
-                $this->continueExecution();
             } else {
-                // No breakpoint - run once to start execution
-                $this->log('▶️ No initial breakpoint. Running until first break or completion...');
-                $response = $this->continueExecution();
+                // No breakpoint - use step_into to stop at first line
+                $this->log('🚶 No initial breakpoint. Starting with step_into to stop at first line...');
+                $response = $this->stepInto();
 
-                // Check if already completed
+                // Check if already completed (empty script?)
                 if ($this->isExecutionComplete($response)) {
-                    $this->log('✅ Script completed without breakpoints');
+                    $this->log('✅ Script completed immediately');
 
                     return;
                 }
+
+                $this->log('⏸️ Stopped at first executable line');
             }
 
-            // Perform step trace through execution
-            $this->performStepTrace();
+            // Start interactive debugging session
+            $this->startInteractiveSession();
         } catch (Throwable $e) {
             $this->log('Debug sequence error: ' . $e->getMessage());
         }
     }
 
     /**
-     * Perform step-by-step tracing with variable inspection
+     * Legacy: Perform step-by-step tracing with variable inspection (DISABLED)
+     * This method has been replaced by startInteractiveSession() for true interactive debugging
      */
+    /*
     private function performStepTrace(): void
     {
         $stepCount = 0;
@@ -337,6 +345,7 @@ final class DebugServer
             $this->continueExecution();
         }
     }
+    */
 
     /**
      * Send a DBGp command and wait for the response
@@ -477,12 +486,17 @@ final class DebugServer
      */
     private function stepInto(): string
     {
-        $response = $this->sendCommand('step_into');
-        if ($response) {
-            $this->log('✅ Step into completed');
-        }
+        try {
+            $response = $this->sendCommand('step_into');
+            if ($response) {
+                $this->log('✅ Step into completed');
+            }
 
-        return $response;
+            return $response;
+        } catch (Throwable $e) {
+            // Re-throw the exception to be handled by caller
+            throw $e;
+        }
     }
 
     /**
@@ -499,6 +513,336 @@ final class DebugServer
     private function getVariables(): string
     {
         return $this->sendCommand('context_get', ['c' => '0']);  // 0 = locals
+    }
+
+    /**
+     * Evaluate expression
+     */
+    private function evaluateExpression(string $expression): string
+    {
+        // For simple variables, use property_get instead of eval
+        if (preg_match('/^\$\w+$/', $expression)) {
+            return $this->sendCommand('property_get', ['n' => $expression]);
+        }
+
+        // For complex expressions, use eval with proper encoding
+        $encoded = base64_encode($expression);
+
+        return $this->sendCommand('eval', ['' => $encoded]);
+    }
+
+    /**
+     * Start interactive debugging session
+     */
+    private function startInteractiveSession(): void
+    {
+        $this->log('🎮 Starting interactive debugging session');
+        $this->log('Available commands: s(tep), c(ontinue), p <var>, bt, l(ist), q(uit)');
+
+        while (true) {
+            $this->displayPrompt();
+            $input = $this->readUserInput();
+
+            if ($input === null) {
+                $this->log('❌ Failed to read user input, exiting');
+                break;
+            }
+
+            $command = trim($input);
+            if (empty($command)) {
+                continue;
+            }
+
+            if ($this->executeUserCommand($command)) {
+                break; // Exit if quit command or execution completed
+            }
+        }
+    }
+
+    /**
+     * Display debugger prompt
+     */
+    private function displayPrompt(): void
+    {
+        echo '(Xdebug) ';
+        flush();
+    }
+
+    /**
+     * Read user input from stdin (blocking)
+     */
+    private function readUserInput(): string|null
+    {
+        // Use blocking read from STDIN
+        // This will pause execution until user enters a command
+        $handle = fopen('php://stdin', 'r');
+        if ($handle === false) {
+            return null;
+        }
+
+        $input = fgets($handle);
+        fclose($handle);
+
+        return $input !== false ? $input : null;
+    }
+
+    /**
+     * Execute user command and return true if session should exit
+     */
+    private function executeUserCommand(string $command): bool
+    {
+        $parts = explode(' ', $command, 2);
+        $cmd = strtolower($parts[0]);
+        $args = $parts[1] ?? '';
+
+        switch ($cmd) {
+            case 's':
+            case 'step':
+                return $this->handleStepCommand();
+
+            case 'c':
+            case 'continue':
+                return $this->handleContinueCommand();
+
+            case 'p':
+            case 'print':
+                $this->handlePrintCommand($args);
+
+                return false;
+
+            case 'bt':
+            case 'backtrace':
+                $this->handleBacktraceCommand();
+
+                return false;
+
+            case 'l':
+            case 'list':
+                $this->handleListCommand();
+
+                return false;
+
+            case 'q':
+            case 'quit':
+                $this->log('👋 Exiting debugger');
+
+                return true;
+
+            case 'h':
+            case 'help':
+                $this->displayHelp();
+
+                return false;
+
+            default:
+                $this->log("❌ Unknown command: {$cmd}. Type 'h' for help.");
+
+                return false;
+        }
+    }
+
+    /**
+     * Handle step command
+     */
+    private function handleStepCommand(): bool
+    {
+        $this->log('👣 Stepping into next instruction...');
+
+        try {
+            $response = $this->stepInto();
+
+            if ($this->isExecutionComplete($response)) {
+                $this->log('✅ Execution completed');
+
+                return true;
+            }
+
+            // Display current state after step
+            $this->displayCurrentState();
+
+            return false;
+        } catch (Throwable $e) {
+            $this->log('⚠️ Step command encountered error: ' . $e->getMessage());
+
+            // Try to recover by checking if we're still connected
+            if ($this->isConnected()) {
+                $this->log('🔄 Connection still active, trying continue to next executable line...');
+                try {
+                    $response = $this->continueExecution();
+                    if ($this->isExecutionComplete($response)) {
+                        $this->log('✅ Execution completed');
+
+                        return true;
+                    }
+
+                    $this->displayCurrentState();
+
+                    return false;
+                } catch (Throwable $retryException) {
+                    $this->log('❌ Recovery failed: ' . $retryException->getMessage());
+                }
+            }
+
+            $this->log('🔚 Debug session ended due to connection issues');
+
+            return true;
+        }
+    }
+
+    /**
+     * Handle continue command
+     */
+    private function handleContinueCommand(): bool
+    {
+        $this->log('▶️ Continuing execution...');
+        $response = $this->continueExecution();
+
+        if ($this->isExecutionComplete($response)) {
+            $this->log('✅ Execution completed');
+
+            return true;
+        }
+
+        $this->log('⏸️ Stopped (breakpoint or end)');
+        $this->displayCurrentState();
+
+        return false;
+    }
+
+    /**
+     * Handle print variable command
+     */
+    private function handlePrintCommand(string $variable): void
+    {
+        if (empty($variable)) {
+            $this->log('❌ Usage: p <variable_name>');
+
+            return;
+        }
+
+        $this->log("🔍 Evaluating: {$variable}");
+        try {
+            $result = $this->evaluateExpression($variable);
+
+            // Parse and format the result
+            $xml = $this->parseXmlResponse($result);
+            if ($xml !== null) {
+                $this->displayPropertyResult($xml, $variable);
+            } else {
+                $this->log("📋 Raw result: {$result}");
+            }
+        } catch (Throwable $e) {
+            $this->log("❌ Error evaluating '{$variable}': " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Display property result from XML
+     */
+    private function displayPropertyResult(SimpleXMLElement $xml, string $variable): void
+    {
+        // Check for error first
+        if (isset($xml->error)) {
+            $errorMsg = (string) $xml->error->message;
+            $this->log("❌ Error: {$errorMsg}");
+
+            return;
+        }
+
+        // Handle property response
+        if (isset($xml->property)) {
+            $property = $xml->property;
+            $type = (string) $property['type'];
+            $encoding = (string) ($property['encoding'] ?? '');
+            $rawValue = (string) $property;
+
+            $value = $encoding === 'base64' ? base64_decode($rawValue) : $rawValue;
+
+            if ($type === 'array' || $type === 'object') {
+                $childCount = count($property->property ?? []);
+                $this->log("📋 {$variable} ({$type}[{$childCount}]):");
+
+                // Show ALL elements for AI client - no pagination needed
+                if ($childCount > 0) {
+                    foreach ($property->property as $child) {
+                        $childName = (string) $child['name'];
+                        $childType = (string) $child['type'];
+                        $childEncoding = (string) ($child['encoding'] ?? '');
+                        $childRawValue = (string) $child;
+                        $childValue = $childEncoding === 'base64' ? base64_decode($childRawValue) : $childRawValue;
+
+                        if ($childType === 'string') {
+                            $childValue = '"' . $childValue . '"';
+                        }
+
+                        $this->log("  [{$childName}] ({$childType}): {$childValue}");
+                    }
+                }
+            } else {
+                $displayValue = $this->formatVariableValue($value, $type);
+                $this->log("📋 {$variable} ({$type}): {$displayValue}");
+            }
+        }
+    }
+
+    /**
+     * Handle backtrace command
+     */
+    private function handleBacktraceCommand(): void
+    {
+        $this->log('📋 Call stack:');
+        $stackInfo = $this->getStack();
+        $this->displayStackInfo($stackInfo);
+    }
+
+    /**
+     * Handle list command
+     */
+    private function handleListCommand(): void
+    {
+        $this->log('📄 Current location:');
+        $this->displayCurrentState();
+    }
+
+    /**
+     * Display help information
+     */
+    private function displayHelp(): void
+    {
+        $this->log('🆘 Available commands:');
+        $this->log('  s, step     - Execute next line');
+        $this->log('  c, continue - Continue execution');
+        $this->log('  p <var>     - Print variable value');
+        $this->log('  bt          - Show backtrace');
+        $this->log('  l, list     - Show current location');
+        $this->log('  q, quit     - Exit debugger');
+        $this->log('  h, help     - Show this help');
+    }
+
+    /**
+     * Display current execution state
+     */
+    private function displayCurrentState(): void
+    {
+        try {
+            // Get and display stack info
+            $stackInfo = $this->getStack();
+            if (! empty($stackInfo)) {
+                $this->displayStackInfo($stackInfo);
+            }
+        } catch (Throwable $e) {
+            $this->log('⚠️ Unable to get stack info: ' . $e->getMessage());
+        }
+
+        try {
+            // Get and display variables
+            $variables = $this->getVariables();
+            if (! empty($variables)) {
+                $this->displayVariables($variables);
+            }
+        } catch (Throwable $e) {
+            $this->log('⚠️ Unable to get variables: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -555,17 +899,49 @@ final class DebugServer
         foreach ($properties as $property) {
             $name = (string) $property['name'];
             $type = (string) $property['type'];
-            $value = isset($property['encoding']) && $property['encoding'] === 'base64'
-                ? base64_decode((string) $property)
-                : (string) $property;
+            $encoding = (string) ($property['encoding'] ?? '');
+            $rawValue = (string) $property;
+
+            // Decode base64 if needed
+            $value = $encoding === 'base64' ? base64_decode($rawValue) : $rawValue;
 
             // Handle arrays and objects
             if ($type === 'array' || $type === 'object') {
                 $childCount = count($property->property ?? []);
-                $this->log("  📋 \${$name} ({$type}[{$childCount}]): <expandable>");
+                // Fix double $ issue - remove prefix if already present
+                $displayName = str_starts_with($name, '$') ? $name : '$' . $name;
+                $this->log("  📋 {$displayName} ({$type}[{$childCount}]): <expandable>");
             } else {
-                $this->log("  📋 \${$name} ({$type}): {$value}");
+                // Format the value display based on type
+                $displayValue = $this->formatVariableValue($value, $type);
+                // Fix double $ issue - remove prefix if already present
+                $displayName = str_starts_with($name, '$') ? $name : '$' . $name;
+                $this->log("  📋 {$displayName} ({$type}): {$displayValue}");
             }
+        }
+    }
+
+    /**
+     * Format variable value for display
+     */
+    private function formatVariableValue(string $value, string $type): string
+    {
+        switch ($type) {
+            case 'string':
+                return '"' . $value . '"';
+
+            case 'int':
+            case 'float':
+                return $value;
+
+            case 'bool':
+                return $value === '1' ? 'true' : 'false';
+
+            case 'null':
+                return 'null';
+
+            default:
+                return $value;
         }
     }
 
@@ -624,14 +1000,16 @@ final class DebugServer
      */
     private function readDbgpFrame(ResourceSocket $socket): string
     {
-        $timeout = new TimeoutCancellation($this->options['readTimeout'] ?? self::DEFAULT_STEP_TIMEOUT);
+        $timeoutValue = $this->options['readTimeout'] ?? self::DEFAULT_STEP_TIMEOUT;
+        // If timeout is 0, don't use timeout cancellation (wait indefinitely)
+        $timeout = $timeoutValue > 0 ? new TimeoutCancellation($timeoutValue) : null;
 
         try {
             // Read length header until NULL byte
             // FIXED: Correct argument order - Cancellation first, then length
             $lengthStr = '';
             while (true) {
-                $char = $socket->read($timeout, 1);
+                $char = $timeout !== null ? $socket->read($timeout, 1) : $socket->read(null, 1);
                 if ($char === null || $char === '') {
                     throw new RuntimeException('Connection closed while reading length');
                 }
@@ -653,7 +1031,7 @@ final class DebugServer
             $response = '';
             $remaining = $length;
             while ($remaining > 0) {
-                $chunk = $socket->read($timeout, $remaining);
+                $chunk = $timeout !== null ? $socket->read($timeout, $remaining) : $socket->read(null, $remaining);
                 if ($chunk === null || $chunk === '') {
                     throw new RuntimeException('Connection closed while reading response data');
                 }
@@ -664,7 +1042,7 @@ final class DebugServer
 
             // Read the trailing NULL byte
             // FIXED: Correct argument order
-            $trailingNull = $socket->read($timeout, 1);
+            $trailingNull = $timeout !== null ? $socket->read($timeout, 1) : $socket->read(null, 1);
             if ($trailingNull !== "\0") {
                 $this->log('Warning: Expected trailing NULL byte, got: ' . bin2hex($trailingNull ?? ''));
             }
