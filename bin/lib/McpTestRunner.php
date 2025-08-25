@@ -35,20 +35,20 @@ use const JSON_THROW_ON_ERROR;
 class McpTestRunner
 {
     // Color constants
-    private const string GREEN = "\033[32m";
-    private const string RED = "\033[31m";
-    private const string YELLOW = "\033[33m";
-    private const string BLUE = "\033[34m";
-    private const string RESET = "\033[0m";
+    private const GREEN = "\033[32m";
+    private const RED = "\033[31m";
+    private const YELLOW = "\033[33m";
+    private const BLUE = "\033[34m";
+    private const RESET = "\033[0m";
 
     // Tool count constants for maintainability
-    public const int TOTAL_WORKING_TOOLS = 25;
-    public const int PROFILING_TOOLS = 4;
-    public const int COVERAGE_TOOLS = 5;
-    public const int STATISTICS_TOOLS = 6;
-    public const int ERROR_COLLECTION_TOOLS = 3;
-    public const int TRACING_TOOLS = 5;
-    public const int CONFIGURATION_TOOLS = 2;
+    public const TOTAL_WORKING_TOOLS = 25;
+    public const PROFILING_TOOLS = 4;
+    public const COVERAGE_TOOLS = 5;
+    public const STATISTICS_TOOLS = 6;
+    public const ERROR_COLLECTION_TOOLS = 3;
+    public const TRACING_TOOLS = 5;
+    public const CONFIGURATION_TOOLS = 2;
 
     private array $results = [
         'passed' => 0,
