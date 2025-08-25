@@ -967,29 +967,4 @@ class XdebugClient
         }
     }
 
-    private function readStateWithLock(): array|null
-    {
-        if (! file_exists(self::GLOBAL_STATE_FILE)) {
-            return null;
-        }
-
-        $file = fopen(self::GLOBAL_STATE_FILE, 'r');
-        if ($file === false) {
-            return null;
-        }
-
-        $state = null;
-        if (flock($file, LOCK_SH)) {
-            $contents = stream_get_contents($file);
-            if ($contents !== false) {
-                $state = json_decode($contents, true);
-            }
-
-            flock($file, LOCK_UN);
-        }
-
-        fclose($file);
-
-        return $state;
-    }
 }
