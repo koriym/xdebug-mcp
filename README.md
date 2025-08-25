@@ -13,7 +13,6 @@ MCP server enabling AI control of PHP Xdebug debugging, profiling, and coverage 
 - **Performance Profiling**: Cachegrind output analysis with AI-driven bottleneck identification  
 - **47 Working MCP Tools**: Complete AI-driven PHP debugging suite (100% tested)
 - **Interactive Step Debugging**: Full breakpoint, step execution, and variable inspection
-- **IDE Compatible**: Port 9004 avoids conflicts with PhpStorm/VS Code (9003)
 
 ## Working Tool Categories
 
@@ -57,7 +56,6 @@ claude mcp list
 #### Why this is recommended
 - Xdebug impacts performance when always enabled and is unnecessary for daily development
 - The bin/xdebug-* commands load Xdebug only when needed for debugging/profiling
-- Production environments should never have Xdebug permanently enabled
 
 ### AI Configuration (Recommended)
 
@@ -114,13 +112,22 @@ This command will:
 # ✅ Traces execution and prompts Claude to analyze for N+1 queries and logic issues
 ```
 
-**3. Ask AI specific questions:**
+**3. Deep AI Investigation:**
 ```bash
-# After running profile/trace, ask targeted questions
-claude --print "What are the heaviest functions in this profile?"
-claude --print "Are there any N+1 query problems? How can I fix them?"
-claude --print "How can I improve memory usage in this code?"
-claude --print "Identify performance bottlenecks from the execution trace"
+# After running step 1 or 2, ask targeted questions:
+./vendor/bin/xdebug-profile -- php test-scripts/sqlite_db_test.php
+
+# Then ask AI to analyze:
+> What are the heaviest functions in this profile?
+> Are there any N+1 query problems? How can I fix them?
+
+# For detailed investigation, run trace analysis:
+./vendor/bin/xdebug-trace -- php test-scripts/sqlite_db_test.php
+
+# Then ask for deeper analysis:
+> Show me the exact execution flow that causes the N+1 queries
+> How can I improve memory usage in this code?
+> Identify performance bottlenecks from the execution trace
 ```
 
 **4. Advanced: PHPUnit Debugging with AI:**
