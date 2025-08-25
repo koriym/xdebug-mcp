@@ -217,16 +217,37 @@ final class DebugServer
             $cancellation = new TimeoutCancellation(3.0);
             $this->listenerReady->getFuture()->await($cancellation);
 
-            $cmd = sprintf(
-                'XDEBUG_TRIGGER=1 php -dzend_extension=xdebug ' .
-                '-dxdebug.mode=debug,trace ' .
-                '-dxdebug.client_host=127.0.0.1 ' .
-                '-dxdebug.client_port=%d ' .
-                '-dxdebug.start_with_request=yes ' .
-                '-dxdebug.start_with_request=trigger %s',
-                $this->debugPort,
-                escapeshellarg($this->targetScript),
-            );
+            // Check if custom command is provided
+            if (isset($this->options['command']) && !empty($this->options['command'])) {
+                $command = $this->options['command'];
+                // Insert Xdebug parameters into the php command
+                if ($command[0] === 'php') {
+                    $cmd = sprintf(
+                        'XDEBUG_TRIGGER=1 php -dzend_extension=xdebug ' .
+                        '-dxdebug.mode=debug,trace ' .
+                        '-dxdebug.client_host=127.0.0.1 ' .
+                        '-dxdebug.client_port=%d ' .
+                        '-dxdebug.start_with_request=yes ' .
+                        '-dxdebug.start_with_request=trigger %s',
+                        $this->debugPort,
+                        implode(' ', array_map('escapeshellarg', array_slice($command, 1)))
+                    );
+                } else {
+                    throw new RuntimeException("Custom command must start with 'php'");
+                }
+            } else {
+                // Default: simple script execution
+                $cmd = sprintf(
+                    'XDEBUG_TRIGGER=1 php -dzend_extension=xdebug ' .
+                    '-dxdebug.mode=debug,trace ' .
+                    '-dxdebug.client_host=127.0.0.1 ' .
+                    '-dxdebug.client_port=%d ' .
+                    '-dxdebug.start_with_request=yes ' .
+                    '-dxdebug.start_with_request=trigger %s',
+                    $this->debugPort,
+                    escapeshellarg($this->targetScript),
+                );
+            }
 
             $this->log('🚀 Executing target script');
             $this->log("Command: {$cmd}");
@@ -294,9 +315,10 @@ final class DebugServer
             $this->log('🔍 Starting step trace debugging session');
 
             if ($this->initialBreakpointLine !== null) {
-                // Set initial breakpoint
-                $this->log("🔴 Setting initial breakpoint at line {$this->initialBreakpointLine}");
-                $breakpointId = $this->setBreakpoint($this->targetScript, $this->initialBreakpointLine);
+                // Set initial breakpoint (support custom breakpoint file)
+                $breakpointFile = $this->options['breakpointFile'] ?? $this->targetScript;
+                $this->log("🔴 Setting initial breakpoint at {$breakpointFile}:{$this->initialBreakpointLine}");
+                $breakpointId = $this->setBreakpoint($breakpointFile, $this->initialBreakpointLine);
 
                 if ($breakpointId !== 'error') {
                     $this->log("✅ Breakpoint set: ID {$breakpointId}");
