@@ -47,6 +47,19 @@ PHPUnit integration with Xdebug features.
 
 These tools provide background services and protocol handling:
 
+### `./debug-server`
+**Persistent debug server (AMPHP-based)**
+- Manages continuous Xdebug connections on port 9004
+- Handles control server on port 9005  
+- Single process architecture for improved reliability
+- Used internally by the debugging infrastructure
+
+### `./xdebug-server`
+**MCP server startup script**
+- Starts the main Xdebug MCP server
+- Listens on port 9004 for Xdebug connections
+- IDE-conflict-free (IDEs typically use port 9003)
+
 ### `./xdebug-mcp`
 **MCP protocol handler**
 - Entry point for MCP (Model Context Protocol) communication
@@ -57,6 +70,7 @@ These tools provide background services and protocol handling:
 
 - **Port 9003**: Reserved for IDEs (VS Code, PhpStorm)  
 - **Port 9004**: Xdebug MCP Server (conflict-free)
+- **Port 9005**: Debug server control port
 
 ## Usage Patterns
 
@@ -74,7 +88,13 @@ These tools provide background services and protocol handling:
 
 ### Interactive Debugging
 ```bash
-# Single command execution (no manual setup required)
+# 1. Start listener
+php test_new_xdebug_debug.php &
+
+# 2. Verify connection
+lsof -i :9004
+
+# 3. Debug interactively
 ./xdebug-debug buggy_script.php
 ```
 
@@ -92,7 +112,7 @@ The MCP tools enable AI assistants to perform comprehensive PHP analysis:
 
 **For Test Quality**: Use `xdebug-coverage` for coverage analysis
 
-**For AI Integration**: MCP tool (`xdebug-mcp`) provides seamless AI assistant integration
+**For AI Integration**: MCP tools (`xdebug-server`, `xdebug-mcp`) provide seamless AI assistant integration
 
 ## Architecture Notes
 
