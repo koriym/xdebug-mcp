@@ -4,14 +4,8 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp;
 
-<?php
-
-namespace Koriym\XdebugMcp;
-
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use RuntimeException;
-
-// …
 
 use function array_map;
 use function array_merge;
@@ -28,6 +22,7 @@ use function ini_get;
 use function is_readable;
 use function json_encode;
 use function passthru;
+use function preg_match_all;
 use function round;
 use function shell_exec;
 use function str_contains;
