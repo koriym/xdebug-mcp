@@ -89,12 +89,14 @@ class McpServer
 {
     protected array $tools = [];
     protected XdebugClient|null $xdebugClient = null;
+    private PersistentDebugClient $persistentClient;
     private bool $debugMode = false;
     private string $sessionId = 'session_001';
 
     public function __construct()
     {
         $this->debugMode = (bool) (getenv('MCP_DEBUG') ?: false);
+        $this->persistentClient = new PersistentDebugClient();
         $this->initializeTools();
         $this->cleanupPreviousSession(); // 前のセッションをクリーンアップ
         $this->loadExistingSession();
@@ -890,7 +892,23 @@ class McpServer
         $line = (int) $args['line'];
         $condition = $args['condition'] ?? '';
 
-        // Direct connection
+        // Try persistent server first
+        if ($this->persistentClient->isServerRunning()) {
+            try {
+                $response = $this->persistentClient->setBreakpoint($filename, $line);
+
+                // Check for error or unsuccessful response
+                if ($response && strpos(strtolower($response), 'error') === false) {
+                    return 'Persistent Server - Breakpoint: ' . $response;
+                }
+            } catch (Throwable $e) {
+                // Log or handle error if needed, fallback to direct connection
+                error_log('Persistent server breakpoint failed: ' . $e->getMessage());
+            }
+            // Fallback to direct connection if persistent server fails
+        }
+
+        // Fallback: try direct connection
         if ($this->xdebugClient) {
             try {
                 $breakpointId = $this->xdebugClient->setBreakpoint($filename, $line, $condition);

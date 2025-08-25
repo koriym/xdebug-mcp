@@ -18,28 +18,28 @@ AMP-powered interactive step debugging with breakpoints and variable inspection.
 ### `./xdebug-profile <script.php>`
 Performance profiling and bottleneck analysis.
 ```bash
-./xdebug-profile src/MyClass.php
+./xdebug-profile -- php src/MyClass.php
 # Generates cachegrind format profile files
 ```
 
-### `./xdebug-coverage <script.php>`
+### `./xdebug-coverage -- php <script.php>`
 Code coverage analysis with multiple output formats.
 ```bash
-./xdebug-coverage tests/MyTest.php
+./xdebug-coverage -- php tests/MyTest.php
 # Generates HTML, XML, JSON, and text coverage reports
 ```
 
-### `./xdebug-trace <script.php>`
+### `./xdebug-trace -- php <script.php>`
 Execution flow tracing and function call analysis.
 ```bash
-./xdebug-trace problematic_script.php
+./xdebug-trace -- php problematic_script.php
 # Generates detailed execution trace files (.xt format)
 ```
 
-### `./xdebug-phpunit`
+### `./xdebug-phpunit -- php <tests/>`
 PHPUnit integration with Xdebug features.
 ```bash
-./xdebug-phpunit tests/
+./xdebug-phpunit -- php tests/
 # Runs PHPUnit tests with Xdebug integration
 ```
 
