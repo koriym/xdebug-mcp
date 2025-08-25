@@ -879,16 +879,7 @@ class McpServer
 
         $this->xdebugClient->disconnect();
 
-        $stateFile = XdebugClient::GLOBAL_STATE_FILE;
-        $existingState = [];
-        if (file_exists($stateFile)) {
-            $json = file_get_contents($stateFile);
-            $existingState = json_decode($json, true) ?? [];
-        }
-
-        $existingState['connected'] = false;
-        $existingState['sessionId'] = $this->sessionId;
-        file_put_contents($stateFile, json_encode($existingState, JSON_PRETTY_PRINT));
+        // State file is cleared by client->disconnect(); do not rewrite it here.
 
         $this->xdebugClient = null;
 
