@@ -4,8 +4,14 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp;
 
-use InvalidArgumentException;
+<?php
+
+namespace Koriym\XdebugMcp;
+
+use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use RuntimeException;
+
+// …
 
 use function array_map;
 use function array_merge;
