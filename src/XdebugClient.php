@@ -946,18 +946,25 @@ class XdebugClient
             throw new SocketException('Failed to open global state file for writing');
         }
 
-        if (flock($file, LOCK_EX)) {
-            // Truncate and write new data
-            ftruncate($file, 0);
-            rewind($file);
-            fwrite($file, json_encode($state, JSON_PRETTY_PRINT));
-            fflush($file);
+        try {
+            if (flock($file, LOCK_EX)) {
+                // Truncate and write new data
+                ftruncate($file, 0);
+                rewind($file);
+                $jsonData = json_encode($state, JSON_PRETTY_PRINT);
+                $bytesWritten = fwrite($file, $jsonData);
+                if ($bytesWritten === false || $bytesWritten !== strlen($jsonData)) {
+                    throw new SocketException('Failed to write complete data to global state file');
+                }
+                fflush($file);
+            } else {
+                throw new SocketException('Failed to acquire lock on global state file');
+            }
+        } finally {
+            // Ensure lock is always released even if exception occurs
             flock($file, LOCK_UN);
-        } else {
-            throw new SocketException('Failed to acquire lock on global state file');
+            fclose($file);
         }
-
-        fclose($file);
     }
 
     private function readStateWithLock(): array|null

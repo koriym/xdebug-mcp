@@ -31,8 +31,23 @@ class SocketException extends RuntimeException
             return in_array($this->socketErrorCode, self::CONNECTION_LOST_ERROR_CODES, true);
         }
 
-        // Fallback to string matching for backward compatibility
-        return str_contains($this->getMessage(), 'Connection lost');
+        // Improved fallback with standardized connection error patterns
+        $message = strtolower($this->getMessage());
+        $connectionLostPatterns = [
+            'connection lost',
+            'connection reset',
+            'broken pipe',
+            'connection refused',
+            'connection aborted',
+        ];
+        
+        foreach ($connectionLostPatterns as $pattern) {
+            if (str_contains($message, $pattern)) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     public function getSocketErrorCode(): int|null
