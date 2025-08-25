@@ -103,9 +103,12 @@ declare(strict_types=1);
     $validate();
     // Load autoloader from possible paths
     $autoloadPaths = [
+        // From package source (bin/ → ../vendor/autoload.php)
         __DIR__ . '/../vendor/autoload.php',
-        __DIR__ . '/../../autoload.php',
-        __DIR__ . '/../../../autoload.php', // When installed via composer
+        // From Composer shim (vendor/bin/ → ../autoload.php)  
+        dirname(__DIR__) . '/../autoload.php',
+        // When installed as dependency (deeper nesting)
+        dirname(__DIR__, 2) . '/vendor/autoload.php',
     ];
 
     foreach ($autoloadPaths as $autoloadPath) {
