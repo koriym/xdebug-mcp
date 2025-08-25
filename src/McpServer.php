@@ -35,7 +35,6 @@ use function implode;
 use function in_array;
 use function ini_get;
 use function ini_set;
-use function is_numeric;
 use function json_decode;
 use function json_encode;
 use function json_last_error;
@@ -899,14 +898,7 @@ class McpServer
     protected function setBreakpoint(array $args): string
     {
         $filename = $args['filename'];
-        $lineInput = $args['line'];
-
-        // Validate line number input
-        if (! is_numeric($lineInput) || (int) $lineInput <= 0) {
-            throw new InvalidArgumentException("Invalid line number: '{$lineInput}'. Must be a positive integer.");
-        }
-
-        $line = (int) $lineInput;
+        $line = (int) $args['line'];
         $condition = $args['condition'] ?? '';
 
         // Try persistent server first
