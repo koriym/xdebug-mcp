@@ -61,11 +61,12 @@ cp vendor/koriym/xdebug-mcp/demo.php .
 ./vendor/bin/xdebug-debug --break=demo.php:60:'$id==0' --exit-on-break -- php demo.php
 
 # 🔍 First, examine the trace file yourself:
-# Output: "📊 Trace file generated up to conditional breakpoint: /tmp/trace.1034012359.xt"
+# Output: "📊 Trace file generated up to conditional breakpoint: /tmp/trace.1034012359.xt (11 lines, 0.3KB)"
 cat /tmp/trace.1034012359.xt | head -20
 # Look for: Line 60, $id parameter, call stack leading to the issue
 
 # 🤖 Then let AI analyze the same data:
+# AI can see file size and choose appropriate reading strategy (full read vs tail/head)
 claude --continue "The trace file shows execution up to the conditional breakpoint - analyze why processUser() received ID 0"
 
 # Watch it pinpoint exactly when processUser() receives ID 0!
