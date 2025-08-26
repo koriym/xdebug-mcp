@@ -36,27 +36,20 @@ The result: AI that doesn't just help you debug—it debugs better than you ever
 # 1. Install
 composer require --dev koriym/xdebug-mcp
 
-# 2. Experience AI-powered conditional debugging
-./vendor/bin/xdebug-debug --break='test.php:10:$result==null' --json -- php test.php
-# JSON output: {"trace_file":"/tmp/trace.123.xt","lines":15,"size":0.8,"command":"php test.php"}
-
-# 3. Traditional debugging (human-readable)
-./vendor/bin/xdebug-debug --break='test.php:10:$result==null' -- php test.php
-# You get: Complete trace showing HOW $result became null + state WHEN it happened
-
-# 3. Enable AI autonomous debugging
-claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
-
-# Create a test file to debug
+# 2. Experience the magic immediately
+# Create a simple test file
 echo '<?php
 $result = "success";
 if (rand(0,1)) { $result = null; }
 echo $result;
 ?>' > test.php
 
-# Analyze execution with AI
+# Let AI analyze execution flow
 ./vendor/bin/xdebug-trace --claude -- php test.php
 claude --continue "Find why \$result becomes null in test.php"
+
+# 3. Enable AI autonomous debugging
+claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
 
 # 4. Experience conditional debugging magic
 cp vendor/koriym/xdebug-mcp/demo.php .
@@ -64,35 +57,16 @@ cp vendor/koriym/xdebug-mcp/demo.php .
 # Conditional breakpoint: Only break when $id == 0
 ./vendor/bin/xdebug-debug --break=demo.php:60:'$id==0' --exit-on-break -- php demo.php
 
-# 🔍 First, examine the trace file yourself:
-# Output: "📊 Trace file generated up to conditional breakpoint: /tmp/trace.1034012359.xt (11 lines, 0.3KB)"
-cat /tmp/trace.1034012359.xt | head -20
-# Look for: Line 60, $id parameter, call stack leading to the issue
-
-# 🤖 Then let AI analyze the same data:
-# AI can see file size and choose appropriate reading strategy (full read vs tail/head)
+# Let AI analyze the trace data
 claude --continue "The trace file shows execution up to the conditional breakpoint - analyze why processUser() received ID 0"
 
 # Watch it pinpoint exactly when processUser() receives ID 0!
 # ✅ Skips normal execution, stops only at the problematic condition  
 # 🎯 Result: "Conditional breakpoint hit!" - found the exact moment
 
-# For interactive step debugging:
-./vendor/bin/xdebug-debug demo.php
-
-# Traditional trace analysis:
+# Or analyze complete execution flow:
 ./vendor/bin/xdebug-trace -- php demo.php
-
-# 👀 Inspect trace manually first:  
-cat /tmp/trace.*.xt | head -10
-# Example trace reading:
-# Level 2: rand() called with args (0, 1) → returned 0
-# Level 1: if (0) is false → $result stays "success" 
-# Result: Human can trace the exact execution path!
-
-# 🤖 Compare with AI analysis:
 claude --continue "Analyze this trace: why didn't \$result become null?"
-# AI instantly identifies: rand() returned 0, condition false, no assignment
 ```
 
 **The magic**: Skip normal execution, catch bugs red-handed with full context.
