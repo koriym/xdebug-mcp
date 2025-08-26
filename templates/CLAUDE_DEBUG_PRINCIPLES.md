@@ -80,14 +80,11 @@ For any specific problematic code location or condition:
 2. **Then**: Read and analyze the relevant source code files
 3. **Combine**: Runtime evidence + static code analysis = complete understanding
 
-Example workflow:
-```bash
 # Step 1: Capture runtime behavior at problem point
-./bin/xdebug-debug --break=User.php:85:$id==0 --exit-on-break -- php app.php
+./bin/xdebug-debug --break='User.php:85:$id==0' --exit-on-break -- php app.php
 
 # Step 2: AI analyzes trace + reads source code
-claude --continue "Analyze the trace showing $id==0, then read User.php lines 80-90 to understand why this happens"
-```
+claude --continue 'Analyze the trace showing $id==0, then read User.php lines 80-90 to understand why this happens'
 
 This dual approach provides both the **evidence** (what actually happened) and **context** (why the code behaves this way).
 
