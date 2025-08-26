@@ -208,27 +208,6 @@ claude --continue "Analyze why total became negative"
 ./vendor/bin/xdebug-phpunit --profile tests/
 ```
 
-## Real Example: From Guesswork to Evidence
-
-### Before (The var_dump() Dance)
-```php
-var_dump($cart);     // What's in cart?
-var_dump($discount); // Check discount
-var_dump($total);    // Why is this negative?!
-die("HERE");         // Getting desperate...
-// 2 hours later: still guessing
-```
-
-### After (Intelligent Debugging)
-```bash
-./vendor/bin/xdebug-debug --break=checkout.php:89:$total<0 --claude -- php app.php
-
-# AI reports in 30 seconds:
-"Found it: At checkout.php:89, $50 discount applied to $30 cart = -$20 total
- Trace shows: removeItem() at line 67 doesn't trigger recalculateDiscount()
- Fix: Add $this->recalculateDiscount() after line 67"
-```
-
 ## Installation & Setup
 
 ### Basic Installation
