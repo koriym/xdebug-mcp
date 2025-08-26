@@ -38,9 +38,15 @@
     },
     {
       "rel": "ai-guide", 
-      "href": "../debug-guidelines.md",
+      "href": "https://koriym.github.io/xdebug-mcp/debug-guidelines.md",
       "title": "AI Debug Analysis Guidelines",
       "description": "Complete guide for AI systems analyzing Xdebug conditional debugging results"
+    },
+    {
+      "rel": "ai-principles",
+      "href": "https://koriym.github.io/xdebug-mcp/CLAUDE_DEBUG_PRINCIPLES.md",
+      "title": "Claude AI Debugging Principles",
+      "description": "Comprehensive non-invasive trace-based debugging principles for AI assistants"
     },
     {
       "rel": "self",
