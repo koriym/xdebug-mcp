@@ -800,9 +800,16 @@ final class DebugServer
 
             $latestTrace = $allTraceFiles[0];
             
-            // For exit-on-break mode: simple message with filename for AI analysis
+            // For exit-on-break mode: simple message with filename and size for AI analysis
             if ($this->options['traceOnly'] ?? false) {
-                $this->log("📊 Trace file generated up to conditional breakpoint: {$latestTrace}");
+                if (file_exists($latestTrace)) {
+                    $lines = count(file($latestTrace, FILE_IGNORE_NEW_LINES));
+                    $size = filesize($latestTrace);
+                    $sizeKB = round($size / 1024, 1);
+                    $this->log("📊 Trace file generated up to conditional breakpoint: {$latestTrace} ({$lines} lines, {$sizeKB}KB)");
+                } else {
+                    $this->log("📊 Trace file generated up to conditional breakpoint: {$latestTrace}");
+                }
             } else {
                 // For interactive mode: show detailed info
                 $this->log("📈 Trace file available: {$latestTrace}");
