@@ -42,6 +42,7 @@ use function implode;
 use function libxml_clear_errors;
 use function libxml_get_errors;
 use function libxml_use_internal_errors;
+use function ltrim;
 use function preg_match;
 use function realpath;
 use function shell_exec;
@@ -52,6 +53,7 @@ use function str_replace;
 use function str_starts_with;
 use function strlen;
 use function strtolower;
+use function strtoupper;
 use function substr;
 use function trim;
 use function usort;
@@ -68,9 +70,9 @@ use const STDERR;
  */
 final class DebugServer
 {
-    private const DEFAULT_CONNECTION_TIMEOUT = 30.0;  // Initial connection only
-    private const DEFAULT_EXECUTION_TIMEOUT = 3600.0;  // 1 hour for long debugging sessions
-    private const DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
+    private const float DEFAULT_CONNECTION_TIMEOUT = 30.0;  // Initial connection only
+    private const float DEFAULT_EXECUTION_TIMEOUT = 3600.0;  // 1 hour for long debugging sessions
+    private const float DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
 
     private DeferredFuture|null $listenerReady = null;
     private DeferredFuture|null $xdebugConnected = null;
@@ -495,6 +497,7 @@ final class DebugServer
                 $rest = $m[2];
                 $parts = explode('/', $rest);
                 $encoded = array_map('rawurlencode', $parts);
+
                 return 'file:///' . $drive . implode('/', $encoded);
             }
         }
@@ -502,6 +505,7 @@ final class DebugServer
         // POSIX: encode each segment
         $parts = explode('/', ltrim($real, '/'));
         $encoded = array_map('rawurlencode', $parts);
+
         return 'file:///' . implode('/', $encoded);
     }
 

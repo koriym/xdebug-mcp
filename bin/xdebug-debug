@@ -4,6 +4,7 @@
 declare(strict_types=1);
 
 use Koriym\XdebugMcp\DebugServer;
+use Koriym\XdebugMcp\Constants;
 
 /**
  * Parse breakpoint specifications
@@ -160,15 +161,17 @@ function parseBreakpoints(string $breakSpec): array
 
     // Use advanced breakpoints if specified, otherwise use legacy format
     if (!empty($breakpoints)) {
-        $server = new DebugServer($targetScript, 9004, null, [
+        $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, null, [
             'breakpoints' => $breakpoints,
             'command' => $command
         ]);
     } else {
-        $server = new DebugServer($targetScript, 9004, $breakpointLine, [
-            'breakpointFile' => $breakpointFile,
-            'command' => $command
-        ]);
+        // For legacy format, only pass command if it's not just the target script
+        $options = ['breakpointFile' => $breakpointFile];
+        if (count($command) > 1 || ($command[0] !== $targetScript)) {
+            $options['command'] = $command;
+        }
+        $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, $breakpointLine, $options);
     }
     $server();
 })();
