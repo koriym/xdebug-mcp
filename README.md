@@ -58,7 +58,7 @@ claude --print "Find why \$result becomes null in test.php"
 cp vendor/koriym/xdebug-mcp/demo.php .
 
 # Conditional breakpoint: Only break when $id == 0
-./vendor/bin/xdebug-debug --break=demo.php:60:'$id==0' --trace-only -- php demo.php
+./vendor/bin/xdebug-debug --break=demo.php:60:'$id==0' --exit-on-break -- php demo.php
 
 # Watch it pinpoint exactly when processUser() receives ID 0!
 # ✅ Skips normal execution, stops only at the problematic condition

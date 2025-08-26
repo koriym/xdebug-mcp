@@ -93,7 +93,7 @@ function parseBreakpoints(string $breakSpec): array
             continue;
         }
         
-        if ($parseOptions && $arg === '--trace-only') {
+        if ($parseOptions && $arg === '--exit-on-break') {
             $traceOnly = true;
             continue;
         }
@@ -106,7 +106,7 @@ function parseBreakpoints(string $breakSpec): array
             echo "  --break=SPEC     Advanced breakpoint specification\n";
             echo "  --file=FILE      File to set breakpoint in (legacy)\n";
             echo "  --line=LINE      Line number to break at (legacy)\n";
-            echo "  --trace-only     Auto-continue and output trace when condition is met\n";
+            echo "  --exit-on-break     Auto-continue and output trace when condition is met\n";
             echo "  --help, -h       Show this help\n";
             echo "\n";
             echo "Breakpoint Specification (--break=SPEC):\n";

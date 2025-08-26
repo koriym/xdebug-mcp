@@ -324,9 +324,9 @@ final class DebugServer
             // Set up conditional breakpoints if provided
             $this->setupConditionalBreakpoints();
 
-            // Check if trace-only mode - start with run instead of step_into
+            // Check if exit-on-break mode - start with run instead of step_into
             if ($this->options['traceOnly'] ?? false) {
-                $this->log('📊 Trace-only mode: starting execution and waiting for breakpoint conditions...');
+                $this->log('📊 exit-on-break mode: starting execution and waiting for breakpoint conditions...');
                 $response = $this->continueExecution();
                 if ($this->didBreak($response)) {
                     $this->log('🎯 Conditional breakpoint hit!');
