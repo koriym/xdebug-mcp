@@ -36,10 +36,20 @@
             return;
         }
 
-        // Validate -- php format
-        if (!isset($GLOBALS['argv'][1]) || $GLOBALS['argv'][1] !== '--') {
-            if (isset($GLOBALS['argv'][1]) && !str_starts_with($GLOBALS['argv'][1], '-')) {
-                fwrite(STDERR, "❌ Error: Missing '--'. Did you mean: {$scriptName} -- php {$GLOBALS['argv'][1]}?\n");
+        // Find the position of '--' delimiter, accounting for optional flags
+        $dashDashPos = array_search('--', $GLOBALS['argv']);
+        if ($dashDashPos === false) {
+            // Try to provide helpful error message
+            $nonFlagArg = null;
+            for ($i = 1; $i < count($GLOBALS['argv']); $i++) {
+                if (!str_starts_with($GLOBALS['argv'][$i], '-')) {
+                    $nonFlagArg = $GLOBALS['argv'][$i];
+                    break;
+                }
+            }
+            
+            if ($nonFlagArg !== null) {
+                fwrite(STDERR, "❌ Error: Missing '--'. Did you mean: {$scriptName} -- php {$nonFlagArg}?\n");
             } else {
                 fwrite(STDERR, "❌ Error: Use format: {$scriptName} -- php script.php [args...]\n");
             }
@@ -47,13 +57,13 @@
             exit(1);
         }
 
-        if (!isset($GLOBALS['argv'][2]) || $GLOBALS['argv'][2] !== 'php') {
-            fwrite(STDERR, "❌ Error: Second argument must be 'php'\n");
+        if (!isset($GLOBALS['argv'][$dashDashPos + 1]) || $GLOBALS['argv'][$dashDashPos + 1] !== 'php') {
+            fwrite(STDERR, "❌ Error: Argument after '--' must be 'php'\n");
             fwrite(STDERR, "Run '{$scriptName} --help' for usage information.\n");
             exit(1);
         }
 
-        if (!isset($GLOBALS['argv'][3])) {
+        if (!isset($GLOBALS['argv'][$dashDashPos + 2])) {
             fwrite(STDERR, "❌ Error: PHP script file is required\n");
             fwrite(STDERR, "Run '{$scriptName} --help' for usage information.\n");
             exit(1);

@@ -88,8 +88,9 @@ Claude automatically detects and uses project-specific debugging tools:
 ./bin/xdebug-profile     # Performance profiling
 ./bin/xdebug-coverage    # Code coverage analysis  
 ./bin/xdebug-trace       # Execution tracing
+./bin/xdebug-debug       # Interactive & conditional debugging
 ./bin/xdebug-phpunit     # PHPUnit profiling/integration
-./bin/xdebug-mcp         # MCP server integration
+./bin/xdebug-mcp         # MCP server entry point
 ```
 
 ### 📋 Before vs After Comparison
@@ -103,6 +104,7 @@ Claude automatically detects and uses project-specific debugging tools:
 - "fibonacci() consumed 3,772μs (27.6%) with 24 recursive calls"
 - "Variable $user = ['id'=>123] at line 45, becomes null at line 67"
 - "Memory usage peaked at 2.3MB during data processing loop"
+- "Conditional breakpoint hit: $id==0 occurred at processUser():60 with complete execution trace"
 
 ## 🔧 Advanced Integration
 

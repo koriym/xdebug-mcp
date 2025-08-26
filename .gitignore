@@ -4,7 +4,12 @@ composer.lock
 
 ## Cache and logs
 .phpunit.cache/
+.php-cache/
 *.log
+
+## Presentation files
+docs/presentation*.html
+docs/presentation*.md
 
 ## IDE
 .vscode/
