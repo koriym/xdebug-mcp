@@ -659,6 +659,11 @@ final class DebugServer
             return $this->sendCommand('property_get', ['n' => $expression]);
         }
 
+        // For array access like $items[0], $data['key'], $items[0][name], or $items[0][1] (multi-dimensional), use property_get
+        if (preg_match('/^\$\w+(\[[\w\'"]+\])+$/', $expression)) {
+            return $this->sendCommand('property_get', ['n' => $expression]);
+        }
+
         // For complex expressions, use eval with proper encoding
         $encoded = base64_encode($expression);
 
