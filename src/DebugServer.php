@@ -20,7 +20,9 @@ use Throwable;
 use function Amp\async;
 use function Amp\Socket\listen;
 use function array_map;
+use function array_merge;
 use function array_slice;
+use function array_unique;
 use function base64_decode;
 use function base64_encode;
 use function basename;
@@ -34,11 +36,13 @@ use function fgets;
 use function file;
 use function file_exists;
 use function filemtime;
+use function filesize;
 use function flush;
 use function fopen;
 use function fwrite;
 use function glob;
 use function implode;
+use function is_array;
 use function is_int;
 use function libxml_clear_errors;
 use function libxml_get_errors;
@@ -60,6 +64,7 @@ use function trim;
 use function usort;
 
 use const DIRECTORY_SEPARATOR;
+use const FILE_IGNORE_NEW_LINES;
 use const STDERR;
 
 /**
@@ -91,7 +96,6 @@ final class DebugServer
         if (! file_exists($targetScript)) {
             throw new InvalidArgumentException("Script not found: {$targetScript}");
         }
-
     }
 
     /**
@@ -317,7 +321,30 @@ final class DebugServer
         try {
             $this->log('🔍 Starting step trace debugging session');
 
-            // Use step_into to stop at first executable line - no breakpoint needed
+            // Set up conditional breakpoints if provided
+            $this->setupConditionalBreakpoints();
+
+            // Check if trace-only mode - start with run instead of step_into
+            if ($this->options['traceOnly'] ?? false) {
+                $this->log('📊 Trace-only mode: starting execution and waiting for breakpoint conditions...');
+                $response = $this->continueExecution();
+                if ($this->didBreak($response)) {
+                    $this->log('🎯 Conditional breakpoint hit!');
+                    // Find and display trace file for AI analysis
+                    $this->outputTraceFile();
+                    exit(0);
+                }
+
+                if ($this->isExecutionComplete($response)) {
+                    $this->log('✅ Execution completed without hitting conditional breakpoint');
+                    $this->outputTraceFile();
+                    exit(0);
+                }
+
+                return;
+            }
+
+            // Interactive mode: Use step_into to stop at first executable line
             $this->log('🚶 Starting with step_into to stop at first executable line...');
             $response = $this->stepInto();
 
@@ -329,19 +356,6 @@ final class DebugServer
             }
 
             $this->log('⏸️ Stopped at first executable line');
-
-            // Check if trace-only mode - auto-continue and wait for breakpoint
-            if ($this->options['traceOnly'] ?? false) {
-                $this->log('📊 Trace-only mode: waiting for breakpoint conditions...');
-                $response = $this->continueExecution();
-                if ($this->didBreak($response)) {
-                    if ($path = $this->finalizeTraceOnBreak()) {
-                        $this->log("📊 Trace finalized at break: {$path}");
-                    }
-                }
-
-                return;
-            }
 
             // Start interactive debugging session
             $this->startInteractiveSession();
@@ -498,7 +512,7 @@ final class DebugServer
     /**
      * Set breakpoint
      */
-    private function setBreakpoint(string $filename, int $line): string
+    private function setBreakpoint(string $filename, int $line, string|null $condition = null): string
     {
         $fileUri = $this->toFileUri($filename);
         $params = [
@@ -508,19 +522,58 @@ final class DebugServer
             'n' => $line,
         ];
 
+        // Add condition if provided
+        if ($condition !== null && trim($condition) !== '') {
+            $params['o'] = trim($condition);
+        }
+
         $response = $this->sendCommand('breakpoint_set', $params);
 
         // Check for error
         if (str_contains($response, '<error')) {
+            // Log the error for debugging
+            $this->log('⚠️ Breakpoint error: ' . $response);
+
             return 'error';
         }
 
         // Parse breakpoint ID from response
         if (preg_match('/id="([^"]*)"/', $response, $matches)) {
-            return $matches[1];
+            $breakpointId = $matches[1];
+            $conditionText = $condition ? " (condition: {$condition})" : '';
+            $this->log("✅ Breakpoint set: {$filename}:{$line}{$conditionText} [ID: {$breakpointId}]");
+
+            return $breakpointId;
         }
 
         return 'unknown';
+    }
+
+    /**
+     * Set up conditional breakpoints from options
+     */
+    private function setupConditionalBreakpoints(): void
+    {
+        if (! isset($this->options['breakpoints']) || ! is_array($this->options['breakpoints'])) {
+            return;
+        }
+
+        foreach ($this->options['breakpoints'] as $breakpoint) {
+            if (! isset($breakpoint['file'], $breakpoint['line'])) {
+                continue;
+            }
+
+            $file = $breakpoint['file'];
+            $line = (int) $breakpoint['line'];
+            $condition = $breakpoint['condition'] ?? null;
+
+            // Set the breakpoint with condition
+            $breakpointId = $this->setBreakpoint($file, $line, $condition);
+
+            if ($breakpointId === 'error') {
+                $this->log("❌ Failed to set breakpoint: {$file}:{$line}");
+            }
+        }
     }
 
     /**
@@ -727,7 +780,7 @@ final class DebugServer
         $patterns = [
             '/tmp/trace.*.xt',  // Default Xdebug pattern
             '/tmp/trace-*-' . basename($this->targetScript, '.php') . '.xt',  // Our custom pattern
-            '/tmp/trace-*.xt'  // Any trace file pattern
+            '/tmp/trace-*.xt',  // Any trace file pattern
         ];
 
         $allTraceFiles = [];
@@ -738,10 +791,10 @@ final class DebugServer
             }
         }
 
-        if (!empty($allTraceFiles)) {
+        if (! empty($allTraceFiles)) {
             // Remove duplicates and sort by modification time, get the most recent
             $allTraceFiles = array_unique($allTraceFiles);
-            usort($allTraceFiles, function($a, $b) {
+            usort($allTraceFiles, static function ($a, $b) {
                 return filemtime($b) - filemtime($a);
             });
 
@@ -1437,7 +1490,6 @@ final class DebugServer
 
         $this->log('🧹 Cleanup completed');
     }
-
 
     /**
      * Handle Claude analysis command
