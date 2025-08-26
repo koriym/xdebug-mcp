@@ -52,7 +52,7 @@ echo $result;
 
 # Analyze execution with AI
 ./vendor/bin/xdebug-trace --claude -- php test.php
-claude --print "Find why \$result becomes null in test.php"
+claude --continue "Find why \$result becomes null in test.php"
 
 # 4. Experience conditional debugging magic
 cp vendor/koriym/xdebug-mcp/demo.php .
