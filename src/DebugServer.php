@@ -78,6 +78,7 @@ final class DebugServer
     private DeferredFuture|null $xdebugConnected = null;
     private ResourceSocket|null $xdebugSocket = null;
     private ServerSocket|null $server = null;
+    private Process|null $process = null;
     private int $transactionId = 1;
     private string|null $traceFile = null;
 
@@ -90,6 +91,7 @@ final class DebugServer
         if (! file_exists($targetScript)) {
             throw new InvalidArgumentException("Script not found: {$targetScript}");
         }
+
     }
 
     /**
@@ -119,6 +121,8 @@ final class DebugServer
             throw new DebugSessionException('Debug session failed', 0, $e);
         } finally {
             $this->cleanup();
+            // Force exit after cleanup to prevent AMP event loop from continuing
+            exit(0);
         }
     }
 
@@ -241,15 +245,15 @@ final class DebugServer
             $this->log("Command: {$cmd}");
 
             // Execute with AMP Process
-            $process = Process::start($cmd);
-            $this->log('📋 Process started, PID: ' . $process->getPid());
+            $this->process = Process::start($cmd);
+            $this->log('📋 Process started, PID: ' . $this->process->getPid());
 
             // Skip process waiting for interactive debugging to avoid connection issues
             if (($this->options['traceOnly'] ?? false) || ! $this->isConnected()) {
                 // Wait for process completion with timeout
                 $executionTimeout = $this->options['executionTimeout'] ?? self::DEFAULT_EXECUTION_TIMEOUT;
                 $cancellation = new TimeoutCancellation($executionTimeout);
-                $result = $process->join($cancellation);
+                $result = $this->process->join($cancellation);
             } else {
                 // For interactive debugging, don't wait for process completion
                 $result = 0; // Mock exit code
@@ -298,8 +302,6 @@ final class DebugServer
 
             // Demo debug sequence
             $this->performDebugSequence();
-
-            $this->log('✅ Debug session complete');
         } catch (Throwable $e) {
             $this->log('❌ Debug session error: ' . $e->getMessage());
 
@@ -663,7 +665,7 @@ final class DebugServer
 
         while (true) {
             $this->displayPrompt();
-            $input = $this->readUserInput();
+            $input = $this->readUserInputWithTimeout();
 
             if ($input === null) {
                 $this->log('❌ Failed to read user input, exiting');
@@ -676,7 +678,8 @@ final class DebugServer
             }
 
             if ($this->executeUserCommand($command)) {
-                break; // Exit if quit command or execution completed
+                $this->outputTraceFile();
+                exit(0);
             }
         }
     }
@@ -693,10 +696,9 @@ final class DebugServer
     /**
      * Read user input from stdin (blocking)
      */
-    private function readUserInput(): string|null
+    private function readUserInputWithTimeout(): string|null
     {
-        // Use blocking read from STDIN
-        // This will pause execution until user enters a command
+        // Use blocking read from STDIN - let the user interact normally
         $handle = fopen('php://stdin', 'r');
         if ($handle === false) {
             return null;
@@ -706,6 +708,60 @@ final class DebugServer
         fclose($handle);
 
         return $input !== false ? $input : null;
+    }
+
+    /**
+     * Check if target process is still running
+     */
+    private function isTargetProcessRunning(): bool
+    {
+        return $this->process !== null && $this->process->isRunning();
+    }
+
+    /**
+     * Output trace file information when session ends
+     */
+    private function outputTraceFile(): void
+    {
+        // Look for trace files with various patterns
+        $patterns = [
+            '/tmp/trace.*.xt',  // Default Xdebug pattern
+            '/tmp/trace-*-' . basename($this->targetScript, '.php') . '.xt',  // Our custom pattern
+            '/tmp/trace-*.xt'  // Any trace file pattern
+        ];
+
+        $allTraceFiles = [];
+        foreach ($patterns as $pattern) {
+            $files = glob($pattern);
+            if ($files) {
+                $allTraceFiles = array_merge($allTraceFiles, $files);
+            }
+        }
+
+        if (!empty($allTraceFiles)) {
+            // Remove duplicates and sort by modification time, get the most recent
+            $allTraceFiles = array_unique($allTraceFiles);
+            usort($allTraceFiles, function($a, $b) {
+                return filemtime($b) - filemtime($a);
+            });
+
+            $latestTrace = $allTraceFiles[0];
+            $this->log("📈 Trace file available: {$latestTrace}");
+            $this->log("🔍 Analyze with: cat '{$latestTrace}'");
+
+            // Show basic trace info if file exists
+            if (file_exists($latestTrace)) {
+                $lines = count(file($latestTrace, FILE_IGNORE_NEW_LINES));
+                $size = filesize($latestTrace);
+                $this->log("📊 Trace contains {$lines} lines ({$size} bytes)");
+            }
+        } else {
+            $this->log('⚠️ No trace file found');
+            $this->log('💡 Trace files are typically saved as /tmp/trace.*.xt');
+        }
+
+        $this->log('✅ Debug session complete');
+        $this->log('👋 バイバイ');
     }
 
     /**
@@ -753,7 +809,7 @@ final class DebugServer
 
             case 'q':
             case 'quit':
-                $this->log('👋 Exiting debugger');
+                $this->log('🔚 Exiting debugger');
 
                 return true;
 
@@ -1379,28 +1435,9 @@ final class DebugServer
             $this->xdebugSocket->close();
         }
 
-        // Report trace file location with improved naming
-        $scriptName = basename($this->targetScript, '.php');
-        $tracePattern = '/tmp/trace-*-' . $scriptName . '.xt';
-        $traceFiles = glob($tracePattern);
-
-        if (! empty($traceFiles)) {
-            // Get the most recently modified trace file for this script
-            usort($traceFiles, static fn ($a, $b) => filemtime($b) <=> filemtime($a));
-            $latestTrace = $traceFiles[0];
-            $this->log("📊 Debug trace saved: {$latestTrace}");
-            $this->log('💡 Analyze execution: claude --print "Analyze trace for ' . $scriptName . ' debugging insights"');
-        } else {
-            // Fallback: look for any recent trace files
-            $allTraces = glob('/tmp/trace*.xt');
-            if (! empty($allTraces)) {
-                usort($allTraces, static fn ($a, $b) => filemtime($b) <=> filemtime($a));
-                $this->log("📊 Debug trace may be available: {$allTraces[0]}");
-            }
-        }
-
         $this->log('🧹 Cleanup completed');
     }
+
 
     /**
      * Handle Claude analysis command

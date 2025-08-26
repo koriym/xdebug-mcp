@@ -42,10 +42,30 @@ composer require --dev koriym/xdebug-mcp:1.x-dev
 
 # 3. Enable AI autonomous debugging
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
-claude --print "Find why $result becomes null in test.php"
+
+# Create a test file to debug
+echo '<?php
+$result = "success";
+if (rand(0,1)) { $result = null; }
+echo $result;
+?>' > test.php
+
+# Analyze execution with AI
+./vendor/bin/xdebug-trace --claude -- php test.php
+claude --print "Find why \$result becomes null in test.php"
+
+# 4. Experience conditional debugging magic
+cp vendor/koriym/xdebug-mcp/test/demo.php .
+
+# Use trace analysis for reliable debugging
+./vendor/bin/xdebug-trace --claude -- php demo.php
+
+# For interactive debugging (experimental):
+# ./vendor/bin/xdebug-debug demo.php
+# Note: Interactive debugging is under development
 ```
 
-Watch as AI debugs with superhuman thoroughness—analyzing every execution path, every variable state, every possibility.
+**The magic**: Skip normal execution, catch bugs red-handed with full context.
 
 ## Key Innovation: Journey + Destination
 
