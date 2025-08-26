@@ -37,7 +37,7 @@ The result: AI that doesn't just help you debug—it debugs better than you ever
 composer require --dev koriym/xdebug-mcp:1.x-dev
 
 # 2. Experience the power of conditional debugging
-./vendor/bin/xdebug-debug --break=test.php:10:$result==null -- php test.php
+./vendor/bin/xdebug-debug --break='test.php:10:$result==null' -- php test.php
 # You get: Complete trace showing HOW $result became null + state WHEN it happened
 
 # 3. Enable AI autonomous debugging
@@ -98,7 +98,7 @@ claude --continue "Analyze this trace: why didn't \$result become null?"
 Unlike IDEs where you guess where to set breakpoints, our conditional debugging provides:
 
 ```bash
-./vendor/bin/xdebug-debug --break=Cart.php:89:$total<0 -- php checkout.php
+./vendor/bin/xdebug-debug --break='Cart.php:89:$total<0' -- php checkout.php
 ```
 
 **You get both:**
@@ -134,13 +134,13 @@ This is intelligence no IDE provides in one shot, enabling AI to debug more effe
 **Breakpoint Syntax: `file.php:line:condition`**
 ```bash
 # Stop when specific condition occurs, with full trace to that point
-./vendor/bin/xdebug-debug --break=User.php:85:$id==0 -- php register.php
+./vendor/bin/xdebug-debug --break='User.php:85:$id==0' -- php register.php
 
 # Multiple conditions (comma-separated)
-./vendor/bin/xdebug-debug --break=Auth.php:42:$token==null,User.php:85:$id==0 -- php app.php
+./vendor/bin/xdebug-debug --break='Auth.php:42:$token==null,User.php:85:$id==0' -- php app.php
 
 # Auto-exit with trace file output
-./vendor/bin/xdebug-debug --break=Cart.php:89:$total<0 --exit-on-break -- php app.php
+./vendor/bin/xdebug-debug --break='Cart.php:89:$total<0' --exit-on-break -- php app.php
 claude --continue "Analyze why total became negative"
 ```
 
@@ -238,14 +238,15 @@ claude --print "Find why users get logged out randomly"
 ### Catching Intermittent Bugs
 ```bash
 # Instead of hoping to catch it, guarantee you will
-./vendor/bin/xdebug-debug --break=api.php:*:$response==null -- php test.php
+./vendor/bin/xdebug-debug --break='api.php:123:$response==null' -- php test.php
 # Captures: Complete trace to first null response
+# Note: Line wildcards (*) are not yet supported - use specific line numbers
 ```
 
 ### Finding Race Conditions
 ```bash
 # Catch timing-sensitive bugs
-./vendor/bin/xdebug-debug --break=session.php:45:$timestamp<time() -- php app.php
+./vendor/bin/xdebug-debug --break='session.php:45:$timestamp<time()' -- php app.php
 # Result: Exact sequence of events leading to race condition
 ```
 
