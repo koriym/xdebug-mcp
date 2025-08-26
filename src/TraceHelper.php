@@ -19,6 +19,7 @@ use function fwrite;
 use function getenv;
 use function glob;
 use function implode;
+use function ini_get;
 use function ini_set;
 use function preg_replace;
 use function rtrim;
@@ -92,10 +93,11 @@ class TraceHelper
 
         $uniqueId = uniqid(date('Ymd_His_'), true);
         $safeTestName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $testName);
-        self::$traceFile = "/tmp/trace_{$safeTestName}_{$uniqueId}.xt";
+        // Use Xdebug configured output directory
+        $xdebugOutputDir = ini_get('xdebug.output_dir') ?: '/tmp';
+        self::$traceFile = $xdebugOutputDir . "/trace_{$safeTestName}_{$uniqueId}.xt";
 
-        // Configure Xdebug tracing
-        ini_set('xdebug.trace_output_dir', '/tmp');
+        // Configure Xdebug tracing (do not modify output_dir - use configured value)
         ini_set('xdebug.trace_format', '1');
         ini_set('xdebug.use_compression', '0');
 

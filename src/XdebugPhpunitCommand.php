@@ -284,7 +284,7 @@ class XdebugPhpunitCommand
             return '-dxdebug.mode=profile ' .
                    '-dxdebug.start_with_request=yes ' .
                    "-dxdebug.output_dir={$this->xdebugOutputDirEscaped} " .
-                   '-dxdebug.profiler_output_name=cachegrind.out.%t ' .
+                   '-dxdebug.profiler_output_name=cachegrind.out.%%s ' .
                    '-dxdebug.use_compression=0';
         }
 

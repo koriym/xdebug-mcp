@@ -139,15 +139,22 @@ The server exposes 42 tools via MCP across three main categories:
 - Xdebug extension (with debug, profile, and coverage modes enabled)
 
 ## Xdebug Configuration
+
+**IMPORTANT: This project uses port 9004 (not 9003) to avoid conflicts with IDEs**
+
 For full functionality, configure php.ini:
 ```ini
 zend_extension=xdebug
 xdebug.mode=debug,profile,coverage  ; Enable all modes
 xdebug.start_with_request=yes
 xdebug.client_host=127.0.0.1
-xdebug.client_port=9003
+xdebug.client_port=9004             ; Uses 9004 (IDEs use 9003)
 xdebug.output_dir=/tmp              ; For profile files
 ```
+
+**Port Usage:**
+- **IDE/Editors (VS Code, PhpStorm)**: Port 9003
+- **This Xdebug MCP Server**: Port 9004 (conflict-free)
 
 ## Key Features Integration
 - **Without Xdebug session**: Profiling and coverage work standalone using Xdebug functions
@@ -314,11 +321,12 @@ This project prioritizes **execution-time trace analysis** over traditional code
 **IMPORTANT: When asked to analyze, debug, or understand any PHP file, ALWAYS use appropriate Xdebug tools automatically unless explicitly told otherwise.**
 
 #### Available Xdebug Tools:
+- `./bin/xdebug-debug` - Interactive step debugging with breakpoints
 - `./bin/xdebug-profile` - Performance profiling
 - `./bin/xdebug-coverage` - Code coverage analysis  
 - `./bin/xdebug-trace` - Execution tracing
-- `./bin/xdebug-server` - Start MCP server
 - `./bin/xdebug-mcp` - MCP client interface
+- `./bin/debug-server` - Persistent debug server (AMPHP-based, background service)
 
 #### Automatic Tool Selection:
 
@@ -330,8 +338,13 @@ This project prioritizes **execution-time trace analysis** over traditional code
 - User: "Check test coverage", "Which lines are tested", "Coverage analysis"
 - AI automatically runs: `./bin/xdebug-coverage path/to/file.php`
 
+**For Interactive Step Debugging:**
+- User: "Debug this code", "Set breakpoints", "Step through execution", "Inspect variables"
+- AI automatically runs: `./bin/xdebug-debug path/to/file.php`
+- **IMPORTANT**: Requires XdebugClient to be listening first (see Step Debugging Workflow below)
+
 **For Execution Flow Analysis:**
-- User: "Trace execution", "Show function calls", "Debug this script"
+- User: "Trace execution", "Show function calls", "Analyze execution flow"
 - AI automatically runs: `./bin/xdebug-trace path/to/file.php`
 
 **For General Analysis (choose most appropriate):**
@@ -340,9 +353,10 @@ This project prioritizes **execution-time trace analysis** over traditional code
 - Then optionally: `./bin/xdebug-trace path/to/file.php` for detailed flow
 
 **Example workflows:**
-1. User: "Analyze test/debug_test.php" → AI runs `./bin/xdebug-profile test/debug_test.php`
-2. User: "Check coverage of my tests" → AI runs `./bin/xdebug-coverage test/MyTest.php`
-3. User: "Trace this function execution" → AI runs `./bin/xdebug-trace src/MyClass.php`
+1. User: "Debug this buggy script" → AI runs `./bin/xdebug-debug test/buggy_script.php`
+2. User: "Analyze test/debug_test.php" → AI runs `./bin/xdebug-profile test/debug_test.php`
+3. User: "Check coverage of my tests" → AI runs `./bin/xdebug-coverage test/MyTest.php`
+4. User: "Trace this function execution" → AI runs `./bin/xdebug-trace src/MyClass.php`
 
 Always use these tools proactively to provide runtime insights rather than static code analysis alone.
 
@@ -489,3 +503,78 @@ Before responding to PHP debugging requests, verify:
 - **Professional**: No debug code left in production accidentally
 
 Follow these principles for all PHP debugging tasks to ensure consistent, professional, and effective trace-based debugging practices.
+
+## Interactive Step Debugging Workflow
+
+### Critical Connection Requirements
+
+**IMPORTANT**: Interactive step debugging with `./bin/xdebug-debug` requires proper connection timing and setup.
+
+### Step Debugging Connection Protocol
+
+**Required Sequence for Step Debugging:**
+
+1. **Start XdebugClient first** (must be listening before script execution)
+   ```bash
+   php test_new_xdebug_debug.php &
+   ```
+
+2. **Verify port availability**
+   ```bash
+   lsof -i :9004  # Must show PHP process LISTENING
+   ```
+
+3. **Execute target script with Xdebug**
+   ```bash
+   ./bin/xdebug-debug target_script.php
+   ```
+
+### Connection Architecture
+
+**Xdebug Connection Model:**
+- **Xdebug (script)**: Acts as **client** - connects to debugger
+- **XdebugClient**: Acts as **server** - listens on port 9004
+- **Protocol**: DBGp over TCP socket
+- **Port**: 9004 (conflict-free with IDEs that use 9003)
+
+### Common Connection Failures
+
+**❌ Wrong Order:**
+```bash
+./bin/xdebug-debug script.php    # Script runs and exits
+php test_new_xdebug_debug.php &  # Too late - no connection
+```
+
+**✅ Correct Order:**
+```bash
+php test_new_xdebug_debug.php &  # XdebugClient listening
+lsof -i :9004                    # Verify LISTEN state  
+./bin/xdebug-debug script.php    # Script connects to waiting client
+```
+
+### Verification Steps
+
+**Successful Connection Indicators:**
+- XdebugClient shows: `[XdebugClient] Xdebug connected!`
+- Script pauses at first line waiting for debugger commands
+- Breakpoints can be set and variables inspected
+
+**Failed Connection Indicators:**
+- Script executes immediately without pausing
+- No connection messages in XdebugClient output
+- `Address already in use` errors when starting XdebugClient
+
+### Step Debugging vs Trace Analysis
+
+**When to use Interactive Step Debugging:**
+- Need to inspect specific variable states at breakpoints
+- Require step-by-step execution control (stepInto, stepOver)
+- Interactive analysis of execution flow
+
+**When to use Trace Analysis (preferred):**
+- General debugging and bug identification
+- Performance analysis  
+- Complete execution flow analysis
+- Non-invasive analysis without connection complexity
+
+**Default Recommendation**: Use trace-based debugging first, step debugging only when interactive control is specifically needed.

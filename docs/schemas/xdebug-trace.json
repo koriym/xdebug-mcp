@@ -1,0 +1,223 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-trace.json",
+  "title": "Xdebug Trace Result",
+  "description": "AI-optimized trace data for PHP debugging and execution flow analysis. Specialized for N+1 problem detection, recursion analysis, and database performance monitoring.",
+  "type": "object",
+  "properties": {
+    "trace_file": {
+      "type": "string",
+      "description": "Absolute path to the generated Xdebug trace file (.xt format)",
+      "pattern": "^/.+\\.xt$"
+    },
+    "total_lines": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total lines in trace file. Use this to decide optimal reading strategy for AI analysis."
+    },
+    "unique_functions": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of unique functions executed. Indicates application complexity and code coverage."
+    },
+    "max_call_depth": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Maximum function call depth reached. Critical for detecting recursion issues and stack depth analysis."
+    },
+    "database_queries": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total database queries executed. Essential for N+1 problem detection and database performance analysis."
+    },
+    "specification": {
+      "type": "string",
+      "format": "uri",
+      "const": "https://xdebug.org/docs/trace",
+      "description": "Official Xdebug trace format documentation"
+    }
+  },
+  "required": ["trace_file", "total_lines", "unique_functions", "max_call_depth", "database_queries", "specification"],
+  "additionalProperties": false,
+  
+  "links": [
+    {
+      "rel": "specification",
+      "href": "https://xdebug.org/docs/trace",
+      "title": "Official Xdebug Trace Format Documentation",
+      "description": "Complete documentation of Xdebug trace file format and configuration options"
+    },
+    {
+      "rel": "self",
+      "href": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-trace.json",
+      "title": "JSON Schema for Xdebug Trace Results",
+      "description": "This schema definition with AI strategies and usage guidelines"
+    },
+    {
+      "rel": "related",
+      "href": "https://github.com/koriym/xdebug-mcp",
+      "title": "Xdebug MCP Server Repository",
+      "description": "Source code and documentation for the Xdebug MCP Server project"
+    },
+    {
+      "rel": "example",
+      "href": "{trace_file}",
+      "title": "Generated Trace File",
+      "description": "The actual Xdebug trace file (.xt) containing execution data",
+      "templated": true
+    },
+    {
+      "rel": "tool",
+      "href": "mcp://xdebug_start_trace",
+      "title": "MCP Tool: Start Trace",
+      "description": "MCP tool to generate trace data programmatically"
+    },
+    {
+      "rel": "command",
+      "href": "file:///bin/xdebug-trace",
+      "title": "Command Line Tool", 
+      "description": "CLI command to generate trace data with this schema"
+    },
+    {
+      "rel": "section",
+      "href": "#x-ai-strategies",
+      "title": "AI Reading Strategies",
+      "description": "Intelligent file reading strategies based on trace file size"
+    },
+    {
+      "rel": "section", 
+      "href": "#x-trace-format",
+      "title": "Trace Format Guide",
+      "description": "Detailed explanation of Xdebug trace file column structure"
+    },
+    {
+      "rel": "section",
+      "href": "#x-debugging-capabilities", 
+      "title": "Debugging Capabilities",
+      "description": "Complete list of debugging and analysis capabilities"
+    },
+    {
+      "rel": "section",
+      "href": "#x-mcp-integration",
+      "title": "MCP Integration Guide",
+      "description": "How to use this schema with MCP tools and workflow"
+    }
+  ],
+  
+  "x-ai-strategies": {
+    "reading_strategy": {
+      "small_files": {
+        "condition": "total_lines < 1000",
+        "approach": "Read entire file with Read tool",
+        "rationale": "Small files can be processed entirely without performance impact"
+      },
+      "medium_files": {
+        "condition": "1000 <= total_lines <= 10000",
+        "approach": "1. Use Grep tool to find relevant sections, 2. Read specific sections with Read tool (offset/limit)",
+        "rationale": "Balance between comprehensive analysis and performance"
+      },
+      "large_files": {
+        "condition": "total_lines > 10000",
+        "approach": "1. Use Grep with patterns to identify key areas, 2. Read targeted sections only",
+        "rationale": "Focus on specific issues rather than full trace analysis"
+      }
+    },
+    
+    "search_patterns": {
+      "function_analysis": {
+        "description": "Find specific function calls and their arguments/returns",
+        "patterns": [
+          "grep 'function_name' trace.xt",
+          "grep -A1 -B1 'function_name' trace.xt",
+          "grep '\\t0\\t.*function_name' trace.xt"
+        ]
+      },
+      "return_values": {
+        "description": "Find function return values",
+        "patterns": [
+          "grep '\\tR\\t' trace.xt",
+          "grep -A1 '\\t1\\t' trace.xt"
+        ]
+      },
+      "error_detection": {
+        "description": "Identify potential issues in execution flow",
+        "patterns": [
+          "grep -i 'error\\|exception\\|warning' trace.xt",
+          "grep -A5 -B5 'error\\|exception' trace.xt"
+        ]
+      },
+      "performance_analysis": {
+        "description": "Find slow or memory-intensive operations",
+        "patterns": [
+          "grep -E '\\t[0-9]{7,}\\t' trace.xt",
+          "sort -k4 -n trace.xt | tail -20"
+        ]
+      },
+      "call_hierarchy": {
+        "description": "Analyze function call depth and relationships",
+        "patterns": [
+          "grep '^[0-9]\\+\\t' trace.xt | head -100",
+          "awk -F'\\t' '{print $1\"\\t\"$6}' trace.xt"
+        ]
+      }
+    },
+    
+    "analysis_workflow": {
+      "step1": {
+        "name": "Initial Assessment",
+        "action": "Check total_lines to determine reading strategy"
+      },
+      "step2": {
+        "name": "Target Identification", 
+        "action": "Use grep patterns to locate relevant functions or issues"
+      },
+      "step3": {
+        "name": "Detailed Analysis",
+        "action": "Read specific sections with context (use -A/-B flags or Read tool with offset)"
+      },
+      "step4": {
+        "name": "Cross-Reference",
+        "action": "Compare with source code to understand execution flow"
+      }
+    }
+  },
+  
+  "x-trace-format": {
+    "description": "Xdebug trace format understanding for AI analysis",
+    "format_type": "Computerized Format (Format 1) - Tab separated",
+    "columns": {
+      "0": "Level - Function call depth (0=main, 1=nested, etc.)",
+      "1": "Function Number - Unique identifier for this function call",  
+      "2": "Entry/Exit - 0=Entry, 1=Exit, R=Return value",
+      "3": "Time Index - Execution timestamp (float)",
+      "4": "Memory Usage - Current memory consumption (bytes)",
+      "5": "Function Name - Name of executed function",
+      "6": "User-Defined Flag - 1=user function, 0=internal function",
+      "7": "Include Filename - File path for includes/requires",
+      "8": "Filename - Current executing file",
+      "9": "Line Number - Source code line number",
+      "10+": "Parameters/Return - Function arguments or return value"
+    },
+    "key_patterns": {
+      "function_entry": "Level\\tFuncNum\\t0\\tTime\\tMemory\\tFunctionName\\t...\\tParams",
+      "function_exit": "Level\\tFuncNum\\t1\\tTime\\tMemory",
+      "return_value": "Level\\tFuncNum\\tR\\t\\t\\t\\t\\t\\t\\t\\treturn_value"
+    }
+  },
+  
+  "x-debugging-capabilities": {
+    "execution_flow": "Track complete function call hierarchy and execution order",
+    "variable_inspection": "See actual parameter values and return values at runtime",
+    "performance_profiling": "Identify bottlenecks through timing and memory analysis", 
+    "bug_detection": "Find logic errors by comparing expected vs actual execution paths",
+    "memory_analysis": "Track memory usage patterns and identify potential leaks",
+    "recursive_analysis": "Detect infinite recursion or excessive call depth",
+    "io_monitoring": "Identify file operations and database queries in execution flow"
+  },
+  
+  "x-mcp-integration": {
+    "tool_name": "xdebug_start_trace",
+    "usage": "Call via MCP to generate trace data, then analyze returned trace_file",
+    "workflow": "1. Generate trace via MCP, 2. Analyze returned file path, 3. Use reading strategy based on total_lines"
+  }
+}

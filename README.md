@@ -1,295 +1,253 @@
 # PHP Xdebug MCP Server
 
-> Enable AI to use Xdebug for PHP debugging like we do
+  <img width="256" alt="xdebug-mcp" src="https://koriym.github.io/xdebug-mcp/logo.jpeg" />
 
-<img width="256" alt="xdebug-mcp" src="https://koriym.github.io/xdebug-mcp/logo.jpeg" />
+**Enable AI to Debug PHP Autonomously, Beyond Human IDE Capabilities**
 
-MCP server enabling AI control of PHP Xdebug debugging, profiling, and coverage analysis.
+[![Debugging](https://img.shields.io/badge/AI_Native-YES-green)](https://github.com/koriym/xdebug-mcp)
+[![Runtime](https://img.shields.io/badge/Runtime_Data-YES-green)](https://github.com/koriym/xdebug-mcp)
+[![var_dump](https://img.shields.io/badge/var__dump()-NO-red)](https://github.com/koriym/xdebug-mcp)
+[![Guesswork](https://img.shields.io/badge/Guesswork-NO-red)](https://github.com/koriym/xdebug-mcp)
 
-## Features
+---
 
-- **25 Working MCP Tools**: Profiling, coverage, and non-session debugging automation
-- **Trace-based Debugging**: AI analyzes runtime execution data (no var_dump needed)
-- **IDE Compatible**: Port 9004 avoids conflicts with PhpStorm/VS Code (9003)
-- **Command Line Tools**: 6 standalone debugging utilities
+## The Vision: AI That Debugs Better Than Humans
 
-## Working Tool Categories
+Imagine AI that doesn't just help you debug, but debugs autonomously—setting intelligent breakpoints, analyzing execution paths, and finding issues faster than any human with an IDE ever could.
 
-- **Profiling**: Performance analysis, function timing, Cachegrind output (4 tools)
-- **Coverage**: Line/function coverage, HTML/XML reports, PHPUnit integration (5 tools)
-- **Statistics**: Memory usage, stack depth, timing information, function stack (6 tools)
-- **Error Collection**: PHP error tracking and analysis (3 tools)
-- **Tracing**: Function call tracing and monitoring (5 tools)
-- **Configuration**: Xdebug settings and feature management (2 tools)
+## The Problem
 
-**Note**: Session-dependent debugging tools (breakpoints, step execution, variable inspection) require additional integration work and are not currently available through simple command-line testing.
+When you ask AI to debug PHP today, it adds `var_dump()` to your code—the same technique from 30 years ago. Why? Because **AI is debugging blind**, only able to read static code and guess what happens at runtime.
 
-## Installation
+## The Solution
+
+This MCP server enables AI to debug PHP autonomously with capabilities beyond human limitations:
+
+- **Conditional breakpoints with full trace**: Capture complete execution history up to problem points
+- **Programmatic control**: Execute thousands of debugging operations in seconds
+- **Pattern recognition**: Identify subtle bugs humans would miss
+- **Complete visibility**: See every variable, every call, every state change
+
+The result: AI that doesn't just help you debug—it debugs better than you ever could.
+
+## Quick Start
 
 ```bash
-# Install as development dependency
+# 1. Install
+composer require --dev koriym/xdebug-mcp:1.x-dev
+
+# 2. Experience the power of conditional debugging
+./vendor/bin/xdebug-debug --break=test.php:10:$result==null -- php test.php
+# You get: Complete trace showing HOW $result became null + state WHEN it happened
+
+# 3. Enable AI autonomous debugging
+claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
+claude --print "Find why $result becomes null in test.php"
+```
+
+Watch as AI debugs with superhuman thoroughness—analyzing every execution path, every variable state, every possibility.
+
+## Key Innovation: Journey + Destination
+
+Unlike IDEs where you guess where to set breakpoints, our conditional debugging provides:
+
+```bash
+./vendor/bin/xdebug-debug --break=Cart.php:89:$total<0 -- php checkout.php
+```
+
+**You get both:**
+- 🛤️ **The Journey**: Complete execution trace showing HOW the total became negative
+- 📍 **The Destination**: All variable states WHEN it happened
+
+This is intelligence no IDE provides in one shot, enabling AI to debug more effectively than humans.
+
+## What AI Can Do That IDEs Can't
+
+| Capability | Human with IDE | AI with Xdebug MCP |
+|------------|---------------|-------------------|
+| **Finding intermittent bugs** | Set breakpoint, hope to catch it | Set conditional breakpoint, capture every occurrence with full trace |
+| **Analyzing complex flows** | Step through manually, miss details | Process entire execution trace, identify all patterns |
+| **Performance analysis** | Profile once, check obvious bottlenecks | Analyze thousands of call paths, find hidden inefficiencies |
+| **Coverage blind spots** | Run coverage, check report | Identify untested edge cases and generate test cases |
+| **Race conditions** | Nearly impossible to catch | Set time-based conditionals, capture exact timing issues |
+
+## Command Line Tools
+
+### `xdebug-trace` - Complete Execution Flow
+```bash
+# Generate trace file
+./vendor/bin/xdebug-trace -- php app.php
+# Output: /tmp/xdebug_trace_*.xt (every function call, param, return value)
+
+# With immediate AI analysis
+./vendor/bin/xdebug-trace --claude -- php app.php
+```
+
+### `xdebug-debug` - Intelligent Conditional Debugging
+```bash
+# Stop when specific condition occurs, with full trace to that point
+./vendor/bin/xdebug-debug --break=User.php:85:$id==0 -- php register.php
+
+# Multiple conditions
+./vendor/bin/xdebug-debug --break=Auth.php:42:$token==null,User.php:85:$id==0 -- php app.php
+
+# With AI analysis
+./vendor/bin/xdebug-debug --break=Cart.php:89:$total<0 --claude -- php app.php
+```
+
+### `xdebug-profile` - Performance Analysis
+```bash
+# Microsecond-precision profiling
+./vendor/bin/xdebug-profile api_endpoint.php
+# Output: /tmp/cachegrind.out.*
+
+# AI-powered optimization suggestions
+./vendor/bin/xdebug-profile --claude api_endpoint.php
+```
+
+### `xdebug-coverage` - Test Coverage
+```bash
+# See exactly what code is tested
+./vendor/bin/xdebug-coverage tests/
+# Output: coverage/index.html
+```
+
+### `xdebug-phpunit` - Test Debugging
+```bash
+# Trace test execution
+./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
+
+# Profile test performance
+./vendor/bin/xdebug-phpunit --profile tests/
+```
+
+## Real Example: From var_dump() to Victory
+
+### Before (The var_dump() Dance)
+```php
+var_dump($cart);     // What's in cart?
+var_dump($discount); // Check discount
+var_dump($total);    // Why is this negative?!
+die("HERE");         // Getting desperate...
+// 2 hours later: still guessing
+```
+
+### After (Intelligent Debugging)
+```bash
+./vendor/bin/xdebug-debug --break=checkout.php:89:$total<0 --claude -- php app.php
+
+# AI reports in 30 seconds:
+"Found it: At checkout.php:89, $50 discount applied to $30 cart = -$20 total
+ Trace shows: removeItem() at line 67 doesn't trigger recalculateDiscount()
+ Fix: Add $this->recalculateDiscount() after line 67"
+```
+
+## Installation & Setup
+
+### Basic Installation
+```bash
 composer require --dev koriym/xdebug-mcp:1.x-dev
 ```
 
-## Setup
-
-### MCP Configuration
-
+### AI Integration (Recommended)
 ```bash
-# Claude Desktop
+# Enable MCP for Claude Desktop
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
 
-# Verify
-claude mcp list
-```
-
-### Xdebug Configuration (Recommended)
-
-#### php.ini: Comment out Xdebug for optimal performance
-```ini
-# RECOMMENDED: Comment out in php.ini for better performance
-;zend_extension=xdebug
-# Other Xdebug settings are handled automatically by bin/xdebug-* commands
-```
-
-#### Why this is recommended
-- Xdebug impacts performance when always enabled and is unnecessary for daily development
-- The bin/xdebug-* commands load Xdebug only when needed for debugging/profiling
-- Production environments should never have Xdebug permanently enabled
-
-### AI Configuration (Recommended)
-
-Note: The commands below target Claude Desktop. If you use a different AI client, adapt the MCP add/list commands and system prompt location accordingly.
-
-#### Teach AI to use runtime analysis instead of guesswork
-
-```bash
-# Project-specific: Copy debugging principles to your project
+# Teach AI to prefer traces over var_dump
 cp vendor/koriym/xdebug-mcp/templates/CLAUDE_DEBUG_PRINCIPLES.md ./
 echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
 ```
 
-**System-wide (optional):**
+## Two Modes of Operation
+
+### 1. Direct CLI Usage
 ```bash
-# Apply to ALL PHP projects
-cp vendor/koriym/xdebug-mcp/templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/CLAUDE.md
+# Generate debug data
+./vendor/bin/xdebug-trace -- php script.php
+
+# Feed to any AI
+cat /tmp/xdebug_trace_*.xt | your-ai-tool
+# Works with ChatGPT, Claude, Gemini, any LLM
 ```
 
-**What this does:**
-- Stops AI from using `var_dump()` or `echo` for debugging
-- Teaches AI to use `./vendor/bin/xdebug-trace` instead
-- Enables data-driven analysis from actual execution traces
-
-## Quick Start
-
-**1. Start MCP server:**
+### 2. Autonomous AI Debugging (via MCP)
 ```bash
-./vendor/bin/xdebug-server
-# ✅ Server starts on port 9004, ready for AI commands
+# AI hunts bugs independently
+claude --print "Find why users get logged out randomly"
+
+# AI autonomously:
+# - Identifies relevant code paths
+# - Sets conditional breakpoints
+# - Captures execution traces
+# - Analyzes patterns
+# - Reports root cause with fix
 ```
 
-**2. Ask AI to debug with runtime data:**
+## Common Debugging Patterns
+
+### Catching Intermittent Bugs
 ```bash
-# In another terminal - AI analyzes actual execution instead of guessing
-claude --print "Trace test/debug_test.php and identify the performance bottleneck"
-# ✅ AI automatically runs xdebug-trace and provides data-driven analysis
+# Instead of hoping to catch it, guarantee you will
+./vendor/bin/xdebug-debug --break=api.php:*:$response==null -- php test.php
+# Captures: Complete trace to first null response
 ```
 
-**3. Zero-config PHPUnit debugging:**
+### Finding Race Conditions
 ```bash
-# AI-assisted test debugging with automatic Xdebug setup
-./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
-# ✅ TraceExtension auto-injected, traces specific test method
+# Catch timing-sensitive bugs
+./vendor/bin/xdebug-debug --break=session.php:45:$timestamp<time() -- php app.php
+# Result: Exact sequence of events leading to race condition
 ```
 
-## Verification
-
-**Test AI integration:**
+### Performance Bottlenecks
 ```bash
-# Performance profiling
-claude --print "Profile test/debug_test.php and show the slowest functions"
-# ✅ AI runs xdebug-profile and analyzes cachegrind output
-
-# Coverage analysis  
-claude --print "Analyze code coverage for test/debug_test.php"
-# ✅ AI runs xdebug-coverage and reports untested code paths
+# Stop guessing, start measuring
+./vendor/bin/xdebug-profile --claude slow_endpoint.php
+# AI: "fetchUser() called 847 times (72% of execution time), add caching"
 ```
 
-**Manual verification (optional):**
+## The 43 Tools Arsenal
+
+- **Execution Tracing** (4): Complete function flow with all data
+- **Conditional Debugging** (11): Intelligent breakpoints with full traces
+- **Performance Profiling** (4): Microsecond-precision timing analysis
+- **Code Coverage** (6): Exact test coverage mapping
+- **Diagnostics** (22): Memory, errors, stack, configuration
+
+Each tool provides a different lens into runtime behavior. Combined, they give AI superhuman debugging capabilities.
+
+## Working with Debug Data
+
+Trace files are portable and universal:
 ```bash
-# Direct tool usage
-./vendor/bin/xdebug-trace test/debug_test.php
-./vendor/bin/xdebug-profile test/debug_test.php  
-./vendor/bin/xdebug-coverage test/debug_test.php
+# Generated files (plain text)
+/tmp/xdebug_trace_*.xt     # Execution traces
+/tmp/cachegrind.out.*       # Performance profiles
+coverage/index.html         # Coverage reports
+
+# Use with any tool or AI
+cat /tmp/xdebug_trace_*.xt | analyze
+# Compatible with ChatGPT, Claude, Gemini, custom scripts
 ```
 
-**Expected results:**
-- Trace files showing exact function call sequences and variable values
-- Performance data revealing O(2^n) fibonacci inefficiency 
-- Coverage reports highlighting untested code paths
-- AI providing data-driven analysis instead of static code guessing
+## Why This Matters
 
+Every time AI uses `xdebug_start_trace()` instead of suggesting `var_dump()`, we're not just solving bugs faster—we're elevating the entire profession. We're moving from guesswork to detective work, from assumptions to facts.
 
-## Usage
+## The Paradigm Shift
 
-### Command Line Tools
+| Traditional Debugging | AI-Native Debugging |
+|----------------------|-------------------|
+| Human guesses where to look | AI analyzes everything |
+| Manual stepping through code | Automatic pattern recognition |
+| Limited by attention span | Processes unlimited data |
+| Misses subtle patterns | Finds hidden correlations |
+| var_dump() and pray | Trace and know |
 
-- `xdebug-server` - Start MCP server (port 9004)
-- `xdebug-mcp` - Core MCP server 
-- `xdebug-trace` - Generate execution traces
-- `xdebug-profile` - Performance profiling  
-- `xdebug-coverage` - Code coverage analysis
-- `xdebug-phpunit` - PHPUnit with selective Xdebug analysis
+## Resources
 
-### Basic Commands
-
-```bash
-# Recommended: Use bin/xdebug-* commands
-./vendor/bin/xdebug-trace script.php
-./vendor/bin/xdebug-profile script.php
-./vendor/bin/xdebug-coverage script.php
-```
-
-**Manual approach (step debugging example):**
-```bash
-# Step debugging example (manual). For traces/profiles/coverage, prefer ./vendor/bin/xdebug-*
-# or set the appropriate xdebug.mode values and ini flags manually.
-php -dzend_extension=xdebug -dxdebug.mode=debug -dxdebug.client_port=9004 script.php
-```
-
-### AI-Powered Examples
-
-### 1. Execution Tracing
-```bash
-claude --print "Run test/debug_test.php and analyze the execution patterns"
-# AI automatically chooses ./vendor/bin/xdebug-trace and provides analysis:
-# ✅ Trace complete: /tmp/xdebug_trace_20250821_044930.xt (64 lines)
-# 📊 Analysis: O(2^n) Fibonacci inefficiency, stable memory usage, microsecond-level metrics
-```
-
-### 2. Performance Profiling
-```bash
-claude --print "Profile the performance of test/debug_test.php"
-# AI automatically uses ./vendor/bin/xdebug-profile:
-# ✅ Profile complete: /tmp/cachegrind.out.1755719364
-# 📊 Size: 1.9K, Functions: 29, Calls: 28, identifies bottlenecks
-```
-
-### 3. Code Coverage Analysis
-```bash
-claude --print "Analyze code coverage for test/debug_test.php"
-# AI automatically uses ./vendor/bin/xdebug-coverage:
-# ✅ Coverage complete: HTML report generated
-# 📊 Coverage: 85.2% lines, 92.1% functions, identifies untested code paths
-```
-
-### 4. Step Debugging
-```bash
-claude --print "Debug test/debug_test.php, break at line 15 and show variable values"
-# AI sets breakpoint and provides debugging session:
-# ✅ Breakpoint set at test/debug_test.php:15
-# 📊 Variables at breakpoint:
-# | Variable | Type   | Value                    |
-# |----------|--------|--------------------------|
-# | $n       | int    | 6                        |
-# | $result  | int    | 8                        |
-# | $user    | array  | ['name'=>'John','age'=>30] |
-```
-
-### 5. PHPUnit Testing
-```bash
-# Debug PHPUnit tests (zero configuration required)
-./vendor/bin/xdebug-phpunit tests/Unit/McpServerTest.php::testConnect
-```
-
-### xdebug-phpunit Usage
-
-Zero-configuration PHPUnit with automatic Xdebug tracing or profiling:
-
-```bash
-# Trace specific test method (default mode)
-./vendor/bin/xdebug-phpunit tests/UserTest.php::testLogin
-
-# Profile entire test file
-./vendor/bin/xdebug-phpunit --profile tests/UserTest.php
-
-# Trace tests matching filter
-./vendor/bin/xdebug-phpunit --filter=testUserAuth
-
-# Show effective configuration (transparency)
-./vendor/bin/xdebug-phpunit --dry-run tests/UserTest.php
-
-# Verbose logging for debugging
-./vendor/bin/xdebug-phpunit --verbose tests/UserTest.php
-```
-
-**Auto-injection:** TraceExtension is automatically injected into a temporary phpunit.xml (no manual setup required)
-
-**Output:**
-- Trace mode: `/tmp/trace_*.xt` (execution traces)
-- Profile mode: `/tmp/cachegrind.out.*` (performance data)
-
-## 25 Working Tools
-
-### Profiling (4 tools)
-- **xdebug_start_profiling**: Start profiling execution
-- **xdebug_stop_profiling**: Stop profiling and return results
-- **xdebug_get_profile_info**: Get current profiling information
-- **xdebug_analyze_profile**: Analyze profiling data from file
-
-### Coverage (5 tools)
-- **xdebug_start_coverage**: Start code coverage tracking
-- **xdebug_stop_coverage**: Stop code coverage tracking
-- **xdebug_get_coverage**: Get code coverage data
-- **xdebug_analyze_coverage**: Analyze coverage data and generate report
-- **xdebug_coverage_summary**: Get coverage summary statistics
-
-### Statistics (6 tools)
-- **xdebug_get_memory_usage**: Get current memory usage information
-- **xdebug_get_peak_memory_usage**: Get peak memory usage information
-- **xdebug_get_stack_depth**: Get current stack depth level
-- **xdebug_get_time_index**: Get time index since script start
-- **xdebug_get_function_stack**: Get detailed function call stack with timing and memory data
-- **xdebug_info**: Get detailed Xdebug configuration and diagnostic information
-
-### Error Collection (3 tools)
-- **xdebug_start_error_collection**: Start collecting PHP errors, notices, and warnings
-- **xdebug_stop_error_collection**: Stop collecting errors and return collected data
-- **xdebug_get_collected_errors**: Get currently collected error messages
-
-### Tracing (5 tools)
-- **xdebug_start_trace**: Start function call tracing
-- **xdebug_stop_trace**: Stop function call tracing and return trace data
-- **xdebug_get_tracefile_name**: Get the filename of the current trace file
-- **xdebug_start_function_monitor**: Start monitoring specific functions
-- **xdebug_stop_function_monitor**: Stop function monitoring and return monitored calls
-
-### Configuration (2 tools)
-- **xdebug_call_info**: Get information about the calling context
-- **xdebug_print_function_stack**: Print formatted function stack trace
-
-## Session-Dependent Tools (Not Available via CLI)
-
-The following 17 tools require active debugging sessions and are not currently available through simple command-line testing:
-
-- xdebug_connect, xdebug_disconnect
-- xdebug_set_breakpoint, xdebug_remove_breakpoint, xdebug_list_breakpoints
-- xdebug_step_into, xdebug_step_over, xdebug_step_out, xdebug_continue
-- xdebug_get_stack, xdebug_get_variables, xdebug_eval
-- xdebug_set_exception_breakpoint, xdebug_set_watch_breakpoint
-- xdebug_get_features, xdebug_set_feature, xdebug_get_feature
-
-
-## Troubleshooting
-
-- Check `claude mcp list` 
-- Verify Xdebug installation: `php -m | grep xdebug`
-- Port conflicts: xdebug-mcp uses 9004, IDEs use 9003
-
-
-## Links
-
-- [Templates & Deployment Guide](templates/README.md)
-- [Xdebug Docs](https://xdebug.org/docs/)
-- [MCP Specification](https://modelcontextprotocol.io/)
-- [Claude Desktop MCP](https://docs.anthropic.com/claude/docs/mcp)
+- 📖 [**MOTIVATION.md**](MOTIVATION.md) - The story and philosophy behind this project
+- 📚 [Xdebug Documentation](https://xdebug.org/docs/)
+- 🔧 [MCP Specification](https://modelcontextprotocol.io/)
+- 💡 [Templates & Examples](templates/)
