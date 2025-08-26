@@ -63,7 +63,7 @@ Runtime-based approach:
 ./bin/xdebug-phpunit --filter=testUserAuth
 
 # MCP server for advanced debugging
-./bin/xdebug-server
+./bin/xdebug-mcp
 ```
 
 **Automatic Tool Selection:**
