@@ -78,11 +78,15 @@ claude --continue "Analyze why processUser() received ID 0 and trace the executi
 ./vendor/bin/xdebug-trace -- php demo.php
 
 # 👀 Inspect trace manually first:  
-cat /tmp/trace.*.xt | grep -A5 -B5 "processUser"
-# See the actual execution flow and parameter values
+cat /tmp/trace.*.xt | head -10
+# Example trace reading:
+# Level 2: rand() called with args (0, 1) → returned 0
+# Level 1: if (0) is false → $result stays "success" 
+# Result: Human can trace the exact execution path!
 
 # 🤖 Compare with AI analysis:
-claude --print "Analyze the trace file and identify potential issues"
+claude --continue "Analyze this trace: why didn't \$result become null?"
+# AI instantly identifies: rand() returned 0, condition false, no assignment
 ```
 
 **The magic**: Skip normal execution, catch bugs red-handed with full context.
@@ -248,6 +252,43 @@ claude --print "Find why users get logged out randomly"
 # Stop guessing, start measuring
 ./vendor/bin/xdebug-profile --claude slow_endpoint.php
 # AI: "fetchUser() called 847 times (72% of execution time), add caching"
+```
+
+## Reading Trace Files Like a Detective
+
+**Trace File Format (.xt):**
+```
+Level FuncID Time     Memory   Function   UserDef  Filename:Line  Args/Return
+2     1      0.000329 396784   rand       0        test.php:3     0  1
+2     1      1        0.000337 396848                              R  0
+```
+
+**What Each Column Means:**
+- **Level**: Call stack depth (1=main, 2=nested function)
+- **FuncID**: Unique function call identifier  
+- **Time**: Execution timestamp (microseconds)
+- **Memory**: Current memory usage (bytes)
+- **Function**: Function name being called/returned
+- **UserDef**: 1=your code, 0=built-in PHP function
+- **Args/Return**: Function parameters or return value (R)
+
+**Human Reading Strategy:**
+1. **Follow the Level**: Track call hierarchy depth
+2. **Watch Memory**: Spot memory leaks or excessive usage
+3. **Time Gaps**: Identify slow operations
+4. **Return Values**: See what functions actually returned
+5. **Arguments**: Verify correct parameters were passed
+
+**Example Detective Work:**
+```bash
+# Find when variable became null
+cat trace.xt | grep -C3 "null"
+
+# Track specific function calls  
+cat trace.xt | grep "calculateTotal"
+
+# Memory usage progression
+cat trace.xt | awk '{print $4}' | head -20
 ```
 
 ## The 43 Tools Arsenal
