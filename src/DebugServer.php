@@ -231,14 +231,14 @@ final class DebugServer
                 // Insert Xdebug parameters into the php command
                 if ($command[0] === 'php') {
                     $scriptName = basename($this->targetScript, '.php');
-                    $traceFile = '/tmp/trace-' . date('Ymd-His') . '-' . $scriptName . '.xt';
+                    $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
                     $cmd = sprintf(
                         'XDEBUG_TRIGGER=1 php -dzend_extension=xdebug ' .
                         '-dxdebug.mode=debug,trace ' .
                         '-dxdebug.client_host=127.0.0.1 ' .
                         '-dxdebug.client_port=%d ' .
                         '-dxdebug.start_with_request=trigger ' .
-                        '-dxdebug.trace_output_name=trace-%s ' .
+                        '-dxdebug.trace_output_name=trace-%%s.xt ' .
                         '-dxdebug.trace_format=1 %s',
                         $this->debugPort,
                         $scriptName,
@@ -251,14 +251,14 @@ final class DebugServer
             } else {
                 // Default: simple script execution
                 $scriptName = basename($this->targetScript, '.php');
-                $traceFile = '/tmp/trace-' . date('Ymd-His') . '-' . $scriptName . '.xt';
+                $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
                 $cmd = sprintf(
                     'XDEBUG_TRIGGER=1 php -dzend_extension=xdebug ' .
                     '-dxdebug.mode=debug,trace ' .
                     '-dxdebug.client_host=127.0.0.1 ' .
                     '-dxdebug.client_port=%d ' .
                     '-dxdebug.start_with_request=trigger ' .
-                    '-dxdebug.trace_output_name=trace-%s ' .
+                    '-dxdebug.trace_output_name=trace-%%s.xt ' .
                     '-dxdebug.trace_format=1 %s',
                     $this->debugPort,
                     $scriptName,
