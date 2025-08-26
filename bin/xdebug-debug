@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 use Koriym\XdebugMcp\DebugServer;
 use Koriym\XdebugMcp\Constants;
+use Koriym\XdebugMcp\Exceptions\InvalidLineException;
 
 /**
  * Parse breakpoint specifications
@@ -34,17 +35,17 @@ function parseBreakpoints(string $breakSpec): array
         }
         
         if ($line <= 0) {
-            throw new RuntimeException("Invalid line number: $line in $file");
+            throw new InvalidLineException("Invalid line number: $line in $file");
         }
         
-        // Validate line number against actual file content
-        $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        // Validate line number against actual file content (include empty lines)
+        $lines = file($file, FILE_IGNORE_NEW_LINES);
         if ($lines === false) {
-            throw new RuntimeException("Could not read file: $file");
+            throw new InvalidArgumentException("Could not read file: $file");
         }
         $maxLine = count($lines);
         if ($line > $maxLine) {
-            throw new RuntimeException("Line $line does not exist in $file (file has $maxLine lines)");
+            throw new InvalidLineException("Line $line does not exist in $file (file has $maxLine lines)");
         }
         
         $breakpoints[] = [

@@ -62,7 +62,7 @@ Runtime-based approach:
 ./bin/xdebug-phpunit --profile tests/UserTest.php
 ./bin/xdebug-phpunit --filter=testUserAuth
 
-# MCP server for advanced debugging
+# MCP server entry point
 ./bin/xdebug-mcp
 ```
 

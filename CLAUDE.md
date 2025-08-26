@@ -53,7 +53,7 @@ php tests/fake/FakeProfilingDemo.php    # Demo profiling and coverage features
 
 ### Running the MCP Server
 ```bash
-./bin/xdebug-mcp             # Start the MCP server directly
+./bin/xdebug-mcp             # MCP server entry point
 php bin/xdebug-mcp           # Alternative way to start server
 php bin/xdebug-mcp --help    # Show available options
 
@@ -325,8 +325,7 @@ This project prioritizes **execution-time trace analysis** over traditional code
 - `./bin/xdebug-profile` - Performance profiling
 - `./bin/xdebug-coverage` - Code coverage analysis  
 - `./bin/xdebug-trace` - Execution tracing
-- `./bin/xdebug-mcp` - MCP client interface
-- `./bin/debug-server` - Persistent debug server (AMPHP-based, background service)
+- `./bin/xdebug-mcp` - MCP server entry point
 
 #### Automatic Tool Selection:
 
