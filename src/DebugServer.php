@@ -812,7 +812,8 @@ final class DebugServer
                     if ($this->options['jsonOutput'] ?? false) {
                         // JSON output for AI consumption
                         $commandParts = $this->options['command'] ?? ['php', $this->targetScript];
-                        $command = implode(' ', $commandParts);
+                        $escapedCommandParts = array_map('escapeshellarg', $commandParts);
+                        $command = implode(' ', $escapedCommandParts);
 
                         echo json_encode([
                             'trace_file' => $latestTrace,
