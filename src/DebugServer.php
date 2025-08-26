@@ -44,6 +44,7 @@ use function glob;
 use function implode;
 use function is_array;
 use function is_int;
+use function json_encode;
 use function libxml_clear_errors;
 use function libxml_get_errors;
 use function libxml_use_internal_errors;
@@ -807,17 +808,17 @@ final class DebugServer
                     $lines = count(file($latestTrace, FILE_IGNORE_NEW_LINES));
                     $size = filesize($latestTrace);
                     $sizeKB = round($size / 1024, 1);
-                    
+
                     if ($this->options['jsonOutput'] ?? false) {
                         // JSON output for AI consumption
                         $commandParts = $this->options['command'] ?? ['php', $this->targetScript];
                         $command = implode(' ', $commandParts);
-                        
+
                         echo json_encode([
                             'trace_file' => $latestTrace,
                             'lines' => $lines,
                             'size' => $sizeKB,
-                            'command' => $command
+                            'command' => $command,
                         ]) . "\n";
                     } else {
                         $this->log("📊 Trace file generated up to conditional breakpoint: {$latestTrace} ({$lines} lines, {$sizeKB}KB)");
@@ -828,7 +829,7 @@ final class DebugServer
                             'trace_file' => $latestTrace,
                             'lines' => 0,
                             'size' => 0,
-                            'command' => implode(' ', $this->options['command'] ?? ['php', $this->targetScript])
+                            'command' => implode(' ', $this->options['command'] ?? ['php', $this->targetScript]),
                         ]) . "\n";
                     } else {
                         $this->log("📊 Trace file generated up to conditional breakpoint: {$latestTrace}");
