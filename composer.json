@@ -1,7 +1,11 @@
 {
     "name": "koriym/xdebug-mcp",
-    "description": "MCP server for controlling PHP Xdebug debugging sessions",
+    "version": "0.1.0",
+    "description": "Universal PHP Xdebug MCP Server with AI-optimized debugging support",
     "type": "library",
+    "keywords": ["xdebug", "debugging", "php", "mcp", "ai", "trace", "profiling"],
+    "homepage": "https://koriym.github.io/xdebug-mcp/",
+    "license": "MIT",
     "require": {
         "php": "^8.1",
         "ext-sockets": "*",
