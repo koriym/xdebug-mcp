@@ -50,8 +50,8 @@
 /mcp.json export-ignore
 
 # Keep important files in export
-!/CHANGELOG.md
-!/README.md
-!/CLAUDE.md
-!/LICENSE
-!/composer.json
+\!CHANGELOG.md
+\!README.md
+\!CLAUDE.md
+\!LICENSE
+\!composer.json
