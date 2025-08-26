@@ -76,9 +76,9 @@ use const SOL_TCP;
 
 class XdebugClient
 {
-    public const string GLOBAL_STATE_FILE = Constants::GLOBAL_STATE_FILE;
-    public const int DEFAULT_PORT = Constants::XDEBUG_DEBUG_PORT;
-    public const string DEFAULT_HOST = Constants::DEFAULT_HOST;
+    public const GLOBAL_STATE_FILE = Constants::GLOBAL_STATE_FILE;
+    public const DEFAULT_PORT = Constants::XDEBUG_DEBUG_PORT;
+    public const DEFAULT_HOST = Constants::DEFAULT_HOST;
     private const int SOCKET_TIMEOUT_SEC = 5;
     private const int SESSION_TIMEOUT_SEC = 300; // 5 minutes
 
