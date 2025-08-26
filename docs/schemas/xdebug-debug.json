@@ -44,8 +44,8 @@
     },
     {
       "rel": "ai-principles",
-      "href": "https://koriym.github.io/xdebug-mcp/CLAUDE_DEBUG_PRINCIPLES.md",
-      "title": "Claude AI Debugging Principles",
+      "href": "https://koriym.github.io/xdebug-mcp/ai-debugging-with-debugger.md",
+      "title": "AI Debugging with Debugger Principles",
       "description": "Comprehensive non-invasive trace-based debugging principles for AI assistants"
     },
     {
