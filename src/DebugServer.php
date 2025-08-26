@@ -39,6 +39,7 @@ use function fopen;
 use function fwrite;
 use function glob;
 use function implode;
+use function is_int;
 use function libxml_clear_errors;
 use function libxml_get_errors;
 use function libxml_use_internal_errors;
@@ -116,8 +117,12 @@ final class DebugServer
 
             // Check if line starts with a lowercase letter
             if (preg_match('/^[a-z]/', $line)) {
-                // Skip function/class declarations - look for actual execution
-                if (str_starts_with($line, 'function ') || str_starts_with($line, 'class ')) {
+                // Skip function/class declarations and declare statements - look for actual execution
+                if (
+                    str_starts_with($line, 'function ') ||
+                    str_starts_with($line, 'class ') ||
+                    str_starts_with($line, 'declare(')
+                ) {
                     continue;
                 }
 
@@ -239,9 +244,12 @@ final class DebugServer
                         '-dxdebug.client_port=%d ' .
                         '-dxdebug.start_with_request=trigger ' .
                         '-dxdebug.trace_output_name=trace-%%s.xt ' .
-                        '-dxdebug.trace_format=1 %s',
+                        '-dxdebug.trace_format=1 ' .
+                        '-dxdebug.log=/tmp/xdebug.log ' .
+                        '-dxdebug.log_level=7 ' .
+                        '-dxdebug.connect_timeout_ms=5000 ' .
+                        '%s',
                         $this->debugPort,
-                        $scriptName,
                         implode(' ', array_map('escapeshellarg', array_slice($command, 1))),
                     );
                     $this->traceFile = $traceFile;
@@ -259,9 +267,12 @@ final class DebugServer
                     '-dxdebug.client_port=%d ' .
                     '-dxdebug.start_with_request=trigger ' .
                     '-dxdebug.trace_output_name=trace-%%s.xt ' .
-                    '-dxdebug.trace_format=1 %s',
+                    '-dxdebug.trace_format=1 ' .
+                    '-dxdebug.log=/tmp/xdebug.log ' .
+                    '-dxdebug.log_level=7 ' .
+                    '-dxdebug.connect_timeout_ms=5000 ' .
+                    '%s',
                     $this->debugPort,
-                    $scriptName,
                     escapeshellarg($this->targetScript),
                 );
                 $this->traceFile = $traceFile;
@@ -274,14 +285,27 @@ final class DebugServer
             $process = Process::start($cmd);
             $this->log('📋 Process started, PID: ' . $process->getPid());
 
-            // Wait for process completion with timeout
-            $executionTimeout = $this->options['executionTimeout'] ?? self::DEFAULT_EXECUTION_TIMEOUT;
-            $cancellation = new TimeoutCancellation($executionTimeout);
-            $result = $process->join($cancellation);
+            // Skip process waiting for interactive debugging to avoid connection issues
+            if (($this->options['traceOnly'] ?? false) || ! $this->isConnected()) {
+                // Wait for process completion with timeout
+                $executionTimeout = $this->options['executionTimeout'] ?? self::DEFAULT_EXECUTION_TIMEOUT;
+                $cancellation = new TimeoutCancellation($executionTimeout);
+                $result = $process->join($cancellation);
+            } else {
+                // For interactive debugging, don't wait for process completion
+                $result = 0; // Mock exit code
+            }
 
-            $stdout = $result->getStdout();
-            $stderr = $result->getStderr();
-            $exitCode = $result->getExitCode();
+            // Handle case where join() returns int instead of ProcessResult
+            if (is_int($result)) {
+                $exitCode = $result;
+                $stdout = '';
+                $stderr = '';
+            } else {
+                $stdout = $result->getStdout();
+                $stderr = $result->getStderr();
+                $exitCode = $result->getExitCode();
+            }
 
             if ($stdout) {
                 echo "\n[SCRIPT OUTPUT]\n{$stdout}\n";
@@ -447,6 +471,11 @@ final class DebugServer
             throw new RuntimeException('No active Xdebug connection');
         }
 
+        // Additional check for connection readability
+        if (! $this->xdebugSocket->isReadable()) {
+            throw new RuntimeException('Xdebug connection lost or not readable');
+        }
+
         // Build full command with transaction ID
         $transactionId = $this->getNextTransactionId();
         $fullCommand = "{$command} -i {$transactionId}";
@@ -458,7 +487,11 @@ final class DebugServer
 
         $fullCommand .= "\0";
 
-        $this->xdebugSocket->write($fullCommand);
+        try {
+            $this->xdebugSocket->write($fullCommand);
+        } catch (Throwable $writeError) {
+            throw new RuntimeException('Failed to write to stream: ' . $writeError->getMessage(), 0, $writeError);
+        }
 
         try {
             $response = $this->readDbgpFrame($this->xdebugSocket);
@@ -492,7 +525,9 @@ final class DebugServer
      */
     private function isConnected(): bool
     {
-        return $this->xdebugSocket !== null && ! $this->xdebugSocket->isClosed();
+        return $this->xdebugSocket !== null
+            && ! $this->xdebugSocket->isClosed()
+            && $this->xdebugSocket->isWritable();
     }
 
     /**
@@ -789,12 +824,8 @@ final class DebugServer
         try {
             $response = $this->stepInto();
 
-            // Check if we hit a breakpoint and finalize trace
-            if ($this->didBreak($response)) {
-                if ($path = $this->finalizeTraceOnBreak()) {
-                    $this->log("📊 Trace finalized at step-break: {$path}");
-                }
-            }
+            // Note: Trace finalization disabled as it causes eval parse errors
+            // Trace is already enabled via Xdebug configuration and continues throughout debug session
 
             if ($this->isExecutionComplete($response)) {
                 $this->log('✅ Execution completed');
@@ -809,7 +840,18 @@ final class DebugServer
         } catch (Throwable $e) {
             $this->log('⚠️ Step command encountered error: ' . $e->getMessage());
 
-            // Try to recover by checking if we're still connected
+            // Check if this is a connection error (broken pipe, connection closed, etc.)
+            if (
+                str_contains($e->getMessage(), 'Broken pipe') ||
+                str_contains($e->getMessage(), 'Connection closed') ||
+                str_contains($e->getMessage(), 'Failed to write to stream')
+            ) {
+                $this->log('🔚 Debug session ended due to connection issues');
+
+                return true; // End session gracefully
+            }
+
+            // Try to recover only for non-connection errors
             if ($this->isConnected()) {
                 $this->log('🔄 Connection still active, trying continue to next executable line...');
                 try {
@@ -952,6 +994,12 @@ final class DebugServer
      */
     private function handleListCommand(): void
     {
+        if (! $this->isConnected()) {
+            $this->log('📄 Cannot list: Debug session ended');
+
+            return;
+        }
+
         $this->log('📄 Current location:');
         $this->displayCurrentState();
     }
@@ -977,6 +1025,13 @@ final class DebugServer
      */
     private function displayCurrentState(): void
     {
+        // Skip display if connection is not available
+        if (! $this->isConnected()) {
+            $this->log('📍 Cannot display state: Connection not available');
+
+            return;
+        }
+
         try {
             // Get and display stack info
             $stackInfo = $this->getStack();
@@ -1232,10 +1287,12 @@ final class DebugServer
         // Close Xdebug connection
         if ($this->xdebugSocket && ! $this->xdebugSocket->isClosed()) {
             try {
-                // Send detach command
-                $this->sendCommand('detach');
+                // Only send detach if connection is still writable
+                if ($this->xdebugSocket->isWritable()) {
+                    $this->sendCommand('detach');
+                }
             } catch (Throwable) {
-                // Ignore cleanup errors
+                // Ignore cleanup errors - connection may already be broken
             }
 
             $this->xdebugSocket->close();
