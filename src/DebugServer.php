@@ -330,7 +330,7 @@ final class DebugServer
                 $response = $this->continueExecution();
                 if ($this->didBreak($response)) {
                     $this->log('🎯 Conditional breakpoint hit!');
-                    // Find and display trace file for AI analysis
+                    // Output trace file for AI analysis and exit cleanly
                     $this->outputTraceFile();
                     exit(0);
                 }
@@ -799,22 +799,27 @@ final class DebugServer
             });
 
             $latestTrace = $allTraceFiles[0];
-            $this->log("📈 Trace file available: {$latestTrace}");
-            $this->log("🔍 Analyze with: cat '{$latestTrace}'");
-
-            // Show basic trace info if file exists
-            if (file_exists($latestTrace)) {
-                $lines = count(file($latestTrace, FILE_IGNORE_NEW_LINES));
-                $size = filesize($latestTrace);
-                $this->log("📊 Trace contains {$lines} lines ({$size} bytes)");
+            
+            // For exit-on-break mode: just output the filename for AI analysis
+            if ($this->options['traceOnly'] ?? false) {
+                echo $latestTrace . "\n";
+            } else {
+                // For interactive mode: show detailed info
+                $this->log("📈 Trace file available: {$latestTrace}");
+                if (file_exists($latestTrace)) {
+                    $lines = count(file($latestTrace, FILE_IGNORE_NEW_LINES));
+                    $size = filesize($latestTrace);
+                    $this->log("📊 Trace contains {$lines} lines ({$size} bytes)");
+                }
+                $this->log('✅ Debug session complete');
             }
         } else {
-            $this->log('⚠️ No trace file found');
-            $this->log('💡 Trace files are typically saved as /tmp/trace.*.xt');
+            if (!($this->options['traceOnly'] ?? false)) {
+                $this->log('⚠️ No trace file found');
+                $this->log('💡 Trace files are typically saved as /tmp/trace.*.xt');
+                $this->log('✅ Debug session complete');
+            }
         }
-
-        $this->log('✅ Debug session complete');
-        $this->log('👋 バイバイ');
     }
 
     /**
