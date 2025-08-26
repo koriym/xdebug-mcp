@@ -61,11 +61,12 @@ cp vendor/koriym/xdebug-mcp/demo.php .
 ./vendor/bin/xdebug-debug --break=demo.php:60:'$id==0' --exit-on-break -- php demo.php
 
 # 🔍 First, examine the trace file yourself:
-cat /tmp/trace.*.xt | head -20
+# The command outputs just the filename: /tmp/trace.1034012359.xt
+cat /tmp/trace.1034012359.xt | head -20
 # Look for: Line 60, $id parameter, call stack leading to the issue
 
 # 🤖 Then let AI analyze the same data:
-claude --continue "Analyze why processUser() received ID 0 and trace the execution flow"
+claude --continue "Analyze /tmp/trace.1034012359.xt and explain why processUser() received ID 0"
 
 # Watch it pinpoint exactly when processUser() receives ID 0!
 # ✅ Skips normal execution, stops only at the problematic condition  
