@@ -60,7 +60,6 @@ use function trim;
 use function usort;
 
 use const DIRECTORY_SEPARATOR;
-use const FILE_IGNORE_NEW_LINES;
 use const STDERR;
 
 /**
@@ -91,46 +90,6 @@ final class DebugServer
         if (! file_exists($targetScript)) {
             throw new InvalidArgumentException("Script not found: {$targetScript}");
         }
-
-        // Auto-detect first executable line if not specified
-        if ($this->initialBreakpointLine === null) {
-            $this->initialBreakpointLine = $this->findFirstExecutableLine($targetScript);
-        }
-    }
-
-    /**
-     * Find first executable line (starts with lowercase letter)
-     */
-    private function findFirstExecutableLine(string $filename): int
-    {
-        $lines = file($filename, FILE_IGNORE_NEW_LINES);
-        if ($lines === false) {
-            return 3; // fallback
-        }
-
-        for ($i = 0; $i < count($lines); $i++) {
-            $line = trim($lines[$i]);
-
-            if (empty($line)) {
-                continue;
-            }
-
-            // Check if line starts with a lowercase letter
-            if (preg_match('/^[a-z]/', $line)) {
-                // Skip function/class declarations and declare statements - look for actual execution
-                if (
-                    str_starts_with($line, 'function ') ||
-                    str_starts_with($line, 'class ') ||
-                    str_starts_with($line, 'declare(')
-                ) {
-                    continue;
-                }
-
-                return $i + 1; // 1-based line number
-            }
-        }
-
-        return 3; // fallback if no executable line found
     }
 
     /**
@@ -356,41 +315,18 @@ final class DebugServer
         try {
             $this->log('🔍 Starting step trace debugging session');
 
-            if ($this->initialBreakpointLine !== null) {
-                // Set initial breakpoint (support custom breakpoint file)
-                $breakpointFile = $this->options['breakpointFile'] ?? $this->targetScript;
-                $this->log("🔴 Setting initial breakpoint at {$breakpointFile}:{$this->initialBreakpointLine}");
-                $breakpointId = $this->setBreakpoint($breakpointFile, $this->initialBreakpointLine);
+            // Use step_into to stop at first executable line - no breakpoint needed
+            $this->log('🚶 Starting with step_into to stop at first executable line...');
+            $response = $this->stepInto();
 
-                if ($breakpointId !== 'error') {
-                    $this->log("✅ Breakpoint set: ID {$breakpointId}");
-                    $this->log('▶️ Continuing to first breakpoint...');
-                    $this->continueExecution();
-                } else {
-                    $this->log('❌ Failed to set breakpoint');
-                    // Fall back to step_into from start
-                    $this->log('🚶 Starting with step_into from first line...');
-                    $response = $this->stepInto();
-                    if ($this->isExecutionComplete($response)) {
-                        $this->log('✅ Script completed');
+            // Check if already completed (empty script?)
+            if ($this->isExecutionComplete($response)) {
+                $this->log('✅ Script completed immediately');
 
-                        return;
-                    }
-                }
-            } else {
-                // No breakpoint - use step_into to stop at first line
-                $this->log('🚶 No initial breakpoint. Starting with step_into to stop at first line...');
-                $response = $this->stepInto();
-
-                // Check if already completed (empty script?)
-                if ($this->isExecutionComplete($response)) {
-                    $this->log('✅ Script completed immediately');
-
-                    return;
-                }
-
-                $this->log('⏸️ Stopped at first executable line');
+                return;
             }
+
+            $this->log('⏸️ Stopped at first executable line');
 
             // Check if trace-only mode - auto-continue and wait for breakpoint
             if ($this->options['traceOnly'] ?? false) {
@@ -710,7 +646,7 @@ final class DebugServer
     private function startInteractiveSession(): void
     {
         $this->log('🎮 Starting interactive debugging session');
-        $this->log('Available commands: s(tep), c(ontinue), p <var>, bt, l(ist), claude, q(uit)');
+        $this->log('Available commands: s(tep), o(ver), c(ontinue), p <var>, bt, l(ist), claude, q(uit)');
 
         while (true) {
             $this->displayPrompt();
@@ -772,6 +708,10 @@ final class DebugServer
             case 's':
             case 'step':
                 return $this->handleStepCommand();
+
+            case 'o':
+            case 'over':
+                return $this->handleStepOverCommand();
 
             case 'c':
             case 'continue':
@@ -854,6 +794,65 @@ final class DebugServer
                 $this->log('🔚 Debug session ended due to connection issues');
 
                 return true; // End session gracefully
+            }
+
+            // Try to recover only for non-connection errors
+            if ($this->isConnected()) {
+                $this->log('🔄 Connection still active, trying continue to next executable line...');
+                try {
+                    $response = $this->continueExecution();
+                    if ($this->isExecutionComplete($response)) {
+                        $this->log('✅ Execution completed');
+
+                        return true;
+                    }
+
+                    $this->displayCurrentState();
+
+                    return false;
+                } catch (Throwable $retryException) {
+                    $this->log('❌ Recovery failed: ' . $retryException->getMessage());
+                }
+            }
+
+            $this->log('🔚 Debug session ended due to connection issues');
+
+            return true;
+        }
+    }
+
+    /**
+     * Handle step over command
+     */
+    private function handleStepOverCommand(): bool
+    {
+        $this->log('👣 Stepping over current instruction...');
+
+        try {
+            $response = $this->stepOver();
+
+            if ($this->isExecutionComplete($response)) {
+                $this->log('✅ Execution completed');
+
+                return true;
+            }
+
+            // Display current state after step
+            $this->displayCurrentState();
+
+            return false;
+        } catch (Throwable $e) {
+            $this->log('⚠️ Step over command encountered error: ' . $e->getMessage());
+
+            // Check if this is a connection error
+            if (
+                str_contains($e->getMessage(), 'Broken pipe') ||
+                str_contains($e->getMessage(), 'Connection closed') ||
+                str_contains($e->getMessage(), 'Failed to write to stream')
+            ) {
+                $this->log('🔚 Debug session ended due to connection issues');
+
+                return true;
             }
 
             // Try to recover only for non-connection errors
@@ -1015,7 +1014,8 @@ final class DebugServer
     private function displayHelp(): void
     {
         $this->log('🆘 Available commands:');
-        $this->log('  s, step     - Execute next line');
+        $this->log('  s, step     - Execute next line (step into)');
+        $this->log('  o, over     - Execute next line (step over)');
         $this->log('  c, continue - Continue execution');
         $this->log('  p <var>     - Print variable value');
         $this->log('  bt          - Show backtrace');
