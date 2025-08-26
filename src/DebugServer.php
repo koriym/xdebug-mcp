@@ -800,9 +800,9 @@ final class DebugServer
 
             $latestTrace = $allTraceFiles[0];
             
-            // For exit-on-break mode: just output the filename for AI analysis
+            // For exit-on-break mode: simple message with filename for AI analysis
             if ($this->options['traceOnly'] ?? false) {
-                echo $latestTrace . "\n";
+                $this->log("📊 Trace file generated up to conditional breakpoint: {$latestTrace}");
             } else {
                 // For interactive mode: show detailed info
                 $this->log("📈 Trace file available: {$latestTrace}");
