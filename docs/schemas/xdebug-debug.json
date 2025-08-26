@@ -23,7 +23,7 @@
     "command": {
       "type": "string",
       "description": "Complete command used to generate this trace. Enables reproduction and context understanding.",
-      "pattern": "^.*xdebug-debug.*"
+      "minLength": 1
     }
   },
   "required": ["trace_file", "lines", "size", "command"],
