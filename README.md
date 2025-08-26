@@ -59,17 +59,30 @@ cp vendor/koriym/xdebug-mcp/demo.php .
 
 # Conditional breakpoint: Only break when $id == 0
 ./vendor/bin/xdebug-debug --break=demo.php:60:'$id==0' --exit-on-break -- php demo.php
+
+# 🔍 First, examine the trace file yourself:
+cat /tmp/trace.*.xt | head -20
+# Look for: Line 60, $id parameter, call stack leading to the issue
+
+# 🤖 Then let AI analyze the same data:
 claude --continue "Analyze why processUser() received ID 0 and trace the execution flow"
 
 # Watch it pinpoint exactly when processUser() receives ID 0!
-# ✅ Skips normal execution, stops only at the problematic condition
+# ✅ Skips normal execution, stops only at the problematic condition  
 # 🎯 Result: "Conditional breakpoint hit!" - found the exact moment
 
 # For interactive step debugging:
 ./vendor/bin/xdebug-debug demo.php
 
 # Traditional trace analysis:
-./vendor/bin/xdebug-trace --claude -- php demo.php
+./vendor/bin/xdebug-trace -- php demo.php
+
+# 👀 Inspect trace manually first:  
+cat /tmp/trace.*.xt | grep -A5 -B5 "processUser"
+# See the actual execution flow and parameter values
+
+# 🤖 Compare with AI analysis:
+claude --print "Analyze the trace file and identify potential issues"
 ```
 
 **The magic**: Skip normal execution, catch bugs red-handed with full context.
