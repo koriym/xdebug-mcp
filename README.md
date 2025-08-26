@@ -34,7 +34,7 @@ The result: AI that doesn't just help you debug—it debugs better than you ever
 
 ```bash
 # 1. Install
-composer require --dev koriym/xdebug-mcp:1.x-dev
+composer require --dev koriym/xdebug-mcp
 
 # 2. Experience AI-powered conditional debugging
 ./vendor/bin/xdebug-debug --break='test.php:10:$result==null' --json -- php test.php
@@ -233,7 +233,7 @@ die("HERE");         // Getting desperate...
 
 ### Basic Installation
 ```bash
-composer require --dev koriym/xdebug-mcp:1.x-dev
+composer require --dev koriym/xdebug-mcp
 ```
 
 ### AI Integration (Recommended)
