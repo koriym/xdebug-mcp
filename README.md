@@ -55,14 +55,20 @@ echo $result;
 claude --print "Find why \$result becomes null in test.php"
 
 # 4. Experience conditional debugging magic
-cp vendor/koriym/xdebug-mcp/test/demo.php .
+cp vendor/koriym/xdebug-mcp/demo.php .
 
-# Use trace analysis for reliable debugging
+# Conditional breakpoint: Only break when $id == 0
+./vendor/bin/xdebug-debug --break=demo.php:60:'$id==0' --trace-only -- php demo.php
+
+# Watch it pinpoint exactly when processUser() receives ID 0!
+# ✅ Skips normal execution, stops only at the problematic condition
+# 🎯 Result: "Conditional breakpoint hit!" - found the exact moment
+
+# For interactive step debugging:
+./vendor/bin/xdebug-debug demo.php
+
+# Traditional trace analysis:
 ./vendor/bin/xdebug-trace --claude -- php demo.php
-
-# For interactive debugging (experimental):
-# ./vendor/bin/xdebug-debug demo.php
-# Note: Interactive debugging is under development
 ```
 
 **The magic**: Skip normal execution, catch bugs red-handed with full context.
