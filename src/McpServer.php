@@ -53,8 +53,6 @@ use function set_error_handler;
 use function sprintf;
 use function str_ends_with;
 use function str_repeat;
-use function strpos;
-use function strtolower;
 use function time;
 use function trim;
 use function uasort;

@@ -368,6 +368,19 @@ final class DebugServer
                 $this->log('⏸️ Stopped at first executable line');
             }
 
+            // Check if trace-only mode - auto-continue and wait for breakpoint
+            if ($this->options['traceOnly'] ?? false) {
+                $this->log('📊 Trace-only mode: waiting for breakpoint conditions...');
+                $response = $this->continueExecution();
+                if ($this->didBreak($response)) {
+                    if ($path = $this->finalizeTraceOnBreak()) {
+                        $this->log("📊 Trace finalized at break: {$path}");
+                    }
+                }
+
+                return;
+            }
+
             // Start interactive debugging session
             $this->startInteractiveSession();
         } catch (Throwable $e) {
@@ -618,6 +631,40 @@ final class DebugServer
     }
 
     /**
+     * Check if response indicates breakpoint hit
+     */
+    private function didBreak(string $resp): bool
+    {
+        // <response ... status="break" ...> のときに true
+        return $resp !== '' && str_contains($resp, 'status="break"');
+    }
+
+    /**
+     * Finalize trace when breakpoint is hit
+     */
+    private function finalizeTraceOnBreak(): string|null
+    {
+        // いま開いているトレースを閉じて、ファイル名を返す
+        $code = base64_encode('return function_exists("xdebug_stop_trace") ? xdebug_stop_trace() : null;');
+        $resp = $this->sendCommand('eval', ['--' => $code]);
+        $xml  = $this->parseXmlResponse($resp);
+        if (! $xml || ! isset($xml->property)) {
+            return null;
+        }
+
+        $prop   = $xml->property;
+        $value  = (string) $prop;
+        $value  = (string) ($prop['encoding'] ?? '') === 'base64' ? base64_decode($value) : $value;
+        $path   = trim($value);
+
+        // すぐ次の区間のために再開しておくと連続収集が楽
+        $restart = base64_encode('return function_exists("xdebug_start_trace") ? xdebug_start_trace() : null;');
+        $this->sendCommand('eval', ['--' => $restart]);
+
+        return $path !== '' ? $path : null;
+    }
+
+    /**
      * Start interactive debugging session
      */
     private function startInteractiveSession(): void
@@ -742,6 +789,13 @@ final class DebugServer
         try {
             $response = $this->stepInto();
 
+            // Check if we hit a breakpoint and finalize trace
+            if ($this->didBreak($response)) {
+                if ($path = $this->finalizeTraceOnBreak()) {
+                    $this->log("📊 Trace finalized at step-break: {$path}");
+                }
+            }
+
             if ($this->isExecutionComplete($response)) {
                 $this->log('✅ Execution completed');
 
@@ -787,6 +841,13 @@ final class DebugServer
     {
         $this->log('▶️ Continuing execution...');
         $response = $this->continueExecution();
+
+        // Check if we hit a breakpoint and finalize trace
+        if ($this->didBreak($response)) {
+            if ($path = $this->finalizeTraceOnBreak()) {
+                $this->log("📊 Trace finalized at break: {$path}");
+            }
+        }
 
         if ($this->isExecutionComplete($response)) {
             $this->log('✅ Execution completed');
