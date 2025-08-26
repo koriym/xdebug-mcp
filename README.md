@@ -59,6 +59,7 @@ cp vendor/koriym/xdebug-mcp/demo.php .
 
 # Conditional breakpoint: Only break when $id == 0
 ./vendor/bin/xdebug-debug --break=demo.php:60:'$id==0' --exit-on-break -- php demo.php
+claude --continue "Analyze why processUser() received ID 0 and trace the execution flow"
 
 # Watch it pinpoint exactly when processUser() receives ID 0!
 # ✅ Skips normal execution, stops only at the problematic condition
@@ -110,15 +111,18 @@ This is intelligence no IDE provides in one shot, enabling AI to debug more effe
 ```
 
 ### `xdebug-debug` - Intelligent Conditional Debugging
+
+**Breakpoint Syntax: `file.php:line:condition`**
 ```bash
 # Stop when specific condition occurs, with full trace to that point
 ./vendor/bin/xdebug-debug --break=User.php:85:$id==0 -- php register.php
 
-# Multiple conditions
+# Multiple conditions (comma-separated)
 ./vendor/bin/xdebug-debug --break=Auth.php:42:$token==null,User.php:85:$id==0 -- php app.php
 
-# With AI analysis
-./vendor/bin/xdebug-debug --break=Cart.php:89:$total<0 --claude -- php app.php
+# Auto-exit with trace file output
+./vendor/bin/xdebug-debug --break=Cart.php:89:$total<0 --exit-on-break -- php app.php
+claude --continue "Analyze why total became negative"
 ```
 
 ### `xdebug-profile` - Performance Analysis
