@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json",
+  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug-v1.json",
   "title": "Xdebug Debug Result",
   "description": "AI-optimized debugging result with conditional breakpoint trace data for PHP debugging and execution flow analysis.",
   "type": "object",
