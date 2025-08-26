@@ -50,6 +50,7 @@ use function libxml_use_internal_errors;
 use function ltrim;
 use function preg_match;
 use function realpath;
+use function round;
 use function shell_exec;
 use function simplexml_load_string;
 use function sprintf;
@@ -799,7 +800,7 @@ final class DebugServer
             });
 
             $latestTrace = $allTraceFiles[0];
-            
+
             // For exit-on-break mode: simple message with filename and size for AI analysis
             if ($this->options['traceOnly'] ?? false) {
                 if (file_exists($latestTrace)) {
@@ -818,10 +819,11 @@ final class DebugServer
                     $size = filesize($latestTrace);
                     $this->log("📊 Trace contains {$lines} lines ({$size} bytes)");
                 }
+
                 $this->log('✅ Debug session complete');
             }
         } else {
-            if (!($this->options['traceOnly'] ?? false)) {
+            if (! ($this->options['traceOnly'] ?? false)) {
                 $this->log('⚠️ No trace file found');
                 $this->log('💡 Trace files are typically saved as /tmp/trace.*.xt');
                 $this->log('✅ Debug session complete');
