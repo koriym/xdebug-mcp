@@ -1,0 +1,57 @@
+# .gitattributes for koriym/xdebug-mcp
+
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# PHP files
+*.php text eol=lf
+*.phpt text eol=lf
+
+# JSON files
+*.json text eol=lf
+
+# Markdown files
+*.md text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+
+# Configuration files
+*.xml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.ini text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+
+# Files to exclude from export (composer archive)
+/.github export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/tests export-ignore
+/test export-ignore
+/test-scripts export-ignore
+/phpunit.xml export-ignore
+/psalm.xml export-ignore
+/psalm-baseline.xml export-ignore
+/phpcs.xml export-ignore
+/simple_test.php export-ignore
+/test*.php export-ignore
+/demo.php export-ignore
+/step_execution_summary.md export-ignore
+/MOTIVATION.md export-ignore
+/claude_desktop_config_example.json export-ignore
+/mcp.json export-ignore
+
+# Keep important files in export
+!/CHANGELOG.md
+!/README.md
+!/CLAUDE.md
+!/LICENSE
+!/composer.json

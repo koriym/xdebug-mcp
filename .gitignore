@@ -6,6 +6,13 @@ composer.lock
 .phpunit.cache/
 .php-cache/
 *.log
+build/
+coverage/
+
+## Xdebug outputs
+/tmp/trace*.xt
+/tmp/cachegrind.out.*
+/tmp/xdebug_*
 
 ## Presentation files
 docs/presentation*.html

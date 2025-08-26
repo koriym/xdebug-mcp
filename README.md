@@ -36,7 +36,11 @@ The result: AI that doesn't just help you debug—it debugs better than you ever
 # 1. Install
 composer require --dev koriym/xdebug-mcp:1.x-dev
 
-# 2. Experience the power of conditional debugging
+# 2. Experience AI-powered conditional debugging
+./vendor/bin/xdebug-debug --break='test.php:10:$result==null' --json -- php test.php
+# JSON output: {"trace_file":"/tmp/trace.123.xt","lines":15,"size":0.8,"command":"php test.php"}
+
+# 3. Traditional debugging (human-readable)
 ./vendor/bin/xdebug-debug --break='test.php:10:$result==null' -- php test.php
 # You get: Complete trace showing HOW $result became null + state WHEN it happened
 
@@ -169,6 +173,13 @@ die("HERE");         // Getting desperate...
 # Auto-exit with trace file output
 ./vendor/bin/xdebug-debug --break='Cart.php:89:$total<0' --exit-on-break -- php app.php
 claude --continue "Analyze why total became negative"
+
+# JSON output for AI integration
+./vendor/bin/xdebug-debug --break='Cart.php:89:$total<0' --json --exit-on-break -- php app.php
+# Output: {"trace_file":"/tmp/trace.123.xt","lines":15,"size":0.8,"command":"php app.php"}
+
+# AI analysis with structured data
+./vendor/bin/xdebug-debug --break='error.php:20:$error!=null' --json -- php app.php | claude --analyze-trace
 ```
 
 ### `xdebug-profile` - Performance Analysis
