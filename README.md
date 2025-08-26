@@ -37,22 +37,68 @@ The result: AI that doesn't just help you debug—it debugs better than you ever
 composer require --dev koriym/xdebug-mcp:1.x-dev
 
 # 2. Experience the power of conditional debugging
-./vendor/bin/xdebug-debug --break=test.php:10:$result==null -- php test.php
+./vendor/bin/xdebug-debug --break='test.php:10:$result==null' -- php test.php
 # You get: Complete trace showing HOW $result became null + state WHEN it happened
 
 # 3. Enable AI autonomous debugging
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
-claude --print "Find why $result becomes null in test.php"
+
+# Create a test file to debug
+echo '<?php
+$result = "success";
+if (rand(0,1)) { $result = null; }
+echo $result;
+?>' > test.php
+
+# Analyze execution with AI
+./vendor/bin/xdebug-trace --claude -- php test.php
+claude --continue "Find why \$result becomes null in test.php"
+
+# 4. Experience conditional debugging magic
+cp vendor/koriym/xdebug-mcp/demo.php .
+
+# Conditional breakpoint: Only break when $id == 0
+./vendor/bin/xdebug-debug --break=demo.php:60:'$id==0' --exit-on-break -- php demo.php
+
+# 🔍 First, examine the trace file yourself:
+# Output: "📊 Trace file generated up to conditional breakpoint: /tmp/trace.1034012359.xt (11 lines, 0.3KB)"
+cat /tmp/trace.1034012359.xt | head -20
+# Look for: Line 60, $id parameter, call stack leading to the issue
+
+# 🤖 Then let AI analyze the same data:
+# AI can see file size and choose appropriate reading strategy (full read vs tail/head)
+claude --continue "The trace file shows execution up to the conditional breakpoint - analyze why processUser() received ID 0"
+
+# Watch it pinpoint exactly when processUser() receives ID 0!
+# ✅ Skips normal execution, stops only at the problematic condition  
+# 🎯 Result: "Conditional breakpoint hit!" - found the exact moment
+
+# For interactive step debugging:
+./vendor/bin/xdebug-debug demo.php
+
+# Traditional trace analysis:
+./vendor/bin/xdebug-trace -- php demo.php
+
+# 👀 Inspect trace manually first:  
+cat /tmp/trace.*.xt | head -10
+# Example trace reading:
+# Level 2: rand() called with args (0, 1) → returned 0
+# Level 1: if (0) is false → $result stays "success" 
+# Result: Human can trace the exact execution path!
+
+# 🤖 Compare with AI analysis:
+claude --continue "Analyze this trace: why didn't \$result become null?"
+# AI instantly identifies: rand() returned 0, condition false, no assignment
 ```
 
-Watch as AI debugs with superhuman thoroughness—analyzing every execution path, every variable state, every possibility.
+**The magic**: Skip normal execution, catch bugs red-handed with full context.
 
 ## Key Innovation: Journey + Destination
 
 Unlike IDEs where you guess where to set breakpoints, our conditional debugging provides:
 
 ```bash
-./vendor/bin/xdebug-debug --break=Cart.php:89:$total<0 -- php checkout.php
+./vendor/bin/xdebug-debug --break='Cart.php:89:$total<0' -- php checkout.php
 ```
 
 **You get both:**
@@ -84,15 +130,18 @@ This is intelligence no IDE provides in one shot, enabling AI to debug more effe
 ```
 
 ### `xdebug-debug` - Intelligent Conditional Debugging
+
+**Breakpoint Syntax: `file.php:line:condition`**
 ```bash
 # Stop when specific condition occurs, with full trace to that point
-./vendor/bin/xdebug-debug --break=User.php:85:$id==0 -- php register.php
+./vendor/bin/xdebug-debug --break='User.php:85:$id==0' -- php register.php
 
-# Multiple conditions
-./vendor/bin/xdebug-debug --break=Auth.php:42:$token==null,User.php:85:$id==0 -- php app.php
+# Multiple conditions (comma-separated)
+./vendor/bin/xdebug-debug --break='Auth.php:42:$token==null,User.php:85:$id==0' -- php app.php
 
-# With AI analysis
-./vendor/bin/xdebug-debug --break=Cart.php:89:$total<0 --claude -- php app.php
+# Auto-exit with trace file output
+./vendor/bin/xdebug-debug --break='Cart.php:89:$total<0' --exit-on-break -- php app.php
+claude --continue "Analyze why total became negative"
 ```
 
 ### `xdebug-profile` - Performance Analysis
@@ -189,14 +238,15 @@ claude --print "Find why users get logged out randomly"
 ### Catching Intermittent Bugs
 ```bash
 # Instead of hoping to catch it, guarantee you will
-./vendor/bin/xdebug-debug --break=api.php:*:$response==null -- php test.php
+./vendor/bin/xdebug-debug --break='api.php:123:$response==null' -- php test.php
 # Captures: Complete trace to first null response
+# Note: Line wildcards (*) are not yet supported - use specific line numbers
 ```
 
 ### Finding Race Conditions
 ```bash
 # Catch timing-sensitive bugs
-./vendor/bin/xdebug-debug --break=session.php:45:$timestamp<time() -- php app.php
+./vendor/bin/xdebug-debug --break='session.php:45:$timestamp<time()' -- php app.php
 # Result: Exact sequence of events leading to race condition
 ```
 
@@ -205,6 +255,43 @@ claude --print "Find why users get logged out randomly"
 # Stop guessing, start measuring
 ./vendor/bin/xdebug-profile --claude slow_endpoint.php
 # AI: "fetchUser() called 847 times (72% of execution time), add caching"
+```
+
+## Reading Trace Files Like a Detective
+
+**Trace File Format (.xt):**
+```
+Level FuncID Time     Memory   Function   UserDef  Filename:Line  Args/Return
+2     1      0.000329 396784   rand       0        test.php:3     0  1
+2     1      1        0.000337 396848                              R  0
+```
+
+**What Each Column Means:**
+- **Level**: Call stack depth (1=main, 2=nested function)
+- **FuncID**: Unique function call identifier  
+- **Time**: Execution timestamp (microseconds)
+- **Memory**: Current memory usage (bytes)
+- **Function**: Function name being called/returned
+- **UserDef**: 1=your code, 0=built-in PHP function
+- **Args/Return**: Function parameters or return value (R)
+
+**Human Reading Strategy:**
+1. **Follow the Level**: Track call hierarchy depth
+2. **Watch Memory**: Spot memory leaks or excessive usage
+3. **Time Gaps**: Identify slow operations
+4. **Return Values**: See what functions actually returned
+5. **Arguments**: Verify correct parameters were passed
+
+**Example Detective Work:**
+```bash
+# Find when variable became null
+cat trace.xt | grep -C3 "null"
+
+# Track specific function calls  
+cat trace.xt | grep "calculateTotal"
+
+# Memory usage progression
+cat trace.xt | awk '{print $4}' | head -20
 ```
 
 ## The 43 Tools Arsenal

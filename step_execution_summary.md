@@ -64,7 +64,7 @@ run -i 2\0          # 実行継続
 ### シンプルなステップ実行
 ```bash
 # 1. サーバー起動
-./bin/debug-server &
+php test_new_xdebug_debug.php &
 
 # 2. デバッグ対象スクリプト実行  
 php -dxdebug.mode=debug -dxdebug.start_with_request=yes -dxdebug.client_port=9004 script.php &

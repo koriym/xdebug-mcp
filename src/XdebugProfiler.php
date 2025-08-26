@@ -172,6 +172,6 @@ class XdebugProfiler
         echo "\n🤖 Starting Claude Code analysis...\n";
         passthru('claude ' . escapeshellarg($claudePrompt));
         echo "\n";
-        echo "🤖 Claude Code analysis completed. 'claude --continue' if you have follow-up questions.\n";
+        echo "🤖 Claude Code analysis completed.\n";
     }
 }
