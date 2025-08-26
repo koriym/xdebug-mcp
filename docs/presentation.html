@@ -1,0 +1,372 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PHP Xdebug MCP Server - AIネイティブな開発とデバッグ</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/theme/black.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal pre code { font-size: 0.7em; }
+        .highlight { color: #ff6b6b; font-weight: bold; }
+        .success { color: #51cf66; }
+        .warning { color: #ffd43b; }
+        .logo { width: 200px; border-radius: 20px; }
+        .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        .feature-box { background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 10px; }
+        .old-way { background: rgba(255,107,107,0.2); }
+        .new-way { background: rgba(81,207,102,0.2); }
+        .demo-output { background: #2d3748; padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 0.8em; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Title Slide -->
+            <section>
+                <img src="https://koriym.github.io/xdebug-mcp/logo.jpeg" alt="Xdebug MCP" class="logo">
+                <h1>PHP Xdebug MCP Server</h1>
+                <h3>AIネイティブな開発とデバッグ</h3>
+                <p><small>Enable AI to use Xdebug for PHP debugging like we do</small></p>
+            </section>
+
+            <!-- Problem Statement 1 -->
+            <section>
+                <h2>🤔 まさか今でも...</h2>
+                <div class="fragment">
+                    <h3>var_dumpデバッグしてませんか？</h3>
+                </div>
+                <div class="fragment">
+                    <h3 class="highlight">AIが...</h3>
+                </div>
+            </section>
+
+            <!-- Problem Statement 2 -->
+            <section>
+                <h2>😱 AIの実際の行動パターン</h2>
+                <div class="fragment">
+                    <h4>Step 1: 勝手にvar_dumpを追加</h4>
+                    <pre class="old-way"><code class="php">function register($user_id) {
+    var_dump($user_id); // ← AIが勝手に追加
+    if ($user_id === 0) {
+        // 問題発見！
+    }
+}</code></pre>
+                </div>
+                <div class="fragment">
+                    <h4>Step 2: 分析後に削除</h4>
+                    <pre class="old-way"><code class="php">function register($user_id) {
+    // var_dump削除済み
+    if ($user_id === 0) {
+        // 修正済み
+    }
+}</code></pre>
+                </div>
+                <div class="fragment highlight">
+                    <p>これで満足してませんか？🤔</p>
+                </div>
+            </section>
+
+            <!-- What is Invasive - Simple -->
+            <section>
+                <h2>💡 「侵襲的」とは？</h2>
+                <div class="fragment">
+                    <div class="feature-grid">
+                        <div class="feature-box old-way">
+                            <h4>😱 侵襲的</h4>
+                            <p>コードを変更して調べる</p>
+                            <pre><code class="php">var_dump($user); // ← 追加</code></pre>
+                        </div>
+                        <div class="feature-box new-way">
+                            <h4>✨ 非侵襲的</h4>
+                            <p>コード変更なしで調べる</p>
+                            <pre><code class="bash">./bin/xdebug-trace app.php</code></pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="fragment">
+                    <p class="highlight">なるほど〜</p>
+                </div>
+            </section>
+
+
+            <!-- Revolution Introduction -->
+            <section>
+                <h2>⚡ 解決策</h2>
+                <div class="fragment">
+                    <h3 class="success">実行時データでAIが真実を知る</h3>
+                </div>
+                <div class="fragment">
+                    <h4 class="highlight">推測 → 実測</h4>
+                </div>
+            </section>
+
+            <!-- Tools Overview -->
+            <section>
+                <h2>🔧 47の動作ツール</h2>
+                <div class="fragment">
+                    <h3 class="success">Profile・Trace・Coverage・Debug</h3>
+                </div>
+            </section>
+
+
+            <!-- Step Debugging -->
+            <section>
+                <h2>🎮 Interactive Step Debugging</h2>
+                <pre class="fragment"><code class="bash"># $idが0のときの登録処理を調べる
+./bin/xdebug-debug --break=User.php:85:$id==0 -- php register.php</code></pre>
+                <div class="demo-output fragment">
+🎮 Starting interactive debugging session<br>
+Available commands: s(tep), c(ontinue), p &lt;var&gt;, claude, q(uit)<br>
+(Xdebug) claude<br>
+🤖 Analyzing execution trace...<br>
+📊 Root Cause: $id initialized as empty string, cast to 0
+                </div>
+            </section>
+
+            <!-- Profile Analysis -->
+            <section>
+                <h2>⚡ Performance Profiling</h2>
+                <pre class="fragment"><code class="bash"># パフォーマンス分析
+./bin/xdebug-profile slow_function.php</code></pre>
+                <div class="demo-output fragment">
+✅ Profile complete: /tmp/cachegrind.out.1755719364<br>
+📊 Analysis Results:<br>
+  - fibonacci(): 1,247μs (34% of total)<br>
+  - 46 recursive calls detected<br>
+  - 🤖 AI Suggestion: Implement memoization
+                </div>
+            </section>
+
+            <!-- Trace Analysis -->
+            <section>
+                <h2>📈 Execution Tracing</h2>
+                <pre class="fragment"><code class="bash"># 実行フロー追跡
+./bin/xdebug-trace complex_workflow.php</code></pre>
+                <div class="demo-output fragment">
+✅ Trace complete: /tmp/trace-workflow-20250825.xt<br>
+📊 Execution Analysis:<br>
+  Level | Function    | Time    | Memory  | Parameters<br>
+  0     | {main}      | 0.001ms | 384KB   |<br>
+  1     | validate()  | 0.002ms | 385KB   | $user=null<br>
+  🤖 AI Found: Null user at validation step
+                </div>
+            </section>
+
+            <!-- Coverage Analysis -->
+            <section>
+                <h2>🔍 Code Coverage</h2>
+                <pre class="fragment"><code class="bash"># カバレッジ分析
+./bin/xdebug-coverage test/UserTest.php</code></pre>
+                <div class="demo-output fragment">
+✅ Coverage complete: HTML report generated<br>
+📊 Coverage Results:<br>
+  - Lines: 85.2% (23/27 covered)<br>
+  - Functions: 92.1% (47/51 covered)<br>
+  - 🤖 AI Identified: Untested error handling paths
+                </div>
+            </section>
+
+            <!-- CLI Tools -->
+            <section>
+                <h2>🛠️ Command Line Tools</h2>
+                <div class="feature-grid">
+                    <div class="feature-box">
+                        <h4>Standalone Commands</h4>
+                        <pre><code class="bash">xdebug-debug
+xdebug-profile  
+xdebug-trace
+xdebug-coverage
+xdebug-phpunit</code></pre>
+                    </div>
+                    <div class="feature-box">
+                        <h4>Auto-Configuration</h4>
+                        <ul>
+                            <li>Zero setup required</li>
+                            <li>Conflict-free ports</li>
+                            <li>Xdebug auto-loading</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MCP Integration -->
+            <section>
+                <h2>🔌 MCP Integration</h2>
+                <pre class="fragment"><code class="bash"># Claude Desktop setup
+claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
+                <div class="demo-output fragment success">
+✅ MCP Server: 47 tools available<br>
+🤖 AI can now:<br>
+  - Start debugging sessions<br>
+  - Analyze performance data<br>
+  - Generate coverage reports<br>
+  - Execute conditional debugging
+                </div>
+            </section>
+
+            <!-- Use Case: Bug Investigation -->
+            <section>
+                <h2>🐛 Use Case: Bug Investigation</h2>
+                <h4 class="fragment">Traditional Way:</h4>
+                <pre class="fragment old-way"><code class="php">// 推測ベース
+var_dump($user_id);  // どんな値？
+echo "Debug point 1";
+if ($user_id == 0) {
+    die("Found the problem!");  // 侵襲的
+}</code></pre>
+                <h4 class="fragment">AI + Xdebug Way:</h4>
+                <pre class="fragment new-way"><code class="bash"># ユーザID=0での登録エラーを調べる - ソースコード変更なし
+./bin/xdebug-debug --break=register.php:45:$user_id==0 -- php app.php
+# 🤖 AI が実行データから根本原因を特定</code></pre>
+            </section>
+
+            <!-- Use Case: Performance Optimization -->
+            <section>
+                <h2>🚀 Use Case: Performance Optimization</h2>
+                <h4 class="fragment">Traditional Way:</h4>
+                <pre class="fragment old-way"><code class="php">// 推測ベース
+$start = microtime(true);
+slowFunction();
+$end = microtime(true);
+echo "Time: " . ($end - $start);  // 手動計測</code></pre>
+                <h4 class="fragment">AI + Xdebug Way:</h4>
+                <pre class="fragment new-way"><code class="bash"># 完全自動計測
+./bin/xdebug-profile app.php
+# 🤖 AI が全関数の実行時間とボトルネックを特定</code></pre>
+            </section>
+
+            <!-- Use Case: Test Coverage -->
+            <section>
+                <h2>🧪 Use Case: Test Coverage Analysis</h2>
+                <h4 class="fragment">Traditional Way:</h4>
+                <div class="fragment old-way">
+                    <p>「このコードはテストされているはず...」</p>
+                    <p>手動でテスト範囲を推測</p>
+                </div>
+                <h4 class="fragment">AI + Xdebug Way:</h4>
+                <pre class="fragment new-way"><code class="bash"># 完全可視化
+./bin/xdebug-coverage tests/UserTest.php
+# 🤖 AI が未テストコードパスを正確に特定</code></pre>
+            </section>
+
+            <!-- Conditional Debugging Demo -->
+            <section>
+                <h2>🎯 Conditional Debugging Demo</h2>
+                <pre class="fragment"><code class="bash"># 認証失敗とID=0問題を同時に調べる
+./bin/xdebug-debug --break=Auth.php:42:$token==null,User.php:85:$id==0</code></pre>
+                <div class="demo-output fragment">
+(Xdebug) claude analyze authentication failure<br>
+🤖 <strong>Root Cause Analysis</strong><br>
+- Call chain: login() → validateToken() → $token=null<br>
+- Token expires at validate.php:23<br>
+- Missing renewal logic in Auth.php:18<br>
+<strong>Suggested Fix:</strong> Add token refresh before validation
+                </div>
+            </section>
+
+            <!-- Real-time AI Analysis -->
+            <section>
+                <h2>🤖 Real-time AI Analysis</h2>
+                <div class="feature-grid">
+                    <div class="feature-box success">
+                        <h4>AI が実行時に知ること</h4>
+                        <ul>
+                            <li>実際の変数値</li>
+                            <li>真の実行パス</li>
+                            <li>正確なパフォーマンス</li>
+                            <li>メモリ使用状況</li>
+                        </ul>
+                    </div>
+                    <div class="feature-box success">
+                        <h4>提供される洞察</h4>
+                        <ul>
+                            <li>根本原因特定</li>
+                            <li>具体的修正案</li>
+                            <li>最適化提案</li>
+                            <li>テスト改善点</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Installation -->
+            <section>
+                <h2>📦 Installation</h2>
+                <pre class="fragment"><code class="bash"># Composer installation
+composer require --dev koriym/xdebug-mcp:1.x-dev
+
+# Claude Desktop setup  
+claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
+
+# Ready to go!
+./bin/xdebug-profile your-script.php</code></pre>
+                <p class="fragment success">Zero configuration. Works immediately.</p>
+            </section>
+
+            <!-- Benefits Summary -->
+            <section>
+                <h2>🌟 AIネイティブ開発の実現</h2>
+                <div class="fragment">
+                    <div class="feature-grid">
+                        <div class="feature-box success">
+                            <h4>From var_dump汚染</h4>
+                            <p>コードに傷をつける</p>
+                        </div>
+                        <div class="feature-box success">
+                            <h4>To 実行データ分析</h4>
+                            <p>コードを守って観察</p>
+                        </div>
+                        <div class="feature-box success">
+                            <h4>From 推測ベース</h4>
+                            <p>「多分こうでしょう」</p>
+                        </div>
+                        <div class="feature-box success">
+                            <h4>To 実測ベース</h4>
+                            <p>「実際にこうでした」</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Call to Action -->
+            <section>
+                <h2>🚀 始めよう！</h2>
+                <div class="fragment">
+                    <p>GitHub: <strong>koriym/xdebug-mcp</strong></p>
+                </div>
+                <div class="fragment">
+                    <h3 class="highlight">Stop guessing. Start knowing.</h3>
+                </div>
+            </section>
+
+            <!-- Thank You -->
+            <section>
+                <h1>ありがとうございました！</h1>
+                <img src="https://koriym.github.io/xdebug-mcp/logo.jpeg" alt="Xdebug MCP" class="logo">
+                <p><strong>PHP Xdebug MCP Server</strong></p>
+                <p><small>Enable AI to debug like we do</small></p>
+                <div class="fragment">
+                    <p>🤖 Questions? Let Claude analyze your debugging workflow!</p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/plugin/notes/notes.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/plugin/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            controls: true,
+            progress: true,
+            center: true,
+            transition: 'slide',
+            plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+        });
+    </script>
+</body>
+</html>

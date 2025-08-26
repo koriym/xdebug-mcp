@@ -3,10 +3,11 @@
     "description": "MCP server for controlling PHP Xdebug debugging sessions",
     "type": "library",
     "require": {
-        "php": ">=8.0",
+        "php": "^8.1",
         "ext-sockets": "*",
         "ext-xml": "*",
-        "symfony/polyfill-php83": "^1.33"
+        "symfony/polyfill-php83": "^1.33",
+        "amphp/socket": "^2.3"
     },
     "require-dev": {
         "phpunit/phpunit": "^10.0",
@@ -29,7 +30,8 @@
         "bin/xdebug-trace",
         "bin/xdebug-profile",
         "bin/xdebug-coverage",
-        "bin/xdebug-phpunit"
+        "bin/xdebug-phpunit",
+        "bin/xdebug-debug"
     ],
     "scripts": {
         "test": "phpunit",

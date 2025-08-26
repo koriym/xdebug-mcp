@@ -1,0 +1,185 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Koriym\XdebugMcp\DebugServer;
+use Koriym\XdebugMcp\Constants;
+
+/**
+ * Parse breakpoint specifications
+ * Format: file.php:line[:condition][,file2.php:line2,...]
+ */
+function parseBreakpoints(string $breakSpec): array
+{
+    $breakpoints = [];
+    $specs = explode(',', $breakSpec);
+    
+    foreach ($specs as $spec) {
+        $spec = trim($spec);
+        if (empty($spec)) continue;
+        
+        // Parse file:line[:condition]
+        $parts = explode(':', $spec);
+        if (count($parts) < 2) {
+            throw new RuntimeException("Invalid breakpoint format: $spec (expected file:line[:condition])");
+        }
+        
+        $file = $parts[0];
+        $line = (int)$parts[1];
+        $condition = isset($parts[2]) ? implode(':', array_slice($parts, 2)) : null;
+        
+        if (!file_exists($file)) {
+            throw new RuntimeException("Breakpoint file not found: $file");
+        }
+        
+        if ($line <= 0) {
+            throw new RuntimeException("Invalid line number: $line in $file");
+        }
+        
+        // Validate line number against actual file content
+        $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($lines === false) {
+            throw new RuntimeException("Could not read file: $file");
+        }
+        $maxLine = count($lines);
+        if ($line > $maxLine) {
+            throw new RuntimeException("Line $line does not exist in $file (file has $maxLine lines)");
+        }
+        
+        $breakpoints[] = [
+            'file' => $file,
+            'line' => $line,
+            'condition' => $condition
+        ];
+    }
+    
+    return $breakpoints;
+}
+
+(function () use ($argv){
+    require_once __DIR__ . '/autoload.php';
+    
+    // Parse command line arguments
+    $breakpointFile = null;
+    $breakpointLine = null;
+    $breakpoints = [];
+    $command = [];
+    $parseOptions = true;
+    $traceOnly = false;
+    
+    for ($i = 1; $i < count($argv); $i++) {
+        $arg = $argv[$i];
+        
+        if ($parseOptions && $arg === '--') {
+            $parseOptions = false;
+            continue;
+        }
+        
+        if ($parseOptions && str_starts_with($arg, '--break=')) {
+            $breakSpec = substr($arg, 8);
+            $breakpoints = parseBreakpoints($breakSpec);
+            continue;
+        }
+        
+        if ($parseOptions && str_starts_with($arg, '--file=')) {
+            $breakpointFile = substr($arg, 7);
+            continue;
+        }
+        
+        if ($parseOptions && str_starts_with($arg, '--line=')) {
+            $breakpointLine = (int)substr($arg, 7);
+            continue;
+        }
+        
+        if ($parseOptions && $arg === '--trace-only') {
+            $traceOnly = true;
+            continue;
+        }
+        
+        if ($parseOptions && ($arg === '--help' || $arg === '-h')) {
+            echo "Usage: xdebug-debug [options] [--] command\n";
+            echo "       xdebug-debug script.php [breakpoint_file] [break_line]  # Legacy format\n";
+            echo "\n";
+            echo "Options:\n";
+            echo "  --break=SPEC     Advanced breakpoint specification\n";
+            echo "  --file=FILE      File to set breakpoint in (legacy)\n";
+            echo "  --line=LINE      Line number to break at (legacy)\n";
+            echo "  --trace-only     Auto-continue and output trace when condition is met\n";
+            echo "  --help, -h       Show this help\n";
+            echo "\n";
+            echo "Breakpoint Specification (--break=SPEC):\n";
+            echo "  file.php:line                    # Simple breakpoint\n";
+            echo "  file.php:line:condition          # Conditional breakpoint\n";
+            echo "  file1.php:5,file2.php:10        # Multiple breakpoints\n";
+            echo "  file.php:5:\$a>1,other.php:20    # Mixed conditions\n";
+            echo "\n";
+            echo "Examples:\n";
+            echo "  xdebug-debug test.php                                    # Auto-detect breakpoint\n";
+            echo "  xdebug-debug --break=src/User.php:42 -- php main.php arg1 arg2\n";
+            echo "  xdebug-debug --break=src/User.php:42:\$id>100 -- php main.php user123\n";
+            echo "  xdebug-debug --break=file1.php:5,file2.php:10 -- php main.php\n";
+            echo "  xdebug-debug test.php test.php 15                       # Legacy format\n";
+            exit(0);
+        }
+        
+        if (!$parseOptions || !str_starts_with($arg, '--')) {
+            $command[] = $arg;
+        }
+    }
+    
+    // Determine target script and command to execute
+    if (empty($command)) {
+        throw new RuntimeException("No command specified. Run 'xdebug-debug --help' for usage information.");
+    }
+    
+    // Handle legacy format: script.php [breakpoint_file] [break_line]
+    if (count($command) >= 1 && !str_contains($command[0], ' ') && file_exists($command[0])) {
+        $targetScript = $command[0];
+        if (!isset($breakpointFile) && isset($command[1])) {
+            $breakpointFile = $command[1];
+        }
+        if (!isset($breakpointLine) && isset($command[2])) {
+            $breakpointLine = (int)$command[2];
+        }
+    } else {
+        // New format: complex command after --
+        if ($command[0] === 'php' && isset($command[1])) {
+            $targetScript = $command[1];
+        } else {
+            throw new RuntimeException("Could not determine target script from command: " . implode(' ', $command));
+        }
+    }
+    
+    // Validate target script
+    if (!file_exists($targetScript)) {
+        throw new RuntimeException("Target script not found: $targetScript");
+    }
+    
+    // Validate breakpoint file if specified
+    if ($breakpointFile !== null) {
+        if (!file_exists($breakpointFile)) {
+            throw new RuntimeException("Breakpoint file not found: $breakpointFile");
+        }
+        if ($breakpointLine === null || $breakpointLine <= 0) {
+            throw new RuntimeException("Valid break line number is required when breakpoint file is specified");
+        }
+    }
+
+    // Use advanced breakpoints if specified, otherwise use legacy format
+    if (!empty($breakpoints)) {
+        $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, null, [
+            'breakpoints' => $breakpoints,
+            'command' => $command,
+            'traceOnly' => $traceOnly
+        ]);
+    } else {
+        // For legacy format, only pass command if it's not just the target script
+        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly];
+        if (count($command) > 1 || ($command[0] !== $targetScript)) {
+            $options['command'] = $command;
+        }
+        $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, $breakpointLine, $options);
+    }
+    $server();
+})();

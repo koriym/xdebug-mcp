@@ -22,7 +22,6 @@ use function dirname;
 use function error_log;
 use function explode;
 use function extension_loaded;
-use function feof;
 use function fflush;
 use function fgets;
 use function file_exists;
@@ -54,6 +53,7 @@ use function set_error_handler;
 use function sprintf;
 use function str_ends_with;
 use function str_repeat;
+use function time;
 use function trim;
 use function uasort;
 use function uniqid;
@@ -88,11 +88,53 @@ class McpServer
     protected array $tools = [];
     protected XdebugClient|null $xdebugClient = null;
     private bool $debugMode = false;
+    private string $sessionId = Constants::DEFAULT_SESSION_ID;
 
     public function __construct()
     {
         $this->debugMode = (bool) (getenv('MCP_DEBUG') ?: false);
         $this->initializeTools();
+        $this->cleanupPreviousSession(); // 前のセッションをクリーンアップ
+        $this->loadExistingSession();
+    }
+
+    private function cleanupPreviousSession(): void
+    {
+        $stateFile = XdebugClient::GLOBAL_STATE_FILE;
+        if (file_exists($stateFile)) {
+            $state = json_decode(file_get_contents($stateFile), true);
+            if (
+                $state && isset($state['host'], $state['port'], $state['connected'], $state['sessionId'])
+                && $state['sessionId'] === $this->sessionId && $state['connected']
+            ) {
+                try {
+                    $tempClient = new XdebugClient($state['host'], $state['port'], $this->sessionId);
+                    $tempClient->disconnect(); // 前のセッションを終了
+                    $this->debugLog('Cleaned up previous session', $state);
+                } catch (Throwable $e) {
+                    $this->debugLog('Failed to disconnect previous session', ['error' => $e->getMessage()]);
+                }
+
+                // セッションを切断状態に更新
+                $state['connected'] = false;
+                $state['sessionId'] = $this->sessionId;
+                file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
+            }
+        }
+    }
+
+    private function loadExistingSession(): void
+    {
+        $stateFile = XdebugClient::GLOBAL_STATE_FILE;
+        if (file_exists($stateFile)) {
+            $state = json_decode(file_get_contents($stateFile), true);
+            if ($state && isset($state['host'], $state['port']) && $state['connected']) {
+                // グローバル状態から既存セッションを復元
+                $this->xdebugClient = new XdebugClient($state['host'], $state['port'], $this->sessionId);
+                // 既存セッションの情報をXdebugClientに設定
+                $this->debugLog('Loaded existing session from global state', $state);
+            }
+        }
     }
 
     private function debugLog(string $message, array $data = []): void
@@ -116,8 +158,8 @@ class McpServer
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'host' => ['type' => 'string', 'default' => '127.0.0.1'],
-                        'port' => ['type' => 'integer', 'default' => 9004],
+                        'host' => ['type' => 'string', 'default' => XdebugClient::DEFAULT_HOST],
+                        'port' => ['type' => 'integer', 'default' => XdebugClient::DEFAULT_PORT],
                     ],
                 ],
             ],
@@ -457,12 +499,6 @@ class McpServer
         try {
             $input = '';
 
-            // Check if STDIN is available and not closed immediately
-            if (feof(STDIN)) {
-                // Handle immediate EOF - this might be a health check
-                return;
-            }
-
             while (($line = fgets(STDIN)) !== false) {
                 $input .= $line;
 
@@ -683,11 +719,11 @@ class McpServer
             case 'xdebug_set_breakpoint':
                 return $this->setBreakpoint($arguments);
 
-            case 'xdebug_remove_breakpoint':
-                return $this->removeBreakpoint($arguments);
-
             case 'xdebug_step_into':
                 return $this->stepInto();
+
+            case 'xdebug_remove_breakpoint':
+                return $this->removeBreakpoint($arguments);
 
             case 'xdebug_step_over':
                 return $this->stepOver();
@@ -807,13 +843,28 @@ class McpServer
 
     protected function connectToXdebug(array $args): string
     {
-        $host = $args['host'] ?? '127.0.0.1';
-        $port = $args['port'] ?? 9003;
+        $host = $args['host'] ?? XdebugClient::DEFAULT_HOST;
+        $port = $args['port'] ?? XdebugClient::DEFAULT_PORT;
 
-        $this->xdebugClient = new XdebugClient($host, $port);
-        $result = $this->xdebugClient->connect();
+        $this->xdebugClient = new XdebugClient($host, $port, $this->sessionId);
+        try {
+            $result = $this->xdebugClient->connect();
+            $state = [
+                'host' => $host,
+                'port' => $port,
+                'connected' => true,
+                'sessionId' => $this->sessionId,
+                'last_activity' => time(),
+                'session_info' => $result,
+            ];
+            file_put_contents(XdebugClient::GLOBAL_STATE_FILE, json_encode($state, JSON_PRETTY_PRINT));
 
-        return "Connected to Xdebug at {$host}:{$port}. Session: " . json_encode($result);
+            return "Connected to new Xdebug session at {$host}:{$port}. Result: " . json_encode($result);
+        } catch (Throwable $e) {
+            $this->debugLog('Connection failed', ['error' => $e->getMessage()]);
+
+            return "Failed to connect to Xdebug: {$e->getMessage()}. Port {$port} may be in use.";
+        }
     }
 
     protected function disconnectFromXdebug(): string
@@ -823,6 +874,9 @@ class McpServer
         }
 
         $this->xdebugClient->disconnect();
+
+        // State file is cleared by client->disconnect(); do not rewrite it here.
+
         $this->xdebugClient = null;
 
         return 'Disconnected from Xdebug';
@@ -830,17 +884,22 @@ class McpServer
 
     protected function setBreakpoint(array $args): string
     {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
         $filename = $args['filename'];
-        $line = $args['line'];
+        $line = (int) $args['line'];
         $condition = $args['condition'] ?? '';
 
-        $breakpointId = $this->xdebugClient->setBreakpoint($filename, $line, $condition);
+        // Direct connection via XdebugClient
+        if ($this->xdebugClient) {
+            try {
+                $breakpointId = $this->xdebugClient->setBreakpoint($filename, $line, $condition);
 
-        return "Breakpoint set at {$filename}:{$line} (ID: {$breakpointId})";
+                return "Direct Connection - Breakpoint set at {$filename}:{$line} (ID: {$breakpointId})";
+            } catch (Throwable $e) {
+                return 'Failed to set breakpoint via both persistent server and direct connection: ' . $e->getMessage();
+            }
+        }
+
+        return 'Failed to set breakpoint: No available debug client.';
     }
 
     protected function removeBreakpoint(array $args): string
@@ -1561,7 +1620,8 @@ class McpServer
         }
 
         self::$tracingActive = true;
-        self::$traceFile = $traceFile ?: '/tmp/xdebug_custom_trace_' . uniqid() . '.xt';
+        $xdebugOutputDir = ini_get('xdebug.output_dir') ?: '/tmp';
+        self::$traceFile = $traceFile ?: $xdebugOutputDir . '/xdebug_custom_trace_' . uniqid() . '.xt';
 
         register_tick_function([$this, 'traceFunction']);
         declare(ticks=1);
