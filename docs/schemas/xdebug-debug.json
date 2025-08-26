@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug-v1.json",
+  "title": "Xdebug Debug Result",
+  "description": "AI-optimized debugging result with conditional breakpoint trace data for PHP debugging and execution flow analysis.",
+  "type": "object",
+  "properties": {
+    "trace_file": {
+      "type": "string",
+      "description": "Absolute path to the generated Xdebug trace file (.xt format)",
+      "pattern": "^/.+\\.xt$"
+    },
+    "lines": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total lines in trace file. Use this to decide optimal reading strategy for AI analysis."
+    },
+    "size": {
+      "type": "number",
+      "minimum": 0,
+      "description": "File size in KB. Critical for AI to choose appropriate reading strategy (full read vs. partial analysis)."
+    },
+    "command": {
+      "type": "string",
+      "description": "Complete command used to generate this trace. Enables reproduction and context understanding.",
+      "minLength": 1
+    }
+  },
+  "required": ["trace_file", "lines", "size", "command"],
+  "additionalProperties": false,
+  
+  "links": [
+    {
+      "rel": "specification",
+      "href": "https://xdebug.org/docs/trace",
+      "title": "Xdebug Trace Format Documentation",
+      "description": "Official documentation for Xdebug trace file format (.xt) structure and interpretation"
+    },
+    {
+      "rel": "ai-guide", 
+      "href": "https://koriym.github.io/xdebug-mcp/debug-guidelines.md",
+      "title": "AI Debug Analysis Guidelines",
+      "description": "Complete guide for AI systems analyzing Xdebug conditional debugging results"
+    },
+    {
+      "rel": "ai-principles",
+      "href": "https://koriym.github.io/xdebug-mcp/ai-debugging-with-debugger.md",
+      "title": "AI Debugging with Debugger Principles",
+      "description": "Comprehensive non-invasive trace-based debugging principles for AI assistants"
+    },
+    {
+      "rel": "self",
+      "href": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json",
+      "title": "JSON Schema for Xdebug Debug Results"
+    },
+    {
+      "rel": "example",
+      "href": "{trace_file}",
+      "title": "Generated Trace File",
+      "templated": true
+    }
+  ]
+}

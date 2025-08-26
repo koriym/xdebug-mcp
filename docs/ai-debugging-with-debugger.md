@@ -70,7 +70,7 @@ Runtime-based approach:
 - Performance issues → `./bin/xdebug-profile`
 - Test coverage → `./bin/xdebug-coverage`  
 - Execution flow → `./bin/xdebug-trace`
-- **Conditional debugging** → `./bin/xdebug-debug --break=file:line:condition --exit-on-break`
+- **Conditional debugging** → `./bin/xdebug-debug --break=file:line:condition --exit-on-break --json`
 - **Test debugging** → `./bin/xdebug-phpunit`
 - General analysis → `./bin/xdebug-profile` (default)
 
@@ -175,6 +175,47 @@ cat /tmp/trace_filename.xt
 - 📊 Complete execution history leading to condition
 - 🤖 AI analysis of real runtime data, not assumptions
 - 🎯 Efficient debugging - no manual trace reading
+
+**4. JSON Output for AI Analysis**
+When using `--json` flag, you receive structured debugging results:
+```json
+{"trace_file":"/tmp/trace.1034012359.xt","lines":11,"size":0.3,"command":"php demo.php"}
+```
+
+**AI Analysis Strategy Based on File Size:**
+- **Small files (size < 1KB):** Read entire trace file directly
+- **Medium files (1-100KB):** Use grep to find breakpoint hit, then read context
+- **Large files (>100KB):** Use tail to examine execution leading to breakpoint
+
+**Key Information:**
+- `trace_file`: Absolute path to Xdebug trace file (.xt format)
+- `lines`: Total lines in trace (guides reading strategy)
+- `size`: File size in KB (determines analysis approach)
+- `command`: Complete execution command (provides context)
+
+**Understanding Xdebug Trace Format (.xt files):**
+```
+Level   FuncID  Time    Memory  Function  UserDef  File:Line  Params/Return
+2       1       0.003   396784  rand      0        test.php:3  0 1
+2       1       1       0.004   396848                         R 0
+```
+
+**Key columns for AI analysis:**
+- **Level**: Call stack depth (higher = deeper nested)
+- **Function**: What function was called
+- **UserDef**: 1=your code, 0=built-in PHP function  
+- **Params/Return**: Arguments passed or return values (R prefix)
+
+**AI Analysis Goal:** Understand why the breakpoint condition became true.
+
+**Analysis Steps:**
+1. Check file size to choose reading strategy (full vs. targeted)
+2. Parse command to understand what condition triggered
+3. Focus on execution leading to the breakpoint hit
+4. Identify function calls and variable states that caused the condition
+5. Provide specific recommendations based on actual runtime data
+
+**Remember:** This is real runtime data showing exactly what happened, not assumptions about what should have happened.
 
 ### When to Use Conditional Debugging
 - **Bug Investigation**: `--break=calculateTotal.php:45:$result<0`

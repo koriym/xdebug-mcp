@@ -68,6 +68,7 @@ function parseBreakpoints(string $breakSpec): array
     $command = [];
     $parseOptions = true;
     $traceOnly = false;
+    $jsonOutput = false;
     
     for ($i = 1; $i < count($argv); $i++) {
         $arg = $argv[$i];
@@ -98,6 +99,11 @@ function parseBreakpoints(string $breakSpec): array
             continue;
         }
         
+        if ($parseOptions && $arg === '--json') {
+            $jsonOutput = true;
+            continue;
+        }
+        
         if ($parseOptions && ($arg === '--help' || $arg === '-h')) {
             echo "Usage: xdebug-debug [options] [--] command\n";
             echo "       xdebug-debug script.php [breakpoint_file] [break_line]  # Legacy format\n";
@@ -106,7 +112,8 @@ function parseBreakpoints(string $breakSpec): array
             echo "  --break=SPEC     Advanced breakpoint specification\n";
             echo "  --file=FILE      File to set breakpoint in (legacy)\n";
             echo "  --line=LINE      Line number to break at (legacy)\n";
-            echo "  --exit-on-break     Auto-continue and output trace when condition is met\n";
+            echo "  --exit-on-break  Auto-continue and output trace when condition is met\n";
+            echo "  --json           Output result in JSON format for AI analysis\n";
             echo "  --help, -h       Show this help\n";
             echo "\n";
             echo "Breakpoint Specification (--break=SPEC):\n";
@@ -172,11 +179,12 @@ function parseBreakpoints(string $breakSpec): array
         $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, null, [
             'breakpoints' => $breakpoints,
             'command' => $command,
-            'traceOnly' => $traceOnly
+            'traceOnly' => $traceOnly,
+            'jsonOutput' => $jsonOutput
         ]);
     } else {
         // For legacy format, only pass command if it's not just the target script
-        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly];
+        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput];
         if (count($command) > 1 || ($command[0] !== $targetScript)) {
             $options['command'] = $command;
         }
