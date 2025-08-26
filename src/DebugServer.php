@@ -570,6 +570,19 @@ final class DebugServer
     }
 
     /**
+     * Step out
+     */
+    private function stepOut(): string
+    {
+        $response = $this->sendCommand('step_out');
+        if ($response) {
+            $this->log('✅ Step out completed');
+        }
+
+        return $response;
+    }
+
+    /**
      * Get stack trace
      */
     private function getStack(): string
@@ -646,7 +659,7 @@ final class DebugServer
     private function startInteractiveSession(): void
     {
         $this->log('🎮 Starting interactive debugging session');
-        $this->log('Available commands: s(tep), o(ver), c(ontinue), p <var>, bt, l(ist), claude, q(uit)');
+        $this->log('Available commands: s(tep), o(ver), out, c(ontinue), p <var>, bt, l(ist), claude, q(uit)');
 
         while (true) {
             $this->displayPrompt();
@@ -712,6 +725,9 @@ final class DebugServer
             case 'o':
             case 'over':
                 return $this->handleStepOverCommand();
+
+            case 'out':
+                return $this->handleStepOutCommand();
 
             case 'c':
             case 'continue':
@@ -843,6 +859,65 @@ final class DebugServer
             return false;
         } catch (Throwable $e) {
             $this->log('⚠️ Step over command encountered error: ' . $e->getMessage());
+
+            // Check if this is a connection error
+            if (
+                str_contains($e->getMessage(), 'Broken pipe') ||
+                str_contains($e->getMessage(), 'Connection closed') ||
+                str_contains($e->getMessage(), 'Failed to write to stream')
+            ) {
+                $this->log('🔚 Debug session ended due to connection issues');
+
+                return true;
+            }
+
+            // Try to recover only for non-connection errors
+            if ($this->isConnected()) {
+                $this->log('🔄 Connection still active, trying continue to next executable line...');
+                try {
+                    $response = $this->continueExecution();
+                    if ($this->isExecutionComplete($response)) {
+                        $this->log('✅ Execution completed');
+
+                        return true;
+                    }
+
+                    $this->displayCurrentState();
+
+                    return false;
+                } catch (Throwable $retryException) {
+                    $this->log('❌ Recovery failed: ' . $retryException->getMessage());
+                }
+            }
+
+            $this->log('🔚 Debug session ended due to connection issues');
+
+            return true;
+        }
+    }
+
+    /**
+     * Handle step out command
+     */
+    private function handleStepOutCommand(): bool
+    {
+        $this->log('👣 Stepping out of current function...');
+
+        try {
+            $response = $this->stepOut();
+
+            if ($this->isExecutionComplete($response)) {
+                $this->log('✅ Execution completed');
+
+                return true;
+            }
+
+            // Display current state after step out
+            $this->displayCurrentState();
+
+            return false;
+        } catch (Throwable $e) {
+            $this->log('⚠️ Step out command encountered error: ' . $e->getMessage());
 
             // Check if this is a connection error
             if (
@@ -1016,6 +1091,7 @@ final class DebugServer
         $this->log('🆘 Available commands:');
         $this->log('  s, step     - Execute next line (step into)');
         $this->log('  o, over     - Execute next line (step over)');
+        $this->log('  out         - Step out of current function');
         $this->log('  c, continue - Continue execution');
         $this->log('  p <var>     - Print variable value');
         $this->log('  bt          - Show backtrace');
