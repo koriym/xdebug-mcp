@@ -14,7 +14,7 @@
       "minItems": 1
     },
     "trace": {
-      "$ref": "#/definitions/trace"
+      "$ref": "xdebug-trace.json"
     }
   },
   "required": ["breaks", "trace"],
@@ -54,27 +54,6 @@
         }
       },
       "required": ["location", "variables"],
-      "additionalProperties": false
-    },
-    "trace": {
-      "type": "object",
-      "description": "Xdebug execution trace - the 'surveillance footage' recording complete function call history, timing, memory usage, and arguments. Generated in Xdebug's .xt format with tab-separated values",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the generated Xdebug trace file (.xt format)",
-          "pattern": "^/.+\\.xt$"
-        },
-        "content": {
-          "type": "array",
-          "description": "Lines from the trace file for AI analysis (up to 1000 lines). Each line represents a function call entry/exit in Xdebug trace format (.xt): Level | Func ID | Entry/Exit | Time | Memory | Function | User-defined | Include | File | Line | Arguments",
-          "items": {
-            "type": "string",
-            "description": "Single trace line in tab-separated format containing execution details"
-          }
-        }
-      },
-      "required": ["file", "content"],
       "additionalProperties": false
     }
   },

@@ -48,6 +48,7 @@ use function filesize;
 use function flush;
 use function fopen;
 use function fwrite;
+use function getenv;
 use function glob;
 use function implode;
 use function is_array;
@@ -96,6 +97,7 @@ final class DebugServer
     private const DEFAULT_CONNECTION_TIMEOUT = 30.0;  // Initial connection only
     private const DEFAULT_EXECUTION_TIMEOUT = 3600.0;  // 1 hour for long debugging sessions
     private const DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
+    private const MAX_STEPS = 100;  // Default maximum steps for step recording
 
     private DeferredFuture|null $listenerReady = null;
     private DeferredFuture|null $xdebugConnected = null;
@@ -107,6 +109,7 @@ final class DebugServer
     private SocketHttpServer|null $httpServer = null;
     private bool $httpMode = false;
     private bool $shouldExit = false;
+    private array $breaks = []; // For Step Recording data collection
 
     public function __construct(
         private string $targetScript,
@@ -232,8 +235,9 @@ final class DebugServer
                         '-dxdebug.client_host=127.0.0.1 ' .
                         '-dxdebug.client_port=%d ' .
                         '-dxdebug.start_with_request=trigger ' .
-                        '-dxdebug.trace_output_name=trace-%%s.xt ' .
+                        '-dxdebug.trace_output_name=trace-%%s ' .
                         '-dxdebug.trace_format=1 ' .
+                        '-dxdebug.use_compression=0 ' .
                         '-dxdebug.log=/tmp/xdebug.log ' .
                         '-dxdebug.log_level=7 ' .
                         '-dxdebug.connect_timeout_ms=5000 ' .
@@ -255,8 +259,9 @@ final class DebugServer
                     '-dxdebug.client_host=127.0.0.1 ' .
                     '-dxdebug.client_port=%d ' .
                     '-dxdebug.start_with_request=trigger ' .
-                    '-dxdebug.trace_output_name=trace-%%s.xt ' .
+                    '-dxdebug.trace_output_name=trace-%%s ' .
                     '-dxdebug.trace_format=1 ' .
+                    '-dxdebug.use_compression=0 ' .
                     '-dxdebug.log=/tmp/xdebug.log ' .
                     '-dxdebug.log_level=7 ' .
                     '-dxdebug.connect_timeout_ms=5000 ' .
@@ -348,7 +353,13 @@ final class DebugServer
 
             // Check if exit-on-break mode
             if ($this->options['traceOnly'] ?? false) {
-                $this->processMultipleBreakpoints();
+                // Check if Step Recording is enabled in exit-on-break mode
+                if (isset($this->options['maxSteps']) && $this->options['maxSteps'] > 0) {
+                    $this->processStepRecordingBreakpoints();
+                } else {
+                    $this->processMultipleBreakpoints();
+                }
+
                 exit(0);
             }
 
@@ -365,41 +376,130 @@ final class DebugServer
 
             $this->log('⏸️ Stopped at first executable line');
 
-            // Start interactive debugging session
-            $this->startInteractiveSession();
+            // Check if Step Recording mode is enabled
+            if (isset($this->options['maxSteps']) && $this->options['maxSteps'] > 0) {
+                $this->log("🎬 Starting Step Recording mode with {$this->options['maxSteps']} steps");
+                $steps = $this->performStepTrace();
+
+                if ($this->jsonMode) {
+                    // Add steps data to the breaks array for JSON output
+                    $this->breaks = array_merge($this->breaks, $steps);
+                }
+            } else {
+                // Start interactive debugging session
+                $this->startInteractiveSession();
+            }
         } catch (Throwable $e) {
             $this->log('Debug sequence error: ' . $e->getMessage());
         }
     }
 
     /**
-     * Legacy: Perform step-by-step tracing with variable inspection (DISABLED)
-     * This method has been replaced by startInteractiveSession() for true interactive debugging
+     * Perform step-by-step tracing with variable inspection for Step Recording
+     * Records variable state at each step for AI analysis
      */
-    /*
-    private function performStepTrace(): void
+    private function performStepTrace(): array
     {
         $stepCount = 0;
         $maxSteps = $this->options['maxSteps'] ?? self::MAX_STEPS;
+        $steps = [];
+        $previousVariables = []; // Store previous state for diff comparison
 
-        $this->log('🚶 Starting step-by-step execution trace');
+        $this->log("🚶 Starting step-by-step execution trace with differential recording (max {$maxSteps} steps)");
 
         while ($stepCount < $maxSteps) {
             $stepCount++;
 
             // Get current position and variables
-            $this->log("\n--- Step {$stepCount} ---");
+            $this->log("--- Step {$stepCount} ---");
 
-            $stackInfo = $this->getStack();
+            $stackInfo = $this->getStackTrace();
             if (empty($stackInfo)) {
                 $this->log('⚠️ No stack info available, execution may have completed');
                 break;
             }
 
-            $this->displayStackInfo($stackInfo);
+            // Get current location from stack info or XML response
+            $location = ['file' => 'unknown', 'line' => 0];
+            try {
+                $stackResponse = $this->sendCommand('stack_get');
+                if ($stackResponse) {
+                    $xml = simplexml_load_string($stackResponse);
+                    if ($xml && isset($xml->stack[0])) {
+                        $topFrame = $xml->stack[0];
+                        $filename = (string) $topFrame['filename'];
+                        $lineno = (string) $topFrame['lineno'];
+                        if ($filename && $lineno) {
+                            $location = [
+                                'file' => basename($filename),
+                                'line' => (int) $lineno,
+                            ];
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+                $this->log('⚠️ Error getting location: ' . $e->getMessage());
+            }
 
-            $variables = $this->getVariables();
-            $this->displayVariables($variables);
+            // Get current variables
+            $currentVariables = $this->getCurrentVariables();
+
+            // Implement differential recording (like video compression)
+            if ($stepCount === 1) {
+                // First frame: record all variables (full state)
+                $variablesToRecord = $currentVariables;
+                $recordingType = 'full';
+                $previousVariables = $currentVariables;
+            } else {
+                // Subsequent frames: record only differences (diff state)
+                $variablesToRecord = [];
+
+                // Find new or changed variables
+                foreach ($currentVariables as $name => $value) {
+                    if (! isset($previousVariables[$name]) || $previousVariables[$name] !== $value) {
+                        $variablesToRecord[$name] = $value;
+                    }
+                }
+
+                // Find deleted variables
+                foreach ($previousVariables as $name => $value) {
+                    if (! isset($currentVariables[$name])) {
+                        $variablesToRecord[$name] = '[DELETED]';
+                    }
+                }
+
+                $recordingType = 'diff';
+                $previousVariables = $currentVariables;
+            }
+
+            // Record step only if there are variables to record or it's the first step
+            if ($stepCount === 1 || ! empty($variablesToRecord)) {
+                $step = [
+                    'step' => $stepCount,
+                    'location' => $location,
+                    'variables' => $variablesToRecord,
+                    'recording_type' => $recordingType, // Indicate full vs diff recording
+                ];
+
+                $steps[] = $step;
+
+                if ($this->jsonMode) {
+                    $changeCount = count($variablesToRecord);
+                    $type = $recordingType === 'full' ? 'full state' : 'changes only';
+                    $this->log("Step {$stepCount}: {$location['file']}:{$location['line']} ({$changeCount} variables, {$type})");
+                } else {
+                    $this->displayStackInfo($stackInfo);
+                    $title = $recordingType === 'full'
+                        ? "Step {$stepCount} Variables (Full State)"
+                        : "Step {$stepCount} Variables (Changes Only)";
+                    $this->displayVariableArray($variablesToRecord, $title);
+                }
+            } else {
+                // No variable changes to record (skipped frame in compression terms)
+                if (! $this->jsonMode) {
+                    $this->log("Step {$stepCount}: {$location['file']}:{$location['line']} (no variable changes - frame skipped)");
+                }
+            }
 
             // Step into next instruction
             $this->log('👣 Step into...');
@@ -411,16 +511,54 @@ final class DebugServer
                 break;
             }
 
-            // Small delay for readability
-            delay(0.1);
+            // Small delay for readability in interactive mode
+            if (! $this->jsonMode) {
+                delay(0.1);
+            }
         }
 
         if ($stepCount >= $maxSteps) {
             $this->log("⚠️ Maximum steps ({$maxSteps}) reached, continuing to completion");
             $this->continueExecution();
         }
+
+        return $steps;
     }
-    */
+
+    /**
+     * Process Step Recording in exit-on-break mode
+     * Combines breakpoint processing with step recording
+     */
+    private function processStepRecordingBreakpoints(): void
+    {
+        $this->log("🎬 exit-on-break mode with Step Recording ({$this->options['maxSteps']} steps)");
+
+        try {
+            // Start execution and wait for first breakpoint
+            $response = $this->sendCommand('run');
+
+            if ($this->didBreak($response)) {
+                $this->log('🎯 Breakpoint hit, starting Step Recording...');
+
+                // Perform step recording from the breakpoint
+                $steps = $this->performStepTrace();
+
+                // Store results for JSON output
+                $this->breaks = array_merge($this->breaks, $steps);
+
+                $this->log('✅ Step Recording completed: ' . count($steps) . ' steps recorded');
+
+                // Output results immediately in JSON mode
+                if ($this->jsonMode) {
+                    $this->outputStepRecordingResults();
+                }
+            } else {
+                $this->log('⚠️ No breakpoint hit, execution completed normally');
+            }
+        } catch (Throwable $e) {
+            $this->log('❌ Step Recording error: ' . $e->getMessage());
+        }
+    }
 
     /**
      * Send a DBGp command and wait for the response
@@ -1591,7 +1729,31 @@ final class DebugServer
     }
 
     /**
-     * Display variables in readable format
+     * Display variables array with title (for step recording)
+     */
+    private function displayVariableArray(array $variables, string $title): void
+    {
+        $this->log("📊 {$title}:");
+
+        if (empty($variables)) {
+            $this->log('  (no variables)');
+
+            return;
+        }
+
+        foreach ($variables as $name => $value) {
+            if ($value === '[DELETED]') {
+                $this->log("  🗑️  {$name} = [DELETED]");
+            } else {
+                $this->log("  📌 {$name} = {$value}");
+            }
+        }
+
+        $this->log('');
+    }
+
+    /**
+     * Display variables in readable format (from XML response)
      */
     private function displayVariables(string $xmlResponse): void
     {
@@ -1809,7 +1971,96 @@ final class DebugServer
             $this->xdebugSocket->close();
         }
 
+        // Output Step Recording results in JSON mode
+        if ($this->jsonMode && ! empty($this->breaks)) {
+            $this->outputStepRecordingResults();
+        }
+
         $this->log('🧹 Cleanup completed');
+    }
+
+    /**
+     * Output Step Recording results in JSON format
+     */
+    private function outputStepRecordingResults(): void
+    {
+        $result = [
+            '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json',
+            'breaks' => $this->breaks,
+        ];
+
+        // Add trace file if available - use the most recent trace file directly
+        try {
+            // Get all trace files sorted by modification time
+            $allTraceFiles = array_merge(
+                glob('/tmp/trace*.xt') ?: [],
+                glob('/var/tmp/trace*.xt') ?: [],
+                glob('/tmp/trace*.xt.gz') ?: [],
+                glob('/var/tmp/trace*.xt.gz') ?: [],
+            );
+
+            // Debug: Add trace file search info to output
+            if ($this->jsonMode && getenv('XDEBUG_DEBUG')) {
+                $result['debug'] = [
+                    'trace_files_found' => count($allTraceFiles),
+                    'search_patterns' => ['/tmp/trace*.xt', '/var/tmp/trace*.xt', '/tmp/trace*.xt.gz', '/var/tmp/trace*.xt.gz'],
+                    'latest_file' => ! empty($allTraceFiles) ? $allTraceFiles[0] : null,
+                ];
+            }
+
+            if (! empty($allTraceFiles)) {
+                // Sort by modification time (newest first)
+                usort($allTraceFiles, static fn ($a, $b) => filemtime($b) - filemtime($a));
+                $latestTraceFile = $allTraceFiles[0];
+
+                // Use XdebugTracer for comprehensive trace statistics
+                $tracer = new XdebugTracer();
+                $result['trace'] = $tracer->generateTraceStatistics($latestTraceFile);
+            } else {
+                // No trace files found
+                $result['trace'] = [
+                    'file' => '',
+                    'content' => [],
+                ];
+            }
+        } catch (Throwable $e) {
+            // Error handling - still provide empty trace structure
+            $result['trace'] = [
+                'file' => '',
+                'content' => [],
+                'error' => $e->getMessage(),
+            ];
+        }
+
+        echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+    }
+
+    /**
+     * Find the most recent trace file
+     */
+    private function findTraceFile(): string|null
+    {
+        // Try the stored trace file first
+        if ($this->traceFile && file_exists($this->traceFile)) {
+            return $this->traceFile;
+        }
+
+        // Look for recent trace files in both /tmp and /var/tmp (both compressed and uncompressed)
+        $traceFiles = array_merge(
+            glob('/tmp/trace*.xt') ?: [],
+            glob('/var/tmp/trace*.xt') ?: [],
+            glob('/tmp/trace*.xt.gz') ?: [],
+            glob('/var/tmp/trace*.xt.gz') ?: [],
+        );
+
+        if (empty($traceFiles)) {
+            return null;
+        }
+
+        // Sort by modification time (newest first)
+        usort($traceFiles, static fn ($a, $b) => filemtime($b) - filemtime($a));
+
+        return $traceFiles[0];
     }
 
     /**
