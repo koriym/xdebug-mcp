@@ -1985,11 +1985,12 @@ final class DebugServer
 
             if (! empty($stack)) {
                 $currentFrame = $stack[0];
+                $loc = $this->parseStackLocation($currentFrame);
                 $debugState['breaks'] = [
                     [
                         'location' => [
-                            'file' => $currentFrame['file'] ?? 'unknown',
-                            'line' => (int) ($currentFrame['line'] ?? 1),
+                            'file' => $loc['file'] ?? 'unknown',
+                            'line' => (int) ($loc['line'] ?? 1),
                         ],
                         'variables' => $variables,
                     ],
@@ -2077,6 +2078,7 @@ final class DebugServer
                 'content' => [],
             ];
         }
+
         // Remove duplicates and sort by modification time, get the most recent
         $allTraceFiles = array_unique($allTraceFiles);
         usort($allTraceFiles, static function ($a, $b) {

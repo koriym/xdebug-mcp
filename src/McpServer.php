@@ -46,6 +46,7 @@ use function ob_get_clean;
 use function ob_start;
 use function phpversion;
 use function preg_match;
+use function register_shutdown_function;
 use function register_tick_function;
 use function restore_error_handler;
 use function round;
@@ -87,6 +88,7 @@ class McpServer
 {
     protected array $tools = [];
     protected XdebugClient|null $xdebugClient = null;
+    private array $xdebugSessions = []; // Multiple session management
     private bool $debugMode = false;
     private string $sessionId;
 
@@ -97,6 +99,9 @@ class McpServer
         $this->initializeTools();
         $this->cleanupPreviousSession(); // 前のセッションをクリーンアップ
         $this->loadExistingSession();
+
+        // Clean up expired sessions periodically
+        register_shutdown_function([$this, 'cleanupExpiredSessions']);
     }
 
     private function cleanupPreviousSession(): void
@@ -155,7 +160,7 @@ class McpServer
         $this->tools = [
             'xdebug_connect' => [
                 'name' => 'xdebug_connect',
-                'description' => 'Connect to Xdebug session',
+                'description' => 'Connect to new Xdebug session and return session ID for persistent operations',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -195,23 +200,43 @@ class McpServer
             ],
             'xdebug_step_into' => [
                 'name' => 'xdebug_step_into',
-                'description' => 'Step into the next function call',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
+                'description' => 'Step into the next function call using session-based connection',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'session_id' => ['type' => 'string', 'description' => 'Optional session ID from xdebug_connect (uses default session if not provided)'],
+                    ],
+                ],
             ],
             'xdebug_step_over' => [
                 'name' => 'xdebug_step_over',
-                'description' => 'Step over the current line',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
+                'description' => 'Step over the current line using session-based connection',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'session_id' => ['type' => 'string', 'description' => 'Optional session ID from xdebug_connect (uses default session if not provided)'],
+                    ],
+                ],
             ],
             'xdebug_step_out' => [
                 'name' => 'xdebug_step_out',
-                'description' => 'Step out of the current function',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
+                'description' => 'Step out of the current function using session-based connection',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'session_id' => ['type' => 'string', 'description' => 'Optional session ID from xdebug_connect (uses default session if not provided)'],
+                    ],
+                ],
             ],
             'xdebug_continue' => [
                 'name' => 'xdebug_continue',
-                'description' => 'Continue execution until next breakpoint',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
+                'description' => 'Continue execution until next breakpoint using session-based connection',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'session_id' => ['type' => 'string', 'description' => 'Optional session ID from xdebug_connect (uses default session if not provided)'],
+                    ],
+                ],
             ],
             'xdebug_get_stack' => [
                 'name' => 'xdebug_get_stack',
@@ -492,6 +517,11 @@ class McpServer
                     'required' => ['feature_name'],
                 ],
             ],
+            'xdebug_list_sessions' => [
+                'name' => 'xdebug_list_sessions',
+                'description' => 'List all active Xdebug sessions with their status information',
+                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
+            ],
         ];
     }
 
@@ -715,25 +745,25 @@ class McpServer
                 return $this->connectToXdebug($arguments);
 
             case 'xdebug_disconnect':
-                return $this->disconnectFromXdebug();
+                return $this->disconnectFromXdebug($arguments);
 
             case 'xdebug_set_breakpoint':
                 return $this->setBreakpoint($arguments);
 
             case 'xdebug_step_into':
-                return $this->stepInto();
+                return $this->stepInto($arguments);
 
             case 'xdebug_remove_breakpoint':
                 return $this->removeBreakpoint($arguments);
 
             case 'xdebug_step_over':
-                return $this->stepOver();
+                return $this->stepOver($arguments);
 
             case 'xdebug_step_out':
-                return $this->stepOut();
+                return $this->stepOut($arguments);
 
             case 'xdebug_continue':
-                return $this->continue();
+                return $this->continueExecution($arguments);
 
             case 'xdebug_get_stack':
                 return $this->getStack();
@@ -837,6 +867,9 @@ class McpServer
             case 'xdebug_get_feature':
                 return $this->getFeature($arguments);
 
+            case 'xdebug_list_sessions':
+                return $this->listSessions();
+
             default:
                 throw new InvalidToolException("Unknown tool: $toolName");
         }
@@ -847,40 +880,91 @@ class McpServer
         $host = $args['host'] ?? XdebugClient::DEFAULT_HOST;
         $port = $args['port'] ?? XdebugClient::DEFAULT_PORT;
 
-        $this->xdebugClient = new XdebugClient($host, $port, $this->sessionId);
+        // Generate new session ID for this connection
+        $sessionId = uniqid('xdebug_session_', true);
+
+        $xdebugClient = new XdebugClient($host, $port, $sessionId);
         try {
-            $result = $this->xdebugClient->connect();
+            $result = $xdebugClient->connect();
+
+            // Store session in multiple session manager
+            $this->xdebugSessions[$sessionId] = [
+                'client' => $xdebugClient,
+                'host' => $host,
+                'port' => $port,
+                'connected' => true,
+                'created_at' => time(),
+                'last_activity' => time(),
+                'session_info' => $result,
+            ];
+
+            // Also maintain backward compatibility with single session
+            $this->xdebugClient = $xdebugClient;
+
             $state = [
                 'host' => $host,
                 'port' => $port,
                 'connected' => true,
-                'sessionId' => $this->sessionId,
+                'sessionId' => $sessionId,
                 'last_activity' => time(),
                 'session_info' => $result,
             ];
             file_put_contents(XdebugClient::GLOBAL_STATE_FILE, json_encode($state, JSON_PRETTY_PRINT));
 
-            return "Connected to new Xdebug session at {$host}:{$port}. Result: " . json_encode($result);
+            return json_encode([
+                'status' => 'connected',
+                'session_id' => $sessionId,
+                'host' => $host,
+                'port' => $port,
+                'connection_info' => $result,
+            ]);
         } catch (Throwable $e) {
             $this->debugLog('Connection failed', ['error' => $e->getMessage()]);
 
-            return "Failed to connect to Xdebug: {$e->getMessage()}. Port {$port} may be in use.";
+            return json_encode([
+                'status' => 'failed',
+                'error' => $e->getMessage(),
+                'host' => $host,
+                'port' => $port,
+            ]);
         }
     }
 
-    protected function disconnectFromXdebug(): string
+    protected function disconnectFromXdebug(array $args = []): string
     {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
+        $sessionId = $args['session_id'] ?? null;
+
+        if ($sessionId && isset($this->xdebugSessions[$sessionId])) {
+            // Disconnect specific session
+            $session = $this->xdebugSessions[$sessionId];
+            $session['client']->disconnect();
+            unset($this->xdebugSessions[$sessionId]);
+
+            // If this was the current session, clear it
+            if ($this->xdebugClient === $session['client']) {
+                $this->xdebugClient = null;
+            }
+
+            return json_encode([
+                'status' => 'disconnected',
+                'session_id' => $sessionId,
+            ]);
+        } elseif (! $sessionId && $this->xdebugClient) {
+            // Disconnect default session for backward compatibility
+            $this->xdebugClient->disconnect();
+            $this->xdebugClient = null;
+
+            // Clear all sessions
+            foreach ($this->xdebugSessions as $id => $session) {
+                $session['client']->disconnect();
+            }
+
+            $this->xdebugSessions = [];
+
+            return json_encode(['status' => 'disconnected', 'session_id' => 'default']);
+        } else {
+            return json_encode(['status' => 'error', 'message' => 'No active session found']);
         }
-
-        $this->xdebugClient->disconnect();
-
-        // State file is cleared by client->disconnect(); do not rewrite it here.
-
-        $this->xdebugClient = null;
-
-        return 'Disconnected from Xdebug';
     }
 
     protected function setBreakpoint(array $args): string
@@ -915,48 +999,116 @@ class McpServer
         return "Breakpoint {$breakpointId} removed";
     }
 
-    protected function stepInto(): string
+    protected function stepInto(array $args = []): string
     {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
+        $sessionId = $args['session_id'] ?? null;
+        $client = $this->getXdebugClient($sessionId);
+
+        if (! $client) {
+            return json_encode(['status' => 'error', 'message' => 'No active Xdebug session found']);
         }
 
-        $result = $this->xdebugClient->stepInto();
+        try {
+            $result = $client->stepInto();
+            $this->updateSessionActivity($sessionId);
 
-        return 'Step into completed: ' . json_encode($result);
+            return json_encode([
+                'status' => 'success',
+                'action' => 'step_into',
+                'session_id' => $sessionId ?? 'default',
+                'result' => $result,
+            ]);
+        } catch (Throwable $e) {
+            return json_encode([
+                'status' => 'error',
+                'action' => 'step_into',
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
-    protected function stepOver(): string
+    protected function stepOver(array $args = []): string
     {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
+        $sessionId = $args['session_id'] ?? null;
+        $client = $this->getXdebugClient($sessionId);
+
+        if (! $client) {
+            return json_encode(['status' => 'error', 'message' => 'No active Xdebug session found']);
         }
 
-        $result = $this->xdebugClient->stepOver();
+        try {
+            $result = $client->stepOver();
+            $this->updateSessionActivity($sessionId);
 
-        return 'Step over completed: ' . json_encode($result);
+            return json_encode([
+                'status' => 'success',
+                'action' => 'step_over',
+                'session_id' => $sessionId ?? 'default',
+                'result' => $result,
+            ]);
+        } catch (Throwable $e) {
+            return json_encode([
+                'status' => 'error',
+                'action' => 'step_over',
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
-    protected function stepOut(): string
+    protected function stepOut(array $args = []): string
     {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
+        $sessionId = $args['session_id'] ?? null;
+        $client = $this->getXdebugClient($sessionId);
+
+        if (! $client) {
+            return json_encode(['status' => 'error', 'message' => 'No active Xdebug session found']);
         }
 
-        $result = $this->xdebugClient->stepOut();
+        try {
+            $result = $client->stepOut();
+            $this->updateSessionActivity($sessionId);
 
-        return 'Step out completed: ' . json_encode($result);
+            return json_encode([
+                'status' => 'success',
+                'action' => 'step_out',
+                'session_id' => $sessionId ?? 'default',
+                'result' => $result,
+            ]);
+        } catch (Throwable $e) {
+            return json_encode([
+                'status' => 'error',
+                'action' => 'step_out',
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
-    protected function continue(): string
+    protected function continueExecution(array $args = []): string
     {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
+        $sessionId = $args['session_id'] ?? null;
+        $client = $this->getXdebugClient($sessionId);
+
+        if (! $client) {
+            return json_encode(['status' => 'error', 'message' => 'No active Xdebug session found']);
         }
 
-        $result = $this->xdebugClient->continue();
+        try {
+            $result = $client->continue();
+            $this->updateSessionActivity($sessionId);
 
-        return 'Continue completed: ' . json_encode($result);
+            return json_encode([
+                'status' => 'success',
+                'action' => 'continue',
+                'session_id' => $sessionId ?? 'default',
+                'result' => $result,
+            ]);
+        } catch (Throwable $e) {
+            return json_encode([
+                'status' => 'error',
+                'action' => 'continue',
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     protected function getStack(): string
@@ -1906,5 +2058,119 @@ class McpServer
         $value = $result['#text'] ?? $result['@attributes']['supported'] ?? 'unknown';
 
         return "Feature '{$featureName}': {$value}";
+    }
+
+    protected function listSessions(): string
+    {
+        // Clean up expired sessions first
+        $this->cleanupExpiredSessions();
+
+        $sessions = $this->getSessionInfo();
+
+        if (empty($sessions)) {
+            return json_encode([
+                'status' => 'success',
+                'active_sessions' => 0,
+                'sessions' => [],
+            ]);
+        }
+
+        return json_encode([
+            'status' => 'success',
+            'active_sessions' => count($sessions),
+            'sessions' => $sessions,
+        ]);
+    }
+
+    /**
+     * Get XdebugClient instance for a specific session or default session
+     */
+    private function getXdebugClient(string|null $sessionId = null): XdebugClient|null
+    {
+        if ($sessionId && isset($this->xdebugSessions[$sessionId])) {
+            return $this->xdebugSessions[$sessionId]['client'];
+        }
+
+        // Return default client for backward compatibility
+        return $this->xdebugClient;
+    }
+
+    /**
+     * Update last activity timestamp for a session
+     */
+    private function updateSessionActivity(string|null $sessionId = null): void
+    {
+        if ($sessionId && isset($this->xdebugSessions[$sessionId])) {
+            $this->xdebugSessions[$sessionId]['last_activity'] = time();
+        }
+    }
+
+    /**
+     * Clean up inactive sessions (older than 1 hour)
+     */
+    private function cleanupInactiveSessions(): void
+    {
+        $currentTime = time();
+        $maxInactiveTime = 3600; // 1 hour
+
+        foreach ($this->xdebugSessions as $sessionId => $session) {
+            $inactiveTime = $currentTime - $session['last_activity'];
+            if ($inactiveTime > $maxInactiveTime) {
+                // Clean up the session
+                if ($session['client'] !== null) {
+                    try {
+                        $session['client']->disconnect();
+                    } catch (Throwable) {
+                        // Ignore cleanup errors
+                    }
+                }
+
+                unset($this->xdebugSessions[$sessionId]);
+            }
+        }
+    }
+
+    /**
+     * Clean up expired sessions (sessions inactive for more than 1 hour)
+     */
+    private function cleanupExpiredSessions(): void
+    {
+        $expiredTime = time() - 3600; // 1 hour timeout
+
+        foreach ($this->xdebugSessions as $sessionId => $session) {
+            if ($session['last_activity'] < $expiredTime) {
+                try {
+                    $session['client']->disconnect();
+                } catch (Throwable $e) {
+                    $this->debugLog('Failed to disconnect expired session', [
+                        'session_id' => $sessionId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                unset($this->xdebugSessions[$sessionId]);
+                $this->debugLog('Cleaned up expired session', ['session_id' => $sessionId]);
+            }
+        }
+    }
+
+    /**
+     * Get information about all active sessions
+     */
+    private function getSessionInfo(): array
+    {
+        $sessions = [];
+        foreach ($this->xdebugSessions as $sessionId => $session) {
+            $sessions[$sessionId] = [
+                'host' => $session['host'],
+                'port' => $session['port'],
+                'connected' => $session['connected'],
+                'created_at' => date('Y-m-d H:i:s', $session['created_at']),
+                'last_activity' => date('Y-m-d H:i:s', $session['last_activity']),
+                'session_info' => $session['session_info'],
+            ];
+        }
+
+        return $sessions;
     }
 }
