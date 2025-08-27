@@ -1970,6 +1970,11 @@ final class DebugServer
     private function outputComprehensiveDebugState(): void
     {
         $debugState = [];
+        
+        // Add context if provided
+        if (!empty($this->options['context'])) {
+            $debugState['context'] = $this->options['context'];
+        }
 
         // Get current location and variables
         try {
@@ -2237,6 +2242,11 @@ final class DebugServer
             'breaks' => $breaks,
             'trace' => $this->getTraceInfo(),
         ];
+        
+        // Add context if provided
+        if (!empty($this->options['context'])) {
+            $debugState['context'] = $this->options['context'];
+        }
 
         // Output format based on jsonMode or jsonOutput option
         if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {

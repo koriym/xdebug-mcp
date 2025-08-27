@@ -1,0 +1,159 @@
+{
+    "$schema": "https://koriym.github.io/xdebug-mcp/schema/xdebug-debug.json",
+    "breaks": [
+        {
+            "step": 1,
+            "location": {
+                "file": "loop-counter.php",
+                "line": 8
+            },
+            "variables": {
+                "$counter": "int: 0",
+                "$i": "uninitialized: ",
+                "$item": "uninitialized: ",
+                "$items": "uninitialized: ",
+                "$length": "uninitialized: ",
+                "$results": "uninitialized: "
+            }
+        },
+        {
+            "step": 2,
+            "location": {
+                "file": "loop-counter.php",
+                "line": 13
+            },
+            "variables": {
+                "$counter": "int: 1",
+                "$i": "int: 0",
+                "$item": "uninitialized: ",
+                "$items": "array: [0: \"apple\", 1: \"banana\", 2: \"cherry\"]",
+                "$length": "uninitialized: ",
+                "$results": "array: []"
+            }
+        },
+        {
+            "step": 3,
+            "location": {
+                "file": "loop-counter.php",
+                "line": 17
+            },
+            "variables": {
+                "$counter": "int: 1",
+                "$i": "int: 0",
+                "$item": "string: apple",
+                "$items": "array: [0: \"apple\", 1: \"banana\", 2: \"cherry\"]",
+                "$length": "int: 5",
+                "$results": "array: []"
+            }
+        },
+        {
+            "step": 4,
+            "location": {
+                "file": "loop-counter.php",
+                "line": 13
+            },
+            "variables": {
+                "$counter": "int: 2",
+                "$i": "int: 1",
+                "$item": "string: apple",
+                "$items": "array: [0: \"apple\", 1: \"banana\", 2: \"cherry\"]",
+                "$length": "int: 5",
+                "$results": "array: [0: array[4]]"
+            }
+        },
+        {
+            "step": 5,
+            "location": {
+                "file": "loop-counter.php",
+                "line": 17
+            },
+            "variables": {
+                "$counter": "int: 2",
+                "$i": "int: 1",
+                "$item": "string: banana",
+                "$items": "array: [0: \"apple\", 1: \"banana\", 2: \"cherry\"]",
+                "$length": "int: 6",
+                "$results": "array: [0: array[4]]"
+            }
+        },
+        {
+            "step": 6,
+            "location": {
+                "file": "loop-counter.php",
+                "line": 24
+            },
+            "variables": {
+                "$counter": "int: 2",
+                "$i": "int: 1",
+                "$item": "string: banana",
+                "$items": "array: [0: \"apple\", 1: \"banana\", 2: \"cherry\"]",
+                "$length": "int: 6",
+                "$results": "array: [0: array[4], 1: array[4]]"
+            }
+        },
+        {
+            "step": 7,
+            "location": {
+                "file": "loop-counter.php",
+                "line": 13
+            },
+            "variables": {
+                "$counter": "int: 3",
+                "$i": "int: 2",
+                "$item": "string: banana",
+                "$items": "array: [0: \"apple\", 1: \"banana\", 2: \"cherry\"]",
+                "$length": "int: 6",
+                "$results": "array: [0: array[4], 1: array[5]]"
+            }
+        },
+        {
+            "step": 8,
+            "location": {
+                "file": "loop-counter.php",
+                "line": 17
+            },
+            "variables": {
+                "$counter": "int: 3",
+                "$i": "int: 2",
+                "$item": "string: cherry",
+                "$items": "array: [0: \"apple\", 1: \"banana\", 2: \"cherry\"]",
+                "$length": "int: 6",
+                "$results": "array: [0: array[4], 1: array[5]]"
+            }
+        },
+        {
+            "step": 9,
+            "location": {
+                "file": "loop-counter.php",
+                "line": 24
+            },
+            "variables": {
+                "$counter": "int: 3",
+                "$i": "int: 2",
+                "$item": "string: cherry",
+                "$items": "array: [0: \"apple\", 1: \"banana\", 2: \"cherry\"]",
+                "$length": "int: 6",
+                "$results": "array: [0: array[4], 1: array[5], 2: array[4]]"
+            }
+        }
+    ],
+    "trace": {
+        "file": "/tmp/trace.1034012359.xt",
+        "content": [
+            "Version: 3.4.4",
+            "File format: 4",
+            "TRACE START [2025-08-27 04:06:38.765451]",
+            "1\t0\t0\t0.000317\t405224\t{main}\t1\t\t/Users/akihito/git/xdebug-mcp/test_array_display.php\t0\t0",
+            "2\t1\t0\t0.000340\t405288\tprocessWithCounters\t1\t\t/Users/akihito/git/xdebug-mcp/test_array_display.php\t49\t0",
+            "2\t1\t1\t0.000358\t407384",
+            "2\t1\tR\t\t\t[0 => ['index' => 0, 'item' => 'apple', 'length' => 5, 'counter' => 1, 'running_total' => 5], 1 => ['index' => 1, 'item' => 'banana', 'length' => 6, 'counter' => 2, 'running_total' => 11], 2 => ['index' => 2, 'item' => 'cherry', 'length' => 6, 'counter' => 3, 'running_total' => 17], 3 => ['index' => 3, 'item' => 'date', 'length' => 4, 'counter' => 4, 'running_total' => 21], 4 => ['index' => 4, 'item' => 'elderberry', 'length' => 10, 'counter' => 5, 'running_total' => 31]]",
+            "2\t2\t0\t0.000379\t407384\tprocessUsers\t1\t\t/Users/akihito/git/xdebug-mcp/test_array_display.php\t50\t0",
+            "2\t2\t1\t0.000388\t408888",
+            "2\t2\tR\t\t\t['alice' => ['age' => 25, 'city' => 'Tokyo', 'process_order' => 1], 'bob' => ['age' => 30, 'city' => 'Osaka', 'process_order' => 2], 'charlie' => ['age' => 35, 'city' => 'Kyoto', 'process_order' => 3]]",
+            "1\t0\t1\t0.000398\t408888",
+            "\t\t\t0.000430\t398680",
+            "TRACE END   [2025-08-27 04:06:38.765729]",
+            ""
+        ]
+    }
+}

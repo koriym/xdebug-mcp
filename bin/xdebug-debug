@@ -69,6 +69,7 @@ function parseBreakpoints(string $breakSpec): array
     $parseOptions = true;
     $traceOnly = false;
     $jsonOutput = false;
+    $context = null;
     
     for ($i = 1; $i < count($argv); $i++) {
         $arg = $argv[$i];
@@ -105,6 +106,11 @@ function parseBreakpoints(string $breakSpec): array
             continue;
         }
         
+        if ($parseOptions && str_starts_with($arg, '--context=')) {
+            $context = substr($arg, 10);
+            continue;
+        }
+        
         if ($parseOptions && ($arg === '--help' || $arg === '-h')) {
             echo "Usage: xdebug-debug [options] [--] command\n";
             echo "       xdebug-debug script.php [breakpoint_file] [break_line]  # Legacy format\n";
@@ -114,6 +120,7 @@ function parseBreakpoints(string $breakSpec): array
             echo "  --file=FILE      File to set breakpoint in (legacy)\n";
             echo "  --line=LINE      Line number to break at (legacy)\n";
             echo "  --exit-on-break  Auto-continue and output trace (automatically enables JSON mode)\n";
+            echo "  --context=TEXT   Add contextual description for AI analysis\n";
             echo "  --json           Force JSON output format (implied by --exit-on-break)\n";
             echo "  --help, -h       Show this help\n";
             echo "\n";
@@ -128,6 +135,7 @@ function parseBreakpoints(string $breakSpec): array
             echo "  xdebug-debug --break=src/User.php:42 -- php main.php arg1 arg2\n";
             echo "  xdebug-debug --break=src/User.php:42:\$id>100 -- php main.php user123\n";
             echo "  xdebug-debug --break=file1.php:5,file2.php:10 -- php main.php\n";
+            echo "  xdebug-debug --context=\"Login validation test\" --exit-on-break -- php UserTest.php\n";
             echo "  xdebug-debug test.php test.php 15                       # Legacy format\n";
             exit(0);
         }
@@ -181,11 +189,12 @@ function parseBreakpoints(string $breakSpec): array
             'breakpoints' => $breakpoints,
             'command' => $command,
             'traceOnly' => $traceOnly,
-            'jsonOutput' => $jsonOutput
+            'jsonOutput' => $jsonOutput,
+            'context' => $context
         ], $jsonOutput);
     } else {
         // For legacy format, only pass command if it's not just the target script
-        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput];
+        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context];
         if (count($command) > 1 || ($command[0] !== $targetScript)) {
             $options['command'] = $command;
         }
