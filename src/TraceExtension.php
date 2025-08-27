@@ -25,8 +25,8 @@ class TraceExtension implements Extension
         $facade->registerSubscriber(new class implements BeforeTestMethodCalledSubscriber {
             public function notify(BeforeTestMethodCalled $event): void
             {
-                $test = $event->testMethod();
-                $testName = $test->className() . '::' . $test->methodName();
+                $method = $event->calledMethod();
+                $testName = $method->className() . '::' . $method->methodName();
 
                 if (TraceHelper::shouldTrace($testName)) {
                     TraceHelper::startTrace($testName);
@@ -37,8 +37,8 @@ class TraceExtension implements Extension
         $facade->registerSubscriber(new class implements AfterTestMethodCalledSubscriber {
             public function notify(AfterTestMethodCalled $event): void
             {
-                $test = $event->testMethod();
-                $testName = $test->className() . '::' . $test->methodName();
+                $method = $event->calledMethod();
+                $testName = $method->className() . '::' . $method->methodName();
 
                 if (TraceHelper::shouldTrace($testName)) {
                     TraceHelper::stopTrace($testName);

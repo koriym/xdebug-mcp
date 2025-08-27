@@ -91,7 +91,7 @@ class XdebugPhpunitCommand
      */
     private function parseArguments(array $argv): void
     {
-        $scriptName = array_shift($argv);
+        $scriptName = array_shift($argv) ?? 'xdebug-phpunit';
 
         if (empty($argv) || in_array($argv[0], ['--help', '-h'])) {
             $this->showHelp($scriptName);

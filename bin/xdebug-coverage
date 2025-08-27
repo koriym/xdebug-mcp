@@ -5,8 +5,21 @@ declare(strict_types=1);
 
 $projectRoot = require __DIR__ . '/autoload.php';
 
+// Show help if requested
+if (in_array('--help', $argv) || in_array('-h', $argv) || count($argv) < 4) {
+    echo "Usage: xdebug-coverage -- php script.php [args...]\n";
+    echo "\n";
+    echo "Executes PHP scripts with Xdebug code coverage and provides coverage analysis.\n";
+    echo "\n";
+    echo "Examples:\n";
+    echo "  xdebug-coverage -- php test.php\n";
+    echo "  xdebug-coverage -- php -f script.php arg1 arg2\n";
+    echo "\n";
+    exit(0);
+}
+
 // Skip: [0]="xdebug-coverage" [1]="--" [2]="php"
-$targetFile = $argv[3];           // script.php
+$targetFile = $argv[3] ?? '';           // script.php
 $phpArgs = array_slice($argv, 4); // remaining args
 
 // Create coverage scripts
