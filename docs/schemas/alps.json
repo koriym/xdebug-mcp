@@ -1,0 +1,388 @@
+{
+  "alps": {
+    "version": "1.0",
+    "title": "BEAR.Resource Schema Collection Profile",
+    "doc": {
+      "value": "Application-Level Profile Semantics for BEAR.Resource schema collection page. Defines semantic descriptors for schema presentation, documentation resources, and semantic profiling references."
+    },
+    "link": [
+      {
+        "rel": "help",
+        "href": "https://bearsunday.github.io/BEAR.Resource/",
+        "title": "BEAR.Resource Documentation"
+      },
+      {
+        "rel": "profile",
+        "href": "https://www.ietf.org/archive/id/draft-amundsen-richardson-foster-alps-07.txt",
+        "title": "ALPS Specification"
+      },
+      {
+        "rel": "describedby",
+        "href": "https://bearsunday.github.io/BEAR.Resource/schemas/semantic-tags.json",
+        "title": "Semantic Tag Definitions"
+      }
+    ],
+    "descriptor": [
+      {
+        "id": "schema-collection",
+        "type": "semantic",
+        "title": "Schema Collection Container",
+        "doc": {
+          "value": "Root container for JSON Schema collection with semantic profiling schemas."
+        },
+        "tag": "html"
+      },
+      {
+        "id": "json-schema-resource",
+        "type": "semantic",
+        "title": "JSON Schema Resource",
+        "doc": {
+          "value": "Individual JSON Schema resource with metadata and reference link."
+        },
+        "tag": "html",
+        "descriptor": [
+          {
+            "id": "schema-title",
+            "type": "semantic",
+            "title": "Schema Title",
+            "doc": {
+              "value": "Human-readable schema name and purpose."
+            },
+            "tag": "html"
+          },
+          {
+            "id": "schema-description", 
+            "type": "semantic",
+            "title": "Schema Description",
+            "doc": {
+              "value": "Detailed explanation of schema purpose and structure."
+            },
+            "tag": "html"
+          },
+          {
+            "id": "schema-reference",
+            "type": "safe",
+            "title": "Schema Reference Link",
+            "doc": {
+              "value": "Direct link to JSON Schema document for machine consumption."
+            },
+            "tag": "html"
+          }
+        ]
+      },
+      {
+        "id": "alps-profile-resource",
+        "type": "semantic", 
+        "title": "ALPS Profile Resource",
+        "doc": {
+          "value": "ALPS semantic profile resource for machine-readable semantics."
+        },
+        "tag": "html",
+        "descriptor": [
+          {
+            "id": "alps-title",
+            "type": "semantic",
+            "title": "ALPS Profile Title",
+            "tag": "html"
+          },
+          {
+            "id": "alps-description",
+            "type": "semantic", 
+            "title": "ALPS Profile Description",
+            "tag": "html"
+          },
+          {
+            "id": "alps-reference",
+            "type": "safe",
+            "title": "ALPS Profile Reference Link",
+            "tag": "html"
+          }
+        ]
+      },
+      {
+        "id": "development-resources",
+        "type": "semantic",
+        "title": "Development Resources Section",
+        "doc": {
+          "value": "Collection of development documentation and LLM interaction logs."
+        },
+        "tag": "html",
+        "descriptor": [
+          {
+            "id": "development-resource",
+            "type": "semantic",
+            "title": "Development Resource Item",
+            "tag": "html",
+            "descriptor": [
+              {
+                "id": "resource-link",
+                "type": "safe",
+                "title": "Development Resource Link",
+                "tag": "html"
+              },
+              {
+                "id": "resource-description",
+                "type": "semantic",
+                "title": "Development Resource Description",
+                "tag": "html"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "semantic-web-vision",
+        "type": "semantic",
+        "title": "Semantic Web Vision Statement",
+        "doc": {
+          "value": "Vision statement describing Tim Berners-Lee's Semantic Web realization through structured profiling."
+        },
+        "tag": "html"
+      },
+      {
+        "id": "json-schema-definitions",
+        "type": "semantic",
+        "title": "JSON Schema Definitions",
+        "doc": {
+          "value": "Machine-readable specifications that define the structure, constraints, and validation rules for JSON data formats."
+        },
+        "tag": "domain"
+      },
+      {
+        "id": "bear-resource-framework",
+        "type": "semantic", 
+        "title": "BEAR.Resource Framework",
+        "doc": {
+          "value": "PHP hypermedia framework implementing REST resource-oriented architecture with 'object as a service' patterns."
+        },
+        "tag": "domain",
+        "link": [
+          {
+            "rel": "help",
+            "href": "https://github.com/bearsunday/BEAR.Resource",
+            "title": "BEAR.Resource GitHub Repository"
+          }
+        ]
+      },
+      {
+        "id": "semantic-logging",
+        "type": "semantic",
+        "title": "Semantic Logging",
+        "doc": {
+          "value": "Structured logging approach that captures not just events but their semantic meaning and relationships for AI analysis."
+        },
+        "tag": "domain",
+        "link": [
+          {
+            "rel": "help",
+            "href": "https://github.com/koriym/Koriym.SemanticLogger",
+            "title": "Semantic Logger Package"
+          }
+        ]
+      },
+      {
+        "id": "structured-performance-profiling",
+        "type": "semantic",
+        "title": "Structured Performance Profiling",
+        "doc": {
+          "value": "Systematic collection of performance metrics (XHProf, Xdebug, PHP backtrace) in machine-readable formats."
+        },
+        "tag": "domain",
+        "link": [
+          {
+            "rel": "help",
+            "href": "https://github.com/tideways/php-xhprof-extension",
+            "title": "XHProf PHP Extension"
+          },
+          {
+            "rel": "help", 
+            "href": "https://xdebug.org/docs/trace",
+            "title": "Xdebug Trace Documentation"
+          }
+        ]
+      },
+      {
+        "id": "ai-understanding",
+        "type": "semantic", 
+        "title": "AI Understanding",
+        "doc": {
+          "value": "The capability of artificial intelligence systems to comprehend data structures, relationships, and context without human explanation."
+        },
+        "tag": "domain"
+      },
+      {
+        "id": "llm-interaction-logs",
+        "type": "semantic",
+        "title": "LLM Interaction Logs",
+        "doc": {
+          "value": "Records of conversations and interactions between developers and Large Language Models, capturing insights, patterns, and problem-solving approaches."
+        },
+        "tag": "domain"
+      },
+      {
+        "id": "development-insights",
+        "type": "semantic",
+        "title": "Development Insights", 
+        "doc": {
+          "value": "Valuable lessons, patterns, and understanding gained during the development process, often captured in LLM interactions."
+        },
+        "tag": "domain"
+      },
+      {
+        "id": "semantic-portal-template",
+        "type": "semantic",
+        "title": "Semantic Portal Template",
+        "doc": {
+          "value": "Reusable template system for creating semantic web portals that enable AI to understand project structures and documentation."
+        },
+        "tag": "domain"
+      },
+      {
+        "id": "ai-powered-performance-analysis",
+        "type": "semantic",
+        "title": "AI-Powered Performance Analysis",
+        "doc": {
+          "value": "Automated analysis of performance profiling data using artificial intelligence to identify bottlenecks, patterns, and optimization opportunities."
+        },
+        "tag": "domain"
+      },
+      {
+        "id": "structured-semantic-profiling",
+        "type": "semantic",
+        "title": "Structured Semantic Profiling",
+        "doc": {
+          "value": "Performance profiling that captures both raw metrics and semantic context, enabling AI to understand the meaning behind performance data."
+        },
+        "tag": "domain"
+      },
+      {
+        "id": "tim-berners-lee-vision",
+        "type": "semantic",
+        "title": "Tim Berners-Lee's Vision",
+        "doc": {
+          "value": "The Semantic Web vision where machines can understand and process the meaning of data, not just its syntax, enabling automatic knowledge discovery and reasoning."
+        },
+        "tag": "domain",
+        "link": [
+          {
+            "rel": "help",
+            "href": "https://www.w3.org/2001/sw/",
+            "title": "W3C Semantic Web Activity"
+          },
+          {
+            "rel": "help",
+            "href": "https://en.wikipedia.org/wiki/Semantic_Web",
+            "title": "Semantic Web - Wikipedia"
+          }
+        ]
+      },
+      {
+        "id": "machine-understanding",
+        "type": "semantic",
+        "title": "Machine Understanding",
+        "doc": {
+          "value": "The ability of computer systems to comprehend not just data structure but the semantic meaning, context, and relationships within information."
+        },
+        "tag": "domain"
+      },
+      {
+        "id": "html-structure-semantics",
+        "type": "semantic",
+        "title": "HTML Structure Semantics",
+        "tag": "domain",
+        "doc": {
+          "value": "Semantic meaning associated with HTML document structure, layout elements, and presentation organization that defines how content is arranged and displayed."
+        },
+        "link": [
+          {
+            "rel": "describedby",
+            "href": "https://bearsunday.github.io/BEAR.Resource/schemas/semantic-tags.json#html",
+            "title": "HTML Tag Definition"
+          }
+        ]
+      },
+      {
+        "id": "domain-knowledge-semantics",
+        "type": "semantic",
+        "title": "Domain Knowledge Semantics", 
+        "tag": "domain",
+        "doc": {
+          "value": "Semantic meaning of specialized concepts, terminology, and relationships within a specific field or application domain, enabling AI to understand subject matter expertise."
+        },
+        "link": [
+          {
+            "rel": "describedby",
+            "href": "https://bearsunday.github.io/BEAR.Resource/schemas/semantic-tags.json#domain",
+            "title": "Domain Tag Definition"
+          }
+        ]
+      },
+      {
+        "id": "resource-object",
+        "type": "semantic",
+        "title": "ResourceObject",
+        "tag": "domain",
+        "doc": {
+          "value": "Abstract base class in BEAR.Resource framework that implements REST resource pattern with HTTP methods (onGet, onPost, onPut, onDelete), containing code, headers, body, and view properties."
+        },
+        "link": [
+          {
+            "rel": "help",
+            "href": "https://github.com/bearsunday/BEAR.Resource/blob/1.x/src/ResourceObject.php",
+            "title": "ResourceObject Source Code"
+          }
+        ]
+      },
+      {
+        "id": "resource-invoker",
+        "type": "semantic",
+        "title": "Resource Invoker",
+        "tag": "domain",
+        "doc": {
+          "value": "Component responsible for executing resource requests, handling method dispatch, parameter injection, and optional semantic profiling integration."
+        },
+        "link": [
+          {
+            "rel": "help", 
+            "href": "https://github.com/bearsunday/BEAR.Resource/blob/1.x/src/Invoker.php",
+            "title": "Resource Invoker Source Code"
+          }
+        ]
+      },
+      {
+        "id": "hypermedia-linking",
+        "type": "semantic",
+        "title": "Hypermedia Linking",
+        "tag": "domain",
+        "doc": {
+          "value": "HATEOAS (Hypermedia as the Engine of Application State) implementation using @Link annotations to define resource relationships, transitions, and discoverable API endpoints."
+        },
+        "link": [
+          {
+            "rel": "help",
+            "href": "https://en.wikipedia.org/wiki/HATEOAS",
+            "title": "HATEOAS - Wikipedia"
+          }
+        ]
+      },
+      {
+        "id": "semantic-profiling",
+        "type": "semantic",
+        "title": "Semantic Profiling",
+        "tag": "domain",
+        "doc": {
+          "value": "Advanced performance analysis approach that captures raw metrics (XHProf, Xdebug) alongside semantic context, enabling AI-powered optimization insights and intelligent bottleneck identification."
+        }
+      },
+      {
+        "id": "resource-uri-scheme", 
+        "type": "semantic",
+        "title": "Resource URI Scheme",
+        "tag": "domain",
+        "doc": {
+          "value": "URI-to-class mapping system that routes requests using schemes (app://, http://, page://) to corresponding PSR-4 autoloaded resource classes, enabling uniform resource addressing."
+        }
+      }
+    ]
+  }
+}
