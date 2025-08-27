@@ -2240,7 +2240,7 @@ final class DebugServer
     private function outputMultipleBreakResults(array $breaks): void
     {
         $debugState = [
-            '$schema' => 'https://koriym.github.io/xdebug-mcp/schema/xdebug-debug.json',
+            '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json',
             'breaks' => $breaks,
             'trace' => $this->getTraceInfo(),
         ];
