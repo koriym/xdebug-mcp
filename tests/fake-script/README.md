@@ -91,7 +91,7 @@ Each test generates JSON conforming to the `xdebug-debug.json` schema:
 
 ```json
 {
-    "$schema": "https://koriym.github.io/xdebug-mcp/schema/xdebug-debug.json",
+    "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json",
     "context": "Your description here", 
     "breaks": [
         {

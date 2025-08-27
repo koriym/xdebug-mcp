@@ -1,5 +1,5 @@
 {
-    "$schema": "https://koriym.github.io/xdebug-mcp/schema/xdebug-debug.json",
+    "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json",
     "breaks": [
         {
             "step": 1,

@@ -68,7 +68,7 @@ All debug output follows a strict JSON schema for reliable AI analysis:
 ./bin/xdebug-debug --break=file.php:10,file.php:20 --exit-on-break --json -- php script.php
 ```
 
-Output includes schema validation: `"$schema": "https://koriym.github.io/xdebug-mcp/schema/xdebug-debug.json"`
+Output includes schema validation: `"$schema": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json"`
 
 **Schema guarantees:**
 - ✅ Predictable structure for AI tools

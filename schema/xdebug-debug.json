@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://koriym.github.io/xdebug-mcp/schema/xdebug-debug.json",
+  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json",
   "title": "Xdebug MCP Debug Output Schema",
   "description": "JSON schema for xdebug-debug output with multiple breakpoints",
   "type": "object",
@@ -103,7 +103,7 @@
         {
           "step": 2,
           "location": {
-            "file": "test_multiple_breaks.php", 
+            "file": "test_multiple_breaks.php",
             "line": 4
           },
           "variables": {
@@ -117,7 +117,7 @@
         "file": "/tmp/trace.123456.xt",
         "content": [
           "Version: 3.4.4",
-          "File format: 4", 
+          "File format: 4",
           "TRACE START [2025-08-27 00:35:21.881182]",
           "1\t0\t0\t0.000763\t401280\t{main}\t1\t\t/Users/akihito/git/xdebug-mcp/test_multiple_breaks.php\t0\t0"
         ]
