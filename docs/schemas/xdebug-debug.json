@@ -89,7 +89,7 @@
     },
     {
       "rel": "analysis-guide",
-      "href": "https://koriym.github.io/xdebug-mcp/docs/xdebug-trace-analysis-guide.md",
+      "href": "https://koriym.github.io/xdebug-mcp/xdebug-guidelines.md",
       "title": "How to Debug Effectively with Xdebug Trace Files",
       "description": "Practical analysis guide with patterns, red flags, and pro tips for effective trace-based debugging"
     },
