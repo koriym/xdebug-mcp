@@ -96,6 +96,7 @@ function parseBreakpoints(string $breakSpec): array
         
         if ($parseOptions && $arg === '--exit-on-break') {
             $traceOnly = true;
+            $jsonOutput = true;  // Auto-enable JSON mode for trace-only sessions
             continue;
         }
         
@@ -112,8 +113,8 @@ function parseBreakpoints(string $breakSpec): array
             echo "  --break=SPEC     Advanced breakpoint specification\n";
             echo "  --file=FILE      File to set breakpoint in (legacy)\n";
             echo "  --line=LINE      Line number to break at (legacy)\n";
-            echo "  --exit-on-break  Auto-continue and output trace when condition is met\n";
-            echo "  --json           Output result in JSON format for AI analysis\n";
+            echo "  --exit-on-break  Auto-continue and output trace (automatically enables JSON mode)\n";
+            echo "  --json           Force JSON output format (implied by --exit-on-break)\n";
             echo "  --help, -h       Show this help\n";
             echo "\n";
             echo "Breakpoint Specification (--break=SPEC):\n";
