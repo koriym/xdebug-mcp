@@ -25,6 +25,11 @@
       "type": "object",
       "description": "Debug state captured at a breakpoint - the 'crime scene photo' showing current execution location and variable values when execution paused",
       "properties": {
+        "step": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Sequential step number for this breakpoint in Forward Trace debugging"
+        },
         "location": {
           "type": "object",
           "description": "Execution location where break occurred",
