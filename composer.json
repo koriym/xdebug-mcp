@@ -53,6 +53,14 @@
         "sa": [
             "@psalm"
         ],
+        "forward-trace": "php tests/fake-script/run.php",
+        "forward-trace:loop": "./bin/xdebug-debug --context=\"Loop counter progression test\" --break=tests/fake-script/loop-counter.php:8,13,17,24,29 --exit-on-break -- php tests/fake-script/loop-counter.php",
+        "forward-trace:array": "./bin/xdebug-debug --context=\"Array manipulation with user filtering\" --break=tests/fake-script/array-manipulation.php:8,14,18,21,23,29,33 --exit-on-break -- php tests/fake-script/array-manipulation.php",
+        "forward-trace:object": "./bin/xdebug-debug --context=\"Object state tracking with method chaining\" --break=tests/fake-script/object-state.php:12,19,23,32,34,38,40,42 --exit-on-break -- php tests/fake-script/object-state.php",
+        "forward-trace:conditional": "./bin/xdebug-debug --context=\"Conditional logic with flag tracking\" --break=tests/fake-script/conditional-logic.php:8,18,21,24,27,32,37 --exit-on-break -- php tests/fake-script/conditional-logic.php",
+        "forward-trace:nested": "./bin/xdebug-debug --context=\"Nested loops matrix processing\" --break=tests/fake-script/nested-loops.php:8,17,21,22,25,32,34,39,41 --exit-on-break -- php tests/fake-script/nested-loops.php",
+        "forward-trace:error": "./bin/xdebug-debug --context=\"Error handling simulation\" --break=tests/fake-script/error-simulation.php:12,15,18,21,25,30,31,36 --exit-on-break -- php tests/fake-script/error-simulation.php",
+        "validate-schema": "php validate_schema.php",
         "tests": [
             "@cs",
             "@sa",
