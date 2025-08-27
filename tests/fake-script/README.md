@@ -82,7 +82,7 @@ php tests/fake-script/run.php > all_tests.json
 
 ### Schema Validation
 ```bash
-vendor/bin/validate-json output.json schema/xdebug-debug.json
+php bin/validate_schema.php docs/schemas/xdebug-debug.json output.json
 ```
 
 ## 📊 Expected Output
@@ -132,7 +132,7 @@ These patterns enable AI to:
 
 1. **Use Context**: Always provide `--context` for self-explanatory data
 2. **Strategic Breakpoints**: Place at variable mutation points
-3. **Schema Validation**: Verify output with `validate-json`
+3. **Schema Validation**: Verify output with `php bin/validate_schema.php`
 4. **Save Output**: Redirect to `.json` files for sharing
 5. **Multiple AI Analysis**: Same JSON works across different AI systems
 

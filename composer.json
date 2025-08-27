@@ -121,10 +121,7 @@
             "script": ["@forward-trace:object", "@profile:object", "@coverage:object"],
             "description": "Complete AI analysis suite for object state pattern (debug + profile + coverage)"
         },
-        "validate-schema": {
-            "script": "php validate_schema.php",
-            "description": "Validate JSON output against xdebug-debug schema"
-        },
+        "validate-schema": "php bin/validate_schema.php",
         "tests": [
             "@cs",
             "@sa",
