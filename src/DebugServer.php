@@ -6,6 +6,12 @@ namespace Koriym\XdebugMcp;
 
 use Amp\DeferredFuture;
 use Amp\Future;
+use Amp\Http\HttpStatus;
+use Amp\Http\Server\DefaultErrorHandler;
+use Amp\Http\Server\Request;
+use Amp\Http\Server\RequestHandler;
+use Amp\Http\Server\Response;
+use Amp\Http\Server\SocketHttpServer;
 use Amp\Process\Process;
 use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocket;
@@ -13,11 +19,13 @@ use Amp\Socket\SocketException;
 use Amp\TimeoutCancellation;
 use InvalidArgumentException;
 use Koriym\XdebugMcp\Exceptions\DebugSessionException;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 use SimpleXMLElement;
 use Throwable;
 
 use function Amp\async;
+use function Amp\delay;
 use function Amp\Socket\listen;
 use function array_map;
 use function array_merge;
@@ -51,6 +59,7 @@ use function libxml_get_errors;
 use function libxml_use_internal_errors;
 use function ltrim;
 use function microtime;
+use function parse_str;
 use function preg_match;
 use function preg_replace;
 use function realpath;
@@ -84,9 +93,9 @@ use const STDERR;
  */
 final class DebugServer
 {
-    private const float DEFAULT_CONNECTION_TIMEOUT = 30.0;  // Initial connection only
-    private const float DEFAULT_EXECUTION_TIMEOUT = 3600.0;  // 1 hour for long debugging sessions
-    private const float DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
+    private const DEFAULT_CONNECTION_TIMEOUT = 30.0;  // Initial connection only
+    private const DEFAULT_EXECUTION_TIMEOUT = 3600.0;  // 1 hour for long debugging sessions
+    private const DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
 
     private DeferredFuture|null $listenerReady = null;
     private DeferredFuture|null $xdebugConnected = null;
@@ -95,6 +104,9 @@ final class DebugServer
     private Process|null $process = null;
     private int $transactionId = 1;
     private string|null $traceFile = null;
+    private SocketHttpServer|null $httpServer = null;
+    private bool $httpMode = false;
+    private bool $shouldExit = false;
 
     public function __construct(
         private string $targetScript,
@@ -471,7 +483,7 @@ final class DebugServer
     /**
      * Check if connected to Xdebug
      */
-    private function isConnected(): bool
+    public function isConnected(): bool
     {
         return $this->xdebugSocket !== null
             && ! $this->xdebugSocket->isClosed()
@@ -705,9 +717,102 @@ final class DebugServer
     }
 
     /**
-     * Start interactive debugging session
+     * Enable HTTP API mode instead of interactive console
+     */
+    public function enableHttpMode(int|null $httpPort = null): void
+    {
+        $this->httpMode = true;
+        $port = $httpPort ?: $this->debugPort + 100; // Default: debug port + 100
+
+        // Create simple logger for AMP SocketHttpServer
+        $logger = new class implements LoggerInterface {
+            public function emergency($message, array $context = []): void
+            {
+                $this->log('EMERGENCY', $message, $context);
+            }
+
+            public function alert($message, array $context = []): void
+            {
+                $this->log('ALERT', $message, $context);
+            }
+
+            public function critical($message, array $context = []): void
+            {
+                $this->log('CRITICAL', $message, $context);
+            }
+
+            public function error($message, array $context = []): void
+            {
+                $this->log('ERROR', $message, $context);
+            }
+
+            public function warning($message, array $context = []): void
+            {
+                $this->log('WARNING', $message, $context);
+            }
+
+            public function notice($message, array $context = []): void
+            {
+                $this->log('NOTICE', $message, $context);
+            }
+
+            public function info($message, array $context = []): void
+            {
+                $this->log('INFO', $message, $context);
+            }
+
+            public function debug($message, array $context = []): void
+            {
+                $this->log('DEBUG', $message, $context);
+            }
+
+            public function log($level, $message, array $context = []): void
+            {
+                fwrite(STDERR, "[HTTP-Server] [{$level}] {$message}\n");
+            }
+        };
+
+        // Create HTTP server
+        $this->httpServer = SocketHttpServer::createForDirectAccess($logger);
+        $this->httpServer->expose("127.0.0.1:{$port}");
+
+        $this->log("🌐 HTTP API enabled on port {$port}");
+    }
+
+    /**
+     * Start interactive debugging session - console or HTTP mode
      */
     private function startInteractiveSession(): void
+    {
+        if ($this->httpMode) {
+            $this->startHttpSession();
+        } else {
+            $this->startConsoleSession();
+        }
+    }
+
+    /**
+     * Start HTTP-based debugging session
+     */
+    private function startHttpSession(): void
+    {
+        $this->log('🌐 Starting HTTP debugging session');
+        $this->log('Available endpoints: /debug/step, /debug/variables, /debug/continue, /debug/quit');
+
+        $requestHandler = $this->createHttpRequestHandler();
+        $errorHandler = new DefaultErrorHandler();
+        $this->httpServer->start($requestHandler, $errorHandler);
+
+        // Keep server running (until quit is called)
+        while ($this->httpServer && ! $this->shouldExit) {
+            delay(0.1);
+        }
+    }
+
+    /**
+     * Start console-based debugging session (original)
+     */
+    private function startConsoleSession(): void
     {
         $this->log('🎮 Starting interactive debugging session');
         $this->log('Available commands: s(tep), o(ver), out, c(ontinue), p <var>, bt, l(ist), claude, q(uit)');
@@ -731,6 +836,181 @@ final class DebugServer
                 exit(0);
             }
         }
+    }
+
+    /**
+     * Create HTTP request handler for debug API
+     */
+    private function createHttpRequestHandler(): RequestHandler
+    {
+        return new class ($this) implements RequestHandler {
+            public function __construct(private DebugServer $debugServer)
+            {
+            }
+
+            public function handleRequest(Request $request): Response
+            {
+                $path = $request->getUri()->getPath();
+                $method = $request->getMethod();
+
+                // CORS headers for development
+                $headers = [
+                    'Content-Type' => 'application/json',
+                    'Access-Control-Allow-Origin' => '*',
+                    'Access-Control-Allow-Methods' => 'GET, POST, OPTIONS',
+                    'Access-Control-Allow-Headers' => 'Content-Type',
+                ];
+
+                // Handle OPTIONS preflight
+                if ($method === 'OPTIONS') {
+                    return new Response(HttpStatus::OK, $headers, '');
+                }
+
+                try {
+                    $result = match ($path) {
+                        '/debug/step' => $this->handleDebugStep(),
+                        '/debug/over' => $this->handleDebugOver(),
+                        '/debug/out' => $this->handleDebugOut(),
+                        '/debug/continue' => $this->handleDebugContinue(),
+                        '/debug/variables' => $this->handleDebugVariables($request),
+                        '/debug/backtrace' => $this->handleDebugBacktrace(),
+                        '/debug/quit' => $this->handleDebugQuit(),
+                        '/debug/status' => $this->handleDebugStatus(),
+                        default => [
+                            'error' => 'Endpoint not found',
+                            'available' => [
+                                '/debug/step',
+                                '/debug/over',
+                                '/debug/out',
+                                '/debug/continue',
+                                '/debug/variables',
+                                '/debug/backtrace',
+                                '/debug/quit',
+                                '/debug/status',
+                            ],
+                        ]
+                    };
+
+                    return new Response(
+                        HttpStatus::OK,
+                        $headers,
+                        json_encode($result, JSON_PRETTY_PRINT),
+                    );
+                } catch (Throwable $e) {
+                    $error = [
+                        'error' => $e->getMessage(),
+                        'endpoint' => $path,
+                        'method' => $method,
+                    ];
+
+                    return new Response(
+                        HttpStatus::INTERNAL_SERVER_ERROR,
+                        $headers,
+                        json_encode($error, JSON_PRETTY_PRINT),
+                    );
+                }
+            }
+
+            private function handleDebugStep(): array
+            {
+                $success = $this->debugServer->handleStepCommand();
+
+                return [
+                    'command' => 'step',
+                    'success' => $success,
+                    'location' => $this->debugServer->getCurrentLocation(),
+                    'should_exit' => $success,
+                ];
+            }
+
+            private function handleDebugOver(): array
+            {
+                $success = $this->debugServer->handleStepOverCommand();
+
+                return [
+                    'command' => 'over',
+                    'success' => $success,
+                    'location' => $this->debugServer->getCurrentLocation(),
+                    'should_exit' => $success,
+                ];
+            }
+
+            private function handleDebugOut(): array
+            {
+                $success = $this->debugServer->handleStepOutCommand();
+
+                return [
+                    'command' => 'out',
+                    'success' => $success,
+                    'location' => $this->debugServer->getCurrentLocation(),
+                    'should_exit' => $success,
+                ];
+            }
+
+            private function handleDebugContinue(): array
+            {
+                $success = $this->debugServer->handleContinueCommand();
+
+                return [
+                    'command' => 'continue',
+                    'success' => $success,
+                    'location' => $this->debugServer->getCurrentLocation(),
+                    'should_exit' => $success,
+                ];
+            }
+
+            private function handleDebugVariables(Request $request): array
+            {
+                // Get variable name from query parameter or request body
+                $query = $request->getUri()->getQuery();
+                parse_str($query, $params);
+                $variable = $params['var'] ?? '';
+
+                if (! empty($variable)) {
+                    // Get specific variable value using existing methods
+                    $variables = $this->debugServer->getCurrentVariables();
+                    $result = $variables[$variable] ?? null;
+                } else {
+                    // Get all variables
+                    $result = $this->debugServer->getCurrentVariables();
+                }
+
+                return [
+                    'command' => 'variables',
+                    'variable' => $variable,
+                    'result' => $result,
+                ];
+            }
+
+            private function handleDebugBacktrace(): array
+            {
+                return [
+                    'command' => 'backtrace',
+                    'result' => $this->debugServer->getBacktraceResult(),
+                ];
+            }
+
+            private function handleDebugQuit(): array
+            {
+                $this->debugServer->setShouldExit(true);
+
+                return [
+                    'command' => 'quit',
+                    'success' => true,
+                    'message' => 'Debug session terminated',
+                ];
+            }
+
+            private function handleDebugStatus(): array
+            {
+                return [
+                    'status' => 'active',
+                    'connected' => $this->debugServer->isConnected(),
+                    'location' => $this->debugServer->getCurrentLocation(),
+                    'available_commands' => ['step', 'over', 'out', 'continue', 'variables', 'backtrace', 'quit'],
+                ];
+            }
+        };
     }
 
     /**
@@ -924,7 +1204,7 @@ final class DebugServer
     /**
      * Handle step command
      */
-    private function handleStepCommand(): bool
+    public function handleStepCommand(): bool
     {
         $this->log('👣 Stepping into next instruction...');
 
@@ -986,7 +1266,7 @@ final class DebugServer
     /**
      * Handle step over command
      */
-    private function handleStepOverCommand(): bool
+    public function handleStepOverCommand(): bool
     {
         $this->log('👣 Stepping over current instruction...');
 
@@ -1045,7 +1325,7 @@ final class DebugServer
     /**
      * Handle step out command
      */
-    private function handleStepOutCommand(): bool
+    public function handleStepOutCommand(): bool
     {
         $this->log('👣 Stepping out of current function...');
 
@@ -1104,7 +1384,7 @@ final class DebugServer
     /**
      * Handle continue command
      */
-    private function handleContinueCommand(): bool
+    public function handleContinueCommand(): bool
     {
         $this->log('▶️ Continuing execution...');
         $response = $this->continueExecution();
@@ -1662,7 +1942,7 @@ final class DebugServer
     /**
      * Get current variables from debugger session
      */
-    private function getCurrentVariables(): array
+    public function getCurrentVariables(): array
     {
         try {
             // Send context_get command to get local variables
@@ -2309,5 +2589,55 @@ final class DebugServer
         }
 
         return 'unknown:0';
+    }
+
+    /**
+     * Get current debugging location (file:line)
+     */
+    public function getCurrentLocation(): string
+    {
+        try {
+            if (! $this->isConnected()) {
+                return 'not_connected:0';
+            }
+
+            // Send status command to get current location
+            $response = $this->sendCommand('status -i ' . $this->getNextTransactionId());
+
+            return $this->extractLocationFromBreakResponse($response);
+        } catch (Throwable $e) {
+            $this->log('❌ Error getting current location: ' . $e->getMessage());
+
+            return 'error:0';
+        }
+    }
+
+    /**
+     * Storage for backtrace results
+     */
+    private array $backtraceResult = [];
+
+    /**
+     * Get backtrace result by using existing getStackTrace method
+     */
+    public function getBacktraceResult(): array
+    {
+        try {
+            $this->backtraceResult = $this->getStackTrace();
+
+            return $this->backtraceResult;
+        } catch (Throwable $e) {
+            $this->log('❌ Error getting backtrace: ' . $e->getMessage());
+
+            return [];
+        }
+    }
+
+    /**
+     * Set the should exit flag for clean shutdown
+     */
+    public function setShouldExit(bool $exit): void
+    {
+        $this->shouldExit = $exit;
     }
 }

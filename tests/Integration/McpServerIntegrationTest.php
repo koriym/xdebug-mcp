@@ -56,22 +56,11 @@ class McpServerIntegrationTest extends TestCase
         $this->assertEquals(2, $toolsResponse['id']);
         $this->assertArrayHasKey('result', $toolsResponse);
         $this->assertArrayHasKey('tools', $toolsResponse['result']);
-        $this->assertCount(43, $toolsResponse['result']['tools']);
+        $this->assertCount(28, $toolsResponse['result']['tools']);
 
-        // Verify essential tools are present
+        // Verify analysis tools are present
         $toolNames = array_column($toolsResponse['result']['tools'], 'name');
         $expectedTools = [
-            'xdebug_connect',
-            'xdebug_disconnect',
-            'xdebug_set_breakpoint',
-            'xdebug_remove_breakpoint',
-            'xdebug_step_into',
-            'xdebug_step_over',
-            'xdebug_step_out',
-            'xdebug_continue',
-            'xdebug_get_stack',
-            'xdebug_get_variables',
-            'xdebug_eval',
             'xdebug_start_profiling',
             'xdebug_stop_profiling',
             'xdebug_get_profile_info',
@@ -81,6 +70,11 @@ class McpServerIntegrationTest extends TestCase
             'xdebug_get_coverage',
             'xdebug_coverage_summary',
             'xdebug_analyze_coverage',
+            'xdebug_start_trace',
+            'xdebug_stop_trace',
+            'xdebug_get_memory_usage',
+            'xdebug_info',
+            'xdebug_start_error_collection',
         ];
 
         foreach ($expectedTools as $toolName) {
