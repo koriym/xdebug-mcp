@@ -88,10 +88,11 @@ class McpServer
     protected array $tools = [];
     protected XdebugClient|null $xdebugClient = null;
     private bool $debugMode = false;
-    private string $sessionId = Constants::DEFAULT_SESSION_ID;
+    private string $sessionId;
 
     public function __construct()
     {
+        $this->sessionId = uniqid('mcp_session_', true);
         $this->debugMode = (bool) (getenv('MCP_DEBUG') ?: false);
         $this->initializeTools();
         $this->cleanupPreviousSession(); // 前のセッションをクリーンアップ

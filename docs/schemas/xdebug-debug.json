@@ -2,33 +2,83 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug-v1.json",
   "title": "Xdebug Debug Result",
-  "description": "AI-optimized debugging result with conditional breakpoint trace data for PHP debugging and execution flow analysis.",
+  "description": "Comprehensive debugging result combining breakpoint state ('crime scene photo') and execution trace ('surveillance footage') for AI-powered PHP debugging. Follows the principle: 'Error message is the crime photo. Trace is the crime footage.' - providing both the current state at breakpoints and the complete execution history in Xdebug .xt format.",
   "type": "object",
   "properties": {
-    "trace_file": {
-      "type": "string",
-      "description": "Absolute path to the generated Xdebug trace file (.xt format)",
-      "pattern": "^/.+\\.xt$"
+    "breaks": {
+      "type": "array",
+      "description": "Breakpoints hit during execution (supports multiple breakpoints)",
+      "items": {
+        "$ref": "#/definitions/breakpoint"
+      },
+      "minItems": 1
     },
-    "lines": {
-      "type": "integer",
-      "minimum": 0,
-      "description": "Total lines in trace file. Use this to decide optimal reading strategy for AI analysis."
-    },
-    "size": {
-      "type": "number",
-      "minimum": 0,
-      "description": "File size in KB. Critical for AI to choose appropriate reading strategy (full read vs. partial analysis)."
-    },
-    "command": {
-      "type": "string",
-      "description": "Complete command used to generate this trace. Enables reproduction and context understanding.",
-      "minLength": 1
+    "trace": {
+      "$ref": "#/definitions/trace"
     }
   },
-  "required": ["trace_file", "lines", "size", "command"],
+  "required": ["breaks", "trace"],
   "additionalProperties": false,
-  
+
+  "definitions": {
+    "breakpoint": {
+      "type": "object",
+      "description": "Debug state captured at a breakpoint - the 'crime scene photo' showing current execution location and variable values when execution paused",
+      "properties": {
+        "step": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Sequential step number for this breakpoint in Forward Trace debugging"
+        },
+        "location": {
+          "type": "object",
+          "description": "Execution location where break occurred",
+          "properties": {
+            "file": {
+              "type": "string",
+              "description": "File path where break occurred"
+            },
+            "line": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Line number where break occurred"
+            }
+          },
+          "required": ["file", "line"],
+          "additionalProperties": false
+        },
+        "variables": {
+          "type": "object",
+          "description": "Variable values at this breakpoint",
+          "additionalProperties": true
+        }
+      },
+      "required": ["location", "variables"],
+      "additionalProperties": false
+    },
+    "trace": {
+      "type": "object",
+      "description": "Xdebug execution trace - the 'surveillance footage' recording complete function call history, timing, memory usage, and arguments. Generated in Xdebug's .xt format with tab-separated values",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path to the generated Xdebug trace file (.xt format)",
+          "pattern": "^/.+\\.xt$"
+        },
+        "content": {
+          "type": "array",
+          "description": "Lines from the trace file for AI analysis (up to 1000 lines). Each line represents a function call entry/exit in Xdebug trace format (.xt): Level | Func ID | Entry/Exit | Time | Memory | Function | User-defined | Include | File | Line | Arguments",
+          "items": {
+            "type": "string",
+            "description": "Single trace line in tab-separated format containing execution details"
+          }
+        }
+      },
+      "required": ["file", "content"],
+      "additionalProperties": false
+    }
+  },
+
   "links": [
     {
       "rel": "specification",
@@ -37,10 +87,16 @@
       "description": "Official documentation for Xdebug trace file format (.xt) structure and interpretation"
     },
     {
-      "rel": "ai-guide", 
+      "rel": "ai-guide",
       "href": "https://koriym.github.io/xdebug-mcp/debug-guidelines.md",
       "title": "AI Debug Analysis Guidelines",
       "description": "Complete guide for AI systems analyzing Xdebug conditional debugging results"
+    },
+    {
+      "rel": "analysis-guide",
+      "href": "https://koriym.github.io/xdebug-mcp/xdebug-guidelines.md",
+      "title": "How to Debug Effectively with Xdebug Trace Files",
+      "description": "Practical analysis guide with patterns, red flags, and pro tips for effective trace-based debugging"
     },
     {
       "rel": "ai-principles",
