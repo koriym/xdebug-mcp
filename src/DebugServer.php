@@ -2074,10 +2074,9 @@ final class DebugServer
         if (empty($allTraceFiles)) {
             return [
                 'file' => '',
-                'tail' => [],
+                'content' => [],
             ];
         }
-
         // Remove duplicates and sort by modification time, get the most recent
         $allTraceFiles = array_unique($allTraceFiles);
         usort($allTraceFiles, static function ($a, $b) {
