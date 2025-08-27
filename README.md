@@ -2,7 +2,9 @@
 
   <img width="256" alt="xdebug-mcp" src="https://koriym.github.io/xdebug-mcp/logo.jpeg" />
 
-**Enable AI to Debug PHP Autonomously, Beyond Human IDE Capabilities**
+**Error message is the crime photo. Trace is the crime footage.**
+
+> *Don't just see the crime. Watch how it happened.*
 
 [![Debugging](https://img.shields.io/badge/AI_Native-YES-green)](https://github.com/koriym/xdebug-mcp)
 [![Runtime](https://img.shields.io/badge/Runtime_Data-YES-green)](https://github.com/koriym/xdebug-mcp)
@@ -11,24 +13,68 @@
 
 ---
 
-## The Vision: AI That Debugs Better Than Humans
+## 🕵️ Debug Like a Detective
 
-Imagine AI that doesn't just help you debug, but debugs autonomously—setting intelligent breakpoints, analyzing execution paths, and finding issues faster than any human with an IDE ever could.
+**Traditional debugging gives you a crime photo:**
+```
+Fatal error: Call to undefined method User::getName() 
+in /app/controller.php on line 42
+```
+📸 *You see the victim, the weapon, the location. But who's the killer? What's the motive?*
 
-## The Problem
+**Trace-driven debugging gives you crime footage:**
+```json
+{
+  "breakpoints": [
+    {"location": "auth.php:15", "variables": {"$token": "invalid"}},
+    {"location": "user.php:23", "variables": {"$user": null}}
+  ],
+  "trace_tail": [
+    "validateToken() -> return false",
+    "getUser(null) -> return null", 
+    "null->getName() -> CRASH"
+  ]
+}
+```
+🎬 *Now you see the whole story. The crime, the motive, the evidence.*
 
-When you ask AI to debug PHP today, it adds `var_dump()` to your code—the same technique from 30 years ago. Why? Because **AI is debugging blind**, only able to read static code and guess what happens at runtime.
+## The Problem with Traditional Debugging
 
-## The Solution
+When AI helps debug PHP today, it adds `var_dump()` to your code—the same technique from 30 years ago. Why? Because **AI is debugging blind**, only able to read static code and guess what happens at runtime.
 
-This MCP server enables AI to debug PHP autonomously with capabilities beyond human limitations:
+## The Solution: Crime Scene Investigation for Code
 
-- **Conditional breakpoints with full trace**: Capture complete execution history up to problem points
-- **Programmatic control**: Execute thousands of debugging operations in seconds
-- **Pattern recognition**: Identify subtle bugs humans would miss
-- **Complete visibility**: See every variable, every call, every state change
+This MCP server turns AI into a digital detective with **crime footage analysis**:
 
-The result: AI that doesn't just help you debug—it debugs better than you ever could.
+### 🎬 From Snapshots to Full Movies
+- **Crime Photos** → **Crime Footage**: Complete execution history, not just error messages
+- **One-shot debugging**: Capture breakpoints + execution flow + variable states in a single run
+- **Time-travel analysis**: See how variables evolved, not just their final values
+- **Multi-scene investigation**: Compare different execution paths (userId=1 vs userId=2)
+
+### 🕵️ AI Detective Capabilities
+- **Pattern recognition**: Spot subtle bugs humans miss in complex traces
+- **Evidence correlation**: Connect cause-and-effect across thousands of function calls  
+- **Programmatic investigation**: Execute complex debugging scenarios in seconds
+- **Complete crime scene**: Every variable, every call, every state change recorded
+
+**The result**: AI doesn't just help you debug—it investigates code like a seasoned detective with perfect memory and infinite patience.
+
+## JSON Schema Support
+
+All debug output follows a strict JSON schema for reliable AI analysis:
+
+```bash
+./bin/xdebug-debug --break=file.php:10,file.php:20 --exit-on-break --json -- php script.php
+```
+
+Output includes schema validation: `"$schema": "https://koriym.github.io/xdebug-mcp/schema/xdebug-debug.json"`
+
+**Schema guarantees:**
+- ✅ Predictable structure for AI tools
+- ✅ Type validation for variables  
+- ✅ Location accuracy (file + line)
+- ✅ Complete trace information
 
 ## Quick Start
 
