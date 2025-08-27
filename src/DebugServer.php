@@ -50,7 +50,9 @@ use function libxml_clear_errors;
 use function libxml_get_errors;
 use function libxml_use_internal_errors;
 use function ltrim;
+use function microtime;
 use function preg_match;
+use function preg_replace;
 use function realpath;
 use function round;
 use function shell_exec;
@@ -114,7 +116,7 @@ final class DebugServer
         $this->listenerReady = new DeferredFuture();
         $this->xdebugConnected = new DeferredFuture();
 
-        $this->log("🚀 Starting AMP Interactive Debugger");
+        $this->log('🚀 Starting AMP Interactive Debugger');
         $this->log("📁 Target: {$this->targetScript}");
         $this->log("🔌 Debug port: {$this->debugPort}");
 
@@ -739,6 +741,7 @@ final class DebugServer
         if ($this->jsonMode) {
             return;
         }
+
         echo '(Xdebug) ';
         flush();
     }
@@ -1493,6 +1496,7 @@ final class DebugServer
         if ($this->jsonMode) {
             return;
         }
+
         $timestamp = date('H:i:s');
         echo "[{$timestamp}] {$message}\n";
     }
@@ -1676,12 +1680,12 @@ final class DebugServer
                     $type = (string) $prop['type'];
                     $encoding = (string) ($prop['encoding'] ?? '');
                     $raw = (string) $prop; // element text content
-                    
+
                     // Get better info for arrays and objects using print_r
                     if ($type === 'array' || $type === 'object') {
                         $numChildren = (int) ($prop['numchildren'] ?? 0);
                         $value = $encoding === 'base64' ? base64_decode($raw) : $raw;
-                        
+
                         if ($numChildren > 0) {
                             // Try json_encode first for detailed display
                             $jsonOutput = $this->getJsonEncodeOutput($name);
@@ -1703,7 +1707,7 @@ final class DebugServer
                                 }
                             }
                         } else {
-                            $variables[$name] = $type === 'array' ? "array: []" : "object: {}";
+                            $variables[$name] = $type === 'array' ? 'array: []' : 'object: {}';
                         }
                     } else {
                         $value = $encoding === 'base64' ? base64_decode($raw) : $raw;
@@ -1721,27 +1725,27 @@ final class DebugServer
     /**
      * Extract child details from XML property node
      */
-    private function extractChildDetails(\SimpleXMLElement $prop, string $type): ?string
+    private function extractChildDetails(SimpleXMLElement $prop, string $type): string|null
     {
         try {
             // Check if property has child elements
-            if (!isset($prop->property)) {
+            if (! isset($prop->property)) {
                 return null;
             }
-            
+
             $items = [];
             $maxItems = $type === 'array' ? 5 : 3; // Show more for arrays, less for objects
-            
+
             foreach ($prop->property as $child) {
                 $key = (string) $child['name'];
                 $childType = (string) $child['type'];
                 $encoding = (string) ($child['encoding'] ?? '');
                 $value = (string) $child;
-                
+
                 if ($encoding === 'base64') {
                     $value = base64_decode($value);
                 }
-                
+
                 // Format key-value pairs
                 if ($childType === 'string') {
                     $displayValue = strlen($value) > 20 ? substr($value, 0, 20) . '...' : $value;
@@ -1760,29 +1764,29 @@ final class DebugServer
                 } else {
                     $items[] = "{$key}: {$childType}";
                 }
-                
+
                 // Limit number of items shown
                 if (count($items) >= $maxItems) {
                     $totalCount = (int) ($prop['numchildren'] ?? 0);
                     if ($totalCount > $maxItems) {
                         $items[] = "... ({$totalCount} total)";
                     }
+
                     break;
                 }
             }
-            
+
             if (empty($items)) {
                 return null;
             }
-            
+
             // Format based on type
             if ($type === 'array') {
                 return '[' . implode(', ', $items) . ']';
-            } else {
-                return '{' . implode(', ', $items) . '}';
             }
-            
-        } catch (Throwable $e) {
+
+            return '{' . implode(', ', $items) . '}';
+        } catch (Throwable) {
             return null;
         }
     }
@@ -1790,48 +1794,47 @@ final class DebugServer
     /**
      * Get json_encode output for a variable using Xdebug eval
      */
-    private function getJsonEncodeOutput(string $varName): ?string
+    private function getJsonEncodeOutput(string $varName): string|null
     {
         try {
             // Use eval to execute json_encode($var, JSON_UNESCAPED_UNICODE)
             $expression = "json_encode({$varName}, JSON_UNESCAPED_UNICODE)";
             $response = $this->sendCommand('eval', [base64_encode($expression)]);
-            
-            if (!$response) {
+
+            if (! $response) {
                 return null;
             }
-            
+
             $xml = simplexml_load_string($response);
-            if (!$xml || !isset($xml->property)) {
+            if (! $xml || ! isset($xml->property)) {
                 return null;
             }
-            
+
             $property = $xml->property;
             $type = (string) ($property['type'] ?? '');
             $encoding = (string) ($property['encoding'] ?? '');
             $output = (string) $property;
-            
+
             // Skip if it's not a string result
             if ($type !== 'string') {
                 return null;
             }
-            
+
             if ($encoding === 'base64') {
                 $output = base64_decode($output);
             }
-            
+
             // Clean up and format JSON output
             $output = trim($output);
             if (strlen($output) > 200) {
                 $output = substr($output, 0, 200) . '... (truncated)';
             }
-            
+
             // Make it more readable by adding spaces after colons and commas
             $output = preg_replace('/([,:])\s*/', '$1 ', $output);
-            
+
             return $output;
-            
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             return null;
         }
     }
@@ -1844,24 +1847,24 @@ final class DebugServer
         try {
             // Get detailed information about the variable
             $response = $this->sendCommand('property_get', ['n' => $name, 'd' => '2']); // depth 2
-            
-            if (!$response) {
+
+            if (! $response) {
                 return "{$type}: (unable to expand)";
             }
 
             $xml = simplexml_load_string($response);
-            if (!$xml || !isset($xml->property)) {
+            if (! $xml || ! isset($xml->property)) {
                 return "{$type}: (no data)";
             }
 
             $property = $xml->property;
             $numChildren = (int) ($property['numchildren'] ?? 0);
-            
+
             if ($type === 'array') {
                 if ($numChildren === 0) {
-                    return "array: []";
+                    return 'array: []';
                 }
-                
+
                 $items = [];
                 if (isset($property->property)) {
                     foreach ($property->property as $child) {
@@ -1869,18 +1872,18 @@ final class DebugServer
                         $childType = (string) $child['type'];
                         $encoding = (string) ($child['encoding'] ?? '');
                         $value = (string) $child;
-                        
+
                         if ($encoding === 'base64') {
                             $value = base64_decode($value);
                         }
-                        
+
                         // Limit recursion for safety
                         if ($childType === 'array' || $childType === 'object') {
                             $items[] = "{$key} => {$childType}";
                         } else {
                             $items[] = "{$key} => {$value}";
                         }
-                        
+
                         // Limit number of items shown for safety
                         if (count($items) >= 10) {
                             $items[] = "... ({$numChildren} total items)";
@@ -1888,16 +1891,16 @@ final class DebugServer
                         }
                     }
                 }
-                
-                return "array: [" . implode(", ", $items) . "]";
-            } 
-            
+
+                return 'array: [' . implode(', ', $items) . ']';
+            }
+
             if ($type === 'object') {
                 $className = (string) ($property['classname'] ?? 'object');
                 if ($numChildren === 0) {
                     return "object: {$className} {}";
                 }
-                
+
                 $properties = [];
                 if (isset($property->property)) {
                     foreach ($property->property as $child) {
@@ -1905,31 +1908,30 @@ final class DebugServer
                         $childType = (string) $child['type'];
                         $encoding = (string) ($child['encoding'] ?? '');
                         $value = (string) $child;
-                        
+
                         if ($encoding === 'base64') {
                             $value = base64_decode($value);
                         }
-                        
+
                         // Limit recursion for safety
                         if ($childType === 'array' || $childType === 'object') {
                             $properties[] = "{$key}: {$childType}";
                         } else {
                             $properties[] = "{$key}: {$value}";
                         }
-                        
+
                         // Limit number of properties shown for safety
                         if (count($properties) >= 5) {
-                            $properties[] = "... (more properties)";
+                            $properties[] = '... (more properties)';
                             break;
                         }
                     }
                 }
-                
-                return "object: {$className} {" . implode(", ", $properties) . "}";
+
+                return "object: {$className} {" . implode(', ', $properties) . '}';
             }
-            
+
             return "{$type}: (unknown format)";
-            
         } catch (Throwable $e) {
             return "{$type}: (expansion error: {$e->getMessage()})";
         }
@@ -1970,9 +1972,9 @@ final class DebugServer
     private function outputComprehensiveDebugState(): void
     {
         $debugState = [];
-        
+
         // Add context if provided
-        if (!empty($this->options['context'])) {
+        if (! empty($this->options['context'])) {
             $debugState['context'] = $this->options['context'];
         }
 
@@ -2026,7 +2028,7 @@ final class DebugServer
         } else {
             // Human-readable format
             $this->log("\n" . str_repeat('=', 60));
-            $this->log("🎯 DEBUG STATE");
+            $this->log('🎯 DEBUG STATE');
             $this->log(str_repeat('=', 60));
 
             foreach ($debugState['breaks'] as $break) {
@@ -2034,7 +2036,7 @@ final class DebugServer
                 $this->log("📍 Location: {$loc['file']}:{$loc['line']}");
 
                 if (! empty($break['variables'])) {
-                    $this->log("📊 Variables:");
+                    $this->log('📊 Variables:');
                     foreach ($break['variables'] as $name => $value) {
                         $displayValue = is_string($value) ? $value : json_encode($value);
                         $this->log("  {$name} = {$displayValue}");
@@ -2117,9 +2119,9 @@ final class DebugServer
             // Start execution
             $response = $this->sendCommand('run');
 
-            while (!$this->isExecutionComplete($response) && $breakCount < $maxBreaks) {
+            while (! $this->isExecutionComplete($response) && $breakCount < $maxBreaks) {
                 // Check execution time limit
-                if ((microtime(true) - $executionStartTime) > $maxExecutionTime) {
+                if (microtime(true) - $executionStartTime > $maxExecutionTime) {
                     $this->log('⚠️ Execution time limit reached (30s)');
                     break;
                 }
@@ -2129,10 +2131,10 @@ final class DebugServer
                     $this->log("🎯 Breakpoint #{$breakCount} hit");
 
                     // Get current location from break response
-                    $this->log("📋 Break response: " . substr($response, 0, 200) . "...");
+                    $this->log('📋 Break response: ' . substr($response, 0, 200) . '...');
                     $currentLocation = $this->extractLocationFromBreakResponse($response);
 
-                    // Check for infinite loop (same location repeatedly)  
+                    // Check for infinite loop (same location repeatedly)
                     if ($currentLocation === $lastLocation) {
                         $sameLocationCount++;
                         if ($sameLocationCount >= 3) {
@@ -2166,7 +2168,6 @@ final class DebugServer
             if ($breakCount >= $maxBreaks) {
                 $this->log("⚠️ Maximum breakpoints limit reached ({$maxBreaks})");
             }
-
         } catch (Throwable $e) {
             $this->log('❌ Error during breakpoint processing: ' . $e->getMessage());
         }
@@ -2178,25 +2179,26 @@ final class DebugServer
     /**
      * Capture current debug state for a breakpoint
      */
-    private function captureCurrentDebugState(int $breakNumber): ?array
+    private function captureCurrentDebugState(int $breakNumber): array|null
     {
         try {
             $stackXml = $this->getStack();
-            $this->log("📋 Stack info: " . json_encode($stackXml));
-            
+            $this->log('📋 Stack info: ' . json_encode($stackXml));
+
             $variables = $this->getCurrentVariables();
-            $this->log("📋 Variables: " . json_encode($variables));
+            $this->log('📋 Variables: ' . json_encode($variables));
 
             // Parse stack XML to get current location
             $location = $this->parseStackLocation($stackXml);
-            
+
             return [
                 'step' => $breakNumber,
                 'location' => $location,
                 'variables' => $variables,
             ];
         } catch (Throwable $e) {
-            $this->log("❌ Error in captureCurrentDebugState: " . $e->getMessage());
+            $this->log('❌ Error in captureCurrentDebugState: ' . $e->getMessage());
+
             return null;
         }
     }
@@ -2212,23 +2214,23 @@ final class DebugServer
                 $currentFrame = $xml->stack[0];
                 $filename = (string) $currentFrame['filename'];
                 $line = (int) $currentFrame['lineno'];
-                
+
                 // Clean up file:// protocol from filename
                 $file = str_replace('file://', '', $filename);
-                
+
                 return [
                     'file' => basename($file),
-                    'line' => $line
+                    'line' => $line,
                 ];
             }
         } catch (Throwable $e) {
-            $this->log("❌ Error parsing stack location: " . $e->getMessage());
+            $this->log('❌ Error parsing stack location: ' . $e->getMessage());
         }
-        
+
         // Fallback
         return [
             'file' => basename($this->targetScript),
-            'line' => 1
+            'line' => 1,
         ];
     }
 
@@ -2242,9 +2244,9 @@ final class DebugServer
             'breaks' => $breaks,
             'trace' => $this->getTraceInfo(),
         ];
-        
+
         // Add context if provided
-        if (!empty($this->options['context'])) {
+        if (! empty($this->options['context'])) {
             $debugState['context'] = $this->options['context'];
         }
 
@@ -2254,21 +2256,22 @@ final class DebugServer
         } else {
             // Human-readable format
             $this->log("\n" . str_repeat('=', 60));
-            $this->log("🎯 MULTIPLE BREAKPOINTS DEBUG RESULT");
+            $this->log('🎯 MULTIPLE BREAKPOINTS DEBUG RESULT');
             $this->log(str_repeat('=', 60));
 
             foreach ($breaks as $break) {
                 $loc = $break['location'];
                 $this->log("📍 Step {$break['step']}: {$loc['file']}:{$loc['line']}");
 
-                if (!empty($break['variables'])) {
-                    $this->log("📊 Variables:");
+                if (! empty($break['variables'])) {
+                    $this->log('📊 Variables:');
                     foreach ($break['variables'] as $name => $value) {
                         $displayValue = is_string($value) ? $value : json_encode($value);
                         $this->log("  {$name} = {$displayValue}");
                     }
                 }
-                $this->log("");
+
+                $this->log('');
             }
 
             if (isset($debugState['trace']['file'])) {
@@ -2289,19 +2292,21 @@ final class DebugServer
                 // Register xdebug namespace
                 $xml->registerXPathNamespace('xdebug', 'https://xdebug.org/dbgp/xdebug');
                 $messages = $xml->xpath('//xdebug:message');
-                
-                if (!empty($messages)) {
+
+                if (! empty($messages)) {
                     $message = $messages[0];
-                    $filename = (string)$message['filename'];
-                    $lineno = (string)$message['lineno'];
+                    $filename = (string) $message['filename'];
+                    $lineno = (string) $message['lineno'];
                     // Remove file:// prefix if present
                     $filename = str_replace('file://', '', $filename);
+
                     return basename($filename) . ':' . $lineno;
                 }
             }
         } catch (Throwable $e) {
-            $this->log("❌ Error parsing break response: " . $e->getMessage());
+            $this->log('❌ Error parsing break response: ' . $e->getMessage());
         }
+
         return 'unknown:0';
     }
 }
