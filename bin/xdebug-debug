@@ -181,14 +181,14 @@ function parseBreakpoints(string $breakSpec): array
             'command' => $command,
             'traceOnly' => $traceOnly,
             'jsonOutput' => $jsonOutput
-        ]);
+        ], $jsonOutput);
     } else {
         // For legacy format, only pass command if it's not just the target script
         $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput];
         if (count($command) > 1 || ($command[0] !== $targetScript)) {
             $options['command'] = $command;
         }
-        $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, $breakpointLine, $options);
+        $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, $breakpointLine, $options, $jsonOutput);
     }
     $server();
 })();
