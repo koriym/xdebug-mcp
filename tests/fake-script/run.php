@@ -35,7 +35,7 @@ foreach ($testCases as $file => $breakpoints) {
     chdir(__DIR__ . '/../../');
     
     $command = sprintf(
-        './bin/xdebug-debug --break=%s --exit-on-break --json -- php %s',
+        './bin/xdebug-debug --break=%s --exit-on-break -- php %s',
         $breakpointSpec,
         $scriptPath
     );
