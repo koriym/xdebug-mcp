@@ -44,6 +44,7 @@ use function glob;
 use function implode;
 use function is_array;
 use function is_int;
+use function is_string;
 use function json_encode;
 use function libxml_clear_errors;
 use function libxml_get_errors;
@@ -56,6 +57,7 @@ use function shell_exec;
 use function simplexml_load_string;
 use function sprintf;
 use function str_contains;
+use function str_repeat;
 use function str_replace;
 use function str_starts_with;
 use function strlen;
@@ -67,6 +69,9 @@ use function usort;
 
 use const DIRECTORY_SEPARATOR;
 use const FILE_IGNORE_NEW_LINES;
+use const JSON_PRETTY_PRINT;
+use const JSON_UNESCAPED_SLASHES;
+use const JSON_UNESCAPED_UNICODE;
 use const STDERR;
 
 /**
@@ -328,22 +333,19 @@ final class DebugServer
 
             // Check if exit-on-break mode - start with run instead of step_into
             if ($this->options['traceOnly'] ?? false) {
-                $this->log('📊 exit-on-break mode: starting execution and waiting for breakpoint conditions...');
-                $response = $this->continueExecution();
-                if ($this->didBreak($response)) {
-                    $this->log('🎯 Conditional breakpoint hit!');
-                    // Output trace file for AI analysis and exit cleanly
-                    $this->outputTraceFile();
-                    exit(0);
-                }
+                $this->log('📊 exit-on-break mode: step to first line and capture debug state...');
+                $response = $this->sendCommand('step_into');
 
                 if ($this->isExecutionComplete($response)) {
-                    $this->log('✅ Execution completed without hitting conditional breakpoint');
-                    $this->outputTraceFile();
+                    $this->log('✅ Script completed immediately');
+                    $this->outputComprehensiveDebugState();
                     exit(0);
                 }
 
-                return;
+                $this->log('⏸️ Stopped at first executable line');
+                // Capture debug state and continue execution
+                $this->outputComprehensiveDebugState();
+                exit(0);
             }
 
             // Interactive mode: Use step_into to stop at first executable line
@@ -1716,5 +1718,135 @@ final class DebugServer
         } catch (Throwable) {
             return [];
         }
+    }
+
+    /**
+     * Output comprehensive debug state with variables, location, and trace content
+     */
+    private function outputComprehensiveDebugState(): void
+    {
+        $debugState = [];
+
+        // Get current location and variables
+        try {
+            $stack = $this->getStack();
+            $variables = $this->getContextVariables(0); // Get variables from current context
+
+            if (! empty($stack)) {
+                $currentFrame = $stack[0];
+                $debugState['breaks'] = [
+                    [
+                        'location' => [
+                            'file' => $currentFrame['file'] ?? 'unknown',
+                            'line' => (int) ($currentFrame['line'] ?? 1),
+                        ],
+                        'variables' => $variables,
+                    ],
+                ];
+            } else {
+                // Fallback if no stack info
+                $debugState['breaks'] = [
+                    [
+                        'location' => [
+                            'file' => $this->targetScript,
+                            'line' => 1,
+                        ],
+                        'variables' => $variables,
+                    ],
+                ];
+            }
+        } catch (Throwable) {
+            // Fallback for any errors
+            $debugState['breaks'] = [
+                [
+                    'location' => [
+                        'file' => $this->targetScript,
+                        'line' => 1,
+                    ],
+                    'variables' => [],
+                ],
+            ];
+        }
+
+        // Add trace file information
+        $debugState['trace'] = $this->getTraceInfo();
+
+        // Output format based on jsonOutput option
+        if ($this->options['jsonOutput'] ?? false) {
+            echo json_encode($debugState, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+        } else {
+            // Human-readable format
+            echo "\n" . str_repeat('=', 60) . "\n";
+            echo "🎯 DEBUG STATE\n";
+            echo str_repeat('=', 60) . "\n";
+
+            foreach ($debugState['breaks'] as $break) {
+                $loc = $break['location'];
+                echo "📍 Location: {$loc['file']}:{$loc['line']}\n";
+
+                if (! empty($break['variables'])) {
+                    echo "📊 Variables:\n";
+                    foreach ($break['variables'] as $name => $value) {
+                        $displayValue = is_string($value) ? $value : json_encode($value);
+                        echo "  {$name} = {$displayValue}\n";
+                    }
+                }
+            }
+
+            if (isset($debugState['trace']['file'])) {
+                echo "📈 Trace file: {$debugState['trace']['file']}\n";
+                echo '📊 Trace lines: ' . count($debugState['trace']['content']) . "\n";
+            }
+        }
+    }
+
+    /**
+     * Get trace file information with content
+     */
+    private function getTraceInfo(): array
+    {
+        // Look for trace files with various patterns
+        $patterns = [
+            '/tmp/trace.*.xt',
+            '/tmp/trace-*-' . basename($this->targetScript, '.php') . '.xt',
+            '/tmp/trace-*.xt',
+        ];
+
+        $allTraceFiles = [];
+        foreach ($patterns as $pattern) {
+            $files = glob($pattern);
+            if ($files) {
+                $allTraceFiles = array_merge($allTraceFiles, $files);
+            }
+        }
+
+        if (empty($allTraceFiles)) {
+            return [
+                'file' => '',
+                'tail' => [],
+            ];
+        }
+
+        // Remove duplicates and sort by modification time, get the most recent
+        $allTraceFiles = array_unique($allTraceFiles);
+        usort($allTraceFiles, static function ($a, $b) {
+            return filemtime($b) - filemtime($a);
+        });
+
+        $latestTrace = $allTraceFiles[0];
+
+        // Read trace file content (last 1000 lines maximum)
+        $traceLines = [];
+        if (file_exists($latestTrace)) {
+            $lines = file($latestTrace, FILE_IGNORE_NEW_LINES);
+            if ($lines !== false) {
+                $traceLines = array_slice($lines, -1000);
+            }
+        }
+
+        return [
+            'file' => $latestTrace,
+            'content' => $traceLines,
+        ];
     }
 }
