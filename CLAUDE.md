@@ -351,13 +351,100 @@ This project prioritizes **execution-time trace analysis** over traditional code
 - AI automatically runs: `./bin/xdebug-profile path/to/file.php` (default choice)
 - Then optionally: `./bin/xdebug-trace path/to/file.php` for detailed flow
 
-**Example workflows:**
-1. User: "Debug this buggy script" → AI runs `./bin/xdebug-debug test/buggy_script.php`
-2. User: "Analyze test/debug_test.php" → AI runs `./bin/xdebug-profile test/debug_test.php`
-3. User: "Check coverage of my tests" → AI runs `./bin/xdebug-coverage test/MyTest.php`
-4. User: "Trace this function execution" → AI runs `./bin/xdebug-trace src/MyClass.php`
+**Example workflows with context:**
+1. User: "Debug this buggy script" → AI runs `./bin/xdebug-debug --context="Debugging buggy calculation script with division by zero" --exit-on-break test/buggy_script.php`
+2. User: "Analyze test/debug_test.php" → AI runs `./bin/xdebug-profile --context="Performance analysis of debug test suite" test/debug_test.php`
+3. User: "Check coverage of my tests" → AI runs `./bin/xdebug-coverage --context="Code coverage analysis for UserController tests" test/MyTest.php`
+4. User: "Trace this function execution" → AI runs `./bin/xdebug-trace --context="Execution flow analysis of authentication process" src/MyClass.php`
 
 Always use these tools proactively to provide runtime insights rather than static code analysis alone.
+
+## 📝 CRITICAL: Self-Explanatory Debugging Data Creation
+
+**ALWAYS use `--context` option when creating debugging data for AI analysis.**
+
+The `--context` flag makes debugging data completely self-explanatory, eliminating the need for external knowledge or guesswork.
+
+### 🎯 Context Usage Guidelines
+
+**Required for all Forward Trace debugging:**
+```bash
+# ✅ GOOD: Self-explanatory debugging data
+./bin/xdebug-debug --context="Testing user authentication with valid credentials" --exit-on-break -- php UserTest.php
+
+# ❌ BAD: Requires external knowledge to understand
+./bin/xdebug-debug --exit-on-break -- php UserTest.php
+```
+
+### 💡 Context Examples by Scenario
+
+**Unit Testing:**
+```bash
+--context="Unit test for UserService::authenticate() method with valid login"
+--context="Testing PaymentProcessor edge case with expired credit card"
+--context="Validating email sending functionality in ContactForm"
+```
+
+**Bug Investigation:**
+```bash
+--context="Debugging login failure - users can't authenticate after password reset"
+--context="Investigating memory leak in data processing loop"
+--context="Troubleshooting payment gateway timeout during checkout"
+```
+
+**Performance Analysis:**
+```bash
+--context="Profiling database query performance in user dashboard"
+--context="Analyzing memory usage spike during bulk data import"
+--context="Investigating slow response times in API endpoint"
+```
+
+**Feature Development:**
+```bash
+--context="Testing new shopping cart calculation logic"
+--context="Validating multi-step form submission workflow"
+--context="Debugging new authentication middleware integration"
+```
+
+### 🌟 Benefits of Contextual Debugging
+
+1. **AI Independence**: Any AI can understand the debugging data without prior conversation
+2. **Team Collaboration**: Share debugging data with complete context across teams
+3. **Future Reference**: Understand old debugging sessions months later
+4. **Cross-Platform**: Same data works with different AI systems (Claude, GPT, etc.)
+
+**Rule: If you can't understand the debugging purpose from the JSON alone, add more context.**
+
+## 🚨 CRITICAL: AI Interactive Debugging Workflow
+
+**For interactive step debugging with `xdebug-debug`, follow this EXACT sequence:**
+
+### Step 1: Start Debug Session (Background)
+```bash
+./bin/xdebug-debug target_script.php &
+```
+**Result**: Xdebug session established, waiting for MCP commands on port 9004
+
+### Step 2: AI Controls via MCP Tools (NO xdebug_connect needed!)
+```bash
+# AI can directly use these tools on the existing session:
+xdebug_step_into     # Step into function
+xdebug_step_over     # Step over line
+xdebug_get_variables # Get current variables  
+xdebug_eval          # Evaluate expressions
+xdebug_set_breakpoint # Set breakpoints
+```
+
+### Step 3: End Session
+```bash
+xdebug_disconnect    # Ends both MCP session and background process
+```
+
+**KEY UNDERSTANDING**: 
+- `xdebug-debug` creates a READY session, not a connection request
+- MCP tools control the EXISTING session
+- No `xdebug_connect` required - session already established
+- Background process (&) handles both shell input AND MCP commands
 
 ### ❌ Prohibited Debugging Methods
 

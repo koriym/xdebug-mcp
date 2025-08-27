@@ -16,7 +16,8 @@
     "require-dev": {
         "phpunit/phpunit": "^10.0",
         "vimeo/psalm": "^6.13",
-        "doctrine/coding-standard": "^13.0"
+        "doctrine/coding-standard": "^13.0",
+        "justinrainbow/json-schema": "^6.4"
     },
     "autoload": {
         "psr-4": {
@@ -52,6 +53,75 @@
         "sa": [
             "@psalm"
         ],
+        "forward-trace": {
+            "script": "php tests/fake-script/run.php",
+            "description": "Run all Forward Trace debugging patterns with breakpoint analysis"
+        },
+        "forward-trace:loop": {
+            "script": "./bin/xdebug-debug --context=\"Loop counter progression test\" --break=tests/fake-script/loop-counter.php:8,13,17,24,29 --exit-on-break -- php tests/fake-script/loop-counter.php",
+            "description": "Debug loop counter progression with variable state tracking"
+        },
+        "forward-trace:array": {
+            "script": "./bin/xdebug-debug --context=\"Array manipulation with user filtering\" --break=tests/fake-script/array-manipulation.php:8,14,18,21,23,29,33 --exit-on-break -- php tests/fake-script/array-manipulation.php",
+            "description": "Debug array manipulation patterns with conditional processing"
+        },
+        "forward-trace:object": {
+            "script": "./bin/xdebug-debug --context=\"Object state tracking with method chaining\" --break=tests/fake-script/object-state.php:12,19,23,32,34,38,40,42 --exit-on-break -- php tests/fake-script/object-state.php",
+            "description": "Debug object state evolution through method chaining"
+        },
+        "forward-trace:conditional": {
+            "script": "./bin/xdebug-debug --context=\"Conditional logic with flag tracking\" --break=tests/fake-script/conditional-logic.php:8,18,21,24,27,32,37 --exit-on-break -- php tests/fake-script/conditional-logic.php",
+            "description": "Debug conditional logic patterns with boolean flag evolution"
+        },
+        "forward-trace:nested": {
+            "script": "./bin/xdebug-debug --context=\"Nested loops matrix processing\" --break=tests/fake-script/nested-loops.php:8,17,21,22,25,32,34,39,41 --exit-on-break -- php tests/fake-script/nested-loops.php",
+            "description": "Debug complex nested loops with multi-dimensional data processing"
+        },
+        "forward-trace:error": {
+            "script": "./bin/xdebug-debug --context=\"Error handling simulation\" --break=tests/fake-script/error-simulation.php:12,15,18,21,25,30,31,36 --exit-on-break -- php tests/fake-script/error-simulation.php",
+            "description": "Debug error handling patterns with null/empty value processing"
+        },
+        "profile:loop": {
+            "script": "./bin/xdebug-profile --context=\"Loop counter performance profiling\" tests/fake-script/loop-counter.php",
+            "description": "Profile loop counter performance and execution time"
+        },
+        "profile:array": {
+            "script": "./bin/xdebug-profile --context=\"Array manipulation performance profiling\" tests/fake-script/array-manipulation.php",
+            "description": "Profile array manipulation performance bottlenecks"
+        },
+        "profile:object": {
+            "script": "./bin/xdebug-profile --context=\"Object state performance profiling\" tests/fake-script/object-state.php",
+            "description": "Profile object method chaining and state management performance"
+        },
+        "coverage:loop": {
+            "script": "./bin/xdebug-coverage --context=\"Loop counter code coverage analysis\" tests/fake-script/loop-counter.php",
+            "description": "Analyze code coverage for loop counter pattern"
+        },
+        "coverage:array": {
+            "script": "./bin/xdebug-coverage --context=\"Array manipulation code coverage analysis\" tests/fake-script/array-manipulation.php",
+            "description": "Analyze code coverage for array manipulation pattern"
+        },
+        "coverage:object": {
+            "script": "./bin/xdebug-coverage --context=\"Object state code coverage analysis\" tests/fake-script/object-state.php",
+            "description": "Analyze code coverage for object state pattern"
+        },
+        "ai-test": {
+            "script": ["@ai-test:loop", "@ai-test:array", "@ai-test:object"],
+            "description": "Run comprehensive AI debugging analysis: debug + profile + coverage for key patterns"
+        },
+        "ai-test:loop": {
+            "script": ["@forward-trace:loop", "@profile:loop", "@coverage:loop"],
+            "description": "Complete AI analysis suite for loop counter pattern (debug + profile + coverage)"
+        },
+        "ai-test:array": {
+            "script": ["@forward-trace:array", "@profile:array", "@coverage:array"],
+            "description": "Complete AI analysis suite for array manipulation pattern (debug + profile + coverage)"
+        },
+        "ai-test:object": {
+            "script": ["@forward-trace:object", "@profile:object", "@coverage:object"],
+            "description": "Complete AI analysis suite for object state pattern (debug + profile + coverage)"
+        },
+        "validate-schema": "php bin/validate_schema.php",
         "tests": [
             "@cs",
             "@sa",

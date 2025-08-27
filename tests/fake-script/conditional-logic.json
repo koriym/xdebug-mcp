@@ -1,0 +1,264 @@
+{
+    "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json",
+    "breaks": [
+        {
+            "step": 1,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 8
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "uninitialized: ",
+                "$index": "uninitialized: ",
+                "$results": "uninitialized: ",
+                "$sum": "uninitialized: ",
+                "$value": "uninitialized: "
+            }
+        },
+        {
+            "step": 2,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 18
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: false, has_positive: false, has_zero: false]",
+                "$index": "int: 0",
+                "$results": "array: []",
+                "$sum": "int: 0",
+                "$value": "int: 1"
+            }
+        },
+        {
+            "step": 3,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 21
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: false, has_positive: false, has_zero: false]",
+                "$index": "int: 0",
+                "$results": "array: []",
+                "$sum": "int: 1",
+                "$value": "int: 1"
+            }
+        },
+        {
+            "step": 4,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 32
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: false, has_positive: true, has_zero: false]",
+                "$index": "int: 0",
+                "$results": "array: [0: array[2]]",
+                "$sum": "int: 1",
+                "$value": "int: 1"
+            }
+        },
+        {
+            "step": 5,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 18
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: false, has_positive: true, has_zero: false]",
+                "$index": "int: 1",
+                "$results": "array: [0: array[2]]",
+                "$sum": "int: 1",
+                "$value": "int: -2"
+            }
+        },
+        {
+            "step": 6,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 32
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: true, has_positive: true, has_zero: false]",
+                "$index": "int: 1",
+                "$results": "array: [0: array[2], 1: array[2]]",
+                "$sum": "int: -1",
+                "$value": "int: -2"
+            }
+        },
+        {
+            "step": 7,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 18
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: true, has_positive: true, has_zero: false]",
+                "$index": "int: 2",
+                "$results": "array: [0: array[2], 1: array[2]]",
+                "$sum": "int: -1",
+                "$value": "int: 3"
+            }
+        },
+        {
+            "step": 8,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 21
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: true, has_positive: true, has_zero: false]",
+                "$index": "int: 2",
+                "$results": "array: [0: array[2], 1: array[2]]",
+                "$sum": "int: 2",
+                "$value": "int: 3"
+            }
+        },
+        {
+            "step": 9,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 32
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: true, has_positive: true, has_zero: false]",
+                "$index": "int: 2",
+                "$results": "array: [0: array[2], 1: array[2], 2: array[2]]",
+                "$sum": "int: 2",
+                "$value": "int: 3"
+            }
+        },
+        {
+            "step": 10,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 18
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: true, has_positive: true, has_zero: false]",
+                "$index": "int: 3",
+                "$results": "array: [0: array[2], 1: array[2], 2: array[3]]",
+                "$sum": "int: 2",
+                "$value": "int: 0"
+            }
+        },
+        {
+            "step": 11,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 32
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: true, has_positive: true, has_zero: true]",
+                "$index": "int: 3",
+                "$results": "array: [0: array[2], 1: array[2], 2: array[3], 3: array[2]]",
+                "$sum": "int: 2",
+                "$value": "int: 0"
+            }
+        },
+        {
+            "step": 12,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 18
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: true, has_positive: true, has_zero: true]",
+                "$index": "int: 4",
+                "$results": "array: [0: array[2], 1: array[2], 2: array[3], 3: array[3]]",
+                "$sum": "int: 2",
+                "$value": "int: -5"
+            }
+        },
+        {
+            "step": 13,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 32
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: true, has_positive: true, has_zero: true]",
+                "$index": "int: 4",
+                "$results": "array: [0: array[2], 1: array[2], 2: array[3], 3: array[3], 4: array[2]]",
+                "$sum": "int: -3",
+                "$value": "int: -5"
+            }
+        },
+        {
+            "step": 14,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 18
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: true, has_positive: true, has_zero: true]",
+                "$index": "int: 5",
+                "$results": "array: [0: array[2], 1: array[2], 2: array[3], 3: array[3], 4: array[2]]",
+                "$sum": "int: -3",
+                "$value": "int: 7"
+            }
+        },
+        {
+            "step": 15,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 21
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: true, has_positive: true, has_zero: true]",
+                "$index": "int: 5",
+                "$results": "array: [0: array[2], 1: array[2], 2: array[3], 3: array[3], 4: array[2]]",
+                "$sum": "int: 4",
+                "$value": "int: 7"
+            }
+        },
+        {
+            "step": 16,
+            "location": {
+                "file": "conditional-logic.php",
+                "line": 32
+            },
+            "variables": {
+                "$data": "array: [0: 1, 1: -2, 2: 3, 3: 0, 4: -5, ... (6 total)]",
+                "$flags": "array: [has_negative: true, has_positive: true, has_zero: true]",
+                "$index": "int: 5",
+                "$results": "array: [0: array[2], 1: array[2], 2: array[3], 3: array[3], 4: array[2], ... (6 total)]",
+                "$sum": "int: 4",
+                "$value": "int: 7"
+            }
+        }
+    ],
+    "trace": {
+        "file": "/tmp/trace.1034012359.xt",
+        "content": [
+            "Version: 3.4.4",
+            "File format: 4",
+            "TRACE START [2025-08-27 04:06:38.765451]",
+            "1\t0\t0\t0.000317\t405224\t{main}\t1\t\t/Users/akihito/git/xdebug-mcp/test_array_display.php\t0\t0",
+            "2\t1\t0\t0.000340\t405288\tprocessWithCounters\t1\t\t/Users/akihito/git/xdebug-mcp/test_array_display.php\t49\t0",
+            "2\t1\t1\t0.000358\t407384",
+            "2\t1\tR\t\t\t[0 => ['index' => 0, 'item' => 'apple', 'length' => 5, 'counter' => 1, 'running_total' => 5], 1 => ['index' => 1, 'item' => 'banana', 'length' => 6, 'counter' => 2, 'running_total' => 11], 2 => ['index' => 2, 'item' => 'cherry', 'length' => 6, 'counter' => 3, 'running_total' => 17], 3 => ['index' => 3, 'item' => 'date', 'length' => 4, 'counter' => 4, 'running_total' => 21], 4 => ['index' => 4, 'item' => 'elderberry', 'length' => 10, 'counter' => 5, 'running_total' => 31]]",
+            "2\t2\t0\t0.000379\t407384\tprocessUsers\t1\t\t/Users/akihito/git/xdebug-mcp/test_array_display.php\t50\t0",
+            "2\t2\t1\t0.000388\t408888",
+            "2\t2\tR\t\t\t['alice' => ['age' => 25, 'city' => 'Tokyo', 'process_order' => 1], 'bob' => ['age' => 30, 'city' => 'Osaka', 'process_order' => 2], 'charlie' => ['age' => 35, 'city' => 'Kyoto', 'process_order' => 3]]",
+            "1\t0\t1\t0.000398\t408888",
+            "\t\t\t0.000430\t398680",
+            "TRACE END   [2025-08-27 04:06:38.765729]",
+            ""
+        ]
+    }
+}
