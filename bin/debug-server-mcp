@@ -6,6 +6,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use Koriym\XdebugMcp\Constants;
+use Koriym\XdebugMcp\Exceptions\InvalidOutputException;
 
 /**
  * MCP Bridge using --exit-on-break approach
@@ -103,30 +104,24 @@ function executeDebugCommand(array $params): array
     
     $command = implode(' ', $cmd);
     
-    // Execute command
-    $output = shell_exec($command . ' 2>&1');
-    if ($output === null) {
-        throw new Exception('Failed to execute debug command');
-    }
+    // Execute command and capture full output with exit status
+    $output_lines = [];
+    $exit_code = null;
+    exec($command . ' 2>&1', $output_lines, $exit_code);
     
-    // Find JSON output in the result
-    $lines = explode("\n", $output);
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if (str_starts_with($line, '{')) {
-            $json = json_decode($line, true);
-            if ($json !== null) {
-                return $json;
-            }
+    // Find first valid JSON line
+    foreach ($output_lines as $line) {
+        $trimmed_line = trim($line);
+        if (json_validate($trimmed_line)) {
+            return [
+                'exit_code' => $exit_code,
+                'json_data' => json_decode($trimmed_line, true),
+                'command' => $command
+            ];
         }
     }
     
-    // If no JSON found, return the raw output
-    return [
-        'status' => 'completed',
-        'output' => $output,
-        'command' => $command
-    ];
+    throw new InvalidOutputException("No valid JSON found in command output");
 }
 
 function sendSuccess(mixed $result): void 
