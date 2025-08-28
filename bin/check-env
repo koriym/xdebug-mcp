@@ -135,22 +135,15 @@ if ($action === '--install-mcp') {
     echo "🔧 Installing Desktop Configuration (Claude Desktop)\n";
     echo "===================================================\n\n";
     
-    $configPaths = [
-        'macOS' => $_SERVER['HOME'] . '/Library/Application Support/Claude/claude_desktop_config.json',
-        'Linux' => $_SERVER['HOME'] . '/.config/claude/claude_desktop_config.json',
-        'Windows' => $_SERVER['HOME'] . '/AppData/Roaming/Claude/claude_desktop_config.json'
-    ];
-    
+    $home = getenv('HOME') ?: getenv('USERPROFILE') ?: '';
     $platform = PHP_OS_FAMILY;
-    $configPath = null;
-    
-    foreach ($configPaths as $os => $path) {
-        if (stripos($platform, substr($os, 0, 3)) !== false) {
-            $configPath = $path;
-            break;
-        }
-    }
-    
+    $configPaths = [
+        'Darwin'  => $home . '/Library/Application Support/Claude/claude_desktop_config.json',
+        'Linux'   => $home . '/.config/claude/claude_desktop_config.json',
+        'Windows' => (getenv('APPDATA') ? rtrim(getenv('APPDATA'), DIRECTORY_SEPARATOR) : $home . '/AppData/Roaming') . '/Claude/claude_desktop_config.json',
+    ];
+    $configPath = $configPaths[$platform] ?? null;
+
     if ($configPath) {
         echo "🖥️  Platform: $platform\n";
         echo "📄 Config path: $configPath\n";
