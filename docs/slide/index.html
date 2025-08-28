@@ -259,60 +259,112 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                 </div>
             </section>
 
-            <!-- AI vs Human Cognition -->
+            <!-- Humans vs AI - Split view -->
             <section data-background-gradient="linear-gradient(45deg, #667db6, #0082c8)">
-                <h2>AI vs Human: Different Cognitive Patterns 🧠</h2>
-                <div class="fragment">
-                    <h3>Humans excel at:</h3>
-                    <ul>
-                        <li>Step-by-step reasoning</li>
-                        <li>Sequential understanding</li>
-                        <li>Interactive exploration</li>
-                        <li>Building mental models gradually</li>
-                    </ul>
+                <h2>Different Cognitive Patterns 🧠</h2>
+                <div style="display: flex; justify-content: space-between;">
+                    <div class="fragment" style="width: 45%;">
+                        <h3 style="color: #ff6b6b;">👤 Humans excel at:</h3>
+                        <ul>
+                            <li>Step-by-step reasoning</li>
+                            <li>Sequential understanding</li>
+                            <li>Interactive exploration</li>
+                            <li>Building mental models gradually</li>
+                        </ul>
+                    </div>
+                    <div class="fragment" style="width: 45%;">
+                        <h3 style="color: #51cf66;">🤖 AI excels at:</h3>
+                        <ul>
+                            <li>📊 Comprehensive data analysis</li>
+                            <li>🔍 Pattern recognition in massive datasets</li>
+                            <li>⚡ Simultaneous processing of all information</li>
+                            <li>🎯 Complete context understanding at once</li>
+                        </ul>
+                    </div>
                 </div>
-                <div class="fragment">
-                    <h3>AI excels at:</h3>
-                    <ul>
-                        <li class="fragment highlight-green">📊 Comprehensive data analysis</li>
-                        <li class="fragment highlight-green">🔍 Pattern recognition in massive datasets</li>
-                        <li class="fragment highlight-green">⚡ Simultaneous processing of all information</li>
-                        <li class="fragment highlight-green">🎯 Complete context understanding at once</li>
-                    </ul>
-                </div>
-                <div class="fragment">
-                    <p class="quote">"We've been forcing AI to debug like humans. Time to let AI debug like AI."</p>
+                <div class="fragment" style="margin-top: 40px;">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        "We've been forcing AI to debug like humans. Time to let AI debug like AI."
+                    </p>
                 </div>
             </section>
 
-            <!-- Forward Trace Revolution -->
+            <!-- Forward Trace Revolution - First slide -->
             <section>
                 <h2>Forward Trace™: AI-Native Debugging 🚀</h2>
-                <div class="fragment">
-                    <h3>Interactive Debugging (Human-Optimized) ❌</h3>
-                    <pre><code class="php code-small">// Step 1: Set breakpoint
+                <div style="display: flex; justify-content: space-between;">
+                    <div class="fragment" style="width: 48%;">
+                        <h3 style="color: #ff6b6b;">Interactive Debugging ❌</h3>
+                        <p style="font-size: 0.8em; color: #ff6b6b; margin-bottom: 15px;">Human-Optimized (Fragmented)</p>
+                        <pre><code class="php" style="font-size: 0.5em;">// Step 1: Set breakpoint
 // Step 2: Run to breakpoint  
-// Step 3: Inspect variable $user
+// Step 3: Inspect $user
 // Step 4: Step into function
-// Step 5: Inspect variable $permissions
+// Step 5: Inspect $permissions
 // Step 6: Continue execution...
-// → Fragmented understanding</code></pre>
-                </div>
-                <div class="fragment">
-                    <h3>Forward Trace (AI-Optimized) ✅</h3>
-                    <pre><code class="bash code-small"># Single command captures EVERYTHING
-./bin/xdebug-trace --condition="$user==null" -- php app.php
+// Step 7: Another breakpoint
+// Step 8: Check another variable
+
+// → Slow, fragmented understanding</code></pre>
+                    </div>
+                    <div class="fragment" style="width: 48%;">
+                        <h3 style="color: #51cf66;">Forward Trace ✅</h3>
+                        <p style="font-size: 0.8em; color: #51cf66; margin-bottom: 15px;">AI-Optimized (Complete Context)</p>
+                        <pre><code class="bash" style="font-size: 0.5em;"># Single command captures EVERYTHING
+./bin/x-debug --break="$user==null" --exit
 
 # AI instantly sees:
-# ├── Complete execution flow (224 function calls)
-# ├── All variable states at each step
-# ├── Memory usage patterns
-# ├── Exact failure conditions
-# └── Root cause identification in seconds</code></pre>
+# ├─ Complete execution flow (224 calls)
+# ├─ All variable states at each step
+# ├─ Memory usage patterns
+# ├─ Exact failure conditions
+# └─ Root cause in seconds
+
+# → Fast, complete understanding</code></pre>
+                    </div>
                 </div>
+                <div class="fragment" style="margin-top: 30px;">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        AI processes complete context → Humans get immediate insights
+                    </p>
+                </div>
+            </section>
+
+            <!-- Forward Trace Benefits -->
+            <section>
+                <h2>Why Forward Trace Works for AI 🤖</h2>
                 <div class="fragment">
-                    <p style="text-align: center; color: #51cf66; font-size: 1.2em;">
-                        <strong>Result: AI processes complete context, humans get immediate insights</strong>
+                    <h3>Real Example: Authentication Bug</h3>
+                    <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                        <div style="width: 48%;">
+                            <h4 style="color: #ff6b6b;">Traditional Way (2 hours)</h4>
+                            <ul style="font-size: 0.8em;">
+                                <li>Set breakpoint at login</li>
+                                <li>Step through each line</li>
+                                <li>Check $user variable</li>
+                                <li>Step into validateUser()</li>
+                                <li>Check $permissions</li>
+                                <li>Miss the real issue...</li>
+                                <li style="color: #ff6b6b;">Still guessing after 2 hours</li>
+                            </ul>
+                        </div>
+                        <div style="width: 48%;">
+                            <h4 style="color: #51cf66;">Forward Trace (30 seconds)</h4>
+                            <ul style="font-size: 0.8em;">
+                                <li>Capture complete auth flow</li>
+                                <li>AI analyzes all 47 function calls</li>
+                                <li>Spots permission check called with null</li>
+                                <li>Traces back to session timeout</li>
+                                <li>Identifies exact line causing issue</li>
+                                <li style="color: #51cf66;">AI: "Fix line 234: add session validation"</li>
+                                <li style="color: #51cf66;">Problem solved in 30 seconds</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 30px;">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.1em; font-weight: bold;">
+                        AI can process complexity that overwhelms humans
                     </p>
                 </div>
             </section>
@@ -492,32 +544,34 @@ claude --continue "Analyze coverage gaps and suggest high-impact test cases"</co
                 </div>
             </section>
 
-            <!-- Schema Intelligence -->
+            <!-- Core Tools Focus -->
             <section>
-                <h2>ADR-001: Forward Trace Only 📋</h2>
+                <h2>The Power of Focused Tools 🎯</h2>
                 <div class="fragment">
-                    <p><strong>We removed 8 interactive debugging tools</strong> to focus on AI-optimized Forward Trace methodology:</p>
+                    <h3>4 Core AI-Optimized Tools:</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
+                            <h4 style="color: #51cf66;">🔍 Forward Trace</h4>
+                            <p style="font-size: 0.8em;">Complete execution flow with all variable states</p>
+                        </div>
+                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
+                            <h4 style="color: #51cf66;">⚡ Conditional Breakpoints</h4>
+                            <p style="font-size: 0.8em;">Smart capture only when conditions met</p>
+                        </div>
+                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
+                            <h4 style="color: #51cf66;">📊 Performance Profiling</h4>
+                            <p style="font-size: 0.8em;">Comprehensive metrics and timing analysis</p>
+                        </div>
+                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
+                            <h4 style="color: #51cf66;">📈 Coverage Analysis</h4>
+                            <p style="font-size: 0.8em;">Full context test coverage mapping</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="fragment">
-                    <h4>Removed (Human-Centric):</h4>
-                    <ul class="code-small">
-                        <li>❌ Function monitoring (step-by-step)</li>
-                        <li>❌ Stack inspection (fragmentary)</li>
-                        <li>❌ Feature control (stateful)</li>
-                        <li>❌ Context info (sequential)</li>
-                    </ul>
-                </div>
-                <div class="fragment">
-                    <h4>Retained (AI-Centric):</h4>
-                    <ul class="code-small">
-                        <li>✅ Forward Trace (complete execution)</li>
-                        <li>✅ Conditional breakpoints (smart capture)</li>
-                        <li>✅ Performance profiling (comprehensive metrics)</li>
-                        <li>✅ Coverage analysis (full context)</li>
-                    </ul>
-                </div>
-                <div class="fragment">
-                    <p class="quote">"23 tools optimized for AI > 43 tools designed for humans"</p>
+                <div class="fragment" style="margin-top: 40px;">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        Each tool gives AI the complete picture it needs to excel
+                    </p>
                 </div>
             </section>
 
