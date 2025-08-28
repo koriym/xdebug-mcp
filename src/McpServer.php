@@ -38,7 +38,6 @@ use function implode;
 use function in_array;
 use function ini_get;
 use function ini_set;
-use function is_array;
 use function is_numeric;
 use function is_string;
 use function json_decode;
@@ -63,7 +62,6 @@ use function str_repeat;
 use function str_starts_with;
 use function strlen;
 use function substr;
-use function sys_get_temp_dir;
 use function trim;
 use function uasort;
 use function uniqid;
@@ -98,12 +96,12 @@ class McpServer
     protected array $tools = [];
     protected XdebugClient|null $xdebugClient = null;
     private bool $debugMode = false;
+
     public function __construct()
     {
         $this->debugMode = (bool) (getenv('MCP_DEBUG') ?: false);
         $this->initializeTools();
     }
-
 
     private function debugLog(string $message, array $data = []): void
     {
@@ -1921,7 +1919,6 @@ class McpServer
             $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
 
-
             // Build command - user must specify PHP binary explicitly
             $cmd = './bin/xdebug-trace --json -- ' . $script;
 
@@ -2007,7 +2004,6 @@ class McpServer
 
             $steps = $args['steps'] ?? '100';
 
-
             // Build command
             $cmd = './bin/xdebug-debug --exit-on-break';
 
@@ -2092,7 +2088,6 @@ class McpServer
             $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
 
-
             // Build command - user must specify PHP binary explicitly
             $cmd = './bin/xdebug-profile --json -- ' . $script;
 
@@ -2156,7 +2151,6 @@ class McpServer
             $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
             $format = $args['format'] ?? 'json';
-
 
             // Build command - user must specify PHP binary explicitly
             $cmd = './bin/xdebug-coverage -- ' . $script;
