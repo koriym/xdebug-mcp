@@ -2,7 +2,7 @@
 
 **Generated**: 2025-08-27  
 **Method**: Manual testing of each tool individually  
-**Total Tools**: 43
+**Total Tools**: See runtime `tools/list` output (do not hard-code)
 
 **IMPORTANT**: All responses below are ACTUAL results from running the MCP server, not estimations or guesses.
 
