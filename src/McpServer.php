@@ -904,22 +904,22 @@ final class McpServer
             case 'x-trace':
                 $result = $this->executeXTrace(null, $arguments);
 
-                return $result['result']['messages'][0]['content']['text'] ?? 'No result';
+                return $result['result']['messages'][0]['content'][0]['text'] ?? 'No result';
 
             case 'x-profile':
                 $result = $this->executeXProfile(null, $arguments);
 
-                return $result['result']['messages'][0]['content']['text'] ?? 'No result';
+                return $result['result']['messages'][0]['content'][0]['text'] ?? 'No result';
 
             case 'x-debug':
                 $result = $this->executeXDebug(null, $arguments);
 
-                return $result['result']['messages'][0]['content']['text'] ?? 'No result';
+                return $result['result']['messages'][0]['content'][0]['text'] ?? 'No result';
 
             case 'x-coverage':
                 $result = $this->executeXCoverage(null, $arguments);
 
-                return $result['result']['messages'][0]['content']['text'] ?? 'No result';
+                return $result['result']['messages'][0]['content'][0]['text'] ?? 'No result';
 
             default:
                 throw new InvalidToolException("Unknown tool: $toolName");
@@ -1656,8 +1656,10 @@ final class McpServer
                         [
                             'role' => 'assistant',
                             'content' => [
-                                'type' => 'text',
-                                'text' => 'Forward Trace execution ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Output**:\n```\n" . $outputText . "\n```",
+                                [
+                                    'type' => 'text',
+                                    'text' => 'Forward Trace execution ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Output**:\n```\n" . $outputText . "\n```",
+                                ],
                             ],
                         ],
                     ],
@@ -1762,8 +1764,10 @@ final class McpServer
                         [
                             'role' => 'assistant',
                             'content' => [
-                                'type' => 'text',
-                                'text' => 'Forward Trace debugging ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Breakpoints**: {$breakpoints}\n**Steps**: {$steps}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Debug Output**:\n```\n" . $outputText . "\n```",
+                                [
+                                    'type' => 'text',
+                                    'text' => 'Forward Trace debugging ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Breakpoints**: {$breakpoints}\n**Steps**: {$steps}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Debug Output**:\n```\n" . $outputText . "\n```",
+                                ],
                             ],
                         ],
                     ],
@@ -1825,8 +1829,10 @@ final class McpServer
                         [
                             'role' => 'assistant',
                             'content' => [
-                                'type' => 'text',
-                                'text' => 'Performance profiling ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Profile Analysis**:\n```\n" . $outputText . "\n```",
+                                [
+                                    'type' => 'text',
+                                    'text' => 'Performance profiling ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Profile Analysis**:\n```\n" . $outputText . "\n```",
+                                ],
                             ],
                         ],
                     ],
@@ -1890,8 +1896,10 @@ final class McpServer
                         [
                             'role' => 'assistant',
                             'content' => [
-                                'type' => 'text',
-                                'text' => 'Code coverage analysis ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Format**: {$format}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Coverage Report**:\n```\n" . $outputText . "\n```",
+                                [
+                                    'type' => 'text',
+                                    'text' => 'Code coverage analysis ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Format**: {$format}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Coverage Report**:\n```\n" . $outputText . "\n```",
+                                ],
                             ],
                         ],
                     ],
