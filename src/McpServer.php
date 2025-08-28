@@ -7,11 +7,9 @@ namespace Koriym\XdebugMcp;
 use Koriym\XdebugMcp\Exceptions\FileNotFoundException;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\Exceptions\InvalidToolException;
-use Koriym\XdebugMcp\Exceptions\XdebugConnectionException;
 use Koriym\XdebugMcp\Exceptions\XdebugNotAvailableException;
 use Throwable;
 
-use function array_flip;
 use function array_merge;
 use function array_slice;
 use function array_values;
@@ -47,15 +45,12 @@ use function max;
 use function memory_get_peak_usage;
 use function memory_get_usage;
 use function microtime;
-use function ob_get_clean;
-use function ob_start;
 use function phpversion;
 use function preg_match;
 use function register_tick_function;
 use function restore_error_handler;
 use function round;
 use function set_error_handler;
-use function sprintf;
 use function str_contains;
 use function str_ends_with;
 use function str_repeat;
@@ -68,7 +63,6 @@ use function uniqid;
 use function unregister_tick_function;
 
 use const DEBUG_BACKTRACE_IGNORE_ARGS;
-use const DEBUG_BACKTRACE_PROVIDE_OBJECT;
 use const E_COMPILE_ERROR;
 use const E_COMPILE_WARNING;
 use const E_CORE_ERROR;
@@ -91,7 +85,7 @@ use const LOCK_EX;
 use const STDIN;
 use const STDOUT;
 
-class McpServer
+final class McpServer
 {
     protected array $tools = [];
     protected XdebugClient|null $xdebugClient = null;
@@ -209,11 +203,6 @@ class McpServer
                 'description' => 'Get peak memory usage information',
                 'inputSchema' => ['type' => 'object', 'properties' => (object) []],
             ],
-            'xdebug_get_stack_depth' => [
-                'name' => 'xdebug_get_stack_depth',
-                'description' => 'Get current stack depth level',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
             'xdebug_get_time_index' => [
                 'name' => 'xdebug_get_time_index',
                 'description' => 'Get time index since script start',
@@ -269,78 +258,6 @@ class McpServer
                 'name' => 'xdebug_get_tracefile_name',
                 'description' => 'Get the filename of the current trace file',
                 'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_start_function_monitor' => [
-                'name' => 'xdebug_start_function_monitor',
-                'description' => 'Start monitoring specific functions',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'functions' => ['type' => 'array', 'items' => ['type' => 'string']],
-                    ],
-                    'required' => ['functions'],
-                ],
-            ],
-            'xdebug_stop_function_monitor' => [
-                'name' => 'xdebug_stop_function_monitor',
-                'description' => 'Stop function monitoring and return monitored calls',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_get_function_stack' => [
-                'name' => 'xdebug_get_function_stack',
-                'description' => 'Get detailed function stack with arguments and variables',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'include_args' => ['type' => 'boolean', 'default' => true],
-                        'include_object' => ['type' => 'boolean', 'default' => true],
-                        'limit' => ['type' => 'integer', 'default' => 0],
-                    ],
-                ],
-            ],
-            'xdebug_print_function_stack' => [
-                'name' => 'xdebug_print_function_stack',
-                'description' => 'Print formatted function stack trace',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'message' => ['type' => 'string', 'default' => 'Call Stack'],
-                        'options' => ['type' => 'integer', 'default' => 0],
-                    ],
-                ],
-            ],
-            'xdebug_call_info' => [
-                'name' => 'xdebug_call_info',
-                'description' => 'Get information about the calling context',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_get_features' => [
-                'name' => 'xdebug_get_features',
-                'description' => 'Get all available Xdebug features and their values',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_set_feature' => [
-                'name' => 'xdebug_set_feature',
-                'description' => 'Set a specific Xdebug feature value',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'feature_name' => ['type' => 'string'],
-                        'value' => ['type' => 'string'],
-                    ],
-                    'required' => ['feature_name', 'value'],
-                ],
-            ],
-            'xdebug_get_feature' => [
-                'name' => 'xdebug_get_feature',
-                'description' => 'Get a specific Xdebug feature value',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'feature_name' => ['type' => 'string'],
-                    ],
-                    'required' => ['feature_name'],
-                ],
             ],
             'x-trace' => [
                 'name' => 'x-trace',
@@ -960,9 +877,6 @@ class McpServer
             case 'xdebug_get_peak_memory_usage':
                 return $this->getPeakMemoryUsage();
 
-            case 'xdebug_get_stack_depth':
-                return $this->getStackDepth();
-
             case 'xdebug_get_time_index':
                 return $this->getTimeIndex();
 
@@ -986,30 +900,6 @@ class McpServer
 
             case 'xdebug_get_tracefile_name':
                 return $this->getTracefileName();
-
-            case 'xdebug_start_function_monitor':
-                return $this->startFunctionMonitor($arguments);
-
-            case 'xdebug_stop_function_monitor':
-                return $this->stopFunctionMonitor();
-
-            case 'xdebug_get_function_stack':
-                return $this->getFunctionStack($arguments);
-
-            case 'xdebug_print_function_stack':
-                return $this->printFunctionStack($arguments);
-
-            case 'xdebug_call_info':
-                return $this->getCallInfo();
-
-            case 'xdebug_get_features':
-                return $this->getFeatures();
-
-            case 'xdebug_set_feature':
-                return $this->setFeature($arguments);
-
-            case 'xdebug_get_feature':
-                return $this->getFeature($arguments);
 
             case 'x-trace':
                 $result = $this->executeXTrace(null, $arguments);
@@ -1485,20 +1375,6 @@ class McpServer
         return "Peak memory usage information:\n" . json_encode($info, JSON_PRETTY_PRINT);
     }
 
-    protected function getStackDepth(): string
-    {
-        $depth = 0;
-
-        if (function_exists('xdebug_get_stack_depth')) {
-            $depth = xdebug_get_stack_depth();
-        } else {
-            $stack = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-            $depth = count($stack);
-        }
-
-        return "Current stack depth: {$depth}";
-    }
-
     protected function getTimeIndex(): string
     {
         $startTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true);
@@ -1697,44 +1573,6 @@ class McpServer
         return self::$traceFile ?: 'No trace file active';
     }
 
-    protected function startFunctionMonitor(array $args): string
-    {
-        $functions = $args['functions'] ?? [];
-
-        if (empty($functions)) {
-            throw new InvalidArgumentException('No functions specified to monitor');
-        }
-
-        if (function_exists('xdebug_start_function_monitor')) {
-            xdebug_start_function_monitor($functions);
-
-            return 'Xdebug function monitor started for: ' . implode(', ', $functions);
-        }
-
-        self::$functionMonitor = array_flip($functions);
-        self::$monitoredCalls = [];
-
-        return 'Custom function monitor started for: ' . implode(', ', $functions);
-    }
-
-    protected function stopFunctionMonitor(): string
-    {
-        if (function_exists('xdebug_stop_function_monitor')) {
-            xdebug_stop_function_monitor();
-
-            return 'Xdebug function monitor stopped';
-        }
-
-        $calls = self::$monitoredCalls;
-        self::$functionMonitor = [];
-        self::$monitoredCalls = [];
-
-        $callCount = count($calls);
-
-        return "Custom function monitor stopped. Monitored {$callCount} calls:\n" .
-               json_encode($calls, JSON_PRETTY_PRINT);
-    }
-
     public function traceFunction(): void
     {
         if (! self::$tracingActive) {
@@ -1773,142 +1611,6 @@ class McpServer
         if (self::$traceFile) {
             file_put_contents(self::$traceFile, json_encode($entry) . "\n", FILE_APPEND | LOCK_EX);
         }
-    }
-
-    protected function getFunctionStack(array $args): string
-    {
-        $includeArgs = $args['include_args'] ?? true;
-        $includeObject = $args['include_object'] ?? true;
-        $limit = $args['limit'] ?? 0;
-
-        if (function_exists('xdebug_get_function_stack')) {
-            $stack = xdebug_get_function_stack();
-        } else {
-            $options = DEBUG_BACKTRACE_PROVIDE_OBJECT;
-            if (! $includeObject) {
-                $options = DEBUG_BACKTRACE_IGNORE_ARGS;
-            }
-
-            $stack = debug_backtrace($options, $limit ?: 50);
-        }
-
-        if ($limit > 0) {
-            $stack = array_slice($stack, 0, $limit);
-        }
-
-        if (! $includeArgs && isset($stack[0]['args'])) {
-            foreach ($stack as &$frame) {
-                unset($frame['args']);
-            }
-        }
-
-        return "Function stack:\n" . json_encode($stack, JSON_PRETTY_PRINT);
-    }
-
-    protected function printFunctionStack(array $args): string
-    {
-        $message = $args['message'] ?? 'Call Stack';
-        $options = $args['options'] ?? 0;
-
-        if (function_exists('xdebug_print_function_stack')) {
-            ob_start();
-            xdebug_print_function_stack($message, $options);
-
-            return ob_get_clean();
-        }
-
-        $stack = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-        $output = $message . ":\n";
-
-        foreach ($stack as $i => $frame) {
-            $function = $frame['function'] ?? 'unknown';
-            $class = $frame['class'] ?? '';
-            $file = $frame['file'] ?? 'unknown';
-            $line = $frame['line'] ?? 0;
-
-            $fullFunction = $class ? "{$class}::{$function}" : $function;
-            $output .= sprintf("#%d %s() called at [%s:%d]\n", $i, $fullFunction, $file, $line);
-        }
-
-        return $output;
-    }
-
-    protected function getCallInfo(): string
-    {
-        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
-
-        $info = [
-            'current_function' => $backtrace[1]['function'] ?? 'unknown',
-            'current_class' => $backtrace[1]['class'] ?? null,
-            'current_file' => $backtrace[1]['file'] ?? 'unknown',
-            'current_line' => $backtrace[1]['line'] ?? 0,
-            'caller_function' => $backtrace[2]['function'] ?? null,
-            'caller_class' => $backtrace[2]['class'] ?? null,
-            'caller_file' => $backtrace[2]['file'] ?? null,
-            'caller_line' => $backtrace[2]['line'] ?? null,
-        ];
-
-        if (function_exists('xdebug_call_class')) {
-            $info['xdebug_call_class'] = xdebug_call_class();
-        }
-
-        if (function_exists('xdebug_call_function')) {
-            $info['xdebug_call_function'] = xdebug_call_function();
-        }
-
-        if (function_exists('xdebug_call_file')) {
-            $info['xdebug_call_file'] = xdebug_call_file();
-        }
-
-        if (function_exists('xdebug_call_line')) {
-            $info['xdebug_call_line'] = xdebug_call_line();
-        }
-
-        return "Call information:\n" . json_encode($info, JSON_PRETTY_PRINT);
-    }
-
-    protected function getFeatures(): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $features = $this->xdebugClient->getFeatures();
-
-        return "Available Xdebug features:\n" . json_encode($features, JSON_PRETTY_PRINT);
-    }
-
-    protected function setFeature(array $args): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $featureName = $args['feature_name'];
-        $value = $args['value'];
-
-        $result = $this->xdebugClient->setFeature($featureName, $value);
-        $success = $result['@attributes']['success'] ?? '0';
-
-        if ($success === '1') {
-            return "Feature '{$featureName}' set to '{$value}' successfully";
-        }
-
-        return "Failed to set feature '{$featureName}' to '{$value}'";
-    }
-
-    protected function getFeature(array $args): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $featureName = $args['feature_name'];
-        $result = $this->xdebugClient->getFeature($featureName);
-
-        $value = $result['#text'] ?? $result['@attributes']['supported'] ?? 'unknown';
-
-        return "Feature '{$featureName}': {$value}";
     }
 
     private function executeXTrace(mixed $id, array $args): array
