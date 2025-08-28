@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use Koriym\XdebugMcp\Tests\Fake\FakeMcpServer;
@@ -18,7 +20,7 @@ $demoSteps = [
             'method' => 'initialize',
             'params' => []
         ]
-    ],
+    ],c
     [
         'name' => 'Connect to Xdebug',
         'request' => [
@@ -139,21 +141,21 @@ $handleRequestMethod->setAccessible(true);
 
 foreach ($demoSteps as $i => $step) {
     echo "--- Step " . ($i + 1) . ": {$step['name']} ---\n";
-    
+
     try {
         $response = $handleRequestMethod->invoke($server, $step['request']);
-        
+
         if (isset($response['result']['content'][0]['text'])) {
             echo $response['result']['content'][0]['text'] . "\n";
         } else {
             echo json_encode($response, JSON_PRETTY_PRINT) . "\n";
         }
-        
+
         echo "✅ Success\n\n";
-        
+
         // Make demo progress more visible
         usleep(500000); // Wait 0.5 seconds
-        
+
     } catch (Exception $e) {
         echo "❌ Error: " . $e->getMessage() . "\n\n";
     }
