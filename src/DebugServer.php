@@ -22,6 +22,7 @@ use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use SimpleXMLElement;
+use Stringable;
 use Throwable;
 
 use function Amp\async;
@@ -864,47 +865,47 @@ final class DebugServer
 
         // Create simple logger for AMP SocketHttpServer
         $logger = new class implements LoggerInterface {
-            public function emergency($message, array $context = []): void
+            public function emergency(string|Stringable $message, array $context = []): void
             {
                 $this->log('EMERGENCY', $message, $context);
             }
 
-            public function alert($message, array $context = []): void
+            public function alert(string|Stringable $message, array $context = []): void
             {
                 $this->log('ALERT', $message, $context);
             }
 
-            public function critical($message, array $context = []): void
+            public function critical(string|Stringable $message, array $context = []): void
             {
                 $this->log('CRITICAL', $message, $context);
             }
 
-            public function error($message, array $context = []): void
+            public function error(string|Stringable $message, array $context = []): void
             {
                 $this->log('ERROR', $message, $context);
             }
 
-            public function warning($message, array $context = []): void
+            public function warning(string|Stringable $message, array $context = []): void
             {
                 $this->log('WARNING', $message, $context);
             }
 
-            public function notice($message, array $context = []): void
+            public function notice(string|Stringable $message, array $context = []): void
             {
                 $this->log('NOTICE', $message, $context);
             }
 
-            public function info($message, array $context = []): void
+            public function info(string|Stringable $message, array $context = []): void
             {
                 $this->log('INFO', $message, $context);
             }
 
-            public function debug($message, array $context = []): void
+            public function debug(string|Stringable $message, array $context = []): void
             {
                 $this->log('DEBUG', $message, $context);
             }
 
-            public function log($level, $message, array $context = []): void
+            public function log(mixed $level, string|Stringable $message, array $context = []): void
             {
                 fwrite(STDERR, "[HTTP-Server] [{$level}] {$message}\n");
             }
@@ -1529,7 +1530,8 @@ final class DebugServer
 
         // Check if we hit a breakpoint and finalize trace
         if ($this->didBreak($response)) {
-            if ($path = $this->finalizeTraceOnBreak()) {
+            $path = $this->finalizeTraceOnBreak();
+            if ($path !== null) {
                 $this->log("📊 Trace finalized at break: {$path}");
             }
         }
