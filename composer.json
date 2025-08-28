@@ -39,10 +39,11 @@
         "bin/xdebug-debug",
         "bin/test-json"
     ],
+comm
     "scripts-descriptions": {
         "test-json": "Run comprehensive JSON test suite with all xdebug commands",
         "install-mcp": "Configure xdebug-mcp for Claude Code MCP integration",
-        "install-desktop": "Configure xdebug-mcp for Claude Desktop integration", 
+        "install-desktop": "Configure xdebug-mcp for Claude Desktop integration",
         "check-env": "Check Xdebug environment and configuration"
     },
     "scripts": {

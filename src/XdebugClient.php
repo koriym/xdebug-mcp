@@ -205,13 +205,9 @@ class XdebugClient
         if ($result === 1) {
             $peek = socket_recv($this->socket, $buffer, 1, MSG_PEEK);
 
-            // socket_recv === false means error
-            if ($peek === false) {
-                return false;
-            }
-
-            // socket_recv === 0 means connection closed
-            if ($peek === 0) {
+            // socket_recv === false means error, === 0 means connection closed
+            // @phpcs:ignore SlevomatCodingStandard.ControlStructures.UselessIfConditionWithReturn.UselessIfCondition
+            if ($peek === false || $peek === 0) {
                 return false;
             }
 

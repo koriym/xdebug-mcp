@@ -314,7 +314,7 @@ class XdebugTracer
     private function countDatabaseQueries(array $stats): int
     {
         $dbQueryCount = 0;
-        foreach ($stats['unique_functions'] as $function => $_) {
+        foreach ($stats['unique_functions'] as $function => $unused) {
             if (
                 str_contains(strtolower($function), 'query') ||
                 str_contains(strtolower($function), 'execute') ||
