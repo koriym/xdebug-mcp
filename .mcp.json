@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "xdebug": {
+      "command": "php",
+      "args": [
+        "/Users/akihito/git/xdebug-mcp/bin/xdebug-mcp"
+      ]
+    }
+  }
+}

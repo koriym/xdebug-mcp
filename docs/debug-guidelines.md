@@ -4,6 +4,80 @@
 
 This document describes how to generate and analyze Xdebug trace data for PHP debugging using runtime analysis. During development, Forward Trace (conditional breakpoints with step recording) should be the primary debugging method, eliminating the need for var_dump() and code modifications.
 
+## AI Assistant Usage (MCP Slash Commands)
+
+**For AI Assistants using Claude Code or MCP protocol**, Forward Trace debugging is available through AI-friendly slash commands that provide the same functionality with improved usability.
+
+### MCP Slash Commands vs CLI
+
+**AI-Recommended: MCP Slash Commands**
+```bash
+# Variable State Inspection
+/x-debug "file.php" "file.php:42" "" "Variable inspection"
+
+# Performance Analysis
+/x-profile script="slow-script.php" context="Bottleneck identification"
+
+# Execution Tracing
+/x-trace script="complex-flow.php" context="Logic flow analysis"
+
+# Code Coverage
+/x-coverage script="vendor/bin/phpunit UserTest.php" context="Test coverage check"
+```
+
+**CLI Alternative (same functionality)**
+```bash
+# Variable State Inspection  
+./bin/xdebug-debug --break='file.php:42' --context="Variable inspection" --json -- php file.php
+
+# Performance Analysis
+./bin/xdebug-profile --context="Bottleneck identification" --json -- php slow-script.php
+
+# Execution Tracing
+./bin/xdebug-trace --context="Logic flow analysis" --json -- php complex-flow.php
+
+# Code Coverage
+./bin/xdebug-coverage -- php vendor/bin/phpunit UserTest.php
+```
+
+### AI-Specific Features
+
+#### Context Memory ('last' functionality)
+```bash
+# First execution
+/x-debug "problematic.php" "problematic.php:42" "" "Bug investigation"
+
+# Repeat with same settings (using updated context)
+/x-debug "problematic.php" "problematic.php:42" "" "Updated investigation"
+```
+
+#### Tab Completion
+```bash
+/x[TAB]              # Shows: x-debug, x-trace, x-profile, x-coverage
+```
+
+#### Structured Output for AI Analysis
+All MCP commands return schema-validated JSON optimized for AI consumption, including:
+- Execution metadata
+- Variable states
+- Performance metrics
+- Error information
+- Context preservation
+
+### When to Use Each Interface
+
+**Use MCP Slash Commands when:**
+- Working with AI assistants (Claude Code, etc.)
+- Need context memory and 'last' functionality
+- Prefer structured parameter input
+- Want integrated Claude Code workflow
+
+**Use CLI directly when:**
+- Writing shell scripts
+- CI/CD integration
+- Custom automation
+- Terminal-only environments
+
 ## Forward Trace for Development
 
 During development, Forward Trace should be the primary debugging method. It captures execution until problems occur, eliminating the need for var_dump() and code modifications.
@@ -13,7 +87,12 @@ During development, Forward Trace should be the primary debugging method. It cap
 #### 1. Variable State Inspection (Replaces var_dump)
 ```bash
 # Instead of: var_dump($user); die();
-./vendor/bin/xdebug-debug --break='file.php:line' --steps=1 --json -- php script.php
+
+# MCP Slash Command (AI-Recommended)
+/x-debug "script.php" "file.php:line" "" "Variable inspection"
+
+# CLI Alternative
+./bin/xdebug-debug --break='file.php:line' --steps=1 --json -- php script.php
 # Shows exact variable state at that line without code changes
 ```
 

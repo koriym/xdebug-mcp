@@ -1,4 +1,4 @@
-# MCP Slash Commands Implementation Plan
+x# MCP Slash Commands Implementation Plan
 
 ## Overview / 概要
 
