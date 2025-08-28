@@ -36,28 +36,14 @@
         "bin/xdebug-profile",
         "bin/xdebug-coverage",
         "bin/xdebug-phpunit",
-        "bin/xdebug-debug"
+        "bin/xdebug-debug",
+        "bin/test-json"
     ],
     "scripts-descriptions": {
-        "forward-trace": "Run all Forward Trace debugging patterns with breakpoint analysis",
-        "forward-trace:loop": "Debug loop counter progression with variable state tracking",
-        "forward-trace:array": "Debug array manipulation patterns with conditional processing",
-        "forward-trace:object": "Debug object state evolution through method chaining",
-        "forward-trace:conditional": "Debug conditional logic patterns with boolean flag evolution",
-        "forward-trace:nested": "Debug complex nested loops with multi-dimensional data processing",
-        "forward-trace:error": "Debug error handling patterns with null/empty value processing",
-        "profile:loop": "Profile loop counter performance and execution time",
-        "profile:array": "Profile array manipulation performance bottlenecks",
-        "profile:object": "Profile object method chaining and state management performance",
-        "coverage:loop": "Generate code coverage report for loop counter test",
-        "coverage:array": "Generate code coverage report for array manipulation test",
-        "coverage:object": "Generate code coverage report for object state test",
-        "ai-test": "Run comprehensive AI debugging test suite for all patterns",
-        "ai-test:loop": "Complete AI analysis of loop counter pattern (trace, profile, coverage)",
-        "ai-test:array": "Complete AI analysis of array manipulation pattern (trace, profile, coverage)",
-        "ai-test:object": "Complete AI analysis of object state pattern (trace, profile, coverage)",
-        "step-recording": "Run step recording demo with 20 steps and JSON output",
-        "step-recording:quick": "Quick step recording test with 5 steps for simple script"
+        "test-json": "Run comprehensive JSON test suite with all xdebug commands",
+        "install-mcp": "Configure xdebug-mcp for Claude Code MCP integration",
+        "install-desktop": "Configure xdebug-mcp for Claude Desktop integration", 
+        "check-env": "Check Xdebug environment and configuration"
     },
     "scripts": {
         "test": "phpunit",
@@ -74,30 +60,10 @@
         "sa": [
             "@psalm"
         ],
-        "forward-trace": {
-            "description": "Run all Forward Trace debugging patterns with breakpoint analysis",
-            "script": [
-                "php tests/fake-script/run.php"
-            ]
-        },
-        "forward-trace:loop": "./bin/xdebug-trace --json -- php tests/fake-script/loop-counter.php",
-        "forward-trace:array": "./bin/xdebug-debug --context=ArrayManipulationTest --break=tests/fake-script/array-manipulation.php:8,tests/fake-script/array-manipulation.php:14,tests/fake-script/array-manipulation.php:18 --json --exit-on-break -- php tests/fake-script/array-manipulation.php",
-        "forward-trace:object": "./bin/xdebug-debug --context=ObjectStateTest --break=tests/fake-script/object-state.php:12,tests/fake-script/object-state.php:19,tests/fake-script/object-state.php:23 --json --exit-on-break -- php tests/fake-script/object-state.php",
-        "forward-trace:conditional": "./bin/xdebug-debug --context=ConditionalLogicTest --break=tests/fake-script/conditional-logic.php:8,tests/fake-script/conditional-logic.php:18,tests/fake-script/conditional-logic.php:21 --json --exit-on-break -- php tests/fake-script/conditional-logic.php",
-        "forward-trace:nested": "./bin/xdebug-debug --context=NestedLoopsTest --break=tests/fake-script/nested-loops.php:8,tests/fake-script/nested-loops.php:17,tests/fake-script/nested-loops.php:21 --json --exit-on-break -- php tests/fake-script/nested-loops.php",
-        "forward-trace:error": "./bin/xdebug-debug --context=ErrorHandlingTest --break=tests/fake-script/error-simulation.php:12,tests/fake-script/error-simulation.php:15,tests/fake-script/error-simulation.php:18 --json --exit-on-break -- php tests/fake-script/error-simulation.php",
-        "profile:loop": "./bin/xdebug-profile --json -- php tests/fake-script/loop-counter.php",
-        "profile:array": "./bin/xdebug-profile --json -- php tests/fake-script/array-manipulation.php",
-        "profile:object": "./bin/xdebug-profile --json -- php tests/fake-script/object-state.php",
-        "coverage:loop": "./bin/xdebug-coverage -- php tests/fake-script/loop-counter.php",
-        "coverage:array": "./bin/xdebug-coverage -- php tests/fake-script/array-manipulation.php", 
-        "coverage:object": "./bin/xdebug-coverage -- php tests/fake-script/object-state.php",
-        "ai-test": ["@ai-test:loop", "@ai-test:array", "@ai-test:object"],
-        "ai-test:loop": ["@forward-trace:loop", "@profile:loop", "@coverage:loop"], 
-        "ai-test:array": ["@forward-trace:array", "@profile:array", "@coverage:array"],
-        "ai-test:object": ["@forward-trace:object", "@profile:object", "@coverage:object"],
-        "step-recording": "./bin/xdebug-debug --context=StepRecordingDemo --break=tests/fake-script/step-recording-demo.php:12 --steps=20 --json --exit-on-break -- php tests/fake-script/step-recording-demo.php",
-        "step-recording:quick": "./bin/xdebug-debug --context=QuickStepTest --break=test-simple-step.php:3 --steps=5 --json --exit-on-break -- php test-simple-step.php",
+        "test-json": "./bin/test-json",
+        "install-mcp": "./bin/check-env --install-mcp",
+        "install-desktop": "./bin/check-env --install-desktop",
+        "check-env": "./bin/check-env",
         "tests": [
             "@cs",
             "@sa",
