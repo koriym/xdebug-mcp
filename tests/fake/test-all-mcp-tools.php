@@ -25,7 +25,7 @@ function sendMcpRequest(string $toolName, array $arguments = []): array
     $output = shell_exec($command);
     
     if (!$output) {
-        return ['error' => 'No output from MCP server'];
+        return ['error' => ['message' => 'No output from MCP server']];
     }
     
     // Parse JSON response robustly: pick the last non-empty line
@@ -34,7 +34,10 @@ function sendMcpRequest(string $toolName, array $arguments = []): array
     
     $response = json_decode($responseJson, true);
     if (json_last_error() !== JSON_ERROR_NONE) {
-        return ['error' => 'Invalid JSON response: ' . $responseJson];
+        return ['error' => [
+            'message' => 'Invalid JSON response: ' . $responseJson,
+            'decoder' => json_last_error_msg()
+        ]];
     }
     
     return $response;
