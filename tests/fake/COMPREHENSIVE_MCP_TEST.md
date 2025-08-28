@@ -117,7 +117,7 @@ php test/debug_session_test.php &
 lsof -i :9004  # LISTEN状態を確認
 
 # Step 3: ./bin/xdebug-debug を使用してスクリプト実行
-./bin/xdebug-debug test-scripts/buggy_calculation_code.php
+./bin/xdebug-debug tests/fake/buggy_calculation_code.php
 ```
 
 **期待される成功サイン:**
@@ -202,7 +202,7 @@ sleep 2
 lsof -i :9004  # <- 必須: LISTEN が表示されるか？
 
 # 2. 実際のデバッグセッション実行
-./bin/xdebug-debug test-scripts/buggy_calculation_code.php
+./bin/xdebug-debug tests/fake/buggy_calculation_code.php
 
 # 3. 成功サインを確認
 # - "✅ Connected to debugging session!" が表示されるか？
