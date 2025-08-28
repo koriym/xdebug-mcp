@@ -28,9 +28,9 @@ function sendMcpRequest(string $toolName, array $arguments = []): array
         return ['error' => 'No output from MCP server'];
     }
     
-    // Parse JSON response (first line is the response, second line is stderr)
-    $lines = explode("\n", trim($output));
-    $responseJson = $lines[0];
+    // Parse JSON response robustly: pick the last non-empty line
+    $lines = array_values(array_filter(explode("\n", (string)$output), static fn($l) => trim($l) !== ''));
+    $responseJson = $lines ? end($lines) : '';
     
     $response = json_decode($responseJson, true);
     if (json_last_error() !== JSON_ERROR_NONE) {
