@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp\Tests\Unit;
 
-use InvalidArgumentException;
 use Koriym\XdebugMcp\DebugServer;
+use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -54,7 +54,7 @@ echo "Result: $result\n";
     public function testConstructorWithInvalidScript(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Script not found');
+        $this->expectExceptionMessageMatches('/Script not found/');
 
         new DebugServer('/nonexistent/script.php', 9004);
     }
@@ -231,7 +231,7 @@ echo "Result: $result\n";
         $nonExistentScript = '/tmp/definitely_does_not_exist_' . uniqid() . '.php';
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Script not found');
+        $this->expectExceptionMessageMatches('/Script not found/');
 
         new DebugServer($nonExistentScript, 9004);
     }
