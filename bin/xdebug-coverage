@@ -7,14 +7,14 @@ $projectRoot = require __DIR__ . '/autoload.php';
 
 // Show help if requested
 if (in_array('--help', $argv) || in_array('-h', $argv) || count($argv) < 4) {
-    echo "Usage: xdebug-coverage -- php script.php [args...]\n";
-    echo "\n";
-    echo "Executes PHP scripts with Xdebug code coverage and provides coverage analysis.\n";
-    echo "\n";
-    echo "Examples:\n";
-    echo "  xdebug-coverage -- php test.php\n";
-    echo "  xdebug-coverage -- php -f script.php arg1 arg2\n";
-    echo "\n";
+    fwrite(STDOUT, "Usage: xdebug-coverage -- php script.php [args...]\n");
+    fwrite(STDOUT, "\n");
+    fwrite(STDOUT, "Executes PHP scripts with Xdebug code coverage and provides coverage analysis.\n");
+    fwrite(STDOUT, "\n");
+    fwrite(STDOUT, "Examples:\n");
+    fwrite(STDOUT, "  xdebug-coverage -- php test.php\n");
+    fwrite(STDOUT, "  xdebug-coverage -- php -f script.php arg1 arg2\n");
+    fwrite(STDOUT, "\n");
     exit(0);
 }
 
@@ -88,14 +88,23 @@ $xdebugOptions = [
 ];
 
 $cmd = 'php ' . implode(' ', array_map('escapeshellarg', array_merge($xdebugOptions, [$targetFile], $phpArgs)));
-$exitCode = 0;
-$output = shell_exec($cmd . ' 2>&1');
-echo $output;
+
+// Execute command and capture output with exit code
+$outputLines = [];
+$exitCode = null;
+exec($cmd . ' 2>&1', $outputLines, $exitCode);
+
+// Output results to STDOUT
+$output = implode("\n", $outputLines);
+fwrite(STDOUT, $output);
+if (!empty($output)) {
+    fwrite(STDOUT, "\n");
+}
 
 unlink($prependScript);
 
 // Always suggest Claude analysis for coverage data  
-echo "\n💡 Analyze with Claude Code:\n";
-echo "   claude \"Analyze the code coverage data above\"\n";
+fwrite(STDERR, "\n💡 Analyze with Claude Code:\n");
+fwrite(STDERR, "   claude \"Analyze the code coverage data above\"\n");
 
 exit($exitCode);
