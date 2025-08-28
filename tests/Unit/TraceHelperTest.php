@@ -58,7 +58,6 @@ TRACE END   [2024-01-15 10:30:00.010000]';
 
         if ($reflection->hasMethod('parseTraceFile')) {
             $method = $reflection->getMethod('parseTraceFile');
-            $this->assertTrue($method->isStatic() || ! $method->isStatic());
 
             // Make method accessible if it's private/protected
             if (! $method->isPublic()) {
@@ -85,7 +84,6 @@ TRACE END   [2024-01-15 10:30:00.010000]';
 
         if ($reflection->hasMethod('analyzeTrace')) {
             $method = $reflection->getMethod('analyzeTrace');
-            $this->assertTrue($method->isStatic() || ! $method->isStatic());
 
             if (! $method->isPublic()) {
                 $method->setAccessible(true);
