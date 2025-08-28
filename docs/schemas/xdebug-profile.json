@@ -103,6 +103,12 @@
       "description": "Complete specification of the Cachegrind profile file format"
     },
     {
+      "rel": "debug-guide",
+      "href": "https://koriym.github.io/xdebug-mcp/debug-guidelines.md",
+      "title": "PHP Xdebug Trace Analysis Guidelines",
+      "description": "Complete debugging guide: Forward Trace methodology, conditional breakpoints, step recording, performance profiling, and trace analysis for runtime debugging without code modifications"
+    },
+    {
       "rel": "self",
       "href": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json",
       "title": "JSON Schema for Xdebug Profile Results",

@@ -14,7 +14,7 @@
       "minItems": 1
     },
     "trace": {
-      "$ref": "#/definitions/trace"
+      "$ref": "xdebug-trace.json"
     }
   },
   "required": ["breaks", "trace"],
@@ -55,27 +55,6 @@
       },
       "required": ["location", "variables"],
       "additionalProperties": false
-    },
-    "trace": {
-      "type": "object",
-      "description": "Xdebug execution trace - the 'surveillance footage' recording complete function call history, timing, memory usage, and arguments. Generated in Xdebug's .xt format with tab-separated values",
-      "properties": {
-        "file": {
-          "type": "string",
-          "description": "Absolute path to the generated Xdebug trace file (.xt format)",
-          "pattern": "^/.+\\.xt$"
-        },
-        "content": {
-          "type": "array",
-          "description": "Lines from the trace file for AI analysis (up to 1000 lines). Each line represents a function call entry/exit in Xdebug trace format (.xt): Level | Func ID | Entry/Exit | Time | Memory | Function | User-defined | Include | File | Line | Arguments",
-          "items": {
-            "type": "string",
-            "description": "Single trace line in tab-separated format containing execution details"
-          }
-        }
-      },
-      "required": ["file", "content"],
-      "additionalProperties": false
     }
   },
 
@@ -87,22 +66,10 @@
       "description": "Official documentation for Xdebug trace file format (.xt) structure and interpretation"
     },
     {
-      "rel": "ai-guide",
+      "rel": "debug-guide",
       "href": "https://koriym.github.io/xdebug-mcp/debug-guidelines.md",
-      "title": "AI Debug Analysis Guidelines",
-      "description": "Complete guide for AI systems analyzing Xdebug conditional debugging results"
-    },
-    {
-      "rel": "analysis-guide",
-      "href": "https://koriym.github.io/xdebug-mcp/xdebug-guidelines.md",
-      "title": "How to Debug Effectively with Xdebug Trace Files",
-      "description": "Practical analysis guide with patterns, red flags, and pro tips for effective trace-based debugging"
-    },
-    {
-      "rel": "ai-principles",
-      "href": "https://koriym.github.io/xdebug-mcp/ai-debugging-with-debugger.md",
-      "title": "AI Debugging with Debugger Principles",
-      "description": "Comprehensive non-invasive trace-based debugging principles for AI assistants"
+      "title": "PHP Xdebug Trace Analysis Guidelines",
+      "description": "Complete debugging guide: Forward Trace methodology, conditional breakpoints, step recording, performance profiling, and trace analysis for runtime debugging without code modifications"
     },
     {
       "rel": "self",

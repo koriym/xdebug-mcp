@@ -52,6 +52,93 @@ class McpTestRunner
         }
     }
 
+    /**
+     * Discover available tools from MCP server (avoiding drift from static lists)
+     */
+    public function listAvailableToolsFromServer(): array
+    {
+        $request = ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'];
+        $cmd = sprintf('echo %s | %s 2>/dev/null', escapeshellarg(json_encode($request)), $this->xdebugMcp);
+        
+        $outputLines = [];
+        $exitCode = null;
+        exec($cmd, $outputLines, $exitCode);
+        
+        if ($exitCode !== 0 || empty($outputLines)) {
+            return [];
+        }
+        
+        // Find the first valid JSON line
+        foreach ($outputLines as $line) {
+            $trimmed = trim($line);
+            if (json_validate($trimmed)) {
+                $decoded = json_decode($trimmed, true);
+                return $decoded['result']['tools'] ?? [];
+            }
+        }
+        
+        return [];
+    }
+
+    /**
+     * Validate static tool list against server discovery to detect drift
+     */
+    public function validateToolListConsistency(): void
+    {
+        $serverTools = $this->listAvailableToolsFromServer();
+        
+        if (empty($serverTools)) {
+            echo self::YELLOW . "⚠️ Could not discover tools from server (continuing with static list)\n" . self::RESET;
+            return;
+        }
+        
+        $serverToolNames = array_column($serverTools, 'name');
+        $expectedCount = self::TOTAL_WORKING_TOOLS;
+        $actualCount = count($serverToolNames);
+        
+        if ($actualCount !== $expectedCount) {
+            echo self::YELLOW . "⚠️ Tool count mismatch: Expected {$expectedCount}, found {$actualCount} from server\n" . self::RESET;
+        }
+        
+        // Get static tool names from test methods
+        $staticTools = $this->getStaticToolList();
+        $missingFromServer = array_diff($staticTools, $serverToolNames);
+        $extraInServer = array_diff($serverToolNames, $staticTools);
+        
+        if (!empty($missingFromServer)) {
+            echo self::YELLOW . "⚠️ Tools missing from server: " . implode(', ', $missingFromServer) . "\n" . self::RESET;
+        }
+        
+        if (!empty($extraInServer)) {
+            echo self::YELLOW . "⚠️ Extra tools in server: " . implode(', ', $extraInServer) . "\n" . self::RESET;
+        }
+        
+        if (empty($missingFromServer) && empty($extraInServer) && $actualCount === $expectedCount) {
+            echo self::GREEN . "✅ Tool list consistency validated\n" . self::RESET;
+        }
+    }
+    
+    /**
+     * Get static tool list from test methods for comparison
+     */
+    private function getStaticToolList(): array 
+    {
+        return [
+            // Profiling Tools
+            'xdebug_start_profiling', 'xdebug_stop_profiling', 'xdebug_get_profile_info', 'xdebug_analyze_profile',
+            // Coverage Tools  
+            'xdebug_start_coverage', 'xdebug_stop_coverage', 'xdebug_get_coverage', 'xdebug_analyze_coverage', 'xdebug_coverage_summary',
+            // Statistics Tools
+            'xdebug_get_memory_usage', 'xdebug_get_peak_memory_usage', 'xdebug_get_stack_depth', 'xdebug_get_time_index', 'xdebug_get_function_stack', 'xdebug_info',
+            // Error Collection Tools
+            'xdebug_start_error_collection', 'xdebug_stop_error_collection', 'xdebug_get_collected_errors',
+            // Tracing Tools
+            'xdebug_start_trace', 'xdebug_stop_trace', 'xdebug_get_tracefile_name', 'xdebug_start_function_monitor', 'xdebug_stop_function_monitor',
+            // Configuration Tools
+            'xdebug_call_info', 'xdebug_print_function_stack'
+        ];
+    }
+
     public function checkPrerequisites(): bool
     {
         if (extension_loaded('xdebug')) {

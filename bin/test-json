@@ -1,0 +1,77 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * JSON Test Runner - Execute various xdebug commands and display results
+ * 
+ * This script runs a comprehensive suite of xdebug commands demonstrating:
+ * - Forward trace debugging
+ * - Performance profiling  
+ * - Code coverage analysis
+ * - Step recording
+ */
+
+$commands = [
+    'Forward Trace - Loop Counter' => './bin/xdebug-trace --json -- php tests/fake/loop-counter.php',
+    'Forward Trace - Array Manipulation' => './bin/xdebug-debug --context=ArrayManipulationTest --break=tests/fake/array-manipulation.php:8,tests/fake/array-manipulation.php:14,tests/fake/array-manipulation.php:18 --json --exit-on-break -- php tests/fake/array-manipulation.php',
+    'Forward Trace - Object State' => './bin/xdebug-debug --context=ObjectStateTest --break=tests/fake/object-state.php:12,tests/fake/object-state.php:19,tests/fake/object-state.php:23 --json --exit-on-break -- php tests/fake/object-state.php',
+    'Forward Trace - Conditional Logic' => './bin/xdebug-debug --context=ConditionalLogicTest --break=tests/fake/conditional-logic.php:8,tests/fake/conditional-logic.php:18,tests/fake/conditional-logic.php:21 --json --exit-on-break -- php tests/fake/conditional-logic.php',
+    'Profile - Loop Counter' => './bin/xdebug-profile --json -- php tests/fake/loop-counter.php',
+    'Profile - Array Manipulation' => './bin/xdebug-profile --json -- php tests/fake/array-manipulation.php',
+    'Coverage - Loop Counter' => './bin/xdebug-coverage -- php tests/fake/loop-counter.php',
+    'Coverage - Array Manipulation' => './bin/xdebug-coverage -- php tests/fake/array-manipulation.php',
+];
+
+$results = [];
+$passed = 0;
+$failed = 0;
+
+echo "🚀 Xdebug JSON Test Suite\n";
+echo "========================\n\n";
+
+foreach ($commands as $name => $command) {
+    echo "Testing: $name\n";
+    echo "Command: $command\n";
+    
+    $start = microtime(true);
+    exec($command . ' 2>&1', $output, $returnCode);
+    $duration = round((microtime(true) - $start) * 1000, 2);
+    
+    if ($returnCode === 0) {
+        echo "✅ OK ({$duration}ms)\n";
+        $passed++;
+        $results[$name] = ['status' => 'PASS', 'duration' => $duration, 'output' => $output];
+    } else {
+        echo "❌ FAIL ({$duration}ms)\n";
+        echo "Error output:\n";
+        foreach (array_slice($output, -5) as $line) {
+            echo "  $line\n";
+        }
+        $failed++;
+        $results[$name] = ['status' => 'FAIL', 'duration' => $duration, 'output' => $output, 'return_code' => $returnCode];
+    }
+    
+    echo "\n";
+    $output = [];
+}
+
+echo "📊 Summary\n";
+echo "==========\n";
+echo "✅ Passed: $passed\n";
+echo "❌ Failed: $failed\n";
+echo "📋 Total: " . ($passed + $failed) . "\n\n";
+
+if ($failed > 0) {
+    echo "💡 Failed tests need investigation:\n";
+    foreach ($results as $name => $result) {
+        if ($result['status'] === 'FAIL') {
+            echo "- $name (exit code: {$result['return_code']})\n";
+        }
+    }
+    exit(1);
+}
+
+echo "🎉 All tests passed!\n";
+exit(0);

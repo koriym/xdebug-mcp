@@ -1,0 +1,205 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Environment Check and Installation Helper
+ * 
+ * Checks Xdebug environment and optionally configures MCP integration
+ */
+
+$action = $argv[1] ?? null;
+
+echo "🔧 Xdebug MCP Environment Check\n";
+echo "===============================\n\n";
+
+$projectRoot = dirname(__DIR__);
+$mcpServerPath = $projectRoot . '/bin/xdebug-mcp';
+
+// Check basic environment
+echo "📁 Project root: $projectRoot\n";
+echo "🚀 MCP server: $mcpServerPath\n\n";
+
+// Check PHP version
+$phpVersion = PHP_VERSION;
+echo "🐘 PHP Version: $phpVersion ";
+if (version_compare($phpVersion, '8.0.0', '>=')) {
+    echo "✅\n";
+} else {
+    echo "❌ (Requires PHP 8.0+)\n";
+}
+
+// Check if Xdebug is loaded by default (should NOT be)
+echo "🔍 Xdebug default loading: ";
+$defaultLoaded = extension_loaded('xdebug');
+if ($defaultLoaded) {
+    echo "❌ (Loaded by default - may impact performance)\n";
+    echo "   Consider removing xdebug from php.ini for production\n";
+} else {
+    echo "✅ (Not loaded by default - good for performance)\n";
+}
+
+// Check if Xdebug can be loaded with -d
+echo "🔍 Xdebug -d loading: ";
+$phpBin = escapeshellcmd(PHP_BINARY);
+$zendCandidates = ['-dzend_extension=xdebug.so', '-dzend_extension=xdebug'];
+$extDir = trim(shell_exec($phpBin . ' -r "echo ini_get(\'extension_dir\');" 2>/dev/null'));
+$dll = (PHP_OS_FAMILY === 'Windows') ? 'php_xdebug.dll' : 'xdebug.so';
+if ($extDir) {
+    $zendCandidates[] = "-dzend_extension={$extDir}/{$dll}";
+}
+$canLoadXdebug = false;
+$zendFlag = null;
+foreach ($zendCandidates as $zc) {
+    $probe = [];
+    exec("$phpBin $zc -m 2>/dev/null", $probe);
+    if (in_array('xdebug', $probe, true)) {
+        $canLoadXdebug = true;
+        $zendFlag = $zc;
+        break;
+    }
+}
+if ($canLoadXdebug) {
+    echo "✅ (Can load with {$zendFlag})\n";
+} else {
+    echo "❌ (Cannot load Xdebug)\n";
+    echo "   Install with: pecl install xdebug (macOS) or apt-get install php-xdebug (Linux)\n";
+}
+
+// Check Xdebug version if available
+if ($canLoadXdebug) {
+    $output = [];
+    exec(sprintf(
+        '%s %s -r "echo phpversion(\'xdebug\');" 2>/dev/null',
+        $phpBin,
+        $zendFlag
+    ), $output);
+    if (!empty($output[0])) {
+        echo "🔍 Xdebug version: {$output[0]} ";
+        if (version_compare($output[0], '3.0.0', '>=')) {
+            echo "✅\n";
+        } else {
+            echo "⚠️  (Consider upgrading to 3.0+)\n";
+        }
+    }
+}
+
+// Check Xdebug modes
+if ($canLoadXdebug) {
+    echo "🔍 Xdebug modes: ";
+    $output = [];
+    exec(sprintf(
+        "%s %s -dxdebug.mode=debug,profile,coverage,trace -r \"echo ini_get('xdebug.mode');\" 2>/dev/null",
+        $phpBin,
+        $zendFlag
+    ), $output);
+    echo (!empty($output) && strpos($output[0], 'debug') !== false)
+        ? "✅ (Modes ok)\n"
+        : "⚠️  (Mode verification inconclusive)\n";
+}
+
+// Check required PHP extensions
+$requiredExtensions = ['sockets', 'xml', 'json'];
+echo "\n📦 Required PHP Extensions:\n";
+foreach ($requiredExtensions as $ext) {
+    echo "   - $ext: ";
+    if (extension_loaded($ext)) {
+        echo "✅\n";
+    } else {
+        echo "❌ (Missing)\n";
+    }
+}
+
+echo "\n";
+
+// Handle installation actions
+if ($action === '--install-mcp') {
+    echo "🔧 Installing MCP Configuration (Claude Code)\n";
+    echo "=============================================\n\n";
+    
+    $claudeDir = $projectRoot . '/.claude';
+    if (!is_dir($claudeDir)) {
+        mkdir($claudeDir, 0755, true);
+        echo "📁 Created .claude directory\n";
+    }
+    
+    $settingsPath = $claudeDir . '/settings.json';
+    $settings = [];
+    
+    if (file_exists($settingsPath)) {
+        $existing = file_get_contents($settingsPath);
+        $settings = json_decode($existing, true) ?? [];
+        echo "📖 Found existing .claude/settings.json\n";
+    }
+    
+    // Add MCP server configuration
+    if (!isset($settings['mcpServers'])) {
+        $settings['mcpServers'] = [];
+    }
+    
+    $settings['mcpServers']['xdebug-mcp'] = [
+        'command' => $mcpServerPath,
+        'args' => [],
+        'env' => ['MCP_DEBUG' => '0']
+    ];
+    
+    $jsonContent = json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    if (file_put_contents($settingsPath, $jsonContent)) {
+        echo "✅ Updated .claude/settings.json\n";
+        echo "🎯 Claude Code should now detect xdebug-mcp automatically\n";
+    } else {
+        echo "❌ Failed to write .claude/settings.json\n";
+    }
+    
+} elseif ($action === '--install-desktop') {
+    echo "🔧 Installing Desktop Configuration (Claude Desktop)\n";
+    echo "===================================================\n\n";
+    
+    $home = getenv('HOME') ?: getenv('USERPROFILE') ?: '';
+    $platform = PHP_OS_FAMILY;
+    $configPaths = [
+        'Darwin'  => $home . '/Library/Application Support/Claude/claude_desktop_config.json',
+        'Linux'   => $home . '/.config/claude/claude_desktop_config.json',
+        'Windows' => (getenv('APPDATA') ? rtrim(getenv('APPDATA'), DIRECTORY_SEPARATOR) : $home . '/AppData/Roaming') . '/Claude/claude_desktop_config.json',
+    ];
+    $configPath = $configPaths[$platform] ?? null;
+
+    if ($configPath) {
+        echo "🖥️  Platform: $platform\n";
+        echo "📄 Config path: $configPath\n";
+        echo "⚠️  Manual step required:\n\n";
+        
+        $configExample = [
+            "mcpServers" => [
+                "xdebug-mcp" => [
+                    "command" => $mcpServerPath,
+                    "args" => [],
+                    "env" => ["MCP_DEBUG" => "0"]
+                ]
+            ]
+        ];
+        
+        echo "Add this to your Claude Desktop configuration:\n\n";
+        echo json_encode($configExample, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n\n";
+        echo "Then restart Claude Desktop.\n";
+    } else {
+        echo "❓ Platform not detected. Please configure manually.\n";
+    }
+    
+} else {
+    echo "🎯 Next Steps:\n";
+    echo "==============\n";
+    echo "1. Install MCP integration:\n";
+    echo "   composer install-mcp      # For Claude Code\n";
+    echo "   composer install-desktop  # For Claude Desktop\n\n";
+    echo "2. Test the installation:\n";
+    echo "   composer test-json\n\n";
+    echo "3. Use xdebug commands:\n";
+    echo "   ./bin/xdebug-debug your-script.php\n";
+    echo "   ./bin/xdebug-trace --json -- php your-script.php\n";
+    echo "   ./bin/xdebug-profile --json -- php your-script.php\n\n";
+}
+
+$hasIssues = !$canLoadXdebug || $defaultLoaded || !extension_loaded('sockets') || !extension_loaded('xml');
+exit($hasIssues ? 1 : 0);

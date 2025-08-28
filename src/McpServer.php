@@ -12,6 +12,7 @@ use Koriym\XdebugMcp\Exceptions\XdebugNotAvailableException;
 use Throwable;
 
 use function array_flip;
+use function array_merge;
 use function array_slice;
 use function array_values;
 use function basename;
@@ -20,6 +21,8 @@ use function date;
 use function debug_backtrace;
 use function dirname;
 use function error_log;
+use function escapeshellarg;
+use function exec;
 use function explode;
 use function extension_loaded;
 use function fflush;
@@ -53,7 +56,6 @@ use function set_error_handler;
 use function sprintf;
 use function str_ends_with;
 use function str_repeat;
-use function time;
 use function trim;
 use function uasort;
 use function uniqid;
@@ -88,54 +90,12 @@ class McpServer
     protected array $tools = [];
     protected XdebugClient|null $xdebugClient = null;
     private bool $debugMode = false;
-    private string $sessionId;
+    private array $contextMemory = [];
 
     public function __construct()
     {
-        $this->sessionId = uniqid('mcp_session_', true);
         $this->debugMode = (bool) (getenv('MCP_DEBUG') ?: false);
         $this->initializeTools();
-        $this->cleanupPreviousSession(); // 前のセッションをクリーンアップ
-        $this->loadExistingSession();
-    }
-
-    private function cleanupPreviousSession(): void
-    {
-        $stateFile = XdebugClient::GLOBAL_STATE_FILE;
-        if (file_exists($stateFile)) {
-            $state = json_decode(file_get_contents($stateFile), true);
-            if (
-                $state && isset($state['host'], $state['port'], $state['connected'], $state['sessionId'])
-                && $state['sessionId'] === $this->sessionId && $state['connected']
-            ) {
-                try {
-                    $tempClient = new XdebugClient($state['host'], $state['port'], $this->sessionId);
-                    $tempClient->disconnect(); // 前のセッションを終了
-                    $this->debugLog('Cleaned up previous session', $state);
-                } catch (Throwable $e) {
-                    $this->debugLog('Failed to disconnect previous session', ['error' => $e->getMessage()]);
-                }
-
-                // セッションを切断状態に更新
-                $state['connected'] = false;
-                $state['sessionId'] = $this->sessionId;
-                file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
-            }
-        }
-    }
-
-    private function loadExistingSession(): void
-    {
-        $stateFile = XdebugClient::GLOBAL_STATE_FILE;
-        if (file_exists($stateFile)) {
-            $state = json_decode(file_get_contents($stateFile), true);
-            if ($state && isset($state['host'], $state['port']) && $state['connected']) {
-                // グローバル状態から既存セッションを復元
-                $this->xdebugClient = new XdebugClient($state['host'], $state['port'], $this->sessionId);
-                // 既存セッションの情報をXdebugClientに設定
-                $this->debugLog('Loaded existing session from global state', $state);
-            }
-        }
     }
 
     private function debugLog(string $message, array $data = []): void
@@ -153,92 +113,6 @@ class McpServer
     private function initializeTools(): void
     {
         $this->tools = [
-            'xdebug_connect' => [
-                'name' => 'xdebug_connect',
-                'description' => 'Connect to Xdebug session',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'host' => ['type' => 'string', 'default' => XdebugClient::DEFAULT_HOST],
-                        'port' => ['type' => 'integer', 'default' => XdebugClient::DEFAULT_PORT],
-                    ],
-                ],
-            ],
-            'xdebug_disconnect' => [
-                'name' => 'xdebug_disconnect',
-                'description' => 'Disconnect from Xdebug session',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_set_breakpoint' => [
-                'name' => 'xdebug_set_breakpoint',
-                'description' => 'Set a breakpoint at specified file and line',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'filename' => ['type' => 'string'],
-                        'line' => ['type' => 'integer'],
-                        'condition' => ['type' => 'string', 'default' => ''],
-                    ],
-                    'required' => ['filename', 'line'],
-                ],
-            ],
-            'xdebug_remove_breakpoint' => [
-                'name' => 'xdebug_remove_breakpoint',
-                'description' => 'Remove a breakpoint by ID',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'breakpoint_id' => ['type' => 'string'],
-                    ],
-                    'required' => ['breakpoint_id'],
-                ],
-            ],
-            'xdebug_step_into' => [
-                'name' => 'xdebug_step_into',
-                'description' => 'Step into the next function call',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_step_over' => [
-                'name' => 'xdebug_step_over',
-                'description' => 'Step over the current line',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_step_out' => [
-                'name' => 'xdebug_step_out',
-                'description' => 'Step out of the current function',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_continue' => [
-                'name' => 'xdebug_continue',
-                'description' => 'Continue execution until next breakpoint',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_get_stack' => [
-                'name' => 'xdebug_get_stack',
-                'description' => 'Get current stack trace',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_get_variables' => [
-                'name' => 'xdebug_get_variables',
-                'description' => 'Get variables in current context',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'context' => ['type' => 'integer', 'default' => 0],
-                    ],
-                ],
-            ],
-            'xdebug_eval' => [
-                'name' => 'xdebug_eval',
-                'description' => 'Evaluate PHP expression in current context',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'expression' => ['type' => 'string'],
-                    ],
-                    'required' => ['expression'],
-                ],
-            ],
             'xdebug_start_profiling' => [
                 'name' => 'xdebug_start_profiling',
                 'description' => 'Start profiling execution',
@@ -407,35 +281,6 @@ class McpServer
                 'description' => 'Stop function monitoring and return monitored calls',
                 'inputSchema' => ['type' => 'object', 'properties' => (object) []],
             ],
-            'xdebug_list_breakpoints' => [
-                'name' => 'xdebug_list_breakpoints',
-                'description' => 'List all active breakpoints',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_set_exception_breakpoint' => [
-                'name' => 'xdebug_set_exception_breakpoint',
-                'description' => 'Set a breakpoint on exception',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'exception_name' => ['type' => 'string'],
-                        'state' => ['type' => 'string', 'enum' => ['caught', 'uncaught', 'all'], 'default' => 'all'],
-                    ],
-                    'required' => ['exception_name'],
-                ],
-            ],
-            'xdebug_set_watch_breakpoint' => [
-                'name' => 'xdebug_set_watch_breakpoint',
-                'description' => 'Set a watch/conditional breakpoint',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'expression' => ['type' => 'string'],
-                        'type' => ['type' => 'string', 'enum' => ['write', 'read', 'readwrite'], 'default' => 'write'],
-                    ],
-                    'required' => ['expression'],
-                ],
-            ],
             'xdebug_get_function_stack' => [
                 'name' => 'xdebug_get_function_stack',
                 'description' => 'Get detailed function stack with arguments and variables',
@@ -588,6 +433,9 @@ class McpServer
                 case 'prompts/list':
                     return $this->handlePromptsList($id);
 
+                case 'prompts/get':
+                    return $this->handlePromptsGet($id, $params);
+
                 case 'notifications/initialized':
                     // Handle initialized notification (no response needed)
                     return null;
@@ -671,9 +519,134 @@ class McpServer
             'jsonrpc' => '2.0',
             'id' => $id,
             'result' => [
-                'prompts' => [],
+                'prompts' => [
+                    [
+                        'name' => 'x-trace',
+                        'description' => 'Execute Forward Trace debugging with AI-optimized JSON output and analysis',
+                        'arguments' => [
+                            [
+                                'name' => 'script',
+                                'description' => 'PHP script to trace (e.g., "test/debug_test.php")',
+                                'required' => true,
+                            ],
+                            [
+                                'name' => 'context',
+                                'description' => 'Context description for AI analysis (e.g., "Testing user authentication flow")',
+                                'required' => false,
+                            ],
+                            [
+                                'name' => 'last',
+                                'description' => 'Use settings from last execution (true/false)',
+                                'required' => false,
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'x-debug',
+                        'description' => 'Interactive step debugging with conditional breakpoints and context memory',
+                        'arguments' => [
+                            [
+                                'name' => 'script',
+                                'description' => 'PHP script to debug (e.g., "test/debug_test.php")',
+                                'required' => true,
+                            ],
+                            [
+                                'name' => 'context',
+                                'description' => 'Context description for debugging session',
+                                'required' => false,
+                            ],
+                            [
+                                'name' => 'breakpoints',
+                                'description' => 'Comma-separated breakpoint locations (e.g., "file.php:15,file.php:25")',
+                                'required' => false,
+                            ],
+                            [
+                                'name' => 'last',
+                                'description' => 'Use settings from last execution (true/false)',
+                                'required' => false,
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'x-profile',
+                        'description' => 'Performance profiling with AI-optimized analysis output',
+                        'arguments' => [
+                            [
+                                'name' => 'script',
+                                'description' => 'PHP script to profile (e.g., "test/performance_test.php")',
+                                'required' => true,
+                            ],
+                            [
+                                'name' => 'context',
+                                'description' => 'Context description for performance analysis',
+                                'required' => false,
+                            ],
+                            [
+                                'name' => 'last',
+                                'description' => 'Use settings from last execution (true/false)',
+                                'required' => false,
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'x-coverage',
+                        'description' => 'Code coverage analysis with comprehensive reporting',
+                        'arguments' => [
+                            [
+                                'name' => 'script',
+                                'description' => 'PHP script to analyze coverage (e.g., "vendor/bin/phpunit")',
+                                'required' => true,
+                            ],
+                            [
+                                'name' => 'context',
+                                'description' => 'Context description for coverage analysis',
+                                'required' => false,
+                            ],
+                            [
+                                'name' => 'format',
+                                'description' => 'Output format: json, html, xml, text (default: json)',
+                                'required' => false,
+                            ],
+                            [
+                                'name' => 'last',
+                                'description' => 'Use settings from last execution (true/false)',
+                                'required' => false,
+                            ],
+                        ],
+                    ],
+                ],
             ],
         ];
+    }
+
+    private function handlePromptsGet(mixed $id, array $params): array
+    {
+        $promptName = $params['name'] ?? '';
+        $args = $params['arguments'] ?? [];
+
+        switch ($promptName) {
+            case 'x-trace':
+                return $this->executeXTrace($id, $args);
+
+            case 'x-debug':
+                return $this->executeXDebug($id, $args);
+
+            case 'x-profile':
+                return $this->executeXProfile($id, $args);
+
+            case 'x-coverage':
+                return $this->executeXCoverage($id, $args);
+
+            default:
+                return [
+                    'jsonrpc' => '2.0',
+                    'id' => $id,
+                    'error' => [
+                        'code' => -32601,
+                        'message' => "Unknown prompt: {$promptName}",
+                    ],
+                ];
+        }
     }
 
     private function handleToolCall(mixed $id, array $params): array
@@ -711,39 +684,6 @@ class McpServer
     private function executeToolCall(string $toolName, array $arguments): string
     {
         switch ($toolName) {
-            case 'xdebug_connect':
-                return $this->connectToXdebug($arguments);
-
-            case 'xdebug_disconnect':
-                return $this->disconnectFromXdebug();
-
-            case 'xdebug_set_breakpoint':
-                return $this->setBreakpoint($arguments);
-
-            case 'xdebug_step_into':
-                return $this->stepInto();
-
-            case 'xdebug_remove_breakpoint':
-                return $this->removeBreakpoint($arguments);
-
-            case 'xdebug_step_over':
-                return $this->stepOver();
-
-            case 'xdebug_step_out':
-                return $this->stepOut();
-
-            case 'xdebug_continue':
-                return $this->continue();
-
-            case 'xdebug_get_stack':
-                return $this->getStack();
-
-            case 'xdebug_get_variables':
-                return $this->getVariables($arguments);
-
-            case 'xdebug_eval':
-                return $this->evaluateExpression($arguments);
-
             case 'xdebug_start_profiling':
                 return $this->startProfiling($arguments);
 
@@ -810,15 +750,6 @@ class McpServer
             case 'xdebug_stop_function_monitor':
                 return $this->stopFunctionMonitor();
 
-            case 'xdebug_list_breakpoints':
-                return $this->listBreakpoints();
-
-            case 'xdebug_set_exception_breakpoint':
-                return $this->setExceptionBreakpoint($arguments);
-
-            case 'xdebug_set_watch_breakpoint':
-                return $this->setWatchBreakpoint($arguments);
-
             case 'xdebug_get_function_stack':
                 return $this->getFunctionStack($arguments);
 
@@ -840,158 +771,6 @@ class McpServer
             default:
                 throw new InvalidToolException("Unknown tool: $toolName");
         }
-    }
-
-    protected function connectToXdebug(array $args): string
-    {
-        $host = $args['host'] ?? XdebugClient::DEFAULT_HOST;
-        $port = $args['port'] ?? XdebugClient::DEFAULT_PORT;
-
-        $this->xdebugClient = new XdebugClient($host, $port, $this->sessionId);
-        try {
-            $result = $this->xdebugClient->connect();
-            $state = [
-                'host' => $host,
-                'port' => $port,
-                'connected' => true,
-                'sessionId' => $this->sessionId,
-                'last_activity' => time(),
-                'session_info' => $result,
-            ];
-            file_put_contents(XdebugClient::GLOBAL_STATE_FILE, json_encode($state, JSON_PRETTY_PRINT));
-
-            return "Connected to new Xdebug session at {$host}:{$port}. Result: " . json_encode($result);
-        } catch (Throwable $e) {
-            $this->debugLog('Connection failed', ['error' => $e->getMessage()]);
-
-            return "Failed to connect to Xdebug: {$e->getMessage()}. Port {$port} may be in use.";
-        }
-    }
-
-    protected function disconnectFromXdebug(): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $this->xdebugClient->disconnect();
-
-        // State file is cleared by client->disconnect(); do not rewrite it here.
-
-        $this->xdebugClient = null;
-
-        return 'Disconnected from Xdebug';
-    }
-
-    protected function setBreakpoint(array $args): string
-    {
-        $filename = $args['filename'];
-        $line = (int) $args['line'];
-        $condition = $args['condition'] ?? '';
-
-        // Direct connection via XdebugClient
-        if ($this->xdebugClient) {
-            try {
-                $breakpointId = $this->xdebugClient->setBreakpoint($filename, $line, $condition);
-
-                return "Direct Connection - Breakpoint set at {$filename}:{$line} (ID: {$breakpointId})";
-            } catch (Throwable $e) {
-                return 'Failed to set breakpoint via both persistent server and direct connection: ' . $e->getMessage();
-            }
-        }
-
-        return 'Failed to set breakpoint: No available debug client.';
-    }
-
-    protected function removeBreakpoint(array $args): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $breakpointId = $args['breakpoint_id'];
-        $this->xdebugClient->removeBreakpoint($breakpointId);
-
-        return "Breakpoint {$breakpointId} removed";
-    }
-
-    protected function stepInto(): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $result = $this->xdebugClient->stepInto();
-
-        return 'Step into completed: ' . json_encode($result);
-    }
-
-    protected function stepOver(): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $result = $this->xdebugClient->stepOver();
-
-        return 'Step over completed: ' . json_encode($result);
-    }
-
-    protected function stepOut(): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $result = $this->xdebugClient->stepOut();
-
-        return 'Step out completed: ' . json_encode($result);
-    }
-
-    protected function continue(): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $result = $this->xdebugClient->continue();
-
-        return 'Continue completed: ' . json_encode($result);
-    }
-
-    protected function getStack(): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $stack = $this->xdebugClient->getStack();
-
-        return "Stack trace:\n" . json_encode($stack, JSON_PRETTY_PRINT);
-    }
-
-    protected function getVariables(array $args): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $context = $args['context'] ?? 0;
-        $variables = $this->xdebugClient->getVariables($context);
-
-        return "Variables (context {$context}):\n" . json_encode($variables, JSON_PRETTY_PRINT);
-    }
-
-    protected function evaluateExpression(array $args): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $expression = $args['expression'];
-        $result = $this->xdebugClient->eval($expression);
-
-        return "Evaluation result for '{$expression}':\n" . json_encode($result, JSON_PRETTY_PRINT);
     }
 
     protected function startProfiling(array $args): string
@@ -1733,45 +1512,6 @@ class McpServer
         }
     }
 
-    protected function listBreakpoints(): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $breakpoints = $this->xdebugClient->listBreakpoints();
-
-        return "Active breakpoints:\n" . json_encode($breakpoints, JSON_PRETTY_PRINT);
-    }
-
-    protected function setExceptionBreakpoint(array $args): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $exceptionName = $args['exception_name'];
-        $state = $args['state'] ?? 'all';
-
-        $breakpointId = $this->xdebugClient->setExceptionBreakpoint($exceptionName, $state);
-
-        return "Exception breakpoint set for '{$exceptionName}' (state: {$state}, ID: {$breakpointId})";
-    }
-
-    protected function setWatchBreakpoint(array $args): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $expression = $args['expression'];
-        $type = $args['type'] ?? 'write';
-
-        $breakpointId = $this->xdebugClient->setWatchBreakpoint($expression, $type);
-
-        return "Watch breakpoint set for expression '{$expression}' (type: {$type}, ID: {$breakpointId})";
-    }
-
     protected function getFunctionStack(array $args): string
     {
         $includeArgs = $args['include_args'] ?? true;
@@ -1906,5 +1646,308 @@ class McpServer
         $value = $result['#text'] ?? $result['@attributes']['supported'] ?? 'unknown';
 
         return "Feature '{$featureName}': {$value}";
+    }
+
+    private function executeXTrace(mixed $id, array $args): array
+    {
+        try {
+            // Handle 'last' functionality
+            if (isset($args['last']) && $args['last'] === 'true') {
+                if (isset($this->contextMemory['x-trace'])) {
+                    $args = array_merge($args, $this->contextMemory['x-trace']);
+                }
+            }
+
+            $script = $args['script'] ?? '';
+            $context = $args['context'] ?? '';
+
+            if (empty($script)) {
+                throw new InvalidArgumentException('Script argument is required');
+            }
+
+            // Store context memory for next 'last' usage
+            $this->contextMemory['x-trace'] = [
+                'script' => $script,
+                'context' => $context,
+            ];
+
+            // Build command
+            $cmd = './bin/xdebug-trace --json';
+            if (! empty($context)) {
+                $cmd .= ' --context=' . escapeshellarg($context);
+            }
+
+            $cmd .= ' -- php ' . escapeshellarg($script);
+
+            // Execute command
+            $output = [];
+            $returnCode = 0;
+            exec($cmd . ' 2>&1', $output, $returnCode);
+
+            $result = [
+                'command' => $cmd,
+                'exit_code' => $returnCode,
+                'output' => implode("\n", $output),
+                'context' => $context,
+                'script' => $script,
+                'timestamp' => date('Y-m-d H:i:s'),
+            ];
+
+            return [
+                'jsonrpc' => '2.0',
+                'id' => $id,
+                'result' => [
+                    'messages' => [
+                        [
+                            'role' => 'assistant',
+                            'content' => [
+                                'type' => 'text',
+                                'text' => "Forward Trace execution completed:\n\n**Script**: {$script}\n**Context**: {$context}\n**Exit Code**: {$returnCode}\n\n**Output**:\n```json\n" . implode("\n", $output) . "\n```",
+                            ],
+                        ],
+                    ],
+                    'debug_data' => $result,
+                ],
+            ];
+        } catch (Throwable $e) {
+            return [
+                'jsonrpc' => '2.0',
+                'id' => $id,
+                'error' => [
+                    'code' => -32000,
+                    'message' => 'x-trace execution failed: ' . $e->getMessage(),
+                ],
+            ];
+        }
+    }
+
+    private function executeXDebug(mixed $id, array $args): array
+    {
+        try {
+            // Handle 'last' functionality
+            if (isset($args['last']) && $args['last'] === 'true') {
+                if (isset($this->contextMemory['x-debug'])) {
+                    $args = array_merge($args, $this->contextMemory['x-debug']);
+                }
+            }
+
+            $script = $args['script'] ?? '';
+            $context = $args['context'] ?? '';
+            $breakpoints = $args['breakpoints'] ?? '';
+
+            if (empty($script)) {
+                throw new InvalidArgumentException('Script argument is required');
+            }
+
+            // Store context memory for next 'last' usage
+            $this->contextMemory['x-debug'] = [
+                'script' => $script,
+                'context' => $context,
+                'breakpoints' => $breakpoints,
+            ];
+
+            // Build command
+            $cmd = './bin/xdebug-debug --json --exit-on-break';
+            if (! empty($context)) {
+                $cmd .= ' --context=' . escapeshellarg($context);
+            }
+
+            if (! empty($breakpoints)) {
+                $cmd .= ' --break=' . escapeshellarg($breakpoints);
+            }
+
+            $cmd .= ' -- php ' . escapeshellarg($script);
+
+            // Execute command
+            $output = [];
+            $returnCode = 0;
+            exec($cmd . ' 2>&1', $output, $returnCode);
+
+            $result = [
+                'command' => $cmd,
+                'exit_code' => $returnCode,
+                'output' => implode("\n", $output),
+                'context' => $context,
+                'script' => $script,
+                'breakpoints' => $breakpoints,
+                'timestamp' => date('Y-m-d H:i:s'),
+            ];
+
+            return [
+                'jsonrpc' => '2.0',
+                'id' => $id,
+                'result' => [
+                    'messages' => [
+                        [
+                            'role' => 'assistant',
+                            'content' => [
+                                'type' => 'text',
+                                'text' => "Forward Trace debugging completed:\n\n**Script**: {$script}\n**Context**: {$context}\n**Breakpoints**: {$breakpoints}\n**Exit Code**: {$returnCode}\n\n**Debug Output**:\n```json\n" . implode("\n", $output) . "\n```",
+                            ],
+                        ],
+                    ],
+                    'debug_data' => $result,
+                ],
+            ];
+        } catch (Throwable $e) {
+            return [
+                'jsonrpc' => '2.0',
+                'id' => $id,
+                'error' => [
+                    'code' => -32000,
+                    'message' => 'x-debug execution failed: ' . $e->getMessage(),
+                ],
+            ];
+        }
+    }
+
+    private function executeXProfile(mixed $id, array $args): array
+    {
+        try {
+            // Handle 'last' functionality
+            if (isset($args['last']) && $args['last'] === 'true') {
+                if (isset($this->contextMemory['x-profile'])) {
+                    $args = array_merge($args, $this->contextMemory['x-profile']);
+                }
+            }
+
+            $script = $args['script'] ?? '';
+            $context = $args['context'] ?? '';
+
+            if (empty($script)) {
+                throw new InvalidArgumentException('Script argument is required');
+            }
+
+            // Store context memory for next 'last' usage
+            $this->contextMemory['x-profile'] = [
+                'script' => $script,
+                'context' => $context,
+            ];
+
+            // Build command
+            $cmd = './bin/xdebug-profile --json';
+            if (! empty($context)) {
+                $cmd .= ' --context=' . escapeshellarg($context);
+            }
+
+            $cmd .= ' -- php ' . escapeshellarg($script);
+
+            // Execute command
+            $output = [];
+            $returnCode = 0;
+            exec($cmd . ' 2>&1', $output, $returnCode);
+
+            $result = [
+                'command' => $cmd,
+                'exit_code' => $returnCode,
+                'output' => implode("\n", $output),
+                'context' => $context,
+                'script' => $script,
+                'timestamp' => date('Y-m-d H:i:s'),
+            ];
+
+            return [
+                'jsonrpc' => '2.0',
+                'id' => $id,
+                'result' => [
+                    'messages' => [
+                        [
+                            'role' => 'assistant',
+                            'content' => [
+                                'type' => 'text',
+                                'text' => "Performance profiling completed:\n\n**Script**: {$script}\n**Context**: {$context}\n**Exit Code**: {$returnCode}\n\n**Profile Analysis**:\n```json\n" . implode("\n", $output) . "\n```",
+                            ],
+                        ],
+                    ],
+                    'debug_data' => $result,
+                ],
+            ];
+        } catch (Throwable $e) {
+            return [
+                'jsonrpc' => '2.0',
+                'id' => $id,
+                'error' => [
+                    'code' => -32000,
+                    'message' => 'x-profile execution failed: ' . $e->getMessage(),
+                ],
+            ];
+        }
+    }
+
+    private function executeXCoverage(mixed $id, array $args): array
+    {
+        try {
+            // Handle 'last' functionality
+            if (isset($args['last']) && $args['last'] === 'true') {
+                if (isset($this->contextMemory['x-coverage'])) {
+                    $args = array_merge($args, $this->contextMemory['x-coverage']);
+                }
+            }
+
+            $script = $args['script'] ?? '';
+            $context = $args['context'] ?? '';
+            $format = $args['format'] ?? 'json';
+
+            if (empty($script)) {
+                throw new InvalidArgumentException('Script argument is required');
+            }
+
+            // Store context memory for next 'last' usage
+            $this->contextMemory['x-coverage'] = [
+                'script' => $script,
+                'context' => $context,
+                'format' => $format,
+            ];
+
+            // Build command
+            $cmd = './bin/xdebug-coverage';
+            if (! empty($context)) {
+                $cmd .= ' --context=' . escapeshellarg($context);
+            }
+
+            $cmd .= ' --format=' . escapeshellarg($format);
+            $cmd .= ' -- php ' . escapeshellarg($script);
+
+            // Execute command
+            $output = [];
+            $returnCode = 0;
+            exec($cmd . ' 2>&1', $output, $returnCode);
+
+            $result = [
+                'command' => $cmd,
+                'exit_code' => $returnCode,
+                'output' => implode("\n", $output),
+                'context' => $context,
+                'script' => $script,
+                'format' => $format,
+                'timestamp' => date('Y-m-d H:i:s'),
+            ];
+
+            return [
+                'jsonrpc' => '2.0',
+                'id' => $id,
+                'result' => [
+                    'messages' => [
+                        [
+                            'role' => 'assistant',
+                            'content' => [
+                                'type' => 'text',
+                                'text' => "Code coverage analysis completed:\n\n**Script**: {$script}\n**Context**: {$context}\n**Format**: {$format}\n**Exit Code**: {$returnCode}\n\n**Coverage Report**:\n```{$format}\n" . implode("\n", $output) . "\n```",
+                            ],
+                        ],
+                    ],
+                    'debug_data' => $result,
+                ],
+            ];
+        } catch (Throwable $e) {
+            return [
+                'jsonrpc' => '2.0',
+                'id' => $id,
+                'error' => [
+                    'code' => -32000,
+                    'message' => 'x-coverage execution failed: ' . $e->getMessage(),
+                ],
+            ];
+        }
     }
 }
