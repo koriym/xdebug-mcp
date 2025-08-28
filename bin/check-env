@@ -70,12 +70,14 @@ if ($canLoadXdebug) {
 if ($canLoadXdebug) {
     echo "🔍 Xdebug modes: ";
     $output = [];
-    exec('php -dzend_extension=xdebug -dxdebug.mode=debug,profile,coverage,trace -r "var_dump(xdebug_info()[\'mode\'] ?? \'unknown\');" 2>/dev/null', $output);
-    if (!empty($output)) {
-        echo "✅ (All modes available)\n";
-    } else {
-        echo "❌ (Mode configuration issue)\n";
-    }
+    exec(sprintf(
+        "%s %s -dxdebug.mode=debug,profile,coverage,trace -r \"echo ini_get('xdebug.mode');\" 2>/dev/null",
+        $phpBin,
+        $zendFlag
+    ), $output);
+    echo (!empty($output) && strpos($output[0], 'debug') !== false)
+        ? "✅ (Modes ok)\n"
+        : "⚠️  (Mode verification inconclusive)\n";
 }
 
 // Check required PHP extensions
