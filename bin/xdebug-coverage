@@ -19,7 +19,27 @@ if (in_array('--help', $argv) || in_array('-h', $argv) || count($argv) < 4) {
 }
 
 // Skip: [0]="xdebug-coverage" [1]="--" [2]="php"
-$targetFile = $argv[3] ?? '';           // script.php
+// Validate target file is provided
+if (!isset($argv[3]) || empty($argv[3])) {
+    fwrite(STDERR, "Error: Target PHP file not specified\n");
+    fwrite(STDERR, "Usage: xdebug-coverage -- php <script.php> [args...]\n");
+    fwrite(STDERR, "Example: xdebug-coverage -- php test.php\n");
+    exit(1);
+}
+
+$targetFile = $argv[3];           // script.php
+
+// Validate target file exists and is readable
+if (!file_exists($targetFile)) {
+    fwrite(STDERR, "Error: Target file '$targetFile' does not exist\n");
+    exit(1);
+}
+
+if (!is_readable($targetFile)) {
+    fwrite(STDERR, "Error: Target file '$targetFile' is not readable\n");
+    exit(1);
+}
+
 $phpArgs = array_slice($argv, 4); // remaining args
 
 // Create coverage scripts
