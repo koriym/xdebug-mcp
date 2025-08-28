@@ -259,21 +259,61 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                 </div>
             </section>
 
-            <!-- Beyond Debugging -->
+            <!-- AI vs Human Cognition -->
             <section data-background-gradient="linear-gradient(45deg, #667db6, #0082c8)">
-                <h2>Beyond Debugging 🌟</h2>
+                <h2>AI vs Human: Different Cognitive Patterns 🧠</h2>
                 <div class="fragment">
-                    <p>This isn't just about fixing bugs faster.</p>
-                </div>
-                <div class="fragment">
-                    <p><strong>It's about transforming human-AI collaboration.</strong></p>
-                </div>
-                <div class="fragment">
+                    <h3>Humans excel at:</h3>
                     <ul>
-                        <li>While humans get overwhelmed by thousands of function calls...</li>
-                        <li>AI instantly identifies patterns in massive trace files</li>
-                        <li>We're giving AI the rich, structured data it excels at</li>
+                        <li>Step-by-step reasoning</li>
+                        <li>Sequential understanding</li>
+                        <li>Interactive exploration</li>
+                        <li>Building mental models gradually</li>
                     </ul>
+                </div>
+                <div class="fragment">
+                    <h3>AI excels at:</h3>
+                    <ul>
+                        <li class="fragment highlight-green">📊 Comprehensive data analysis</li>
+                        <li class="fragment highlight-green">🔍 Pattern recognition in massive datasets</li>
+                        <li class="fragment highlight-green">⚡ Simultaneous processing of all information</li>
+                        <li class="fragment highlight-green">🎯 Complete context understanding at once</li>
+                    </ul>
+                </div>
+                <div class="fragment">
+                    <p class="quote">"We've been forcing AI to debug like humans. Time to let AI debug like AI."</p>
+                </div>
+            </section>
+
+            <!-- Forward Trace Revolution -->
+            <section>
+                <h2>Forward Trace™: AI-Native Debugging 🚀</h2>
+                <div class="fragment">
+                    <h3>Interactive Debugging (Human-Optimized) ❌</h3>
+                    <pre><code class="php code-small">// Step 1: Set breakpoint
+// Step 2: Run to breakpoint  
+// Step 3: Inspect variable $user
+// Step 4: Step into function
+// Step 5: Inspect variable $permissions
+// Step 6: Continue execution...
+// → Fragmented understanding</code></pre>
+                </div>
+                <div class="fragment">
+                    <h3>Forward Trace (AI-Optimized) ✅</h3>
+                    <pre><code class="bash code-small"># Single command captures EVERYTHING
+./bin/xdebug-trace --condition="$user==null" -- php app.php
+
+# AI instantly sees:
+# ├── Complete execution flow (224 function calls)
+# ├── All variable states at each step
+# ├── Memory usage patterns
+# ├── Exact failure conditions
+# └── Root cause identification in seconds</code></pre>
+                </div>
+                <div class="fragment">
+                    <p style="text-align: center; color: #51cf66; font-size: 1.2em;">
+                        <strong>Result: AI processes complete context, humans get immediate insights</strong>
+                    </p>
                 </div>
             </section>
 
@@ -390,27 +430,27 @@ claude --continue "Analyze the profile data and suggest specific optimizations"<
                 </div>
             </section>
 
-            <!-- Step Debugging -->
+            <!-- Forward Trace Debugging -->
             <section>
-                <h2>xdebug-debug: AI-Controlled Step Debugging 🕵️</h2>
+                <h2>x-debug: Forward Trace with Conditional Breakpoints 🕵️</h2>
                 <div class="fragment">
-                    <pre><code class="bash"># AI can directly control interactive debugging
-claude --continue "Debug this algorithm step by step, show variable changes"
+                    <pre><code class="bash"># AI-optimized debugging with complete context
+./bin/xdebug-debug --break="User.php:42:$user==null" --exit-on-break -- php app.php
 
-# AI executes MCP commands:
-# xdebug_connect, xdebug_step_into, xdebug_get_variables, 
-# xdebug_step_over, xdebug_continue, etc.</code></pre>
+# AI gets complete execution history leading to condition
+claude --continue "Analyze the complete path to null user and suggest fix"</code></pre>
                 </div>
                 <div class="fragment">
-                    <p><strong>AI autonomous debugging:</strong></p>
+                    <p><strong>AI receives comprehensive data:</strong></p>
                     <ul>
-                        <li><strong>Direct control:</strong> AI issues step_into, step_over commands</li>
-                        <li><strong>Real-time analysis:</strong> AI sees variables at each step</li>
-                        <li><strong>Intelligent flow:</strong> AI decides when to step vs continue</li>
+                        <li><strong>Complete execution trace:</strong> All function calls leading to breakpoint</li>
+                        <li><strong>Variable evolution:</strong> How $user became null</li>
+                        <li><strong>Full context:</strong> Stack trace, memory, timing</li>
+                        <li><strong>Conditional capture:</strong> Only records when condition met</li>
                     </ul>
                 </div>
                 <div class="fragment">
-                    <p><strong>Revolutionary:</strong> AI debugs like an expert human, but faster and more systematically</p>
+                    <p><strong>Revolutionary:</strong> AI sees the complete story, not just fragments</p>
                 </div>
             </section>
 
@@ -454,25 +494,30 @@ claude --continue "Analyze coverage gaps and suggest high-impact test cases"</co
 
             <!-- Schema Intelligence -->
             <section>
-                <h2>schema/* : AI Data Intelligence 🧠</h2>
+                <h2>ADR-001: Forward Trace Only 📋</h2>
                 <div class="fragment">
-                    <p><strong>Complete MCP Schema Documentation:</strong></p>
-                    <ul>
-                        <li>43 debugging tools with detailed parameters</li>
-                        <li>Data formats and output structures</li>
-                        <li>Integration patterns and best practices</li>
+                    <p><strong>We removed 8 interactive debugging tools</strong> to focus on AI-optimized Forward Trace methodology:</p>
+                </div>
+                <div class="fragment">
+                    <h4>Removed (Human-Centric):</h4>
+                    <ul class="code-small">
+                        <li>❌ Function monitoring (step-by-step)</li>
+                        <li>❌ Stack inspection (fragmentary)</li>
+                        <li>❌ Feature control (stateful)</li>
+                        <li>❌ Context info (sequential)</li>
                     </ul>
                 </div>
                 <div class="fragment">
-                    <p><strong>AI knows exactly:</strong></p>
-                    <ul>
-                        <li>Which tool to use for which problem</li>
-                        <li>How to parse and interpret results</li>
-                        <li>Optimal debugging strategies for different scenarios</li>
+                    <h4>Retained (AI-Centric):</h4>
+                    <ul class="code-small">
+                        <li>✅ Forward Trace (complete execution)</li>
+                        <li>✅ Conditional breakpoints (smart capture)</li>
+                        <li>✅ Performance profiling (comprehensive metrics)</li>
+                        <li>✅ Coverage analysis (full context)</li>
                     </ul>
                 </div>
                 <div class="fragment">
-                    <p class="quote">"Self-documenting debugging: AI understands the full toolkit"</p>
+                    <p class="quote">"23 tools optimized for AI > 43 tools designed for humans"</p>
                 </div>
             </section>
 
