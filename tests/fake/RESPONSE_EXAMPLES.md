@@ -175,7 +175,7 @@ Some analysis tools return formatted text:
 ## Testing Instructions
 
 ### Manual Testing
-Use the commands in `test-scripts/manual-mcp-test.sh`:
+Use the commands in `tests/fake/manual-mcp-test.sh`:
 
 ```bash
 # Show all available tools
@@ -191,7 +191,7 @@ echo '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"xdebug_ste
 ### Automated Testing
 Run the comprehensive test with:
 ```bash
-php test-scripts/test-all-mcp-tools.php
+php tests/fake/test-all-mcp-tools.php
 ```
 
 ## Recommendations

@@ -159,7 +159,7 @@ foreach ($toolsToTest as [$toolName, $arguments, $description]) {
 $markdownContent = generateMarkdownReport($results);
 
 // Write the report
-$reportFile = 'test-scripts/MCP_TOOLS_TEST_REPORT.md';
+$reportFile = 'tests/fake/MCP_TOOLS_TEST_REPORT.md';
 file_put_contents($reportFile, $markdownContent);
 
 echo "=== Test Completed ===\n";

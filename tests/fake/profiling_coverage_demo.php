@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
-use XdebugMcp\Tests\Fake\FakeMcpServer;
+use Koriym\XdebugMcp\Tests\Fake\FakeMcpServer;
 
 echo "=== Xdebug Profiling & Coverage Demo ===\n\n";
 

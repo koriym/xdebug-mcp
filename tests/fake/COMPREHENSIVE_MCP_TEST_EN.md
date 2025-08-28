@@ -117,7 +117,7 @@ php test_new_xdebug_debug.php &
 lsof -i :9004  # Confirm LISTEN status
 
 # Step 3: Execute script using ./bin/xdebug-debug
-./bin/xdebug-debug test-scripts/buggy_calculation_code.php
+./bin/xdebug-debug tests/fake/buggy_calculation_code.php
 ```
 
 **Expected Success Signs:**
@@ -202,7 +202,7 @@ sleep 2
 lsof -i :9004  # <- MANDATORY: Does LISTEN appear?
 
 # 2. Execute actual debug session
-./bin/xdebug-debug test-scripts/buggy_calculation_code.php
+./bin/xdebug-debug tests/fake/buggy_calculation_code.php
 
 # 3. Confirm success signs
 # - Does "✅ Connected to debugging session!" appear?
