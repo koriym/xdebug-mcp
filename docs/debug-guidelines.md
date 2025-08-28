@@ -42,15 +42,6 @@ This document describes how to generate and analyze Xdebug trace data for PHP de
 
 ### AI-Specific Features
 
-#### Context Memory ('last' functionality)
-```bash
-# First execution
-/x-debug "problematic.php" "problematic.php:42" "" "Bug investigation"
-
-# Repeat with same settings (using updated context)
-/x-debug "problematic.php" "problematic.php:42" "" "Updated investigation"
-```
-
 #### Tab Completion
 ```bash
 /x[TAB]              # Shows: x-debug, x-trace, x-profile, x-coverage
@@ -68,7 +59,6 @@ All MCP commands return schema-validated JSON optimized for AI consumption, incl
 
 **Use MCP Slash Commands when:**
 - Working with AI assistants (Claude Code, etc.)
-- Need context memory and 'last' functionality
 - Prefer structured parameter input
 - Want integrated Claude Code workflow
 
