@@ -55,7 +55,11 @@ if ($canLoadXdebug) {
 // Check Xdebug version if available
 if ($canLoadXdebug) {
     $output = [];
-    exec('php -dzend_extension=xdebug -r "echo phpversion(\'xdebug\');" 2>/dev/null', $output);
+    exec(sprintf(
+        '%s %s -r "echo phpversion(\'xdebug\');" 2>/dev/null',
+        $phpBin,
+        $zendFlag
+    ), $output);
     if (!empty($output[0])) {
         echo "🔍 Xdebug version: {$output[0]} ";
         if (version_compare($output[0], '3.0.0', '>=')) {
