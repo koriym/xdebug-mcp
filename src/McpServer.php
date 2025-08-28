@@ -424,14 +424,19 @@ class McpServer
                             'type' => 'string',
                             'description' => 'PHP script to debug (e.g., "test/debug_test.php")',
                         ],
-                        'context' => [
-                            'type' => 'string',
-                            'description' => 'Context description for debugging session',
-                            'default' => '',
-                        ],
                         'breakpoints' => [
                             'type' => 'string',
                             'description' => 'Comma-separated breakpoint locations (e.g., "file.php:15,file.php:25")',
+                            'default' => '',
+                        ],
+                        'steps' => [
+                            'type' => 'string',
+                            'description' => 'Maximum debugging steps to execute',
+                            'default' => '100',
+                        ],
+                        'context' => [
+                            'type' => 'string',
+                            'description' => 'Context description for debugging session',
                             'default' => '',
                         ],
                         'last' => [
@@ -484,6 +489,7 @@ class McpServer
                 $input .= $line;
 
                 if ($this->isCompleteJsonRpc($input)) {
+                    error_log('DEBUG: Raw Claude CLI input = ' . trim($input));
                     $request = json_decode(trim($input), true);
 
                     if ($request === null) {
@@ -499,6 +505,7 @@ class McpServer
                         echo json_encode($errorResponse) . "\n";
                         fflush(STDOUT);
                     } else {
+                        error_log('DEBUG: Processing request method = ' . ($request['method'] ?? 'unknown'));
                         $this->debugLog('Received request', $request);
 
                         try {
@@ -510,6 +517,7 @@ class McpServer
                                 fflush(STDOUT);
                             }
                         } catch (Throwable $e) {
+                            error_log('DEBUG: MCP Server Error for method ' . ($request['method'] ?? 'unknown') . ': ' . $e->getMessage());
                             error_log('MCP Server Error: ' . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString());
 
                             $errorResponse = [
@@ -686,13 +694,18 @@ class McpServer
                                 'required' => true,
                             ],
                             [
-                                'name' => 'context',
-                                'description' => 'Context description for debugging session',
+                                'name' => 'breakpoints',
+                                'description' => 'Comma-separated breakpoint locations (e.g., "file.php:15,file.php:25")',
                                 'required' => false,
                             ],
                             [
-                                'name' => 'breakpoints',
-                                'description' => 'Comma-separated breakpoint locations (e.g., "file.php:15,file.php:25")',
+                                'name' => 'steps',
+                                'description' => 'Maximum debugging steps to execute',
+                                'required' => false,
+                            ],
+                            [
+                                'name' => 'context',
+                                'description' => 'Context description for debugging session',
                                 'required' => false,
                             ],
                             [
@@ -835,11 +848,11 @@ class McpServer
                 }
 
                 if (isset($args[1])) {
-                    $args['context'] = $args[1];
+                    $args['breakpoints'] = $args[1];
                 }
 
                 if (isset($args[2])) {
-                    $args['breakpoints'] = $args[2];
+                    $args['steps'] = $args[2];
                 }
 
                 break;
@@ -895,6 +908,10 @@ class McpServer
         // Strip complete outer double quotes if present (Claude CLI client adds extra quotes)
         elseif (strlen($script) >= 2 && str_starts_with($script, '"') && str_ends_with($script, '"')) {
             $script = substr($script, 1, -1);
+        }
+        // Handle trailing quote without leading quote (Claude CLI parsing issue)
+        elseif (str_ends_with($script, '"') && ! str_starts_with($script, '"')) {
+            $script = substr($script, 0, -1);
         }
 
         return $script;
@@ -2025,27 +2042,56 @@ class McpServer
 
             $script = $args['script'] ?? '';
             $script = $this->processScriptArgument($script);
+
+            // Claude CLI workaround: If script is just "php" and breakpoints contains a .php file, reconstruct
+            if (trim($script) === 'php') {
+                $breakpoints = $args['breakpoints'] ?? '';
+                $breakpoints = $this->processScriptArgument($breakpoints);
+
+                // If breakpoints contains what looks like a PHP file, use it to reconstruct the script
+                if (str_contains($breakpoints, '.php') && ! str_contains($breakpoints, ':')) {
+                    $script = 'php ' . $breakpoints;
+                    $args['breakpoints'] = ''; // Clear breakpoints since we used it for script reconstruction
+                }
+            }
+
             $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
             $breakpoints = $args['breakpoints'] ?? '';
+            $breakpoints = $this->processScriptArgument($breakpoints); // Process quotes in breakpoints too
+
+            // Claude CLI bug workaround: if breakpoints contains a script-like value, treat as empty
+            if (str_contains($breakpoints, '.php') && ! str_contains($breakpoints, ':')) {
+                $breakpoints = '';
+            }
+
+            $steps = $args['steps'] ?? '100';
 
             // Store context memory for next 'last' usage
             $this->contextMemory['x-debug'] = [
                 'script' => $script,
                 'context' => $context,
                 'breakpoints' => $breakpoints,
+                'steps' => $steps,
             ];
             $this->saveContextMemory();
 
             // Build command
-            $cmd = './bin/xdebug-debug --json --exit-on-break';
+            $cmd = './bin/xdebug-debug --exit-on-break';
+
+            // Add breakpoints if specified
+            if (! empty($breakpoints)) {
+                $cmd .= ' --break=' . escapeshellarg($breakpoints);
+            }
+
             if (! empty($context)) {
                 $cmd .= ' --context=' . escapeshellarg($context);
             }
 
-            if (! empty($breakpoints)) {
-                $cmd .= ' --break=' . escapeshellarg($breakpoints);
-            }
+            // Note: --steps parameter causes issues, temporarily disabled
+            // if (! empty($steps)) {
+            //     $cmd .= ' --steps=' . escapeshellarg($steps);
+            // }
 
             // Build command - user must specify PHP binary explicitly
             $cmd .= ' -- ' . $script;
@@ -2074,6 +2120,7 @@ class McpServer
                 'context' => $context,
                 'script' => $script,
                 'breakpoints' => $breakpoints,
+                'steps' => $steps,
                 'timestamp' => date('Y-m-d H:i:s'),
             ];
 
@@ -2086,7 +2133,7 @@ class McpServer
                             'role' => 'assistant',
                             'content' => [
                                 'type' => 'text',
-                                'text' => 'Forward Trace debugging ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Breakpoints**: {$breakpoints}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Debug Output**:\n```\n" . $outputText . "\n```",
+                                'text' => 'Forward Trace debugging ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Breakpoints**: {$breakpoints}\n**Steps**: {$steps}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Debug Output**:\n```\n" . $outputText . "\n```",
                             ],
                         ],
                     ],
