@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Feeding the Beast: Why AI Needs Runtime Data</title>
-    
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/reveal.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/theme/black.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/plugin/highlight/monokai.css">
-    
+
     <style>
         .reveal {
             font-size: 32px; /* Default is 40px, reducing to 32px (20% smaller) */
@@ -84,7 +84,7 @@
 <body>
     <div class="reveal">
         <div class="slides">
-            
+
             <!-- Title Slide -->
             <section data-background-gradient="linear-gradient(45deg, #000428, #004e92)">
                 <h1>🍽️ Feeding the Beast</h1>
@@ -94,7 +94,7 @@
                     <small>A Paradigm Shift in AI-Assisted Development</small>
                 </p>
                 <p style="text-align: center; margin-top: 50px;">
-                    <img src="https://koriym.github.io/xdebug-mcp/logo.jpeg" alt="xdebug-mcp" style="width: 200px; border-radius: 10px;">
+                    <img src="../images/title.jpg" alt="xdebug-mcp" style="width: 300px; border-radius: 10px;">
                 </p>
             </section>
 
@@ -184,7 +184,7 @@ var_dump($result);    // Repeat...</code></pre>
                 <div class="fragment">
                     <h3>Old Way (2 hours of guessing)</h3>
                     <pre><code class="php code-small">var_dump($cart);     // What's in cart?
-var_dump($discount); // Check discount  
+var_dump($discount); // Check discount
 var_dump($total);    // Why is this negative?!
 die("HERE");         // Getting desperate...
 // 2 hours later: still guessing...</code></pre>
@@ -203,8 +203,9 @@ die("HERE");         // Getting desperate...
             <!-- Quick Start -->
             <section>
                 <h2>Try It Right Now 🏃‍♂️</h2>
-                <pre><code class="bash"># 1. Install
-composer require --dev koriym/xdebug-mcp
+                <pre><code class="bash"># 1. Clone from GitHub
+git clone https://github.com/koriym/xdebug-mcp.git
+cd xdebug-mcp && composer install
 
 # 2. Create a simple test
 echo '&lt;?php
@@ -217,7 +218,7 @@ echo $result;
 ./vendor/bin/xdebug-trace --claude -- php test.php
 claude --continue "Find why \$result becomes null"
 
-# 4. Enable full AI integration  
+# 4. Enable full AI integration
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
             </section>
 
@@ -311,7 +312,7 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                         <h3 style="color: #ff6b6b;">Interactive Debugging ❌</h3>
                         <p style="font-size: 0.8em; color: #ff6b6b; margin-bottom: 15px;">Human-Optimized (Fragmented)</p>
                         <pre><code class="php" style="font-size: 0.5em;">// Step 1: Set breakpoint
-// Step 2: Run to breakpoint  
+// Step 2: Run to breakpoint
 // Step 3: Inspect $user
 // Step 4: Step into function
 // Step 5: Inspect $permissions
@@ -630,7 +631,7 @@ claude --continue "Analyze coverage gaps and suggest high-impact test cases"</co
                 <h2>Let AI See How Your Code Truly Runs 👁️</h2>
                 <div style="text-align: center;">
                     <p><strong>GitHub:</strong> <a href="https://github.com/koriym/xdebug-mcp">github.com/koriym/xdebug-mcp</a></p>
-                    <p><strong>Install:</strong> <code>composer require --dev koriym/xdebug-mcp</code></p>
+                    <p><strong>GitHub:</strong> <code>git clone https://github.com/koriym/xdebug-mcp.git</code></p>
                     <div style="margin: 40px 0;">
                         <p><strong>Status Badges:</strong></p>
                         <span class="badge badge-green">AI Native: YES</span>
