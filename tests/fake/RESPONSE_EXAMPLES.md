@@ -135,7 +135,7 @@ This document shows actual response examples from all MCP tools to understand th
 
 ## Response Format Patterns
 
-### Pattern 1: Pure JSON (New Session Management)
+### Pattern 1: JSON-in-text envelope (Session Management, current)
 Tools that return pure JSON in structured format:
 - `xdebug_list_sessions`
 - `xdebug_connect` 
@@ -144,7 +144,6 @@ Tools that return pure JSON in structured format:
 - `xdebug_step_over` 
 - `xdebug_step_out`
 - `xdebug_continue`
-
 **Format:**
 ```json
 {"status": "success|error", "data": "...", "session_id": "..."}
