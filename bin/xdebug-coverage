@@ -5,8 +5,41 @@ declare(strict_types=1);
 
 $projectRoot = require __DIR__ . '/autoload.php';
 
+// Show help if requested
+if (in_array('--help', $argv) || in_array('-h', $argv) || count($argv) < 4) {
+    fwrite(STDOUT, "Usage: xdebug-coverage -- php script.php [args...]\n");
+    fwrite(STDOUT, "\n");
+    fwrite(STDOUT, "Executes PHP scripts with Xdebug code coverage and provides coverage analysis.\n");
+    fwrite(STDOUT, "\n");
+    fwrite(STDOUT, "Examples:\n");
+    fwrite(STDOUT, "  xdebug-coverage -- php test.php\n");
+    fwrite(STDOUT, "  xdebug-coverage -- php -f script.php arg1 arg2\n");
+    fwrite(STDOUT, "\n");
+    exit(0);
+}
+
 // Skip: [0]="xdebug-coverage" [1]="--" [2]="php"
+// Validate target file is provided
+if (!isset($argv[3]) || empty($argv[3])) {
+    fwrite(STDERR, "Error: Target PHP file not specified\n");
+    fwrite(STDERR, "Usage: xdebug-coverage -- php <script.php> [args...]\n");
+    fwrite(STDERR, "Example: xdebug-coverage -- php test.php\n");
+    exit(1);
+}
+
 $targetFile = $argv[3];           // script.php
+
+// Validate target file exists and is readable
+if (!file_exists($targetFile)) {
+    fwrite(STDERR, "Error: Target file '$targetFile' does not exist\n");
+    exit(1);
+}
+
+if (!is_readable($targetFile)) {
+    fwrite(STDERR, "Error: Target file '$targetFile' is not readable\n");
+    exit(1);
+}
+
 $phpArgs = array_slice($argv, 4); // remaining args
 
 // Create coverage scripts
@@ -44,7 +77,7 @@ register_shutdown_function(function() {
         ];
     }
     
-    echo json_encode(\$result);
+    echo json_encode(\$result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 });");
 
 // Execute with Xdebug coverage
@@ -55,14 +88,23 @@ $xdebugOptions = [
 ];
 
 $cmd = 'php ' . implode(' ', array_map('escapeshellarg', array_merge($xdebugOptions, [$targetFile], $phpArgs)));
-$exitCode = 0;
-$output = shell_exec($cmd . ' 2>&1');
-echo $output;
+
+// Execute command and capture output with exit code
+$outputLines = [];
+$exitCode = null;
+exec($cmd . ' 2>&1', $outputLines, $exitCode);
+
+// Output results to STDOUT
+$output = implode("\n", $outputLines);
+fwrite(STDOUT, $output);
+if (!empty($output)) {
+    fwrite(STDOUT, "\n");
+}
 
 unlink($prependScript);
 
 // Always suggest Claude analysis for coverage data  
-echo "\n💡 Analyze with Claude Code:\n";
-echo "   claude \"Analyze the code coverage data above\"\n";
+fwrite(STDERR, "\n💡 Analyze with Claude Code:\n");
+fwrite(STDERR, "   claude \"Analyze the code coverage data above\"\n");
 
 exit($exitCode);

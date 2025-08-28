@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xdebug MCP Server - PHP Debugging Schemas & Documentation</title>
+
+    <!-- JSON Schema Profile -->
+    <link rel="profile" href="schemas/xdebug-debug.json" type="application/schema+json" title="Xdebug Debug Schema Profile" />
+    <!-- Semantic Portal CSS -->
+    <link rel="stylesheet" href="css/semantic-portal.css" />
+</head>
+<body>
+    <h1>Xdebug MCP Server</h1>
+    <p><span class="json-schema-definitions">JSON Schema definitions</span> and <span class="documentation-portal">comprehensive documentation</span> for <span class="xdebug-mcp-server">Xdebug MCP Server</span> - <span class="forward-trace-debugging">Forward Trace™ debugging</span> and <span class="runtime-analysis">runtime analysis</span> designed for <span class="ai-debugging">AI-powered debugging</span>.</p>
+
+    <div class="schema-collection">
+        <article class="json-schema-resource">
+            <h3 class="schema-title">Debug Schema</h3>
+            <p class="schema-description">Main schema for conditional debugging with breakpoints and step recording</p>
+            <p class="schema-description" style="margin: 10px 0; font-size: 14px;">
+                <strong>Forward Trace™:</strong> Captures execution from start until problems occur, eliminating need for var_dump() and code modifications.
+            </p>
+            <a href="schemas/xdebug-debug.json" class="schema-reference">schemas/xdebug-debug.json</a>
+        </article>
+
+        <article class="json-schema-resource">
+            <h3 class="schema-title">Trace Schema</h3>
+            <p class="schema-description">Schema for Xdebug execution traces (.xt format) with comprehensive statistics</p>
+            <p class="schema-description" style="margin: 10px 0; font-size: 14px;">
+                <strong>AI-optimized:</strong> Includes total_lines, unique_functions, max_call_depth, and database_queries for intelligent analysis strategies.
+            </p>
+            <a href="schemas/xdebug-trace.json" class="schema-reference">schemas/xdebug-trace.json</a>
+        </article>
+
+        <article class="json-schema-resource">
+            <h3 class="schema-title">Profile Schema</h3>
+            <p class="schema-description">Schema for performance profiling data (Cachegrind format) with optimization insights</p>
+            <p class="schema-description" style="margin: 10px 0; font-size: 14px;">
+                <strong>Performance analysis:</strong> Bottleneck detection, execution timing, memory usage, and AI-generated optimization suggestions.
+            </p>
+            <a href="schemas/xdebug-profile.json" class="schema-reference">schemas/xdebug-profile.json</a>
+        </article>
+    </div>
+
+    <div class="documentation-collection" style="margin-top: 40px;">
+        <h2 style="color: #2c3e50; margin-bottom: 20px;">Documentation & Guides</h2>
+
+        <article class="documentation-resource">
+            <h3 class="doc-title">PHP Xdebug Trace Analysis Guidelines</h3>
+            <p class="doc-description">Complete debugging guide: Forward Trace methodology, conditional breakpoints, step recording, performance profiling, and trace analysis for runtime debugging without code modifications</p>
+            <p class="doc-description" style="margin: 10px 0; font-size: 14px;">
+                <strong>Core Features:</strong> Environment setup, troubleshooting, emergency analysis commands, and best practices for trace-based debugging.
+            </p>
+            <a href="debug-guidelines.md" class="doc-reference">debug-guidelines.md</a>
+        </article>
+
+        <article class="documentation-resource">
+            <h3 class="doc-title">Claude Code Instructions</h3>
+            <p class="doc-description">Comprehensive instructions for Claude Code CLI integration, MCP protocol usage, and AI debugging workflows</p>
+            <p class="doc-description" style="margin: 10px 0; font-size: 14px;">
+                <strong>AI Integration:</strong> Forward Trace principles, task management, code style guidelines, and non-invasive debugging methodology.
+            </p>
+            <a href="../CLAUDE.md" class="doc-reference">CLAUDE.md</a>
+        </article>
+
+        <article class="documentation-resource">
+            <h3 class="doc-title">Project README</h3>
+            <p class="doc-description">Main project documentation with installation, usage, and MCP server setup instructions</p>
+            <p class="doc-description" style="margin: 10px 0; font-size: 14px;">
+                <strong>Getting Started:</strong> Installation guide, MCP configuration, CLI tools usage, and integration examples.
+            </p>
+            <a href="../README.md" class="doc-reference">README.md</a>
+        </article>
+    </div>
+
+    <div class="tools-collection" style="margin-top: 40px;">
+        <h2 style="color: #2c3e50; margin-bottom: 20px;">CLI Tools</h2>
+        <div class="tool-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div class="tool-item">
+                <strong>xdebug-debug</strong>
+                <p>Interactive debugging with conditional breakpoints and step recording</p>
+            </div>
+            <div class="tool-item">
+                <strong>xdebug-trace</strong>
+                <p>Complete execution tracing with comprehensive statistics</p>
+            </div>
+            <div class="tool-item">
+                <strong>xdebug-profile</strong>
+                <p>Performance profiling with bottleneck detection</p>
+            </div>
+            <div class="tool-item">
+                <strong>xdebug-coverage</strong>
+                <p>Code coverage analysis with multiple report formats</p>
+            </div>
+            <div class="tool-item">
+                <strong>xdebug-phpunit</strong>
+                <p>PHPUnit integration with Xdebug profiling and coverage</p>
+            </div>
+            <div class="tool-item">
+                <strong>xdebug-mcp</strong>
+                <p>MCP server for AI integration and programmatic access</p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="semantic-web-vision">
+        <p><strong>AI-Native PHP Debugging Revolution</strong></p>
+        <p>This project enables <span class="ai-powered-debugging">AI-powered PHP debugging</span> through <span class="forward-trace-methodology">Forward Trace™ methodology</span>, eliminating traditional <span class="invasive-debugging">var_dump() invasive debugging</span> with <span class="runtime-analysis">comprehensive runtime analysis</span>.</p>
+
+        <div class="development-resources">
+            <h3 style="color: #2c3e50; margin-top: 30px;">Development Resources</h3>
+            <div class="development-resource">
+                <a href="../composer.json" class="resource-link">composer.json</a>
+                <span class="resource-description">- Project dependencies and <span class="forward-trace-scripts">Forward Trace scripts</span></span>
+            </div>
+            <div class="development-resource">
+                <a href="../bin/" class="resource-link">bin/</a>
+                <span class="resource-description">- <span class="cli-tools">CLI debugging tools</span> for development workflow</span>
+            </div>
+            <div class="development-resource">
+                <a href="../tests/" class="resource-link">tests/</a>
+                <span class="resource-description">- <span class="comprehensive-tests">Comprehensive test suite</span> and <span class="fake-scripts">debugging examples</span></span>
+            </div>
+        </div>
+
+        <p style="margin-top: 20px;">Part of <a href="https://github.com/koriym/xdebug-mcp" class="resource-link">Xdebug MCP Server</a> project - <span class="mcp-protocol">MCP Protocol</span> implementation for <span class="php-debugging">PHP debugging</span>.</p>
+    </footer>
+</body>
+</html>

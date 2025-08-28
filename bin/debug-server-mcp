@@ -1,0 +1,149 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use Koriym\XdebugMcp\Constants;
+use Koriym\XdebugMcp\Exceptions\InvalidOutputException;
+
+/**
+ * MCP Bridge using --exit-on-break approach
+ * 
+ * Stateless debugging via xdebug-debug --exit-on-break calls
+ * Usage: echo '{"method":"xdebug_debug","params":{"script":"test.php","breakpoint":"test.php:9"}}' | ./bin/debug-server-mcp
+ */
+
+function main(): void 
+{
+    // Read JSON input from STDIN
+    $input = file_get_contents('php://stdin');
+    if ($input === false || trim($input) === '') {
+        sendError('No input received');
+        return;
+    }
+    
+    // Parse JSON
+    $request = json_decode($input, true);
+    if ($request === null) {
+        sendError('Invalid JSON input');
+        return;
+    }
+    
+    // Validate request structure
+    if (!isset($request['method'])) {
+        sendError('Missing method in request');
+        return;
+    }
+    
+    $method = $request['method'];
+    $params = $request['params'] ?? [];
+    
+    try {
+        // Handle MCP methods using --exit-on-break approach
+        $result = handleMcpMethod($method, $params);
+        
+        // Send success response
+        sendSuccess($result);
+        
+    } catch (Exception $e) {
+        sendError($e->getMessage());
+    }
+}
+
+/**
+ * Handle MCP methods using xdebug-debug --exit-on-break
+ */
+function handleMcpMethod(string $method, array $params): array 
+{
+    switch ($method) {
+        case 'xdebug_debug':
+        case 'xdebug_step_into':
+        case 'xdebug_get_variables':
+        case 'xdebug_get_stack':
+            return executeDebugCommand($params);
+            
+        case 'xdebug_info':
+            return [
+                'method' => 'exit-on-break',
+                'description' => 'Stateless debugging using --exit-on-break approach',
+                'usage' => 'Provide script and optional breakpoint parameters'
+            ];
+            
+        default:
+            throw new Exception("Method not supported via --exit-on-break: {$method}");
+    }
+}
+
+/**
+ * Execute debug command using --exit-on-break
+ */
+function executeDebugCommand(array $params): array 
+{
+    $script = $params['script'] ?? null;
+    $breakpoint = $params['breakpoint'] ?? null;
+    
+    if (!$script) {
+        throw new Exception('Missing required parameter: script');
+    }
+    
+    // Build xdebug-debug command
+    $xdebugDebugPath = dirname(__DIR__) . '/bin/xdebug-debug';
+    $cmd = [$xdebugDebugPath];
+    
+    if ($breakpoint) {
+        $cmd[] = '--break=' . escapeshellarg($breakpoint);
+    }
+    
+    $cmd[] = '--exit-on-break';
+    $cmd[] = '--json';
+    $cmd[] = '--';
+    $cmd[] = 'php';
+    $cmd[] = escapeshellarg($script);
+    
+    $command = implode(' ', $cmd);
+    
+    // Execute command and capture full output with exit status
+    $output_lines = [];
+    $exit_code = null;
+    exec($command . ' 2>&1', $output_lines, $exit_code);
+    
+    // Find first valid JSON line
+    foreach ($output_lines as $line) {
+        $trimmed_line = trim($line);
+        if (json_validate($trimmed_line)) {
+            return [
+                'exit_code' => $exit_code,
+                'json_data' => json_decode($trimmed_line, true),
+                'command' => $command
+            ];
+        }
+    }
+    
+    throw new InvalidOutputException("No valid JSON found in command output");
+}
+
+function sendSuccess(mixed $result): void 
+{
+    $response = [
+        'success' => true,
+        'result' => $result
+    ];
+    
+    echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
+}
+
+function sendError(string $message): void 
+{
+    $response = [
+        'success' => false,
+        'error' => $message
+    ];
+    
+    echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
+    exit(1);
+}
+
+// Run the bridge
+main();

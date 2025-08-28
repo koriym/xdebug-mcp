@@ -5,10 +5,16 @@ declare(strict_types=1);
 namespace Koriym\XdebugMcp;
 
 use InvalidArgumentException;
+use JsonSchema\Constraints\Constraint;
+use JsonSchema\Validator;
 use RuntimeException;
 
+use function array_column;
 use function array_map;
 use function array_merge;
+use function array_slice;
+use function array_sum;
+use function count;
 use function end;
 use function escapeshellarg;
 use function explode;
@@ -19,16 +25,26 @@ use function filesize;
 use function glob;
 use function implode;
 use function ini_get;
+use function is_numeric;
 use function is_readable;
+use function json_decode;
 use function json_encode;
 use function passthru;
+use function preg_match;
 use function round;
 use function shell_exec;
+use function sprintf;
 use function str_contains;
+use function str_starts_with;
 use function strpos;
 use function substr;
 use function substr_count;
+use function trim;
+use function uasort;
 use function usort;
+
+use const JSON_UNESCAPED_SLASHES;
+use const JSON_UNESCAPED_UNICODE;
 
 /**
  * Xdebug Cachegrind profile analyzer
@@ -127,6 +143,146 @@ class XdebugProfiler
         return $stats;
     }
 
+    /**
+     * Generate schema-compliant JSON output for AI analysis
+     */
+    private function generateSchemaCompliantOutput(array $stats): array
+    {
+        // Parse the actual profile file for detailed analysis
+        $detailedStats = $this->analyzeProfileContent($stats['file_path']);
+
+        return [
+            '📁 profile_file' => $stats['file_path'],
+            '📊 total_lines' => $detailedStats['total_lines'] . ' lines',
+            '💾 file_size_bytes' => $stats['file_size'] . ' bytes',
+            '📏 file_size_formatted' => $stats['file_size_formatted'],
+            '📈 functions_count' => $detailedStats['functions_count'] . ' functions',
+            '👤 user_functions' => $detailedStats['user_functions'] . ' user',
+            '⚙️ internal_functions' => $detailedStats['internal_functions'] . ' internal',
+            '📞 total_calls' => $detailedStats['total_calls'] . ' calls',
+            '⏱️ execution_time_ms' => $detailedStats['execution_time_ms'] . 'ms',
+            '🧠 peak_memory_mb' => $detailedStats['peak_memory_mb'] . 'MB',
+            '📂 file_io_operations' => $detailedStats['file_io_operations'] . ' operations',
+            '🗃️ database_operations' => $detailedStats['database_operations'] . ' queries',
+            '🎯 bottleneck_functions' => $detailedStats['bottleneck_functions'],
+            '💡 optimization_suggestions' => [],
+            '📋 specification' => 'https://kcachegrind.github.io/html/CallgrindFormat.html',
+            '🔗 schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json',
+        ];
+    }
+
+    /**
+     * Analyze profile content for detailed statistics
+     */
+    private function analyzeProfileContent(string $profileFile): array
+    {
+        $content = file_get_contents($profileFile);
+        $lines = explode("\n", $content);
+
+        $analysis = [
+            'total_lines' => count($lines),
+            'functions_count' => 0,
+            'user_functions' => 0,
+            'internal_functions' => 0,
+            'total_calls' => 0,
+            'execution_time_ms' => 0,
+            'peak_memory_mb' => 0,
+            'file_io_operations' => 0,
+            'database_operations' => 0,
+            'bottleneck_functions' => [],
+        ];
+
+        $functions = [];
+        $currentFunction = null;
+        $summary = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            if (str_starts_with($line, 'fn=')) {
+                $analysis['functions_count']++;
+                $functionName = substr($line, 3);
+                $currentFunction = $functionName;
+
+                // Classify function type
+                if (str_contains($functionName, 'php::') || str_contains($functionName, '{main}')) {
+                    $analysis['internal_functions']++;
+                } else {
+                    $analysis['user_functions']++;
+                }
+
+                $functions[$functionName] = ['cost' => 0, 'calls' => 0];
+            } elseif (str_starts_with($line, 'calls=')) {
+                $analysis['total_calls'] += (int) explode(' ', $line)[0];
+                if ($currentFunction && isset($functions[$currentFunction])) {
+                    $functions[$currentFunction]['calls']++;
+                }
+            } elseif (str_starts_with($line, 'summary:')) {
+                $parts = explode(' ', $line);
+                if (count($parts) >= 2) {
+                    $totalCost = (int) $parts[1];
+                    $analysis['execution_time_ms'] = round($totalCost / 100000, 2); // Rough estimate
+                    $analysis['peak_memory_mb'] = round($totalCost / 1000000, 1); // Rough estimate
+                }
+            } elseif (preg_match('/^\d+/', $line) && $currentFunction) {
+                // Cost line
+                $costs = explode(' ', $line);
+                if (count($costs) > 0 && is_numeric($costs[0])) {
+                    $cost = (int) $costs[0];
+                    if (isset($functions[$currentFunction])) {
+                        $functions[$currentFunction]['cost'] += $cost;
+                    }
+                }
+            }
+        }
+
+        // Find bottleneck functions (top 5 by cost)
+        uasort($functions, static fn ($a, $b) => $b['cost'] <=> $a['cost']);
+        $topFunctions = array_slice($functions, 0, 5, true);
+        $totalCost = array_sum(array_column($functions, 'cost'));
+
+        if ($totalCost > 0) {
+            foreach ($topFunctions as $name => $data) {
+                $percentage = round($data['cost'] / $totalCost * 100, 1);
+                $analysis['bottleneck_functions'][] = "{$name} ({$percentage}%)";
+            }
+        }
+
+        return $analysis;
+    }
+
+    /**
+     * Validate JSON output against xdebug-profile.json schema
+     */
+    private function validateJsonOutput(array $data): void
+    {
+        $schemaPath = __DIR__ . '/../docs/schemas/xdebug-profile.json';
+
+        if (! file_exists($schemaPath)) {
+            // Schema validation is optional if schema file doesn't exist
+            return;
+        }
+
+        $validator = new Validator();
+        $schema = json_decode(file_get_contents($schemaPath));
+
+        // Convert to object for validation
+        $jsonData = json_decode(json_encode($data));
+
+        $validator->validate($jsonData, $schema, Constraint::CHECK_MODE_NORMAL);
+
+        if (! $validator->isValid()) {
+            $errors = [];
+            foreach ($validator->getErrors() as $error) {
+                $errors[] = sprintf("Property '%s': %s", $error['property'], $error['message']);
+            }
+
+            throw new RuntimeException(
+                "Profile JSON output does not conform to schema:\n" . implode("\n", $errors),
+            );
+        }
+    }
+
     public function generateStatistics(array $stats): array
     {
         $fileSize = $stats['file_size'];
@@ -146,7 +302,13 @@ class XdebugProfiler
     public function displayResults(array $stats, bool $jsonOutput = false): void
     {
         if ($jsonOutput) {
-            echo json_encode($stats);
+            // Generate schema-compliant JSON output
+            $schemaCompliantOutput = $this->generateSchemaCompliantOutput($stats);
+
+            // Always validate against schema (performance cost is negligible)
+            $this->validateJsonOutput($schemaCompliantOutput);
+
+            echo json_encode($schemaCompliantOutput, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         } else {
             echo "✅ Profile complete: {$stats['profile_file']}\n";
             echo "📊 Size: {$stats['file_size_formatted']}\n";

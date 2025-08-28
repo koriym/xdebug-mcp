@@ -57,12 +57,18 @@ class McpServerTest extends TestCase
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('tools', $response['result']);
-        $this->assertCount(42, $response['result']['tools']);
+        $this->assertCount(28, $response['result']['tools']);
 
         $toolNames = array_column($response['result']['tools'], 'name');
-        $this->assertContains('xdebug_connect', $toolNames);
-        $this->assertContains('xdebug_disconnect', $toolNames);
-        $this->assertContains('xdebug_set_breakpoint', $toolNames);
+        // Test that analysis tools are present
+        $this->assertContains('xdebug_start_profiling', $toolNames);
+        $this->assertContains('xdebug_start_coverage', $toolNames);
+        $this->assertContains('xdebug_start_trace', $toolNames);
+
+        // Test that interactive debugging tools are removed
+        $this->assertNotContains('xdebug_connect', $toolNames);
+        $this->assertNotContains('xdebug_disconnect', $toolNames);
+        $this->assertNotContains('xdebug_set_breakpoint', $toolNames);
     }
 
     public function testUnknownMethodRequest(): void
@@ -90,6 +96,7 @@ class McpServerTest extends TestCase
 
     public function testToolCallWithoutConnection(): void
     {
+        // Test that removed interactive tools return proper error
         $request = [
             'jsonrpc' => '2.0',
             'id' => 4,
@@ -104,7 +111,7 @@ class McpServerTest extends TestCase
 
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals(-32000, $response['error']['code']);
-        $this->assertStringContainsString('Not connected to Xdebug', $response['error']['message']);
+        $this->assertStringContainsString('Unknown tool: xdebug_disconnect', $response['error']['message']);
     }
 
     public function testUnknownToolCall(): void

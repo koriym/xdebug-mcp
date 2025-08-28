@@ -10,6 +10,19 @@
       "description": "Absolute path to the generated Xdebug trace file (.xt format)",
       "pattern": "^/.+\\.xt$"
     },
+    "file": {
+      "type": "string",
+      "description": "Absolute path to the generated Xdebug trace file (.xt format) - alias for compatibility",
+      "pattern": "^/.+\\.xt$"
+    },
+    "content": {
+      "type": "array",
+      "description": "Lines from the trace file for AI analysis. Each line represents execution data in Xdebug trace format",
+      "items": {
+        "type": "string",
+        "description": "Single trace line containing execution details"
+      }
+    },
     "total_lines": {
       "type": "integer",
       "minimum": 0,
@@ -39,13 +52,19 @@
   },
   "required": ["trace_file", "total_lines", "unique_functions", "max_call_depth", "database_queries", "specification"],
   "additionalProperties": false,
-  
+
   "links": [
     {
       "rel": "specification",
       "href": "https://xdebug.org/docs/trace",
       "title": "Official Xdebug Trace Format Documentation",
       "description": "Complete documentation of Xdebug trace file format and configuration options"
+    },
+    {
+      "rel": "debug-guide",
+      "href": "https://koriym.github.io/xdebug-mcp/debug-guidelines.md",
+      "title": "PHP Xdebug Trace Analysis Guidelines",
+      "description": "Complete debugging guide: Forward Trace methodology, conditional breakpoints, step recording, performance profiling, and trace analysis for runtime debugging without code modifications"
     },
     {
       "rel": "self",
@@ -75,7 +94,7 @@
     {
       "rel": "command",
       "href": "file:///bin/xdebug-trace",
-      "title": "Command Line Tool", 
+      "title": "Command Line Tool",
       "description": "CLI command to generate trace data with this schema"
     },
     {
@@ -85,14 +104,14 @@
       "description": "Intelligent file reading strategies based on trace file size"
     },
     {
-      "rel": "section", 
+      "rel": "section",
       "href": "#x-trace-format",
       "title": "Trace Format Guide",
       "description": "Detailed explanation of Xdebug trace file column structure"
     },
     {
       "rel": "section",
-      "href": "#x-debugging-capabilities", 
+      "href": "#x-debugging-capabilities",
       "title": "Debugging Capabilities",
       "description": "Complete list of debugging and analysis capabilities"
     },
@@ -103,7 +122,7 @@
       "description": "How to use this schema with MCP tools and workflow"
     }
   ],
-  
+
   "x-ai-strategies": {
     "reading_strategy": {
       "small_files": {
@@ -122,7 +141,7 @@
         "rationale": "Focus on specific issues rather than full trace analysis"
       }
     },
-    
+
     "search_patterns": {
       "function_analysis": {
         "description": "Find specific function calls and their arguments/returns",
@@ -161,14 +180,14 @@
         ]
       }
     },
-    
+
     "analysis_workflow": {
       "step1": {
         "name": "Initial Assessment",
         "action": "Check total_lines to determine reading strategy"
       },
       "step2": {
-        "name": "Target Identification", 
+        "name": "Target Identification",
         "action": "Use grep patterns to locate relevant functions or issues"
       },
       "step3": {
@@ -181,13 +200,13 @@
       }
     }
   },
-  
+
   "x-trace-format": {
     "description": "Xdebug trace format understanding for AI analysis",
     "format_type": "Computerized Format (Format 1) - Tab separated",
     "columns": {
       "0": "Level - Function call depth (0=main, 1=nested, etc.)",
-      "1": "Function Number - Unique identifier for this function call",  
+      "1": "Function Number - Unique identifier for this function call",
       "2": "Entry/Exit - 0=Entry, 1=Exit, R=Return value",
       "3": "Time Index - Execution timestamp (float)",
       "4": "Memory Usage - Current memory consumption (bytes)",
@@ -204,17 +223,17 @@
       "return_value": "Level\\tFuncNum\\tR\\t\\t\\t\\t\\t\\t\\t\\treturn_value"
     }
   },
-  
+
   "x-debugging-capabilities": {
     "execution_flow": "Track complete function call hierarchy and execution order",
     "variable_inspection": "See actual parameter values and return values at runtime",
-    "performance_profiling": "Identify bottlenecks through timing and memory analysis", 
+    "performance_profiling": "Identify bottlenecks through timing and memory analysis",
     "bug_detection": "Find logic errors by comparing expected vs actual execution paths",
     "memory_analysis": "Track memory usage patterns and identify potential leaks",
     "recursive_analysis": "Detect infinite recursion or excessive call depth",
     "io_monitoring": "Identify file operations and database queries in execution flow"
   },
-  
+
   "x-mcp-integration": {
     "tool_name": "xdebug_start_trace",
     "usage": "Call via MCP to generate trace data, then analyze returned trace_file",

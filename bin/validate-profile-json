@@ -1,0 +1,69 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/autoload.php';
+
+use JsonSchema\Validator;
+use JsonSchema\Constraints\Constraint;
+
+if (count($argv) < 2) {
+    echo "Usage: validate-profile-json <profile-json-file>\n";
+    echo "\n";
+    echo "Validates a profile JSON file against the xdebug-profile.json schema.\n";
+    echo "\n";
+    echo "Examples:\n";
+    echo "  validate-profile-json profile-output.json\n";
+    echo "  composer profile:loop > output.json && validate-profile-json output.json\n";
+    echo "\n";
+    exit(1);
+}
+
+$jsonFile = $argv[1];
+$schemaPath = __DIR__ . '/../docs/schemas/xdebug-profile.json';
+
+if (!file_exists($jsonFile)) {
+    echo "❌ Error: JSON file not found: $jsonFile\n";
+    exit(1);
+}
+
+if (!file_exists($schemaPath)) {
+    echo "❌ Error: Schema file not found: $schemaPath\n";
+    exit(1);
+}
+
+try {
+    $jsonContent = file_get_contents($jsonFile);
+    $jsonData = json_decode($jsonContent);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        echo "❌ Error: Invalid JSON in file: " . json_last_error_msg() . "\n";
+        exit(1);
+    }
+
+    $schema = json_decode(file_get_contents($schemaPath));
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        echo "❌ Error: Invalid JSON in schema: " . json_last_error_msg() . "\n";
+        exit(1);
+    }
+
+    $validator = new Validator();
+    $validator->validate($jsonData, $schema, Constraint::CHECK_MODE_NORMAL);
+
+    if ($validator->isValid()) {
+        echo "✅ Profile JSON is valid and conforms to schema!\n";
+        echo "📁 File: $jsonFile\n";
+        echo "📋 Schema: xdebug-profile.json\n";
+        exit(0);
+    } else {
+        echo "❌ Profile JSON validation failed:\n\n";
+        foreach ($validator->getErrors() as $error) {
+            echo "  • Property '{$error['property']}': {$error['message']}\n";
+        }
+        exit(1);
+    }
+} catch (Exception $e) {
+    echo "❌ Validation error: " . $e->getMessage() . "\n";
+    exit(1);
+}

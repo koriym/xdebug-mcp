@@ -7,6 +7,7 @@ namespace Koriym\XdebugMcp;
 use InvalidArgumentException;
 use RuntimeException;
 
+use function array_filter;
 use function array_map;
 use function array_merge;
 use function count;
@@ -15,10 +16,15 @@ use function explode;
 use function fclose;
 use function fgets;
 use function file_exists;
+use function file_get_contents;
 use function filemtime;
 use function filesize;
 use function fopen;
 use function glob;
+use function gzclose;
+use function gzdecode;
+use function gzgets;
+use function gzopen;
 use function implode;
 use function in_array;
 use function ini_get;
@@ -29,6 +35,8 @@ use function passthru;
 use function round;
 use function shell_exec;
 use function str_contains;
+use function str_ends_with;
+use function strtolower;
 use function trim;
 use function usort;
 
@@ -149,24 +157,39 @@ class XdebugTracer
             'file_io_operations' => 0,
             'db_operations' => 0,
             'max_depth' => 0,
+            'max_call_depth' => 0,  // Add missing key
             'peak_memory' => 0,
             'start_time' => null,
             'end_time' => 0,
             'execution_time' => 0,
         ];
 
-        // Parse trace file line by line
-        $handle = fopen($traceFile, 'r');
-        if (! $handle) {
-            throw new RuntimeException("Cannot open trace file: $traceFile");
-        }
+        // Parse trace file line by line (handle both compressed and uncompressed)
+        if (str_ends_with($traceFile, '.gz')) {
+            $handle = gzopen($traceFile, 'r');
+            if (! $handle) {
+                throw new RuntimeException("Cannot open compressed trace file: $traceFile");
+            }
 
-        while (($line = fgets($handle)) !== false) {
-            $stats['total_lines']++;
-            $this->parseTraceLine(trim($line), $stats);
-        }
+            while (($line = gzgets($handle)) !== false) {
+                $stats['total_lines']++;
+                $this->parseTraceLine(trim($line), $stats);
+            }
 
-        fclose($handle);
+            gzclose($handle);
+        } else {
+            $handle = fopen($traceFile, 'r');
+            if (! $handle) {
+                throw new RuntimeException("Cannot open trace file: $traceFile");
+            }
+
+            while (($line = fgets($handle)) !== false) {
+                $stats['total_lines']++;
+                $this->parseTraceLine(trim($line), $stats);
+            }
+
+            fclose($handle);
+        }
 
         // Calculate execution time
         if ($stats['start_time'] !== null) {
@@ -249,6 +272,59 @@ class XdebugTracer
             'total_lines' => $stats['total_lines'],
             'specification' => 'https://xdebug.org/docs/trace',
         ];
+    }
+
+    /**
+     * Generate comprehensive trace statistics from existing trace file
+     * Used by both standalone trace analysis and debug output
+     */
+    public function generateTraceStatistics(string $traceFile): array
+    {
+        if (! file_exists($traceFile)) {
+            throw new RuntimeException("Trace file not found: $traceFile");
+        }
+
+        $stats = $this->parseTraceFile($traceFile);
+
+        // Handle both compressed and uncompressed trace files
+        if (str_ends_with($traceFile, '.gz')) {
+            $content = array_filter(explode("\n", gzdecode(file_get_contents($traceFile))), 'trim');
+        } else {
+            $content = array_filter(explode("\n", file_get_contents($traceFile)), 'trim');
+        }
+
+        return [
+            // Compatibility with debug schema (old format)
+            'file' => $traceFile,
+            'content' => $content,
+
+            // Full trace schema compliance (new format)
+            'trace_file' => $traceFile,
+            'total_lines' => $stats['total_lines'],
+            'unique_functions' => count($stats['unique_functions']),
+            'max_call_depth' => $stats['max_call_depth'],
+            'database_queries' => $this->countDatabaseQueries($stats),
+            'specification' => 'https://xdebug.org/docs/trace',
+        ];
+    }
+
+    /**
+     * Count database queries in trace statistics
+     */
+    private function countDatabaseQueries(array $stats): int
+    {
+        $dbQueryCount = 0;
+        foreach ($stats['unique_functions'] as $function => $unused) {
+            if (
+                str_contains(strtolower($function), 'query') ||
+                str_contains(strtolower($function), 'execute') ||
+                str_contains(strtolower($function), 'prepare')
+            ) {
+                $dbQueryCount++;
+            }
+        }
+
+        return $dbQueryCount;
     }
 
     public function generateStatistics(array $stats): array

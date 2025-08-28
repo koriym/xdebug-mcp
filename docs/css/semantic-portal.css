@@ -1,0 +1,112 @@
+/* Semantic Portal CSS - Universal styling for semantic web portals */
+
+/* Base typography and layout */
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; 
+    margin: 40px; 
+    line-height: 1.6; 
+}
+
+/* Main heading with semantic accent */
+h1 { 
+    color: #2c3e50; 
+    border-bottom: 2px solid #3498db; 
+    padding-bottom: 10px; 
+}
+
+/* Schema collection container */
+.schema-collection { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 20px; 
+}
+
+/* Schema and ALPS resource cards */
+.json-schema-resource, .alps-profile-resource { 
+    background: #f8f9fa; 
+    padding: 15px; 
+    border-radius: 8px; 
+    border-left: 4px solid #3498db; 
+}
+
+/* Resource titles */
+.schema-title, .alps-title { 
+    margin: 0 0 8px 0; 
+    color: #2c3e50; 
+    font-size: 1.2em; 
+    font-weight: 600; 
+}
+
+/* Resource descriptions */
+.schema-description, .alps-description { 
+    margin: 0 0 10px 0; 
+    color: #7f8c8d; 
+}
+
+/* Reference links */
+.schema-reference, .alps-reference, .resource-link { 
+    color: #3498db; 
+    text-decoration: none; 
+    font-family: monospace; 
+    font-size: 14px; 
+}
+
+.schema-reference:hover, .alps-reference:hover, .resource-link:hover { 
+    text-decoration: underline; 
+}
+
+/* Development resources section */
+.development-resources { 
+    margin-top: 40px; 
+    padding-top: 20px; 
+    border-top: 1px solid #ecf0f1; 
+}
+
+.development-resource { 
+    margin: 5px 0; 
+}
+
+.resource-description { 
+    color: #7f8c8d; 
+    margin-left: 10px; 
+}
+
+/* Terminology section */
+.terminology-section {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.terminology-section h2 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.terminology-list {
+    margin: 0;
+    padding: 0;
+}
+
+.term-name {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-top: 15px;
+    margin-bottom: 5px;
+}
+
+.term-name:first-child {
+    margin-top: 0;
+}
+
+.term-definition {
+    margin: 0 0 10px 20px;
+    color: #7f8c8d;
+    line-height: 1.5;
+}
+
+/* Semantic web vision footer */
+.semantic-web-vision { 
+    margin-top: 30px; 
+    color: #7f8c8d; 
+}
