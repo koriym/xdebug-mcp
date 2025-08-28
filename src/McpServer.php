@@ -98,34 +98,12 @@ class McpServer
     protected array $tools = [];
     protected XdebugClient|null $xdebugClient = null;
     private bool $debugMode = false;
-    private array $contextMemory = [];
-
     public function __construct()
     {
         $this->debugMode = (bool) (getenv('MCP_DEBUG') ?: false);
         $this->initializeTools();
-        $this->loadContextMemory();
     }
 
-    private function loadContextMemory(): void
-    {
-        $memoryFile = sys_get_temp_dir() . '/xdebug-mcp-context.json';
-        if (file_exists($memoryFile)) {
-            $data = file_get_contents($memoryFile);
-            if ($data !== false) {
-                $decoded = json_decode($data, true);
-                if (is_array($decoded)) {
-                    $this->contextMemory = $decoded;
-                }
-            }
-        }
-    }
-
-    private function saveContextMemory(): void
-    {
-        $memoryFile = sys_get_temp_dir() . '/xdebug-mcp-context.json';
-        file_put_contents($memoryFile, json_encode($this->contextMemory, JSON_PRETTY_PRINT), LOCK_EX);
-    }
 
     private function debugLog(string $message, array $data = []): void
     {
@@ -686,7 +664,7 @@ class McpServer
                     ],
                     [
                         'name' => 'x-debug',
-                        'description' => 'Step debugging with breakpoints | ex) /x-debug --script=test.php --breakpoints="test.php:15:$user==null" --steps=100',
+                        'description' => 'Step debugging with breakpoints | ex) /x-debug "php test.php" "test.php:15" 5 "debug context"',
                         'arguments' => [
                             [
                                 'name' => 'script',
@@ -853,6 +831,10 @@ class McpServer
 
                 if (isset($args[2])) {
                     $args['steps'] = $args[2];
+                }
+
+                if (isset($args[3])) {
+                    $args['context'] = $args[3];
                 }
 
                 break;
