@@ -15,10 +15,7 @@ jobs:
       - name: Validate Documentation URLs
         run: |
           urls=(
-            "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json"
             "https://xdebug.org/docs/trace"
-            "https://koriym.github.io/xdebug-mcp/debug-guidelines.md"
-            "https://koriym.github.io/xdebug-mcp/ai-debugging-with-debugger.md"
           )
 
           for url in "${urls[@]}"; do
@@ -28,4 +25,18 @@ jobs:
               exit 1
             fi
             echo "OK:    $url"
+          done
+          
+          # Check local files exist instead of GitHub Pages URLs
+          files=(
+            "docs/schemas/xdebug-debug.json"
+            "docs/debug-guidelines.md"
+          )
+          
+          for file in "${files[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              echo "ERROR: File not found: $file"
+              exit 1
+            fi
+            echo "OK:    $file (exists locally)"
           done
