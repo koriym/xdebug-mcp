@@ -359,11 +359,6 @@ class McpServer
                             'description' => 'Context description for AI analysis (e.g., "Testing user authentication flow")',
                             'default' => '',
                         ],
-                        'last' => [
-                            'type' => 'string',
-                            'description' => 'Use settings from last execution (true/false)',
-                            'default' => 'false',
-                        ],
                     ],
                     'required' => ['script'],
                 ],
@@ -382,11 +377,6 @@ class McpServer
                             'type' => 'string',
                             'description' => 'Context description for performance analysis',
                             'default' => '',
-                        ],
-                        'last' => [
-                            'type' => 'string',
-                            'description' => 'Use settings from last execution (true/false)',
-                            'default' => 'false',
                         ],
                     ],
                     'required' => ['script'],
@@ -417,11 +407,6 @@ class McpServer
                             'description' => 'Context description for debugging session',
                             'default' => '',
                         ],
-                        'last' => [
-                            'type' => 'string',
-                            'description' => 'Use settings from last execution (true/false)',
-                            'default' => 'false',
-                        ],
                     ],
                     'required' => ['script'],
                 ],
@@ -445,11 +430,6 @@ class McpServer
                             'type' => 'string',
                             'description' => 'Output format: html, xml, json, text',
                             'default' => 'html',
-                        ],
-                        'last' => [
-                            'type' => 'string',
-                            'description' => 'Use settings from last execution (true/false)',
-                            'default' => 'false',
                         ],
                     ],
                     'required' => ['script'],
@@ -1936,25 +1916,11 @@ class McpServer
     private function executeXTrace(mixed $id, array $args): array
     {
         try {
-            // Handle 'last' functionality BEFORE validation
-            if (isset($args['last']) && $args['last'] === 'true') {
-                if (isset($this->contextMemory['x-trace'])) {
-                    // Merge previous settings, but allow current args to override
-                    $args = array_merge($this->contextMemory['x-trace'], $args);
-                }
-            }
-
             $script = $args['script'] ?? '';
             $script = $this->processScriptArgument($script);
             $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
 
-            // Store context memory for next 'last' usage
-            $this->contextMemory['x-trace'] = [
-                'script' => $script,
-                'context' => $context,
-            ];
-            $this->saveContextMemory();
 
             // Build command - user must specify PHP binary explicitly
             $cmd = './bin/xdebug-trace --json -- ' . $script;
@@ -2014,14 +1980,6 @@ class McpServer
     private function executeXDebug(mixed $id, array $args): array
     {
         try {
-            // Handle 'last' functionality BEFORE validation
-            if (isset($args['last']) && $args['last'] === 'true') {
-                if (isset($this->contextMemory['x-debug'])) {
-                    // Merge previous settings, but allow current args to override
-                    $args = array_merge($this->contextMemory['x-debug'], $args);
-                }
-            }
-
             $script = $args['script'] ?? '';
             $script = $this->processScriptArgument($script);
 
@@ -2049,14 +2007,6 @@ class McpServer
 
             $steps = $args['steps'] ?? '100';
 
-            // Store context memory for next 'last' usage
-            $this->contextMemory['x-debug'] = [
-                'script' => $script,
-                'context' => $context,
-                'breakpoints' => $breakpoints,
-                'steps' => $steps,
-            ];
-            $this->saveContextMemory();
 
             // Build command
             $cmd = './bin/xdebug-debug --exit-on-break';
@@ -2137,25 +2087,11 @@ class McpServer
     private function executeXProfile(mixed $id, array $args): array
     {
         try {
-            // Handle 'last' functionality BEFORE validation
-            if (isset($args['last']) && $args['last'] === 'true') {
-                if (isset($this->contextMemory['x-profile'])) {
-                    // Merge previous settings, but allow current args to override
-                    $args = array_merge($this->contextMemory['x-profile'], $args);
-                }
-            }
-
             $script = $args['script'] ?? '';
             $script = $this->processScriptArgument($script);
             $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
 
-            // Store context memory for next 'last' usage
-            $this->contextMemory['x-profile'] = [
-                'script' => $script,
-                'context' => $context,
-            ];
-            $this->saveContextMemory();
 
             // Build command - user must specify PHP binary explicitly
             $cmd = './bin/xdebug-profile --json -- ' . $script;
@@ -2215,27 +2151,12 @@ class McpServer
     private function executeXCoverage(mixed $id, array $args): array
     {
         try {
-            // Handle 'last' functionality BEFORE validation
-            if (isset($args['last']) && $args['last'] === 'true') {
-                if (isset($this->contextMemory['x-coverage'])) {
-                    // Merge previous settings, but allow current args to override
-                    $args = array_merge($this->contextMemory['x-coverage'], $args);
-                }
-            }
-
             $script = $args['script'] ?? '';
             $script = $this->processScriptArgument($script);
             $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
             $format = $args['format'] ?? 'json';
 
-            // Store context memory for next 'last' usage
-            $this->contextMemory['x-coverage'] = [
-                'script' => $script,
-                'context' => $context,
-                'format' => $format,
-            ];
-            $this->saveContextMemory();
 
             // Build command - user must specify PHP binary explicitly
             $cmd = './bin/xdebug-coverage -- ' . $script;
