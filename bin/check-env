@@ -42,14 +42,29 @@ if ($defaultLoaded) {
 
 // Check if Xdebug can be loaded with -d
 echo "🔍 Xdebug -d loading: ";
-$output = [];
-exec('php -dzend_extension=xdebug -m 2>/dev/null', $output, $returnCode);
-$canLoadXdebug = in_array('xdebug', $output, true);
+$phpBin = escapeshellcmd(PHP_BINARY);
+$zendCandidates = ['-dzend_extension=xdebug.so', '-dzend_extension=xdebug'];
+$extDir = trim(shell_exec($phpBin . ' -r "echo ini_get(\'extension_dir\');" 2>/dev/null'));
+$dll = (PHP_OS_FAMILY === 'Windows') ? 'php_xdebug.dll' : 'xdebug.so';
+if ($extDir) {
+    $zendCandidates[] = "-dzend_extension={$extDir}/{$dll}";
+}
+$canLoadXdebug = false;
+$zendFlag = null;
+foreach ($zendCandidates as $zc) {
+    $probe = [];
+    exec("$phpBin $zc -m 2>/dev/null", $probe);
+    if (in_array('xdebug', $probe, true)) {
+        $canLoadXdebug = true;
+        $zendFlag = $zc;
+        break;
+    }
+}
 if ($canLoadXdebug) {
-    echo "✅ (Can load with -dzend_extension=xdebug)\n";
+    echo "✅ (Can load with {$zendFlag})\n";
 } else {
     echo "❌ (Cannot load Xdebug)\n";
-    echo "   Install with: brew install php-xdebug (macOS) or apt-get install php-xdebug (Linux)\n";
+    echo "   Install with: pecl install xdebug (macOS) or apt-get install php-xdebug (Linux)\n";
 }
 
 // Check Xdebug version if available
