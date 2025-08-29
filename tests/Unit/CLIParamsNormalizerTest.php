@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp\Tests\Unit;
 
-use InvalidArgumentException;
 use Koriym\XdebugMcp\CLIParamsNormalizer;
+use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 class CLIParamsNormalizerTest extends TestCase

@@ -59,7 +59,7 @@ We decided to **remove 8 interactive debugging tools** and focus exclusively on 
 
 1. **Reduced Complexity**: 26% fewer tools (31 → 23)
 2. **Improved Focus**: All remaining tools support Forward Trace methodology
-3. **MCP Compliance**: Eliminates stateful interactive patterns
+3. **MCP Compliance**: Reduces stateful interactive patterns (note: some state persists via saveGlobalState/loadGlobalState and /tmp/xdebug_session_*.json files)
 4. **Performance**: No connection management overhead
 5. **Maintainability**: Simplified codebase without duplicate patterns
 
@@ -123,11 +123,11 @@ This decision was implemented by:
 - ✅ **Code Simplification**: ~400 lines of interactive debugging code removed
 - ✅ **Forward Trace Functionality**: All core capabilities retained and enhanced
 - ✅ **AI Debugging Effectiveness**: Faster root cause identification in real testing
-- ✅ **MCP Protocol Compliance**: Fully stateless architecture
+- ✅ **MCP Protocol Compliance**: Minimizes stateful patterns (note: some state persists via saveGlobalState/loadGlobalState and /tmp/xdebug_session_*.json files)
 
 ## Related Documents
 
-- [Forward Trace Debugging Guidelines](./debug-guidelines.md)
+- [Forward Trace Debugging Guidelines](./debug_guideline_for_ai.md)
 - [MCP Slash Commands Documentation](../README.md)
 - [AI-Native PHP Debugging Methodology](../CLAUDE.md)
 

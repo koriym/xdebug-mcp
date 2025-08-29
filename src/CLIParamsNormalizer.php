@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp;
 
-use InvalidArgumentException;
+use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 
 use function array_filter;
 use function array_slice;
+use function array_values;
 use function count;
 use function ctype_digit;
 use function explode;
@@ -48,7 +49,7 @@ class CLIParamsNormalizer
      *
      * @return array Normalized MCP params
      *
-     * @throws InvalidArgumentException On invalid format
+     * @throws InvalidArgumentException On invalid format.
      */
     public function normalize(string $cliString): array
     {
@@ -123,7 +124,7 @@ class CLIParamsNormalizer
             $tokens[] = $current;
         }
 
-        return array_values(array_filter($tokens, fn($t) => $t !== '')); // Remove only empty strings, preserve "0"
+        return array_values(array_filter($tokens, static fn ($t) => $t !== '')); // Remove only empty strings, preserve "0"
     }
 
     /**
