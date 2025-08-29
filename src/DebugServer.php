@@ -230,6 +230,7 @@ final class DebugServer
                 if ($command[0] === 'php') {
                     $scriptName = basename($this->targetScript, '.php');
                     $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
+                    // @todo Remove trace mode in 1.0 release
                     $cmd = sprintf(
                         'XDEBUG_TRIGGER=1 php -dzend_extension=xdebug ' .
                         '-dxdebug.mode=debug,trace ' .
@@ -242,6 +243,10 @@ final class DebugServer
                         '-dxdebug.log=/tmp/xdebug.log ' .
                         '-dxdebug.log_level=7 ' .
                         '-dxdebug.connect_timeout_ms=5000 ' .
+                        '-dmemory_limit=1G ' . // Increase memory limit for debugging
+                        '-derror_reporting=E_ERROR ' .
+                        '-dlog_errors=1 ' .
+                        '-derror_log=/tmp/php.log ' .
                         '%s',
                         $this->debugPort,
                         implode(' ', array_map('escapeshellarg', array_slice($command, 1))),
@@ -408,7 +413,7 @@ final class DebugServer
 
         $this->log("🚶 Starting step-by-step execution trace with differential recording (max {$maxSteps} steps)");
 
-        while ($stepCount < $maxSteps) {
+        while (true) {
             $stepCount++;
 
             // Get current position and variables
@@ -422,6 +427,7 @@ final class DebugServer
 
             // Get current location from stack info or XML response
             $location = ['file' => 'unknown', 'line' => 0];
+            $stackResponse = '';
             try {
                 $stackResponse = $this->sendCommand('stack_get');
                 if ($stackResponse) {
@@ -473,33 +479,39 @@ final class DebugServer
                 $previousVariables = $currentVariables;
             }
 
-            // Record step only if there are variables to record or it's the first step
-            if ($stepCount === 1 || ! empty($variablesToRecord)) {
-                $step = [
-                    'step' => $stepCount,
-                    'location' => $location,
-                    'variables' => $variablesToRecord,
-                    'recording_type' => $recordingType, // Indicate full vs diff recording
-                ];
+            // Record every step (not just variable changes)
+            $step = [
+                'step' => $stepCount,
+                'location' => $location,
+                'variables' => $variablesToRecord,
+                'recording_type' => $recordingType, // Indicate full vs diff recording
+            ];
 
-                $steps[] = $step;
+            $steps[] = $step;
 
-                if ($this->jsonMode) {
-                    $changeCount = count($variablesToRecord);
-                    $type = $recordingType === 'full' ? 'full state' : 'changes only';
-                    $this->log("Step {$stepCount}: {$location['file']}:{$location['line']} ({$changeCount} variables, {$type})");
-                } else {
-                    $this->displayStackInfo($stackInfo);
-                    $title = $recordingType === 'full'
-                        ? "Step {$stepCount} Variables (Full State)"
-                        : "Step {$stepCount} Variables (Changes Only)";
-                    $this->displayVariableArray($variablesToRecord, $title);
+            // Check if we've reached the step limit AFTER recording the step
+            if ($stepCount >= $maxSteps) {
+                $this->log("⚠️ Maximum steps ({$maxSteps}) reached, stopping execution");
+
+                // Output JSON results immediately when step limit is reached
+                if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
+                    $this->breaks = array_merge($this->breaks, $steps);
+                    $this->outputStepRecordingResults();
                 }
+
+                break;
+            }
+
+            if ($this->jsonMode) {
+                $changeCount = count($variablesToRecord);
+                $type = $recordingType === 'full' ? 'full state' : 'changes only';
+                $this->log("Step {$stepCount}: {$location['file']}:{$location['line']} ({$changeCount} variables, {$type})");
             } else {
-                // No variable changes to record (skipped frame in compression terms)
-                if (! $this->jsonMode) {
-                    $this->log("Step {$stepCount}: {$location['file']}:{$location['line']} (no variable changes - frame skipped)");
-                }
+                $this->displayStackInfo($stackResponse);
+                $title = $recordingType === 'full'
+                    ? "Step {$stepCount} Variables (Full State)"
+                    : "Step {$stepCount} Variables (Changes Only)";
+                $this->displayVariableArray($variablesToRecord, $title);
             }
 
             // Step into next instruction
@@ -509,6 +521,13 @@ final class DebugServer
             // Check if execution completed
             if ($this->isExecutionComplete($stepResponse)) {
                 $this->log("✅ Execution completed after {$stepCount} steps");
+
+                // Output JSON results immediately when execution completes
+                if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
+                    $this->breaks = array_merge($this->breaks, $steps);
+                    $this->outputStepRecordingResults();
+                }
+
                 break;
             }
 
@@ -516,18 +535,6 @@ final class DebugServer
             if (! $this->jsonMode) {
                 delay(0.1);
             }
-        }
-
-        if ($stepCount >= $maxSteps) {
-            $this->log("⚠️ Maximum steps ({$maxSteps}) reached, continuing to completion");
-
-            // Output JSON results immediately when step limit is reached
-            if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
-                $this->breaks = array_merge($this->breaks, $steps);
-                $this->outputStepRecordingResults();
-            }
-
-            $this->continueExecution();
         }
 
         return $steps;
@@ -556,10 +563,7 @@ final class DebugServer
 
                 $this->log('✅ Step Recording completed: ' . count($steps) . ' steps recorded');
 
-                // Output results immediately in JSON mode
-                if ($this->jsonMode) {
-                    $this->outputStepRecordingResults();
-                }
+                // JSON output will be handled by performStepTrace() when needed
             } else {
                 $this->log('⚠️ No breakpoint hit, execution completed normally');
             }
@@ -2339,7 +2343,11 @@ final class DebugServer
         try {
             // Use eval to execute json_encode($var, JSON_UNESCAPED_UNICODE)
             $expression = "json_encode({$varName}, JSON_UNESCAPED_UNICODE)";
-            $response = $this->sendCommand('eval', [base64_encode($expression)]);
+            // Use proper DBGp protocol format: eval -- base64_encoded_data
+            $transactionId = $this->getNextTransactionId();
+            $fullCommand = "eval -i {$transactionId} -- " . base64_encode($expression) . "\0";
+            $this->xdebugSocket->write($fullCommand);
+            $response = $this->readDbgpFrame($this->xdebugSocket);
 
             if (! $response) {
                 return null;
