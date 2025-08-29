@@ -58,13 +58,6 @@ echo '{"jsonrpc":"2.0","id":1,"method":"prompts/list"}' | php bin/xdebug-mcp
 /x-coverage script="vendor/bin/phpunit tests/Unit/McpServerTest.php" context="Coverage test"
 ```
 
-#### Context Memory Tests
-```bash
-# Test 'last' functionality
-/x-trace script="test1.php" context="First test"
-/x-trace last="true"  # Should reuse previous settings
-/x-trace last="true" context="Modified context"  # Should merge settings
-```
 
 #### Error Handling Tests
 ```bash
