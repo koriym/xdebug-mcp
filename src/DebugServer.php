@@ -520,6 +520,13 @@ final class DebugServer
 
         if ($stepCount >= $maxSteps) {
             $this->log("⚠️ Maximum steps ({$maxSteps}) reached, continuing to completion");
+
+            // Output JSON results immediately when step limit is reached
+            if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
+                $this->breaks = array_merge($this->breaks, $steps);
+                $this->outputStepRecordingResults();
+            }
+
             $this->continueExecution();
         }
 
