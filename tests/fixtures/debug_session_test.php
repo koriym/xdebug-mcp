@@ -17,17 +17,17 @@ $counter = 0;
 
 while (time() - $startTime < 300) { // 5 minutes instead of 60 seconds
     $counter++;
-    $message = "Iteration: $counter | Time: " . date('H:i:s') . " | Memory: " . memory_get_usage(true);
+    $message = "Iteration: $counter | Time: " . date('H:i:s') . ' | Memory: ' . memory_get_usage(true);
     echo "$message\n";
-    
+
     // Some sample variables for debugging
     $testArray = ['a' => 1, 'b' => 2, 'c' => 3];
     $testString = "Hello Xdebug Session $counter";
     $testNumber = $counter * 2;
-    
+
     // Add some function calls for stack testing
     testFunction($counter);
-    
+
     sleep(2);
 }
 

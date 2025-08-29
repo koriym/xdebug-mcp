@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-function add($a, $b) {
-    $result = $a + $b;  // Line 7 - good breakpoint target
-    return $result;
+function add($a, $b)
+{
+    return $a + $b;
 }
 
 echo "Starting calculation...\n";
