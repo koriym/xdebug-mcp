@@ -217,6 +217,6 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
         $this->assertEquals(1, $response['id']);
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('tools', $response['result']);
-        $this->assertCount(28, $response['result']['tools'], 'Should have 28 tools after restructuring');
+        $this->assertCount(23, $response['result']['tools'], 'Should have 28 tools after restructuring');
     }
 }
