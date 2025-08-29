@@ -261,7 +261,7 @@ final class McpServer
             ],
             'x-trace' => [
                 'name' => 'x-trace',
-                'description' => 'Trace PHP execution flow | ex) x-trace --script=test.php --context="Debug login flow"',
+                'description' => 'Trace PHP execution flow | ex) ./x-trace "php test.php" "Debug login flow"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -280,7 +280,7 @@ final class McpServer
             ],
             'x-profile' => [
                 'name' => 'x-profile',
-                'description' => 'Profile performance bottlenecks | ex) x-profile --script=slow-app.php --context="API performance"',
+                'description' => 'Profile performance bottlenecks | ex) ./x-profile "php slow-app.php" "API performance"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -299,7 +299,7 @@ final class McpServer
             ],
             'x-debug' => [
                 'name' => 'x-debug',
-                'description' => 'Step debugging with breakpoints | ex) x-debug --script=test.php --breakpoints="test.php:15:$user==null" --steps=100',
+                'description' => 'Step debugging with breakpoints | ex) ./x-debug "php test.php" --break="test.php:15:$user==null" --steps=100',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -328,7 +328,7 @@ final class McpServer
             ],
             'x-coverage' => [
                 'name' => 'x-coverage',
-                'description' => 'Analyze test coverage | ex) x-coverage --script="vendor/bin/phpunit UserTest.php"',
+                'description' => 'Analyze test coverage | ex) ./x-coverage "php vendor/bin/phpunit UserTest.php"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
