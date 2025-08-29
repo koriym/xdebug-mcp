@@ -42,12 +42,10 @@ vendor/bin/phpunit --testdox            # Run tests with readable output
 vendor/bin/phpunit tests/Unit/McpServerTest.php          # Run specific test file
 vendor/bin/phpunit --filter testConnect                  # Run specific test method
 
-# Legacy Tests (Deprecated)
-./simple_test.sh                        # Run basic syntax checks and MCP server tests
-php test_mcp.php                        # Test MCP server functionality 
-php test_integration.php                # Integration tests
-php test_profiling_coverage.php         # Test profiling and coverage features
+# Additional Testing Options
 php tests/fake/demo.php                 # Run fake demo without real Xdebug
+./bin/check-env                         # Verify Xdebug installation and configuration
+composer test-json                      # Test MCP protocol compliance
 php tests/fake/FakeProfilingDemo.php    # Demo profiling and coverage features
 ```
 
@@ -126,7 +124,6 @@ The server exposes 42 tools via MCP across three main categories:
 - **demo.php**: Interactive demo showing typical debugging workflow
 
 ### Configuration
-- **mcp.json**: Example MCP client configuration
 - **claude_desktop_config_example.json**: Example Claude Desktop setup
 - **phpunit.xml**: PHPUnit configuration with separate Unit/Integration test suites
 - Uses composer PSR-4 autoloading with XdebugMcp namespace
