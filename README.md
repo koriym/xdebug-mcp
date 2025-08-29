@@ -1,6 +1,6 @@
 # PHP Xdebug MCP Server
 
-<img width="256" alt="xdebug-mcp" src="https://koriym.github.io/xdebug-mcp/logo.jpeg" />
+<img width="256" alt="xdebug-mcp" src="docs/images/logo.jpeg" />
 
 > **Error message is the crime photo. Trace is the crime footage.**  
 > Don't just see the crime. Watch how it happened.
@@ -35,7 +35,7 @@ This MCP server enables AI to debug PHP with superhuman capabilities:
 
 ```bash
 # 1. Install
-composer require --dev koriym/xdebug-mcp
+composer require koriym/xdebug-mcp
 
 # 2. Create a test bug
 echo '<?php
@@ -427,7 +427,8 @@ cat /tmp/xdebug_trace_*.xt | less
 
 ```bash
 # Basic installation
-composer require --dev koriym/xdebug-mcp
+git clone https://github.com/koriym/xdebug-mcp.git
+cd xdebug-mcp && composer install
 
 # Enable AI autonomous debugging
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
