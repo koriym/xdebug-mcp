@@ -562,6 +562,7 @@ MCP_DEBUG=1 php bin/xdebug-mcp  # Enable debug mode
 - 🔧 [**TROUBLESHOOTING.md**](TROUBLESHOOTING.md) - Common issues and solutions
 
 **Additional Resources:**
+- 🎬 [Forward Trace Revolution Presentation](docs/slide/) - Interactive slides showcasing the paradigm shift
 - 🎬 [Forward Trace Demo](https://github.com/koriym/xdebug-mcp/demo) - See it in action
 - 📚 [Xdebug Documentation](https://xdebug.org/docs/)
 - 🔧 [MCP Specification](https://modelcontextprotocol.io/)
