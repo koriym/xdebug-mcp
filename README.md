@@ -427,8 +427,7 @@ cat /tmp/xdebug_trace_*.xt | less
 
 ```bash
 # Basic installation
-git clone https://github.com/koriym/xdebug-mcp.git
-cd xdebug-mcp && composer install
+composer require koriym/xdebug-mcp
 
 # Enable AI autonomous debugging
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
