@@ -20,15 +20,13 @@ function parseBreakpoints(string $breakSpec): array
         $spec = trim($spec);
         if (empty($spec)) continue;
 
-        // Parse file:line[:condition]
-        $parts = explode(':', $spec);
-        if (count($parts) < 2) {
+        // Parse file:line[:condition] (supports Windows paths and conditions with colons)
+        if (!preg_match('/^(.*):(\d+)(?::(.*))?$/', $spec, $m)) {
             throw new RuntimeException("Invalid breakpoint format: $spec (expected file:line[:condition])");
         }
-
-        $file = $parts[0];
-        $line = (int)$parts[1];
-        $condition = isset($parts[2]) ? implode(':', array_slice($parts, 2)) : null;
+        $file = $m[1];
+        $line = (int) $m[2];
+        $condition = $m[3] ?? null;
 
         if (!file_exists($file)) {
             throw new RuntimeException("Breakpoint file not found: $file");
