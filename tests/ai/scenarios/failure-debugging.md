@@ -82,10 +82,6 @@ echo '{"jsonrpc":"2.0","id":4,"method":"prompts/get","params":{"name":"x-profile
 **Objective**: Debug subtle logic errors that produce wrong results.
 
 ### Test Logic Flow Analysis
-```bash
-# Debug script with logic error
-echo '{"jsonrpc":"2.0","id":5,"method":"prompts/get","params":{"name":"x-debug","arguments":{"script":"tests/fake/wrong-calculation.php","context":"Logic error investigation","breakpoints":"tests/fake/wrong-calculation.php:15,tests/fake/wrong-calculation.php:25"}}}' | php bin/xdebug-mcp
-```
 
 **Expected Behavior:**
 - Should show variable evolution through execution
