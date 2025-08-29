@@ -6,7 +6,7 @@
 
 ## Context
 
-The Xdebug MCP Server initially included 32 debugging tools covering both interactive debugging capabilities (step debugging, function monitoring, stack inspection) and Forward Trace™ capabilities (execution tracing, profiling, coverage analysis).
+The Xdebug MCP Server initially included 31 debugging tools covering both interactive debugging capabilities (step debugging, function monitoring, stack inspection) and Forward Trace™ capabilities (execution tracing, profiling, coverage analysis).
 
 During development and testing, we discovered fundamental incompatibilities between AI debugging patterns and traditional interactive debugging approaches.
 
@@ -57,7 +57,7 @@ We decided to **remove 8 interactive debugging tools** and focus exclusively on 
 
 ### Technical Benefits
 
-1. **Reduced Complexity**: 28% fewer tools (32 → 23)
+1. **Reduced Complexity**: 26% fewer tools (31 → 23)
 2. **Improved Focus**: All remaining tools support Forward Trace methodology
 3. **MCP Compliance**: Eliminates stateful interactive patterns
 4. **Performance**: No connection management overhead
@@ -119,7 +119,7 @@ This decision was implemented by:
 
 ## Success Metrics
 
-- ✅ **Tool Count Reduction**: 32 → 23 tools (28% reduction)
+- ✅ **Tool Count Reduction**: 31 → 23 tools (26% reduction)
 - ✅ **Code Simplification**: ~400 lines of interactive debugging code removed
 - ✅ **Forward Trace Functionality**: All core capabilities retained and enhanced
 - ✅ **AI Debugging Effectiveness**: Faster root cause identification in real testing
