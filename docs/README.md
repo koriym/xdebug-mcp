@@ -8,8 +8,8 @@ This folder contains documentation, guides, and presentation materials for the P
 
 ### Debugging Guides
 - **`debug_guideline_for_ai.md`** - AI assistant debugging methodology and Forward Trace™ concepts
-- **`debug_guideline_for_humans.md`** - Human developer workflow and practical usage patterns  
-- **`debug-guidelines.md`** - Legacy comprehensive technical reference (being replaced)
+- **`debug_guideline_for_humans.md`** - Human developer workflow and practical usage patterns
+- **`TROUBLESHOOTING.md`** - Common issues and comprehensive solutions guide
 
 ### Architecture & Decisions
 - **`ADR-001-forward-trace-only-approach.md`** - Architecture Decision Record for Forward Trace-only approach

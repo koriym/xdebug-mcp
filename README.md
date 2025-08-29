@@ -559,7 +559,7 @@ MCP_DEBUG=1 php bin/xdebug-mcp  # Enable debug mode
 **Essential Reading:**
 - 🎯 **[docs/debug-guidelines.md](docs/debug-guidelines.md)** - **READ FIRST** - Forward Trace methodology and best practices
 - 📖 [**MOTIVATION.md**](MOTIVATION.md) - Why we built this
-- 🔧 [**TROUBLESHOOTING.md**](TROUBLESHOOTING.md) - Common issues and solutions
+- 🔧 [**docs/TROUBLESHOOTING.md**](docs/TROUBLESHOOTING.md) - Common issues and solutions
 
 **Additional Resources:**
 - 🎬 [Forward Trace Revolution Presentation](docs/slide/) - Interactive slides showcasing the paradigm shift

@@ -267,7 +267,7 @@ final class McpServer
                     'properties' => [
                         'script' => [
                             'type' => 'string',
-                            'description' => 'PHP script to trace (e.g., "test/debug_test.php")',
+                            'description' => 'PHP script to trace (e.g., "tests/fixtures/debug_test.php")',
                         ],
                         'context' => [
                             'type' => 'string',
@@ -286,7 +286,7 @@ final class McpServer
                     'properties' => [
                         'script' => [
                             'type' => 'string',
-                            'description' => 'PHP script to profile (e.g., "test/performance_test.php")',
+                            'description' => 'PHP script to profile (e.g., "tests/fixtures/performance_test.php")',
                         ],
                         'context' => [
                             'type' => 'string',
@@ -305,7 +305,7 @@ final class McpServer
                     'properties' => [
                         'script' => [
                             'type' => 'string',
-                            'description' => 'PHP script to debug (e.g., "test/debug_test.php")',
+                            'description' => 'PHP script to debug (e.g., "tests/fixtures/debug_test.php")',
                         ],
                         'breakpoints' => [
                             'type' => 'string',
@@ -542,7 +542,7 @@ final class McpServer
                         'arguments' => [
                             [
                                 'name' => 'script',
-                                'description' => 'PHP script to trace (e.g., "test/debug_test.php")',
+                                'description' => 'PHP script to trace (e.g., "tests/fixtures/debug_test.php")',
                                 'required' => true,
                             ],
                             [
@@ -563,7 +563,7 @@ final class McpServer
                         'arguments' => [
                             [
                                 'name' => 'script',
-                                'description' => 'PHP script to debug (e.g., "test/debug_test.php")',
+                                'description' => 'PHP script to debug (e.g., "tests/fixtures/debug_test.php")',
                                 'required' => true,
                             ],
                             [
@@ -594,7 +594,7 @@ final class McpServer
                         'arguments' => [
                             [
                                 'name' => 'script',
-                                'description' => 'PHP script to profile (e.g., "test/performance_test.php")',
+                                'description' => 'PHP script to profile (e.g., "tests/fixtures/performance_test.php")',
                                 'required' => true,
                             ],
                             [
