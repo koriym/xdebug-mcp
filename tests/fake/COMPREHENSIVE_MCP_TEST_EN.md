@@ -87,7 +87,7 @@ Autonomously test all XdebugMCP server features (42 MCP tools + 5 CLI tools = 47
 mcp__xdebug__xdebug_start_profiling
 
 # 2. If MCP unavailable, test with CLI tools
-./bin/xdebug-profile test/debug_test.php
+./bin/xdebug-profile tests/fixtures/debug_test.php
 
 # 3. Verify actual results (CRITICAL!)
 ls -la /tmp/*profile*  # Confirm profile files are generated
@@ -96,9 +96,9 @@ ls -la /tmp/*profile*  # Confirm profile files are generated
 ### Phase 2: CLI Tools Testing  
 ```bash
 # 43-47: Execute CLI tools directly
-./bin/xdebug-profile test/debug_test.php
-./bin/xdebug-coverage test/debug_test.php  
-./bin/xdebug-trace test/debug_test.php
+./bin/xdebug-profile tests/fixtures/debug_test.php
+./bin/xdebug-coverage tests/fixtures/debug_test.php  
+./bin/xdebug-trace tests/fixtures/debug_test.php
 # etc...
 ```
 

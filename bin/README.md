@@ -1,111 +1,165 @@
-~~# Xdebug MCP Tools
+# Xdebug MCP Tools
 
-This directory contains various tools for PHP debugging, profiling, and analysis using Xdebug and MCP (Model Context Protocol).
+This directory contains executable tools for PHP debugging, profiling, and analysis using Xdebug and MCP (Model Context Protocol).
 
-## User Tools (Direct Execution)
+## Core Debugging Tools
 
-These tools are designed for direct user interaction and analysis:
-
-### `./xdebug-debug <script.php>`
-Interactive step debugging with breakpoints and variable inspection.
+### `./xdebug-debug`
+Interactive step debugging with conditional breakpoints and Forward Trace™ capabilities.
 ```bash
-# Auto-detect breakpoint
-./xdebug-debug test.php
+# Interactive debugging session
+./xdebug-debug script.php
 
-# Advanced conditional breakpoints
-./xdebug-debug --break=src/User.php:42:$id>100 -- php main.php
-./xdebug-debug --break=User.php:85:$id==0,Auth.php:20:empty($token) -- php app.php
+# Conditional breakpoints (Forward Trace)
+./xdebug-debug --break='User.php:42:$id==null' --exit-on-break -- php script.php
 
-# Features: Conditional breakpoints, step execution, variable inspection
+# Step recording with JSON output
+./xdebug-debug --break='loop.php:15' --steps=100 --json -- php script.php
+
+# Multiple conditions (first match triggers)
+./xdebug-debug --break='Auth.php:20:empty($token),User.php:85:$id==0' --exit-on-break -- php app.php
 ```
 
-### `./xdebug-profile <script.php>`
-Performance profiling and bottleneck analysis.
+### `./xdebug-profile`
+Performance profiling with microsecond precision and AI analysis integration.
 ```bash
-./xdebug-profile src/MyClass.php
-# Generates cachegrind format profile files
+# Basic profiling
+./xdebug-profile script.php
 
-# With automatic Claude analysis
-./xdebug-profile --claude src/MyClass.php
+# With context for AI analysis
+./xdebug-profile --context="API endpoint performance" -- php api.php
+
+# JSON output for MCP integration
+./xdebug-profile --json -- php slow-script.php
 ```
 
-### `./xdebug-coverage <script.php>`
+### `./xdebug-trace`
+Execution flow tracing with complete function call analysis.
+```bash
+# Basic execution tracing
+./xdebug-trace script.php
+
+# With context documentation
+./xdebug-trace --context="Authentication flow analysis" -- php login.php
+
+# JSON output for AI processing
+./xdebug-trace --json -- php complex-workflow.php
+```
+
+### `./xdebug-coverage`
 Code coverage analysis with multiple output formats.
 ```bash
+# Basic coverage analysis
 ./xdebug-coverage tests/MyTest.php
-# Generates HTML, XML, JSON, and text coverage reports
+
+# With context
+./xdebug-coverage --context="Unit test coverage verification" -- php vendor/bin/phpunit tests/
+
+# Multiple formats: HTML, XML, JSON, text
+./xdebug-coverage --format=html --format=json -- php tests/suite.php
 ```
 
-### `./xdebug-trace -- php <script.php>`
-Execution flow tracing and function call analysis.
+### `./xdebug-phpunit`
+PHPUnit integration with Xdebug profiling and coverage.
 ```bash
-# Basic trace execution
-./xdebug-trace -- php app.php
+# Run PHPUnit with Xdebug integration
+./xdebug-phpunit tests/UserTest.php
 
-# JSON output for AI/MCP integration
-./xdebug-trace --json -- php app.php
-
-# Automatic Claude analysis
-./xdebug-trace --claude -- php app.php
+# With context for analysis
+./xdebug-phpunit --context="User authentication tests" tests/AuthTest.php
 ```
 
-### `./xdebug-phpunit <tests/>`
-PHPUnit integration with Xdebug features.
-```bash
-./xdebug-phpunit tests/
-# Runs PHPUnit tests with Xdebug integration
-```
-
-## System/Infrastructure Tools
-
-These tools provide background services and protocol handling:
-
+## MCP Protocol Tools
 
 ### `./xdebug-mcp`
-**MCP protocol handler**
-- Entry point for MCP (Model Context Protocol) communication
-- Processes JSON-RPC requests from AI clients
-- Delegates to XdebugClient for actual debugging operations
+**Main MCP protocol server** - Entry point for AI assistant communication.
+```bash
+# Start MCP server
+./xdebug-mcp
+
+# With debug logging
+MCP_DEBUG=1 ./xdebug-mcp
+
+# Test MCP protocol
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | ./xdebug-mcp
+```
+
+## Utility Tools
+
+### `./check-env`
+Environment verification script - checks Xdebug installation and configuration.
+```bash
+./check-env
+# Verifies: PHP version, Xdebug extension, required modes, port availability
+```
+
+### `./test-json`
+JSON validation and testing utility for MCP protocol compliance.
+```bash
+./test-json
+# Tests: JSON schema validation, MCP tool responses, output format compliance
+```
+
+### `./validate-profile-json`
+Profile data validation utility for ensuring schema compliance.
+```bash
+./validate-profile-json profile-data.json
+# Validates against: https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json
+```
+
+### `./autoload.php`
+Composer autoloader setup for standalone tool execution.
+
+### `./debug-server-mcp`
+Legacy debugging server utility (development purposes).
 
 ## Port Configuration
 
-- **Port 9003**: Reserved for IDEs (VS Code, PhpStorm)  
-- **Port 9004**: Xdebug MCP Server (conflict-free)
+**Port Usage:**
+- **Port 9003**: Reserved for IDEs (VS Code, PhpStorm)
+- **Port 9004**: Xdebug MCP Server (conflict-free with IDE debugging)
 
-## Usage Patterns
+## Tool Categories
 
-### Quick Analysis
+**Forward Trace Tools (AI-Optimized):**
+- `xdebug-debug` - Conditional breakpoints with step recording
+- `xdebug-trace` - Complete execution flow analysis
+- `xdebug-profile` - Performance bottleneck identification
+- `xdebug-coverage` - Test coverage verification
+
+**Integration Tools:**
+- `xdebug-mcp` - AI assistant protocol handler
+- `xdebug-phpunit` - Test framework integration
+
+**Support Tools:**
+- `check-env` - Environment validation
+- `test-json` - Protocol compliance testing
+- `validate-profile-json` - Schema validation
+
+## Common Usage Patterns
+
+### Bug Investigation
 ```bash
-# For general debugging
-./xdebug-trace script.php
-
-# For performance issues
-./xdebug-profile slow_script.php
-
-# For test coverage
-./xdebug-coverage test_suite.php
+# Catch specific problem conditions
+./xdebug-debug --break='ErrorHandler.php:45:$error_code>400' --exit-on-break -- php api.php
 ```
 
+### Performance Analysis  
+```bash
+# Profile slow endpoints
+./xdebug-profile --context="Payment processing bottleneck analysis" -- php checkout.php
+```
 
-### AI-Driven Analysis
-The MCP tools enable AI assistants to perform comprehensive PHP analysis:
-- Automatic tool selection based on analysis type
-- Runtime data collection and analysis
-- Non-invasive debugging without code modification
+### Test Coverage Verification
+```bash
+# Analyze test effectiveness
+./xdebug-coverage --context="AuthController test coverage" -- php vendor/bin/phpunit tests/AuthTest.php
+```
 
-## Tool Selection Guide
+### Complex Flow Understanding
+```bash
+# Trace execution paths
+./xdebug-trace --context="Multi-step form submission workflow" -- php form-handler.php
+```
 
-**For Bug Investigation**: Start with `xdebug-trace`, escalate to `xdebug-debug` if interactive control needed
-
-**For Performance Issues**: Use `xdebug-profile` for bottleneck identification
-
-**For Test Quality**: Use `xdebug-coverage` for coverage analysis
-
-**For AI Integration**: MCP tool (`xdebug-mcp`) provides seamless AI assistant integration
-
-## Architecture Notes
-
-- **Client-Server Model**: Xdebug acts as client, debug tools act as servers
-- **DBGp Protocol**: Standard debugging protocol over TCP sockets
-- **MCP Integration**: Enables AI assistants to perform runtime analysis
-- **Non-Invasive**: No source code modification required for analysis~~
+All tools support `--help` option for detailed usage information.
