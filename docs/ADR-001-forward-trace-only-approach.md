@@ -73,8 +73,9 @@ xdebug_set_breakpoint(...) → xdebug_step_into() → xdebug_get_variables()
 **After (Forward Trace)**:
 ```bash
 # Complete execution analysis with conditional capture
-/x-debug "script.php" "User.php:42:$user==null" "" "User validation analysis"
-```
+./bin/xdebug-debug script.php \
+  --breakpoint 'User.php:42:$user==null' \
+  --context 'User validation analysis'
 
 ## Consequences
 
