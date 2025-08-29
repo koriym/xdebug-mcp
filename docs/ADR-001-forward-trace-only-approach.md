@@ -25,8 +25,7 @@ We decided to **remove 8 interactive debugging tools** and focus exclusively on 
 - **Profiling**: `xdebug_start/stop_profiling`, `x-profile`
 - **Coverage**: `xdebug_start/stop_coverage`, `x-coverage`
 - **Diagnostics**: `xdebug_info`, memory usage, error collection
-- **AI-Optimized Commands**: `x-debug` (Forward Trace with breakpoints)
-
+- **AI-Optimized Commands**: `xdebug-debug` (Forward Trace with breakpoints)
 ## Rationale
 
 ### Why Interactive Debugging is Incompatible with AI
