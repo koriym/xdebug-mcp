@@ -182,15 +182,12 @@ var_dump($result);    // Repeat...</code></pre>
             <section>
                 <h2>See the Magic ✨</h2>
                 <div class="fragment">
-                    <h3>Old Way (2 hours of guessing)</h3>
-                    <pre><code class="php code-small">var_dump($cart);     // What's in cart?
-var_dump($discount); // Check discount
-var_dump($total);    // Why is this negative?!
-die("HERE");         // Getting desperate...
-// 2 hours later: still guessing...</code></pre>
+                    <h3>Traditional Approach</h3>
+                    <pre><code class="php code-small">// Multiple debugging attempts
+// Modify code, test, repeat...</code></pre>
                 </div>
                 <div class="fragment">
-                    <h3>New Way (30 seconds of evidence)</h3>
+                    <h3>ForwardTrace Approach</h3>
                     <pre><code class="bash code-small"># Conditional breakpoint: Stop when problem occurs
 ./vendor/bin/xdebug-debug --break=checkout.php:89:$total&lt;0 --exit-on-break
 
@@ -253,10 +250,10 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
             <section>
                 <h2>The Forward Trace Arsenal 🛠️</h2>
                 <div class="fragment">
-                    <p><strong>23 AI-Optimized Tools</strong> (streamlined from 43 after removing interactive debugging)</p>
+                    <p><strong>23 AI-Optimized Tools</strong> designed for complete runtime analysis</p>
                 </div>
                 <div class="fragment">
-                    <p><strong>ForwardTrace<span style="color: #ffd43b;">™️</span> (4):</strong> Complete execution flow with all data</p>
+                    <p><strong>ForwardTrace (4):</strong> Complete execution flow with all data</p>
                 </div>
                 <div class="fragment">
                     <p><strong>Performance Profiling (4):</strong> Microsecond-precision timing analysis</p>
@@ -270,6 +267,16 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                 <div class="fragment">
                     <p style="text-align: center; margin-top: 30px; color: #ffd43b;">
                         <strong>🎯 Fewer tools, smarter AI, better results</strong>
+                    </p>
+                </div>
+            </section>
+
+            <!-- Transition: Why This Approach? -->
+            <section>
+                <div style="text-align: center; margin-top: 100px;">
+                    <h2 style="color: #ffd43b; font-size: 2em;">But Why Does This Work?</h2>
+                    <p style="font-size: 1.5em; margin-top: 50px; color: #ffffff;">
+                        The answer lies in how humans and AI process information differently
                     </p>
                 </div>
             </section>
@@ -309,33 +316,29 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                 <h2>ForwardTrace<span style="color: #ffd43b;">™️</span>: AI-Native Debugging 🚀</h2>
                 <div style="display: flex; justify-content: space-between;">
                     <div class="fragment" style="width: 48%;">
-                        <h3 style="color: #ff6b6b;">Interactive Debugging ❌</h3>
-                        <p style="font-size: 0.8em; color: #ff6b6b; margin-bottom: 15px;">Human-Optimized (Fragmented)</p>
-                        <pre><code class="php" style="font-size: 0.5em;">// Step 1: Set breakpoint
-// Step 2: Run to breakpoint
-// Step 3: Inspect $user
+                        <h3 style="color: #ff6b6b;">Interactive Debugging</h3>
+                        <p style="font-size: 0.8em; color: #ff6b6b; margin-bottom: 15px;">📷 Photo Shooting<br>(Fragmented Snapshots)</p>
+                        <pre><code class="php" style="font-size: 0.6em;">// Step 1: Set breakpoint
+// Step 2: Run to breakpoint (📷 snapshot)
+// Step 3: Check $user variable
 // Step 4: Step into function
-// Step 5: Inspect $permissions
-// Step 6: Continue execution...
-// Step 7: Another breakpoint
-// Step 8: Check another variable
+// Step 5: Another snapshot (📷)
+// Step 6: Check another variable...
 
-// → Slow, fragmented understanding</code></pre>
+// → Multiple photos, missing the story</code></pre>
                     </div>
                     <div class="fragment" style="width: 48%;">
-                        <h3 style="color: #51cf66;">ForwardTrace<span style="color: #ffd43b;">™️</span> ✅</h3>
-                        <p style="font-size: 0.8em; color: #51cf66; margin-bottom: 15px;">AI-Optimized (Complete Crime Video 🎥)</p>
-                        <pre><code class="bash" style="font-size: 0.5em;"># Single command captures EVERYTHING
-./bin/x-debug --break="$user==null" --exit
+                        <h3 style="color: #51cf66;">ForwardTrace</h3>
+                        <p style="font-size: 0.8em; color: #51cf66; margin-bottom: 15px;">🎥 Video Shooting<br>(Complete Recording)</p>
+                        <pre><code class="bash" style="font-size: 0.6em;"># Single command records entire movie
+./bin/x-debug --break="script.php:10:$user==null" --steps=300 --exit-on-break
 
-# AI instantly sees:
-# ├─ Complete execution flow (224 calls)
-# ├─ All variable states at each step
-# ├─ Memory usage patterns
-# ├─ Exact failure conditions
-# └─ Root cause in seconds
-
-# → Fast, complete understanding</code></pre>
+# AI sees the complete 🎥 movie:
+# Step 1: $id = getUserId() → returns 42
+# Step 2: $user = findUser($id) → DB query success
+# Step 3: validateUser($user) → validation passes
+# Step 4: $permissions = getPermissions($user) → returns null
+# Step 5: checkAccess($permissions) → CRASH! null access</code></pre>
                     </div>
                 </div>
                 <div class="fragment" style="margin-top: 30px;">
@@ -347,31 +350,23 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
 
             <!-- Forward Trace Benefits -->
             <section>
-                <h2 style="font-size: 1.8em;">Why ForwardTrace<span style="color: #ffd43b;">™️</span> Works for AI 🤖</h2>
+                <h2 style="font-size: 1.8em;">Why ForwardTrace Works for AI 🤖</h2>
                 <div class="fragment">
                     <h3 style="font-size: 1.2em; margin: 10px 0;">Real Example: Authentication Bug</h3>
                     <div style="display: flex; justify-content: space-between; margin-top: 15px;">
                         <div style="width: 48%;">
                             <h4 style="color: #ff6b6b; font-size: 1em; margin: 8px 0;">Traditional Way (2 hours)</h4>
-                            <ul style="font-size: 0.65em; line-height: 1.3; margin: 8px 0;">
-                                <li>Set breakpoint at login</li>
-                                <li>Step through each line</li>
-                                <li>Check $user variable</li>
-                                <li>Step into validateUser()</li>
-                                <li>Check $permissions</li>
-                                <li>Miss the real issue...</li>
+                            <ul style="font-size: 0.7em; line-height: 1.4; margin: 8px 0;">
+                                <li>Set breakpoints, step through code</li>
+                                <li>Check variables one by one</li>
                                 <li style="color: #ff6b6b;">Still guessing after 2 hours</li>
                             </ul>
                         </div>
                         <div style="width: 48%;">
-                            <h4 style="color: #51cf66; font-size: 1em; margin: 8px 0;">ForwardTrace<span style="color: #ffd43b;">™️</span> (30 seconds)</h4>
-                            <ul style="font-size: 0.65em; line-height: 1.3; margin: 8px 0;">
-                                <li>Capture complete auth flow</li>
-                                <li>AI analyzes all 47 function calls</li>
-                                <li>Spots permission check called with null</li>
-                                <li>Traces back to session timeout</li>
-                                <li>Identifies exact line causing issue</li>
-                                <li style="color: #51cf66;">AI: "Fix line 234: add session validation"</li>
+                            <h4 style="color: #51cf66; font-size: 1em; margin: 8px 0;">ForwardTrace (30 seconds)</h4>
+                            <ul style="font-size: 0.7em; line-height: 1.4; margin: 8px 0;">
+                                <li>Capture complete execution flow</li>
+                                <li>AI analyzes all function calls instantly</li>
                                 <li style="color: #51cf66;">Problem solved in 30 seconds</li>
                             </ul>
                         </div>
@@ -395,9 +390,6 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                         <li class="fragment">Every developer has professional debugging workflows</li>
                         <li class="fragment">AI assistants routinely use execution traces</li>
                     </ul>
-                </div>
-                <div class="fragment" style="margin-top: 40px;">
-                    <p class="quote">"Every time AI uses xdebug_start_trace() instead of var_dump(), we're elevating the entire profession."</p>
                 </div>
             </section>
 
@@ -499,7 +491,7 @@ claude --continue "Analyze the profile data and suggest specific optimizations"<
 
             <!-- Forward Trace Debugging -->
             <section>
-                <h2>x-debug: ForwardTrace<span style="color: #ffd43b;">™️</span> with Conditional Breakpoints 🕵️</h2>
+                <h2>x-debug: ForwardTrace with Conditional Breakpoints 🕵️</h2>
                 <div class="fragment">
                     <pre><code class="bash"># AI-optimized debugging with complete context
 ./bin/xdebug-debug --break="User.php:42:$user==null" --exit-on-break -- php app.php
@@ -566,7 +558,7 @@ claude --continue "Analyze coverage gaps and suggest high-impact test cases"</co
                     <h3>4 Core AI-Optimized Tools:</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
                         <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
-                            <h4 style="color: #51cf66;">🔍 ForwardTrace<span style="color: #ffd43b;">™️</span></h4>
+                            <h4 style="color: #51cf66;">🔍 ForwardTrace</h4>
                             <p style="font-size: 0.8em;">Complete execution flow with all variable states</p>
                         </div>
                         <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
@@ -603,7 +595,11 @@ claude --continue "Analyze coverage gaps and suggest high-impact test cases"</co
                         <span class="badge badge-red">var_dump(): NO</span>
                         <span class="badge badge-red">Guesswork: NO</span>
                     </div>
-                    <p style="margin-top: 50px;"><em>— Akihito Koriyama (@koriym)</em></p>
+                    <p style="margin-top: 30px; font-size: 0.9em; color: #ffffff; opacity: 0.8;">
+                        Special thanks to <strong>Derick Rethans</strong> for creating Xdebug,
+                        the foundation that makes all of this possible.
+                    </p>
+                    <p style="margin-top: 30px;"><em>— Akihito Koriyama (@koriym)</em></p>
                 </div>
             </section>
 
