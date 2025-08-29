@@ -274,7 +274,7 @@ All Forward Trace tools output schema-validated JSON for consistent AI analysis:
   ],
   "trace": {
     "file": "/tmp/trace.1034012359.xt",
-    "content": ["Complete execution trace..."]
+    "content": ["..."]
   }
 }
 ```

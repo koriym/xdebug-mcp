@@ -199,7 +199,7 @@ Forward Trace's `--steps` mode creates a **variable evolution timeline**:
   ],
   "trace": {
     "file": "/tmp/trace.1034012359.xt",
-    "content": ["Complete execution trace..."]
+    "content": ["..."]
   }
 }
 ```
