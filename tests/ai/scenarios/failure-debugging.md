@@ -124,11 +124,6 @@ echo '{"jsonrpc":"2.0","id":6,"method":"prompts/get","params":{"name":"x-debug",
 **Objective**: Test debugging behavior with edge cases and unusual inputs.
 
 ### Test with Empty/Null Inputs
-```bash
-# Debug with unusual parameters
-echo '{"jsonrpc":"2.0","id":7,"method":"prompts/get","params":{"name":"x-trace","arguments":{"script":"","context":"Empty script test"}}}' | php bin/xdebug-mcp
-```
-
 ### Test with Very Long Context
 ```bash
 # Test with extremely long context string
