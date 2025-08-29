@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp;
 
-use InvalidArgumentException;
+use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use JsonSchema\Constraints\Constraint;
 use JsonSchema\Validator;
 use RuntimeException;
