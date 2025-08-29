@@ -1,0 +1,149 @@
+# PHP Xdebug MCP Server
+
+## Overview
+
+Universal PHP Xdebug MCP (Model Context Protocol) Server that enables AI assistants to perform comprehensive PHP application analysis and debugging through Forward Trace™ methodology.
+
+## Core Purpose
+
+- AI-Driven PHP Analysis: Enable AI assistants to understand PHP application behavior through runtime data
+- Universal Debugging Tool: Works with any PHP application, framework, or codebase without modification  
+- Forward Trace™: Record execution until problems occur, eliminating var_dump() debugging
+- Performance Profiling: Microsecond-precision timing and bottleneck identification
+- Code Coverage Analysis: Comprehensive test coverage reports and analysis
+- Runtime Debugging: Step through code execution, inspect variables, analyze call stacks
+
+## Key Features
+
+### Forward Trace™ Methodology
+- Conditional breakpoints: `--break='file.php:42:$user==null'`
+- Step recording: `--steps=100` captures variable evolution
+- Schema-validated JSON output for consistent AI analysis
+- Non-invasive: Zero code modifications required
+
+### AI Integration
+- 28+ MCP tools for debugging, profiling, coverage, and analysis
+- JSON-RPC 2.0 protocol for AI assistant communication
+- Claude Code slash commands: `/x-debug`, `/x-trace`, `/x-profile`
+- Automatic tool detection and usage by AI assistants
+
+### CLI Tools
+- `xdebug-debug`: Interactive debugging with conditional breakpoints
+- `xdebug-trace`: Complete execution flow tracing  
+- `xdebug-profile`: Performance profiling with AI analysis
+- `xdebug-coverage`: Code coverage with multiple report formats
+- `xdebug-phpunit`: PHPUnit integration with profiling/coverage
+- `xdebug-mcp`: MCP server entry point for AI integration
+
+## Architecture
+
+- **Port 9004**: Xdebug MCP Server (conflict-free with IDE debugging on 9003)
+- **PHP 8.0+**: Modern PHP with strict types and advanced features
+- **Socket communication**: Direct TCP connection with Xdebug daemon
+- **Schema validation**: All outputs conform to JSON schemas
+- **Modular design**: Separate debugging, profiling, coverage, and MCP concerns
+
+## Documentation
+
+### For AI Assistants
+- `docs/debug_guideline_for_ai.md`: Forward Trace™ methodology and automatic tool usage
+- `docs/schemas/`: JSON schemas for all tool outputs
+- `CLAUDE.md`: Complete AI integration instructions
+
+### For Human Developers  
+- `docs/debug_guideline_for_humans.md`: Practical workflows and team collaboration
+- `docs/TROUBLESHOOTING.md`: Common issues and comprehensive solutions
+- `bin/README.md`: CLI tools reference guide
+
+### Additional Resources
+- `docs/slide/`: Forward Trace Revolution interactive presentation
+- `docs/ADR-001-forward-trace-only-approach.md`: Architecture decisions
+- `claude_desktop_config_example.json`: Claude Desktop MCP configuration
+
+## Installation & Setup
+
+### Quick Start
+```bash
+# Install via Composer
+composer require koriym/xdebug-mcp
+
+# Enable AI debugging guide  
+echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
+
+# Configure Claude Desktop MCP
+# Copy claude_desktop_config_example.json and update paths
+
+# Test installation
+./vendor/bin/xdebug-mcp --help
+```
+
+### Requirements
+- PHP >= 8.0 with ext-sockets, ext-xml
+- Xdebug extension with debug,profile,coverage modes
+- For AI integration: Claude Desktop or compatible MCP client
+
+## Usage Examples
+
+### Conditional Debugging (Forward Trace™)
+```bash
+# Catch null user bugs automatically
+./bin/xdebug-debug --break='User.php:42:$user==null' --exit-on-break -- php app.php
+
+# Record 100 steps of variable evolution  
+./bin/xdebug-debug --break='loop.php:15' --steps=100 --json -- php script.php
+```
+
+### Performance Analysis
+```bash
+# Profile with AI analysis
+./bin/xdebug-profile --context="API performance investigation" -- php api.php
+
+# Generate schema-compliant JSON
+./bin/xdebug-profile --json -- php slow-endpoint.php
+```
+
+### AI Integration (Claude Code)
+```bash
+# Enable MCP server
+claude mcp add xdebug php "$(pwd)/bin/xdebug-mcp"
+
+# Use slash commands
+/x-debug "script.php" "script.php:42:$error!=null" "" "Debug error handling"
+/x-profile script="api.php" context="Performance analysis" 
+/x-trace script="workflow.php" context="Execution flow analysis"
+```
+
+## Testing & Development
+
+```bash
+# PHPUnit test suite
+vendor/bin/phpunit
+
+# Environment verification
+./bin/check-env
+
+# MCP protocol testing  
+composer test-json
+
+# Fake environment (no Xdebug required)
+php tests/fake/demo.php
+```
+
+## Key Differentiators
+
+### vs Traditional Debugging
+- **Traditional**: Add var_dump(), run, remove, repeat
+- **Forward Trace**: Single command captures complete problem context
+
+### vs IDE Debugging  
+- **IDE**: Manual stepping, session-bound, human-only
+- **Forward Trace**: Automated capture, schema-validated, AI-analyzable
+
+### vs Static Analysis
+- **Static**: Code structure analysis, educated guesses
+- **Forward Trace**: Actual runtime data, precise problem identification
+
+## GitHub Repository
+https://github.com/koriym/xdebug-mcp
+
+The project revolutionizes PHP debugging by providing AI assistants with comprehensive runtime analysis capabilities, eliminating traditional invasive debugging practices through Forward Trace™ methodology.
