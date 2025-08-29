@@ -24,30 +24,37 @@ Complete debugging principles template featuring:
 
 ## Deployment Strategies
 
-### System-Wide Installation
+### System-Wide Installation (Affects All Projects)
 
-Apply debugging principles to all PHP projects:
+⚠️ **Warning**: This applies PHP debugging to ALL projects (JavaScript, Python, etc.)
 
 ```bash
-# Install globally for all projects
+# Install globally for all projects (use with caution)
 mkdir -p ~/.claude
 cp templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/
 echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ~/.claude/CLAUDE.md
 ```
 
-Benefits: Claude automatically uses runtime analysis across every PHP project
+Benefits: Claude automatically uses runtime analysis across every project
+Drawbacks: Non-PHP projects also get PHP-specific debugging suggestions
 
-### Project-Specific Installation
+### Project-Specific Installation (Recommended)
 
-**Option 1: Direct Project Memory**
+**Standard Installation via Composer**
 ```bash
-# Replace project memory entirely
-cp templates/CLAUDE_DEBUG_PRINCIPLES.md ./CLAUDE.md
+# Install the package
+composer require koriym/xdebug-mcp
+
+# Enable AI debugging guide for this PHP project only
+echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
 ```
 
-**Option 2: Modular Integration (Recommended)**
+**Legacy Options (for development/testing)**
 ```bash
-# Add as importable module (preferred)
+# Option 1: Direct project memory (development only)
+cp templates/CLAUDE_DEBUG_PRINCIPLES.md ./CLAUDE.md
+
+# Option 2: Modular integration (development only)
 cp templates/CLAUDE_DEBUG_PRINCIPLES.md ./
 echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ./CLAUDE.md
 ```
@@ -143,28 +150,32 @@ git add CLAUDE.md  # Contains @CLAUDE_DEBUG_PRINCIPLES.md
 
 ## 🚀 Quick Start Guide
 
-### For PHP Developers (Personal Use)
+### For PHP Developers (Recommended)
 ```bash
-# 1. Install globally
-mkdir -p ~/.claude
-cp templates/CLAUDE_DEBUG_PRINCIPLES.md ~/.claude/
-echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> ~/.claude/CLAUDE.md
+# 1. Install via Composer in your PHP project
+composer require koriym/xdebug-mcp
 
-# 2. Test with any PHP file
-# Claude now automatically suggests: ./bin/xdebug-profile script.php
+# 2. Enable AI debugging guide
+echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
+
+# 3. Test - Claude now automatically uses Forward Trace tools
+# Example: Ask Claude to "analyze this PHP file"
+# Result: Claude runs ./bin/xdebug-profile instead of suggesting var_dump()
 ```
 
 ### For Development Teams
 ```bash
-# 1. Add to your project
-cp templates/CLAUDE_DEBUG_PRINCIPLES.md ./
-echo "@CLAUDE_DEBUG_PRINCIPLES.md" >> CLAUDE.md
+# 1. Add to your project via Composer
+composer require koriym/xdebug-mcp
 
-# 2. Add project-specific tools
-echo "- Use ./bin/xdebug-coverage for CI integration" >> CLAUDE.md
+# 2. Enable AI debugging guide for the team
+echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
 
-# 3. Commit to version control
-git add . && git commit -m "Add AI debugging revolution"
+# 3. Add project-specific notes (optional)
+echo "# Project Notes: Focus on authentication and payment debugging" >> CLAUDE.md
+
+# 4. Commit team configuration
+git add CLAUDE.md && git commit -m "Enable AI Forward Trace debugging"
 ```
 
 ## 📊 Impact Measurement

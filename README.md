@@ -61,10 +61,13 @@ claude --continue "Why does \$result sometimes become null?"
 ./vendor/bin/xdebug-debug --break='test.php:2' --steps=10 --json -- php test.php
 # Output: JSON with variable state at each of 10 steps
 
-# 6. Enable AI autonomous debugging
+# 6. Enable AI Forward Trace debugging (transforms AI behavior)
+echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
+
+# 7. Enable AI autonomous debugging with MCP
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
 
-# 7. Use AI-friendly slash commands (in Claude Code)
+# 8. Use AI-friendly slash commands (in Claude Code)
 /x-debug "test.php" "test.php:3:$result==null" "" "Investigate null result bug"
 /x-trace script="test.php" context="Trace execution flow"
 /x-profile script="test.php" context="Performance analysis"
@@ -429,6 +432,9 @@ cat /tmp/xdebug_trace_*.xt | less
 # Basic installation
 composer require koriym/xdebug-mcp
 
+# Enable AI Forward Trace methodology (transforms AI debugging behavior)
+echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
+
 # Enable AI autonomous debugging
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
 
@@ -515,8 +521,7 @@ Every bug has a story. Traditional debugging shows you the ending. Forward Trace
 |--------------------|------------|
 | **var_dump() Era** (1995) | See variable state |
 | **IDE Debugger Era** (2000) | Step through code |
-| **Trace Era** (2010) | Record everything |
-| **Forward Trace Era** (2025) | Record until problem |
+| **Forward Trace Era** (2025) | The era of sharing everything with AI |
 
 ## The Paradigm Shift
 
