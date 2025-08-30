@@ -90,6 +90,10 @@
       "format": "uri",
       "const": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json",
       "description": "This schema URL"
+    },
+    "🎯 analysis_context": {
+      "type": "string",
+      "description": "Optional contextual description for AI analysis (e.g., 'Performance analysis of user authentication')"
     }
   },
   "required": ["📁 profile_file", "📊 total_lines", "💾 file_size_bytes", "📏 file_size_formatted", "📈 functions_count", "👤 user_functions", "⚙️ internal_functions", "📞 total_calls", "🎯 bottleneck_functions", "💡 optimization_suggestions", "📋 specification", "🔗 schema"],

@@ -5,29 +5,50 @@ declare(strict_types=1);
 
 $projectRoot = require __DIR__ . '/autoload.php';
 
+// Parse --context= flag
+$context = null;
+foreach ($argv as $arg) {
+    if (str_starts_with($arg, '--context=')) {
+        $context = substr($arg, 10);
+        break;
+    }
+}
+
 // Show help if requested
-if (in_array('--help', $argv) || in_array('-h', $argv) || count($argv) < 4) {
-    fwrite(STDOUT, "Usage: xdebug-coverage -- php script.php [args...]\n");
+// Remove context flag from argv for argument counting
+$filteredArgv = [];
+foreach ($argv as $arg) {
+    if (!str_starts_with($arg, '--context=')) {
+        $filteredArgv[] = $arg;
+    }
+}
+
+if (in_array('--help', $argv) || in_array('-h', $argv) || count($filteredArgv) < 4) {
+    fwrite(STDOUT, "Usage: xdebug-coverage [--context=TEXT] -- php script.php [args...]\n");
     fwrite(STDOUT, "\n");
     fwrite(STDOUT, "Executes PHP scripts with Xdebug code coverage and provides coverage analysis.\n");
+    fwrite(STDOUT, "\n");
+    fwrite(STDOUT, "Options:\n");
+    fwrite(STDOUT, "  --context=TEXT   Add contextual description for AI analysis\n");
     fwrite(STDOUT, "\n");
     fwrite(STDOUT, "Examples:\n");
     fwrite(STDOUT, "  xdebug-coverage -- php test.php\n");
     fwrite(STDOUT, "  xdebug-coverage -- php -f script.php arg1 arg2\n");
+    fwrite(STDOUT, "  xdebug-coverage --context=\"Testing payment processing\" -- php PaymentTest.php\n");
     fwrite(STDOUT, "\n");
     exit(0);
 }
 
 // Skip: [0]="xdebug-coverage" [1]="--" [2]="php"
 // Validate target file is provided
-if (!isset($argv[3]) || empty($argv[3])) {
+if (!isset($filteredArgv[3]) || empty($filteredArgv[3])) {
     fwrite(STDERR, "Error: Target PHP file not specified\n");
-    fwrite(STDERR, "Usage: xdebug-coverage -- php <script.php> [args...]\n");
+    fwrite(STDERR, "Usage: xdebug-coverage [--context=TEXT] -- php <script.php> [args...]\n");
     fwrite(STDERR, "Example: xdebug-coverage -- php test.php\n");
     exit(1);
 }
 
-$targetFile = $argv[3];           // script.php
+$targetFile = $filteredArgv[3];           // script.php
 
 // Validate target file exists and is readable
 if (!file_exists($targetFile)) {
@@ -40,7 +61,7 @@ if (!is_readable($targetFile)) {
     exit(1);
 }
 
-$phpArgs = array_slice($argv, 4); // remaining args
+$phpArgs = array_slice($filteredArgv, 4); // remaining args
 
 // Create coverage scripts
 // NOTE: Cannot use register_shutdown_function() directly in current process
@@ -48,6 +69,7 @@ $phpArgs = array_slice($argv, 4); // remaining args
 $srcPath = $projectRoot . '/src';
 
 $prependScript = tempnam(sys_get_temp_dir(), 'coverage_start_');
+$contextValue = $context ?? 'null';
 file_put_contents($prependScript, "<?php
 xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_INCLUDE, ['$srcPath/']);
 xdebug_start_code_coverage(XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
@@ -77,6 +99,12 @@ register_shutdown_function(function() {
         ];
     }
     
+    // Add context if provided
+    \$contextValue = " . var_export($contextValue, true) . ";
+    if (\$contextValue !== null && \$contextValue !== 'null') {
+        \$result['analysis_context'] = \$contextValue;
+    }
+    
     echo json_encode(\$result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 });");
 
@@ -102,6 +130,11 @@ if (!empty($output)) {
 }
 
 unlink($prependScript);
+
+// Show context in output if provided
+if ($context !== null) {
+    fwrite(STDERR, "\n🎯 Context: $context\n");
+}
 
 // Always suggest Claude analysis for coverage data  
 fwrite(STDERR, "\n💡 Analyze with Claude Code:\n");
