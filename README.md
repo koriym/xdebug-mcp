@@ -557,7 +557,7 @@ MCP_DEBUG=1 php bin/xdebug-mcp  # Enable debug mode
 ## Resources
 
 **Essential Reading:**
-- 🎯 **[docs/debug-guidelines.md](docs/debug-guidelines.md)** - **READ FIRST** - Forward Trace methodology and best practices
+- 🎯 **[Forward Trace™ Debugging Guide](https://koriym.github.io/xdebug-mcp/debug-guidelines/)** - **READ FIRST** - Forward Trace methodology and best practices
 - 📖 [**MOTIVATION.md**](MOTIVATION.md) - Why we built this
 - 🔧 [**docs/TROUBLESHOOTING.md**](docs/TROUBLESHOOTING.md) - Common issues and solutions
 

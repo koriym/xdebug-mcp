@@ -29,7 +29,7 @@ Evaluate the MCP slash commands (`/x-debug`, `/x-trace`, `/x-profile`, `/x-cover
 ### Step 1: Launch Fresh Claude Session
 1. Open a **new Claude conversation** (critical - do not use existing context)
 2. Navigate to the xdebug-mcp project directory
-3. **Read docs/debug-guidelines.md FIRST** - Essential for understanding Forward Trace methodology
+3. **Read docs/debug_guideline_for_ai.md FIRST** - Essential for understanding Forward Trace methodology
 4. Then read the main README.md
 
 ### Step 2: Setup Attempt

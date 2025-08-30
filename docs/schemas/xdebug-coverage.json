@@ -64,7 +64,7 @@
     },
     {
       "rel": "debug-guide",
-      "href": "https://koriym.github.io/xdebug-mcp/debug-guidelines.md",
+      "href": "https://koriym.github.io/xdebug-mcp/debug_guideline_for_ai.md",
       "title": "PHP Xdebug Coverage Analysis Guidelines",
       "description": "Complete coverage analysis guide: test quality assessment, coverage gap identification, and improvement strategies"
     },
