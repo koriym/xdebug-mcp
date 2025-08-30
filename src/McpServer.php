@@ -42,6 +42,7 @@ use function is_string;
 use function json_decode;
 use function json_encode;
 use function json_last_error;
+use function ltrim;
 use function max;
 use function memory_get_peak_usage;
 use function memory_get_usage;
@@ -54,9 +55,11 @@ use function round;
 use function set_error_handler;
 use function str_contains;
 use function str_ends_with;
+use function str_getcsv;
 use function str_repeat;
 use function str_starts_with;
 use function strlen;
+use function strpos;
 use function substr;
 use function trim;
 use function uasort;
@@ -2000,15 +2003,8 @@ final class McpServer
 
             $cmd .= ' -- ' . escapeshellarg($script);
 
-            // Pre-check: Ensure script file exists before executing
-            if (! file_exists($script)) {
-                throw new FileNotFoundException('Script file not found: ' . $script);
-            }
-
-            // Pre-check: Ensure script file is readable
-            if (! is_readable($script)) {
-                throw new InvalidArgumentException('Permission denied accessing: ' . $script);
-            }
+            // Pre-check: Parse and validate script path if it's a file path
+            $this->validateScriptPath($script);
 
             // Execute command with environment
             $fullCmd = $envPrefix . $cmd;
@@ -2055,6 +2051,48 @@ final class McpServer
                     'message' => 'x-test execution failed: ' . $e->getMessage(),
                 ],
             ];
+        }
+    }
+
+    /**
+     * Validate script path from command string if applicable
+     *
+     * @param string $script Command string that may contain executable path
+     *
+     * @throws FileNotFoundException If script file doesn't exist
+     * @throws InvalidArgumentException If script file isn't readable
+     */
+    private function validateScriptPath(string $script): void
+    {
+        // Parse the first token from the command string
+        $tokens = str_getcsv($script, ' ');
+        if (empty($tokens)) {
+            return;
+        }
+
+        $firstToken = $tokens[0];
+
+        // Skip validation for bare commands (no path separators)
+        // These rely on PATH resolution: php, node, python, etc.
+        if (strpos($firstToken, '/') === false && strpos($firstToken, '\\') === false) {
+            return;
+        }
+
+        // For tokens that contain path separators, validate as file paths
+        $pathToCheck = $firstToken;
+
+        // Handle relative paths by checking if file exists relative to current directory
+        if (! str_starts_with($pathToCheck, '/')) {
+            $pathToCheck = './' . ltrim($pathToCheck, './');
+        }
+
+        // Check if the resolved path exists and is readable
+        if (! file_exists($pathToCheck)) {
+            throw new FileNotFoundException('Script file not found: ' . $pathToCheck);
+        }
+
+        if (! is_readable($pathToCheck)) {
+            throw new InvalidArgumentException('Permission denied accessing: ' . $pathToCheck);
         }
     }
 }
