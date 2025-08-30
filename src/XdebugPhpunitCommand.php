@@ -44,7 +44,7 @@ class XdebugPhpunitCommand
     private bool $verbose = false;
     private bool $dryRun = false;
     private string $mode = 'trace'; // trace or profile
-    private ?string $context = null;
+    private string|null $context = null;
 
     /** @var array<string> */
     private array $phpunitArgs = [];
@@ -123,6 +123,7 @@ class XdebugPhpunitCommand
                     if (empty($argv)) {
                         throw new RuntimeException('--context requires a value');
                     }
+
                     $this->context = array_shift($argv);
                     break;
 

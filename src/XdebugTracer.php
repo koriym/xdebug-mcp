@@ -20,6 +20,7 @@ use function file_get_contents;
 use function filemtime;
 use function filesize;
 use function fopen;
+use function getenv;
 use function glob;
 use function gzclose;
 use function gzdecode;
@@ -366,9 +367,9 @@ class XdebugTracer
 
     public function analyzeWithClaude(string $traceFile): void
     {
-        $localeOutput = shell_exec('defaults read -g AppleLocale') ?: '';
-        $lang = str_contains($localeOutput, 'ja_JP') ? 'Japanese' : 'English';
-        $claudePrompt = "Analyze this Xdebug trace file for execution flow, function calls, and debugging insights. Focus on identifying execution patterns, variable states, and potential issues: $traceFile. Answer in $lang.";
+        $languageOutput = shell_exec('defaults read -g AppleLanguages') ?: (getenv('LANG') ?: getenv('LC_ALL') ?: '');
+        $lang = str_contains($languageOutput, 'ja') ? 'Japanese' : 'English';
+        $claudePrompt = "Analyze this Xdebug trace file for code quality across multiple dimensions: 1) Security vulnerabilities (SQL injection, XSS, unsafe operations), 2) Performance efficiency (N+1 queries, redundant operations, memory leaks), 3) Code principles violations (DRY, SOLID, separation of concerns), 4) Execution patterns and debugging insights. Focus especially on AI/Junior developer code that passes tests but has hidden quality issues: $traceFile. Answer in $lang.";
 
         echo "\n🤖 Starting Claude Code analysis...\n";
         passthru('claude ' . escapeshellarg($claudePrompt));
