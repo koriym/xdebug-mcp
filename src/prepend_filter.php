@@ -13,7 +13,12 @@ if (extension_loaded('xdebug')) {
         ? dirname(__DIR__) . '/vendor/'           // Local development: src/../vendor/
         : dirname(__DIR__, 3) . '/vendor/';       // Composer install: vendor/koriym/xdebug-mcp/src -> project-root/vendor/
 
-    // Exclude vendor for both TRACING and COVERAGE
-    xdebug_set_filter(XDEBUG_FILTER_TRACING, XDEBUG_PATH_EXCLUDE, [$vendorPath]);
-    xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, [$vendorPath]);
+    // Allow disabling via env
+    if (getenv('XDEBUG_MCP_DISABLE_VENDOR_FILTER') === '1') {
+        return;
+    }
+    if (function_exists('xdebug_set_filter')) {
+        xdebug_set_filter(XDEBUG_FILTER_TRACING, XDEBUG_PATH_EXCLUDE, [$vendorPath]);
+        xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, [$vendorPath]);
+    }
 }
