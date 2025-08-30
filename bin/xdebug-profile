@@ -83,6 +83,7 @@ $xdebugOutputDir = ini_get('xdebug.output_dir') ?: '/tmp';
 echo "📊 Profiling: $targetFile\n";
 
 // Build command with Xdebug profiling enabled
+$prependFilter = __DIR__ . '/../src/prepend_filter.php';
 $xdebugOptions = [
     '-dzend_extension=xdebug',
     '-dxdebug.mode=profile',
@@ -90,6 +91,7 @@ $xdebugOptions = [
     "-dxdebug.output_dir={$xdebugOutputDir}",
     '-dxdebug.profiler_output_name=cachegrind.out.%%s',
     '-dxdebug.use_compression=0',  // Disable compression for easier parsing
+    "-dauto_prepend_file={$prependFilter}",
 ];
 
 // Combine all arguments

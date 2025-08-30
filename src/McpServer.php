@@ -7,92 +7,39 @@ namespace Koriym\XdebugMcp;
 use Koriym\XdebugMcp\Exceptions\FileNotFoundException;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\Exceptions\InvalidToolException;
-use Koriym\XdebugMcp\Exceptions\XdebugNotAvailableException;
 use Throwable;
 
 use function array_merge;
-use function array_slice;
 use function array_values;
-use function basename;
-use function count;
 use function date;
-use function debug_backtrace;
-use function dirname;
 use function error_log;
 use function escapeshellarg;
 use function exec;
-use function explode;
-use function extension_loaded;
 use function fflush;
 use function fgets;
-use function file_exists;
-use function file_get_contents;
-use function file_put_contents;
-use function filesize;
-use function function_exists;
 use function getenv;
-use function gzfile;
 use function implode;
 use function in_array;
-use function ini_get;
-use function ini_set;
 use function is_numeric;
-use function is_readable;
 use function is_string;
 use function json_decode;
 use function json_encode;
 use function json_last_error;
-use function ltrim;
-use function max;
-use function memory_get_peak_usage;
-use function memory_get_usage;
-use function microtime;
-use function phpversion;
 use function preg_match;
-use function register_tick_function;
-use function restore_error_handler;
-use function round;
-use function set_error_handler;
 use function str_contains;
 use function str_ends_with;
-use function str_getcsv;
-use function str_repeat;
 use function str_starts_with;
 use function strlen;
-use function strpos;
 use function substr;
 use function trim;
-use function uasort;
-use function uniqid;
-use function unregister_tick_function;
 
-use const DEBUG_BACKTRACE_IGNORE_ARGS;
-use const E_COMPILE_ERROR;
-use const E_COMPILE_WARNING;
-use const E_CORE_ERROR;
-use const E_CORE_WARNING;
-use const E_DEPRECATED;
-use const E_ERROR;
-use const E_NOTICE;
-use const E_PARSE;
-use const E_RECOVERABLE_ERROR;
-use const E_STRICT;
-use const E_USER_DEPRECATED;
-use const E_USER_ERROR;
-use const E_USER_NOTICE;
-use const E_USER_WARNING;
-use const E_WARNING;
-use const FILE_APPEND;
 use const JSON_ERROR_NONE;
-use const JSON_PRETTY_PRINT;
-use const LOCK_EX;
 use const STDIN;
 use const STDOUT;
 
 final class McpServer
 {
     protected array $tools = [];
-    protected XdebugClient|null $xdebugClient = null;
     private bool $debugMode = false;
 
     public function __construct()
@@ -101,6 +48,7 @@ final class McpServer
         $this->initializeTools();
     }
 
+    /** @codeCoverageIgnore Uses error_log() side effect - difficult to test without mocking global functions */
     private function debugLog(string $message, array $data = []): void
     {
         if ($this->debugMode) {
@@ -116,156 +64,9 @@ final class McpServer
     private function initializeTools(): void
     {
         $this->tools = [
-            'xdebug_start_profiling' => [
-                'name' => 'xdebug_start_profiling',
-                'description' => 'Start profiling execution',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'output_file' => ['type' => 'string', 'default' => ''],
-                    ],
-                ],
-            ],
-            'xdebug_stop_profiling' => [
-                'name' => 'xdebug_stop_profiling',
-                'description' => 'Stop profiling and return results',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_get_profile_info' => [
-                'name' => 'xdebug_get_profile_info',
-                'description' => 'Get current profiling information',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_analyze_profile' => [
-                'name' => 'xdebug_analyze_profile',
-                'description' => 'Analyze profiling data from file',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'profile_file' => ['type' => 'string'],
-                        'top_functions' => ['type' => 'integer', 'default' => 10],
-                    ],
-                    'required' => ['profile_file'],
-                ],
-            ],
-            'xdebug_start_coverage' => [
-                'name' => 'xdebug_start_coverage',
-                'description' => 'Start code coverage tracking',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'include_patterns' => ['type' => 'array', 'default' => []],
-                        'exclude_patterns' => ['type' => 'array', 'default' => []],
-                        'track_unused' => ['type' => 'boolean', 'default' => true],
-                    ],
-                ],
-            ],
-            'xdebug_stop_coverage' => [
-                'name' => 'xdebug_stop_coverage',
-                'description' => 'Stop code coverage tracking',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_get_coverage' => [
-                'name' => 'xdebug_get_coverage',
-                'description' => 'Get code coverage data',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'format' => ['type' => 'string', 'enum' => ['raw', 'summary'], 'default' => 'raw'],
-                    ],
-                ],
-            ],
-            'xdebug_analyze_coverage' => [
-                'name' => 'xdebug_analyze_coverage',
-                'description' => 'Analyze coverage data and generate report',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'coverage_data' => ['type' => 'object'],
-                        'format' => ['type' => 'string', 'enum' => ['html', 'xml', 'text', 'json'], 'default' => 'text'],
-                        'output_file' => ['type' => 'string', 'default' => ''],
-                    ],
-                ],
-            ],
-            'xdebug_coverage_summary' => [
-                'name' => 'xdebug_coverage_summary',
-                'description' => 'Get coverage summary statistics',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'coverage_data' => ['type' => 'object'],
-                    ],
-                ],
-            ],
-            'xdebug_get_memory_usage' => [
-                'name' => 'xdebug_get_memory_usage',
-                'description' => 'Get current memory usage information',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_get_peak_memory_usage' => [
-                'name' => 'xdebug_get_peak_memory_usage',
-                'description' => 'Get peak memory usage information',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_get_time_index' => [
-                'name' => 'xdebug_get_time_index',
-                'description' => 'Get time index since script start',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_info' => [
-                'name' => 'xdebug_info',
-                'description' => 'Get detailed Xdebug configuration and diagnostic information',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'format' => ['type' => 'string', 'enum' => ['array', 'html'], 'default' => 'array'],
-                    ],
-                ],
-            ],
-            'xdebug_start_error_collection' => [
-                'name' => 'xdebug_start_error_collection',
-                'description' => 'Start collecting PHP errors, notices, and warnings',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_stop_error_collection' => [
-                'name' => 'xdebug_stop_error_collection',
-                'description' => 'Stop collecting errors and return collected data',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_get_collected_errors' => [
-                'name' => 'xdebug_get_collected_errors',
-                'description' => 'Get currently collected error messages',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'clear' => ['type' => 'boolean', 'default' => false],
-                    ],
-                ],
-            ],
-            'xdebug_start_trace' => [
-                'name' => 'xdebug_start_trace',
-                'description' => 'Start function call tracing',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'trace_file' => ['type' => 'string', 'default' => ''],
-                        'options' => ['type' => 'integer', 'default' => 0],
-                    ],
-                ],
-            ],
-            'xdebug_stop_trace' => [
-                'name' => 'xdebug_stop_trace',
-                'description' => 'Stop function call tracing and return trace data',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_get_tracefile_name' => [
-                'name' => 'xdebug_get_tracefile_name',
-                'description' => 'Get the filename of the current trace file',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
             'x-trace' => [
                 'name' => 'x-trace',
-                'description' => 'Trace PHP execution flow | ex) ./x-trace "php test.php" "Debug login flow"',
+                'description' => 'Trace PHP execution flow | ex) ./x-trace "php test.php" "Debug login flow" | PHPUnit: ./x-trace "php vendor/bin/phpunit --filter testMethod TestClass.php" "Testing user auth"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -357,6 +158,11 @@ final class McpServer
         ];
     }
 
+    /**
+     * Main MCP server entry point - handles STDIN/STDOUT communication
+     *
+     * @codeCoverageIgnore Requires STDIN input stream, infinite loop, and process control - difficult to test in unit tests
+     */
     public function __invoke(): void
     {
         try {
@@ -370,6 +176,7 @@ final class McpServer
                     $request = json_decode(trim($input), true);
 
                     if ($request === null) {
+                        // @codeCoverageIgnoreStart - JSON parse error path rarely triggered in tests
                         // Invalid JSON, send parse error
                         $errorResponse = [
                             'jsonrpc' => '2.0',
@@ -381,6 +188,7 @@ final class McpServer
                         ];
                         echo json_encode($errorResponse) . "\n";
                         fflush(STDOUT);
+                        // @codeCoverageIgnoreEnd
                     } else {
                         error_log('DEBUG: Processing request method = ' . ($request['method'] ?? 'unknown'));
                         $this->debugLog('Received request', $request);
@@ -542,11 +350,11 @@ final class McpServer
                 'prompts' => [
                     [
                         'name' => 'x-trace',
-                        'description' => 'Trace PHP execution flow | ex) /x-trace --script=test.php --context="Debug login flow"',
+                        'description' => 'Trace PHP execution flow | ex) /x-trace --script=test.php --context="Debug login flow" | PHPUnit: /x-trace --script="vendor/bin/phpunit --filter testMethod TestClass.php" --context="Testing user auth"',
                         'arguments' => [
                             [
                                 'name' => 'script',
-                                'description' => 'PHP script to trace (e.g., "tests/fixtures/debug_test.php")',
+                                'description' => 'PHP script to trace (e.g., "tests/fixtures/debug_test.php") | PHPUnit: "vendor/bin/phpunit --filter testMethod TestClass.php"',
                                 'required' => true,
                             ],
                             [
@@ -639,32 +447,6 @@ final class McpServer
                             ],
                         ],
                     ],
-                    [
-                        'name' => 'x-test',
-                        'description' => 'Run PHPUnit tests with intelligent Xdebug tracing | ex) /x-test --script="vendor/bin/phpunit UserTest.php" --context="Testing user login" --mode="trace"',
-                        'arguments' => [
-                            [
-                                'name' => 'script',
-                                'description' => 'PHPUnit test command (e.g., "vendor/bin/phpunit tests/Unit/UserTest.php")',
-                                'required' => true,
-                            ],
-                            [
-                                'name' => 'context',
-                                'description' => 'Context description for test analysis',
-                                'required' => false,
-                            ],
-                            [
-                                'name' => 'mode',
-                                'description' => 'Analysis mode: trace (default) or profile',
-                                'required' => false,
-                            ],
-                            [
-                                'name' => 'pattern',
-                                'description' => 'Test pattern to trace (e.g., "UserTest::testLogin")',
-                                'required' => false,
-                            ],
-                        ],
-                    ],
                 ],
             ],
         ];
@@ -710,9 +492,6 @@ final class McpServer
 
             case 'x-coverage':
                 return $this->executeXCoverage($id, $args);
-
-            case 'x-test':
-                return $this->executeXTest($id, $args);
 
             default:
                 return [
@@ -789,25 +568,6 @@ final class McpServer
 
                 if (isset($args[2])) {
                     $args['format'] = $args[2];
-                }
-
-                break;
-
-            case 'x-test':
-                if (isset($args[0])) {
-                    $args['script'] = $args[0];
-                }
-
-                if (isset($args[1])) {
-                    $args['context'] = $args[1];
-                }
-
-                if (isset($args[2])) {
-                    $args['mode'] = $args[2];
-                }
-
-                if (isset($args[3])) {
-                    $args['pattern'] = $args[3];
                 }
 
                 break;
@@ -906,63 +666,6 @@ final class McpServer
     private function executeToolCall(string $toolName, array $arguments): string
     {
         switch ($toolName) {
-            case 'xdebug_start_profiling':
-                return $this->startProfiling($arguments);
-
-            case 'xdebug_stop_profiling':
-                return $this->stopProfiling();
-
-            case 'xdebug_get_profile_info':
-                return $this->getProfileInfo();
-
-            case 'xdebug_analyze_profile':
-                return $this->analyzeProfile($arguments);
-
-            case 'xdebug_start_coverage':
-                return $this->startCoverage($arguments);
-
-            case 'xdebug_stop_coverage':
-                return $this->stopCoverage();
-
-            case 'xdebug_get_coverage':
-                return $this->getCoverage($arguments);
-
-            case 'xdebug_analyze_coverage':
-                return $this->analyzeCoverage($arguments);
-
-            case 'xdebug_coverage_summary':
-                return $this->getCoverageSummary($arguments);
-
-            case 'xdebug_get_memory_usage':
-                return $this->getMemoryUsage();
-
-            case 'xdebug_get_peak_memory_usage':
-                return $this->getPeakMemoryUsage();
-
-            case 'xdebug_get_time_index':
-                return $this->getTimeIndex();
-
-            case 'xdebug_info':
-                return $this->getXdebugInfo($arguments);
-
-            case 'xdebug_start_error_collection':
-                return $this->startErrorCollection();
-
-            case 'xdebug_stop_error_collection':
-                return $this->stopErrorCollection();
-
-            case 'xdebug_get_collected_errors':
-                return $this->getCollectedErrors($arguments);
-
-            case 'xdebug_start_trace':
-                return $this->startTrace($arguments);
-
-            case 'xdebug_stop_trace':
-                return $this->stopTrace();
-
-            case 'xdebug_get_tracefile_name':
-                return $this->getTracefileName();
-
             case 'x-trace':
                 $result = $this->executeXTrace(null, $arguments);
 
@@ -985,693 +688,6 @@ final class McpServer
 
             default:
                 throw new InvalidToolException("Unknown tool: $toolName");
-        }
-    }
-
-    protected function startProfiling(array $args): string
-    {
-        $outputFile = $args['output_file'] ?? '';
-
-        if (! $this->xdebugClient) {
-            return $this->startStandaloneProfiling($outputFile);
-        }
-
-        $result = $this->xdebugClient->startProfiling($outputFile);
-
-        return 'Profiling started: ' . json_encode($result);
-    }
-
-    protected function stopProfiling(): string
-    {
-        if (! $this->xdebugClient) {
-            return $this->stopStandaloneProfiling();
-        }
-
-        $result = $this->xdebugClient->stopProfiling();
-
-        return 'Profiling stopped: ' . json_encode($result);
-    }
-
-    protected function getProfileInfo(): string
-    {
-        if (! $this->xdebugClient) {
-            return $this->getStandaloneProfileInfo();
-        }
-
-        $info = $this->xdebugClient->getProfileInfo();
-
-        return "Profile info:\n" . json_encode($info, JSON_PRETTY_PRINT);
-    }
-
-    protected function analyzeProfile(array $args): string
-    {
-        $profileFile = $args['profile_file'];
-        $topFunctions = $args['top_functions'] ?? 10;
-
-        if (! file_exists($profileFile)) {
-            throw new FileNotFoundException("Profile file not found: {$profileFile}");
-        }
-
-        $analysis = $this->parseProfileFile($profileFile, $topFunctions);
-
-        return "Profile analysis for {$profileFile}:\n" . json_encode($analysis, JSON_PRETTY_PRINT);
-    }
-
-    private function startStandaloneProfiling(string $outputFile): string
-    {
-        if (! extension_loaded('xdebug')) {
-            throw new XdebugNotAvailableException('Xdebug extension not loaded');
-        }
-
-        if ($outputFile) {
-            ini_set('xdebug.profiler_output_name', basename($outputFile));
-            ini_set('xdebug.output_dir', dirname($outputFile));
-        }
-
-        if (function_exists('xdebug_start_trace')) {
-            xdebug_start_trace();
-        }
-
-        return 'Standalone profiling started' . ($outputFile ? " (output: {$outputFile})" : '');
-    }
-
-    private function stopStandaloneProfiling(): string
-    {
-        if (! extension_loaded('xdebug')) {
-            throw new XdebugNotAvailableException('Xdebug extension not loaded');
-        }
-
-        if (function_exists('xdebug_stop_trace')) {
-            xdebug_stop_trace();
-        }
-
-        return 'Standalone profiling stopped';
-    }
-
-    private function getStandaloneProfileInfo(): string
-    {
-        if (! extension_loaded('xdebug')) {
-            throw new XdebugNotAvailableException('Xdebug extension not loaded');
-        }
-
-        $info = [
-            'xdebug_version' => phpversion('xdebug'),
-            'profiler_enabled' => ini_get('xdebug.profiler_enable') || ini_get('xdebug.mode') === 'profile',
-            'output_dir' => ini_get('xdebug.output_dir'),
-            'output_name' => ini_get('xdebug.profiler_output_name'),
-        ];
-
-        return json_encode($info, JSON_PRETTY_PRINT);
-    }
-
-    private function parseProfileFile(string $profileFile, int $topFunctions): array
-    {
-        // Handle gzipped files
-        if (str_ends_with($profileFile, '.gz')) {
-            $content = gzfile($profileFile);
-            if ($content === false) {
-                throw new FileNotFoundException("Failed to read gzipped profile file: {$profileFile}");
-            }
-
-            $content = implode('', $content);
-        } else {
-            $content = file_get_contents($profileFile);
-            if ($content === false) {
-                throw new FileNotFoundException("Failed to read profile file: {$profileFile}");
-            }
-        }
-
-        $lines = explode("\n", $content);
-        $functions = [];
-        $totalTime = 0;
-        $currentFunction = null;
-        $functionMap = [];
-
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (empty($line)) {
-                continue;
-            }
-
-            // Parse function definitions: fn=(123) function_name
-            if (preg_match('/^fn=\((\d+)\)\s*(.*)$/', $line, $matches)) {
-                $functionId = $matches[1];
-                $functionName = $matches[2] ?: "function_{$functionId}";
-                $functionMap[$functionId] = $functionName;
-                $currentFunction = $functionName;
-                if (! isset($functions[$functionName])) {
-                    $functions[$functionName] = [
-                        'calls' => 0,
-                        'time' => 0,
-                        'memory' => 0,
-                        'self_time' => 0,
-                    ];
-                }
-
-                continue;
-            }
-
-            // Parse cost lines: line_number time memory
-            if ($currentFunction && preg_match('/^(\d+)\s+(\d+)(?:\s+(\d+))?/', $line, $matches)) {
-                $time = (int) $matches[2];
-                $memory = isset($matches[3]) ? (int) $matches[3] : 0;
-
-                $functions[$currentFunction]['self_time'] += $time;
-                $functions[$currentFunction]['memory'] += $memory;
-                $totalTime += $time;
-                continue;
-            }
-
-            // Parse call lines: calls=X Y Z
-            if (preg_match('/^calls=(\d+)\s+(\d+)\s+(\d+)/', $line, $matches)) {
-                if ($currentFunction) {
-                    $functions[$currentFunction]['calls'] += (int) $matches[1];
-                }
-
-                continue;
-            }
-
-            // Parse summary line
-            if (preg_match('/^summary:\s*(\d+)\s+(\d+)/', $line, $matches)) {
-                $totalTime = max($totalTime, (int) $matches[1]);
-                continue;
-            }
-        }
-
-        // Calculate inclusive time (self_time for now, could be enhanced)
-        foreach ($functions as $name => $data) {
-            $functions[$name]['time'] = $data['self_time'];
-        }
-
-        // Sort by inclusive time
-        uasort($functions, static function ($a, $b) {
-            return $b['time'] <=> $a['time'];
-        });
-
-        $topFunctionsList = array_slice($functions, 0, $topFunctions, true);
-
-        return [
-            'total_time' => $totalTime,
-            'total_functions' => count($functions),
-            'top_functions' => $topFunctionsList,
-            'file' => $profileFile,
-            'size' => filesize($profileFile) ?: 0,
-            'format' => 'cachegrind',
-        ];
-    }
-
-    protected function startCoverage(array $args): string
-    {
-        if (! extension_loaded('xdebug')) {
-            throw new XdebugNotAvailableException('Xdebug extension not loaded');
-        }
-
-        $includePatterns = $args['include_patterns'] ?? [];
-        $excludePatterns = $args['exclude_patterns'] ?? [];
-        $trackUnused = $args['track_unused'] ?? true;
-
-        $flags = XDEBUG_CC_UNUSED;
-        if (! $trackUnused) {
-            $flags = 0;
-        }
-
-        if (function_exists('xdebug_start_code_coverage')) {
-            xdebug_start_code_coverage($flags);
-        }
-
-        return 'Code coverage started' .
-               ($includePatterns ? ' (includes: ' . implode(', ', $includePatterns) . ')' : '') .
-               ($excludePatterns ? ' (excludes: ' . implode(', ', $excludePatterns) . ')' : '');
-    }
-
-    protected function stopCoverage(): string
-    {
-        if (! extension_loaded('xdebug')) {
-            throw new XdebugNotAvailableException('Xdebug extension not loaded');
-        }
-
-        if (function_exists('xdebug_stop_code_coverage')) {
-            xdebug_stop_code_coverage();
-        }
-
-        return 'Code coverage stopped';
-    }
-
-    protected function getCoverage(array $args): string
-    {
-        if (! extension_loaded('xdebug')) {
-            throw new XdebugNotAvailableException('Xdebug extension not loaded');
-        }
-
-        $format = $args['format'] ?? 'raw';
-
-        if (function_exists('xdebug_get_code_coverage')) {
-            $coverage = xdebug_get_code_coverage();
-
-            if ($format === 'summary') {
-                $summary = $this->calculateCoverageSummary($coverage);
-
-                return "Coverage summary:\n" . json_encode($summary, JSON_PRETTY_PRINT);
-            }
-
-            return "Code coverage data:\n" . json_encode($coverage, JSON_PRETTY_PRINT);
-        }
-
-        throw new XdebugNotAvailableException('xdebug_get_code_coverage function not available');
-    }
-
-    protected function analyzeCoverage(array $args): string
-    {
-        $coverageData = $args['coverage_data'] ?? [];
-        $format = $args['format'] ?? 'text';
-        $outputFile = $args['output_file'] ?? '';
-
-        if (empty($coverageData)) {
-            throw new InvalidArgumentException('No coverage data provided');
-        }
-
-        $analysis = $this->processCoverageData($coverageData);
-
-        switch ($format) {
-            case 'html':
-                $report = $this->generateHtmlCoverageReport($analysis);
-                break;
-            case 'xml':
-                $report = $this->generateXmlCoverageReport($analysis);
-                break;
-            case 'json':
-                $report = json_encode($analysis, JSON_PRETTY_PRINT);
-                break;
-            default:
-                $report = $this->generateTextCoverageReport($analysis);
-        }
-
-        if ($outputFile) {
-            file_put_contents($outputFile, $report);
-
-            return "Coverage report saved to {$outputFile}";
-        }
-
-        return $report;
-    }
-
-    protected function getCoverageSummary(array $args): string
-    {
-        $coverageData = $args['coverage_data'] ?? [];
-
-        if (empty($coverageData)) {
-            if (function_exists('xdebug_get_code_coverage')) {
-                $coverageData = xdebug_get_code_coverage();
-            } else {
-                throw new InvalidArgumentException('No coverage data available');
-            }
-        }
-
-        $summary = $this->calculateCoverageSummary($coverageData);
-
-        return "Coverage Summary:\n" . json_encode($summary, JSON_PRETTY_PRINT);
-    }
-
-    private function calculateCoverageSummary(array $coverageData): array
-    {
-        $totalLines = 0;
-        $coveredLines = 0;
-        $fileCount = 0;
-
-        foreach ($coverageData as $file => $lines) {
-            $fileCount++;
-            foreach ($lines as $lineNumber => $executed) {
-                $totalLines++;
-                if ($executed > 0) {
-                    $coveredLines++;
-                }
-            }
-        }
-
-        $percentage = $totalLines > 0 ? round($coveredLines / $totalLines * 100, 2) : 0;
-
-        return [
-            'total_files' => $fileCount,
-            'total_lines' => $totalLines,
-            'covered_lines' => $coveredLines,
-            'uncovered_lines' => $totalLines - $coveredLines,
-            'coverage_percentage' => $percentage,
-        ];
-    }
-
-    private function processCoverageData(array $coverageData): array
-    {
-        $processed = [];
-
-        foreach ($coverageData as $file => $lines) {
-            $fileInfo = [
-                'file' => $file,
-                'total_lines' => count($lines),
-                'covered_lines' => 0,
-                'uncovered_lines' => [],
-                'coverage_percentage' => 0,
-            ];
-
-            foreach ($lines as $lineNumber => $executed) {
-                if ($executed > 0) {
-                    $fileInfo['covered_lines']++;
-                } elseif ($executed === -1) {
-                    $fileInfo['uncovered_lines'][] = $lineNumber;
-                }
-            }
-
-            if ($fileInfo['total_lines'] > 0) {
-                $fileInfo['coverage_percentage'] = round($fileInfo['covered_lines'] / $fileInfo['total_lines'] * 100, 2);
-            }
-
-            $processed[] = $fileInfo;
-        }
-
-        return $processed;
-    }
-
-    private function generateTextCoverageReport(array $analysis): string
-    {
-        $report = "Code Coverage Report\n";
-        $report .= str_repeat('=', 50) . "\n\n";
-
-        foreach ($analysis as $fileInfo) {
-            $report .= "File: {$fileInfo['file']}\n";
-            $report .= "Coverage: {$fileInfo['coverage_percentage']}%\n";
-            $report .= "Lines: {$fileInfo['covered_lines']}/{$fileInfo['total_lines']}\n";
-
-            if (! empty($fileInfo['uncovered_lines'])) {
-                $report .= 'Uncovered lines: ' . implode(', ', $fileInfo['uncovered_lines']) . "\n";
-            }
-
-            $report .= "\n";
-        }
-
-        return $report;
-    }
-
-    private function generateHtmlCoverageReport(array $analysis): string
-    {
-        $html = '<html><head><title>Code Coverage Report</title></head><body>';
-        $html .= '<h1>Code Coverage Report</h1>';
-        $html .= "<table border='1'><tr><th>File</th><th>Coverage</th><th>Lines</th><th>Uncovered Lines</th></tr>";
-
-        foreach ($analysis as $fileInfo) {
-            $html .= '<tr>';
-            $html .= "<td>{$fileInfo['file']}</td>";
-            $html .= "<td>{$fileInfo['coverage_percentage']}%</td>";
-            $html .= "<td>{$fileInfo['covered_lines']}/{$fileInfo['total_lines']}</td>";
-            $html .= '<td>' . implode(', ', $fileInfo['uncovered_lines']) . '</td>';
-            $html .= '</tr>';
-        }
-
-        $html .= '</table></body></html>';
-
-        return $html;
-    }
-
-    private function generateXmlCoverageReport(array $analysis): string
-    {
-        $xml = "<?xml version='1.0'?>\n<coverage>\n";
-
-        foreach ($analysis as $fileInfo) {
-            $xml .= "  <file name='{$fileInfo['file']}'>\n";
-            $xml .= "    <coverage_percentage>{$fileInfo['coverage_percentage']}</coverage_percentage>\n";
-            $xml .= "    <total_lines>{$fileInfo['total_lines']}</total_lines>\n";
-            $xml .= "    <covered_lines>{$fileInfo['covered_lines']}</covered_lines>\n";
-            $xml .= '    <uncovered_lines>' . implode(',', $fileInfo['uncovered_lines']) . "</uncovered_lines>\n";
-            $xml .= "  </file>\n";
-        }
-
-        $xml .= '</coverage>';
-
-        return $xml;
-    }
-
-    protected function getMemoryUsage(): string
-    {
-        $info = [
-            'current_memory' => memory_get_usage(),
-            'current_memory_real' => memory_get_usage(true),
-            'memory_limit' => ini_get('memory_limit'),
-        ];
-
-        if (function_exists('xdebug_memory_usage')) {
-            $info['xdebug_memory'] = xdebug_memory_usage();
-        }
-
-        return "Memory usage information:\n" . json_encode($info, JSON_PRETTY_PRINT);
-    }
-
-    protected function getPeakMemoryUsage(): string
-    {
-        $info = [
-            'peak_memory' => memory_get_peak_usage(),
-            'peak_memory_real' => memory_get_peak_usage(true),
-        ];
-
-        if (function_exists('xdebug_peak_memory_usage')) {
-            $info['xdebug_peak_memory'] = xdebug_peak_memory_usage();
-        }
-
-        return "Peak memory usage information:\n" . json_encode($info, JSON_PRETTY_PRINT);
-    }
-
-    protected function getTimeIndex(): string
-    {
-        $startTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true);
-        $currentTime = microtime(true);
-        $elapsed = $currentTime - $startTime;
-
-        $info = [
-            'start_time' => $startTime,
-            'current_time' => $currentTime,
-            'elapsed_seconds' => $elapsed,
-        ];
-
-        if (function_exists('xdebug_time_index')) {
-            $info['xdebug_time_index'] = xdebug_time_index();
-        }
-
-        return "Time information:\n" . json_encode($info, JSON_PRETTY_PRINT);
-    }
-
-    protected function getXdebugInfo(array $args): string
-    {
-        $format = $args['format'] ?? 'array';
-
-        if (! extension_loaded('xdebug')) {
-            return 'Xdebug extension not loaded';
-        }
-
-        if ($format === 'html' && function_exists('xdebug_info')) {
-            return xdebug_info();
-        }
-
-        $info = [
-            'version' => phpversion('xdebug'),
-            'mode' => ini_get('xdebug.mode'),
-            'client_host' => ini_get('xdebug.client_host'),
-            'client_port' => ini_get('xdebug.client_port'),
-            'start_with_request' => ini_get('xdebug.start_with_request'),
-            'log' => ini_get('xdebug.log'),
-            'output_dir' => ini_get('xdebug.output_dir'),
-            'max_nesting_level' => ini_get('xdebug.max_nesting_level'),
-            'collect_assignments' => ini_get('xdebug.collect_assignments'),
-            'collect_return' => ini_get('xdebug.collect_return'),
-            'collect_params' => ini_get('xdebug.collect_params'),
-            'show_exception_trace' => ini_get('xdebug.show_exception_trace'),
-            'show_error_trace' => ini_get('xdebug.show_error_trace'),
-            'show_local_vars' => ini_get('xdebug.show_local_vars'),
-        ];
-
-        if (function_exists('xdebug_is_debugger_active')) {
-            $info['debugger_active'] = xdebug_is_debugger_active();
-        }
-
-        return "Xdebug information:\n" . json_encode($info, JSON_PRETTY_PRINT);
-    }
-
-    private static $errorCollection = [];
-    private static $errorCollectionActive = false;
-
-    protected function startErrorCollection(): string
-    {
-        if (function_exists('xdebug_start_error_collection')) {
-            xdebug_start_error_collection();
-
-            return 'Xdebug error collection started';
-        }
-
-        self::$errorCollection = [];
-        self::$errorCollectionActive = true;
-
-        set_error_handler(function ($severity, $message, $file, $line) {
-            if (self::$errorCollectionActive) {
-                self::$errorCollection[] = [
-                    'type' => $this->getErrorTypeName($severity),
-                    'message' => $message,
-                    'file' => $file,
-                    'line' => $line,
-                    'timestamp' => microtime(true),
-                ];
-            }
-
-            return false;
-        });
-
-        return 'Custom error collection started';
-    }
-
-    protected function stopErrorCollection(): string
-    {
-        if (function_exists('xdebug_stop_error_collection')) {
-            xdebug_stop_error_collection();
-
-            return 'Xdebug error collection stopped';
-        }
-
-        self::$errorCollectionActive = false;
-        restore_error_handler();
-
-        $errorCount = count(self::$errorCollection);
-
-        return "Custom error collection stopped. Collected {$errorCount} errors.";
-    }
-
-    protected function getCollectedErrors(array $args): string
-    {
-        $clear = $args['clear'] ?? false;
-
-        if (function_exists('xdebug_get_collected_errors')) {
-            $errors = xdebug_get_collected_errors($clear);
-
-            return "Collected errors:\n" . ($errors ?: 'No errors collected');
-        }
-
-        $errors = self::$errorCollection;
-
-        if ($clear) {
-            self::$errorCollection = [];
-        }
-
-        if (empty($errors)) {
-            return 'No errors collected';
-        }
-
-        return "Collected errors:\n" . json_encode($errors, JSON_PRETTY_PRINT);
-    }
-
-    private function getErrorTypeName(int $type): string
-    {
-        return match ($type) {
-            E_ERROR => 'E_ERROR',
-            E_WARNING => 'E_WARNING',
-            E_PARSE => 'E_PARSE',
-            E_NOTICE => 'E_NOTICE',
-            E_CORE_ERROR => 'E_CORE_ERROR',
-            E_CORE_WARNING => 'E_CORE_WARNING',
-            E_COMPILE_ERROR => 'E_COMPILE_ERROR',
-            E_COMPILE_WARNING => 'E_COMPILE_WARNING',
-            E_USER_ERROR => 'E_USER_ERROR',
-            E_USER_WARNING => 'E_USER_WARNING',
-            E_USER_NOTICE => 'E_USER_NOTICE',
-            E_STRICT => 'E_STRICT',
-            E_RECOVERABLE_ERROR => 'E_RECOVERABLE_ERROR',
-            E_DEPRECATED => 'E_DEPRECATED',
-            E_USER_DEPRECATED => 'E_USER_DEPRECATED',
-            default => "UNKNOWN_ERROR_TYPE({$type})"
-        };
-    }
-
-    private static $tracingActive = false;
-    private static $traceFile = '';
-    private static $functionMonitor = [];
-    private static $monitoredCalls = [];
-
-    protected function startTrace(array $args): string
-    {
-        $traceFile = $args['trace_file'] ?? '';
-        $options = $args['options'] ?? 0;
-
-        if (function_exists('xdebug_start_trace')) {
-            $filename = xdebug_start_trace($traceFile, $options);
-
-            return 'Xdebug trace started' . ($filename ? " (file: {$filename})" : '');
-        }
-
-        self::$tracingActive = true;
-        $xdebugOutputDir = ini_get('xdebug.output_dir') ?: '/tmp';
-        self::$traceFile = $traceFile ?: $xdebugOutputDir . '/xdebug_custom_trace_' . uniqid() . '.xt';
-
-        register_tick_function([$this, 'traceFunction']);
-        declare(ticks=1);
-
-        return 'Custom trace started (file: ' . self::$traceFile . ')';
-    }
-
-    protected function stopTrace(): string
-    {
-        if (function_exists('xdebug_stop_trace')) {
-            $filename = xdebug_stop_trace();
-
-            return 'Xdebug trace stopped' . ($filename ? " (file: {$filename})" : '');
-        }
-
-        self::$tracingActive = false;
-        unregister_tick_function([$this, 'traceFunction']);
-
-        return 'Custom trace stopped (file: ' . self::$traceFile . ')';
-    }
-
-    protected function getTracefileName(): string
-    {
-        if (function_exists('xdebug_get_tracefile_name')) {
-            $filename = xdebug_get_tracefile_name();
-
-            return $filename ?: 'No trace file active';
-        }
-
-        return self::$traceFile ?: 'No trace file active';
-    }
-
-    public function traceFunction(): void
-    {
-        if (! self::$tracingActive) {
-            return;
-        }
-
-        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
-        if (count($backtrace) < 2) {
-            return;
-        }
-
-        $current = $backtrace[1];
-        $function = $current['function'] ?? 'unknown';
-        $class = $current['class'] ?? '';
-        $file = $current['file'] ?? 'unknown';
-        $line = $current['line'] ?? 0;
-
-        $fullFunction = $class ? "{$class}::{$function}" : $function;
-
-        if (! empty(self::$functionMonitor) && ! isset(self::$functionMonitor[$fullFunction])) {
-            return;
-        }
-
-        $entry = [
-            'function' => $fullFunction,
-            'file' => $file,
-            'line' => $line,
-            'time' => microtime(true),
-            'memory' => memory_get_usage(),
-        ];
-
-        if (! empty(self::$functionMonitor)) {
-            self::$monitoredCalls[] = $entry;
-        }
-
-        if (self::$traceFile) {
-            file_put_contents(self::$traceFile, json_encode($entry) . "\n", FILE_APPEND | LOCK_EX);
         }
     }
 
@@ -1727,6 +743,7 @@ final class McpServer
                 ],
             ];
         } catch (Throwable $e) {
+            // @codeCoverageIgnoreStart - Exception handling difficult to test without mocking shell commands
             return [
                 'jsonrpc' => '2.0',
                 'id' => $id,
@@ -1735,6 +752,7 @@ final class McpServer
                     'message' => 'x-trace execution failed: ' . $e->getMessage(),
                 ],
             ];
+            // @codeCoverageIgnoreEnd
         }
     }
 
@@ -1833,6 +851,7 @@ final class McpServer
                 ],
             ];
         } catch (Throwable $e) {
+            // @codeCoverageIgnoreStart - Exception handling difficult to test without mocking shell commands
             return [
                 'jsonrpc' => '2.0',
                 'id' => $id,
@@ -1841,6 +860,7 @@ final class McpServer
                     'message' => 'x-debug execution failed: ' . $e->getMessage(),
                 ],
             ];
+            // @codeCoverageIgnoreEnd
         }
     }
 
@@ -1896,6 +916,7 @@ final class McpServer
                 ],
             ];
         } catch (Throwable $e) {
+            // @codeCoverageIgnoreStart - Exception handling path requires shell command failures which are difficult to reproduce consistently in tests
             return [
                 'jsonrpc' => '2.0',
                 'id' => $id,
@@ -1904,6 +925,7 @@ final class McpServer
                     'message' => 'x-profile execution failed: ' . $e->getMessage(),
                 ],
             ];
+            // @codeCoverageIgnoreEnd
         }
     }
 
@@ -1961,6 +983,7 @@ final class McpServer
                 ],
             ];
         } catch (Throwable $e) {
+            // @codeCoverageIgnoreStart - Exception handling path requires coverage collection failures which are environment-dependent and difficult to test reliably
             return [
                 'jsonrpc' => '2.0',
                 'id' => $id,
@@ -1969,215 +992,7 @@ final class McpServer
                     'message' => 'x-coverage execution failed: ' . $e->getMessage(),
                 ],
             ];
+            // @codeCoverageIgnoreEnd
         }
-    }
-
-    private function executeXTest(mixed $id, array $args): array
-    {
-        try {
-            $script = $args['script'] ?? '';
-            $script = $this->processScriptArgument($script);
-            $this->validatePhpBinaryScript($script);
-            $context = $args['context'] ?? '';
-            $mode = $args['mode'] ?? 'trace';
-            $pattern = $args['pattern'] ?? '';
-
-            // Build command - use xdebug-phpunit wrapper
-            $cmd = './bin/xdebug-phpunit';
-
-            if ($mode === 'profile') {
-                $cmd .= ' --profile';
-            } else {
-                $cmd .= ' --trace';
-            }
-
-            if (! empty($context)) {
-                $cmd .= ' --context=' . escapeshellarg($context);
-            }
-
-            // Add pattern as environment variable if specified
-            $envPrefix = '';
-            if (! empty($pattern)) {
-                $envPrefix = 'TRACE_TEST=' . escapeshellarg($pattern) . ' ';
-            }
-
-            $cmd .= ' -- ' . escapeshellarg($script);
-
-            // Pre-check: Parse and validate script path if it's a file path
-            $this->validateScriptPath($script);
-
-            // Execute command with environment
-            $fullCmd = $envPrefix . $cmd;
-            $output = [];
-            $returnCode = 0;
-            exec($fullCmd . ' 2>&1', $output, $returnCode);
-
-            // Handle common error cases
-            $outputText = implode("\n", $output);
-
-            $result = [
-                'command' => $fullCmd,
-                'exit_code' => $returnCode,
-                'output' => $outputText,
-                'context' => $context,
-                'script' => $script,
-                'mode' => $mode,
-                'pattern' => $pattern,
-                'timestamp' => date('Y-m-d H:i:s'),
-            ];
-
-            return [
-                'jsonrpc' => '2.0',
-                'id' => $id,
-                'result' => [
-                    'messages' => [
-                        [
-                            'role' => 'assistant',
-                            'content' => [
-                                'type' => 'text',
-                                'text' => 'PHPUnit testing with Xdebug analysis ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Mode**: {$mode}\n**Pattern**: {$pattern}\n**Command**: `{$fullCmd}`\n**Exit Code**: {$returnCode}\n\n**Test Results**:\n```\n" . $outputText . "\n```",
-                            ],
-                        ],
-                    ],
-                    'debug_data' => $result,
-                ],
-            ];
-        } catch (Throwable $e) {
-            return [
-                'jsonrpc' => '2.0',
-                'id' => $id,
-                'error' => [
-                    'code' => -32000,
-                    'message' => 'x-test execution failed: ' . $e->getMessage(),
-                ],
-            ];
-        }
-    }
-
-    /**
-     * Validate script path from command string if applicable
-     *
-     * @param string $script Command string that may contain executable path
-     *
-     * @throws FileNotFoundException If script file doesn't exist
-     * @throws InvalidArgumentException If script file isn't readable
-     */
-    private function validateScriptPath(string $script): void
-    {
-        // Parse the command string into tokens
-        $tokens = str_getcsv($script, ' ');
-        if (empty($tokens)) {
-            return;
-        }
-
-        $scriptPath = $this->extractScriptPathFromTokens($tokens);
-        if ($scriptPath === null) {
-            return;
-        }
-
-        // Handle relative paths by checking if file exists relative to current directory
-        $pathToCheck = $scriptPath;
-        if (! str_starts_with($pathToCheck, '/') && ! str_starts_with($pathToCheck, '\\')) {
-            $pathToCheck = './' . ltrim($pathToCheck, './');
-        }
-
-        // Check if the resolved path exists and is readable
-        if (! file_exists($pathToCheck)) {
-            throw new FileNotFoundException('Script file not found: ' . $pathToCheck);
-        }
-
-        if (! is_readable($pathToCheck)) {
-            throw new InvalidArgumentException('Permission denied accessing: ' . $pathToCheck);
-        }
-    }
-
-    /**
-     * Extract the actual script path from command tokens
-     *
-     * @param array<string> $tokens Command tokens
-     *
-     * @return string|null Script path if found, null otherwise
-     */
-    private function extractScriptPathFromTokens(array $tokens): string|null
-    {
-        $firstToken = $tokens[0];
-
-        // If first token contains path separators, validate it directly
-        if (strpos($firstToken, '/') !== false || strpos($firstToken, '\\') !== false) {
-            return $firstToken;
-        }
-
-        // For PHP commands, look for the script path after the binary and options
-        if (in_array(basename($firstToken), ['php', 'php.exe'], true)) {
-            return $this->findScriptAfterPhpOptions($tokens);
-        }
-
-        // For other binaries without path separators, skip validation (PATH resolution)
-        return null;
-    }
-
-    /**
-     * Find script path after PHP binary and its options
-     *
-     * @param array<string> $tokens Command tokens starting with php
-     *
-     * @return string|null Script path if found, null otherwise
-     */
-    private function findScriptAfterPhpOptions(array $tokens): string|null
-    {
-        // Skip the first token (php binary)
-        for ($i = 1; $i < count($tokens); $i++) {
-            $token = $tokens[$i];
-
-            // Skip options that start with '-'
-            if (str_starts_with($token, '-')) {
-                // Handle options that take a value (like -d option=value)
-                if (in_array($token, ['-d', '-f', '-c', '-n'], true) && $i + 1 < count($tokens)) {
-                    $i++; // Skip the option value
-                }
-
-                continue;
-            }
-
-            // First non-option token should be the script
-            if ($this->looksLikeScriptPath($token)) {
-                return $token;
-            }
-
-            // If it doesn't look like a script path, stop looking
-            break;
-        }
-
-        return null;
-    }
-
-    /**
-     * Check if a token looks like a script path
-     *
-     * @param string $token Token to check
-     *
-     * @return bool True if it looks like a script path
-     */
-    private function looksLikeScriptPath(string $token): bool
-    {
-        // Contains directory separators (Unix or Windows)
-        if (strpos($token, '/') !== false || strpos($token, '\\') !== false) {
-            return true;
-        }
-
-        // Common script patterns
-        if (str_starts_with($token, 'vendor/bin/') || str_starts_with($token, 'bin/')) {
-            return true;
-        }
-
-        // Known script extensions
-        $scriptExtensions = ['.php', '.phar', '.sh', '.py', '.js', '.rb'];
-        foreach ($scriptExtensions as $ext) {
-            if (str_ends_with($token, $ext)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

@@ -14,13 +14,15 @@
 
 ---
 
-## The Problem: AI is Debugging Blind
+## The Problem: From var_dump() to xdebug_start_trace()
 
 When you ask AI to debug PHP today, it adds `var_dump()` to your code—the same technique from 30 years ago.
 
 Why? Because **AI is debugging blind**, only able to read static code and guess what happens at runtime.
 
 ## The Solution: Forward Trace™
+
+**Transform AI debugging from `var_dump()` to `xdebug_start_trace()`** — a paradigm shift from static guesswork to runtime intelligence.
 
 This MCP server enables AI to debug PHP with superhuman capabilities:
 
