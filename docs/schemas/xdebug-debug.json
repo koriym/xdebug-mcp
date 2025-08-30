@@ -15,6 +15,10 @@
     },
     "trace": {
       "$ref": "xdebug-trace.json"
+    },
+    "analysis_context": {
+      "type": "string",
+      "description": "Optional contextual description for AI analysis (e.g., 'Debugging login validation with invalid credentials')"
     }
   },
   "required": ["breaks", "trace"],
