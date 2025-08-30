@@ -49,7 +49,8 @@
   "properties": {
     "analysis_context": {
       "type": "string",
-      "description": "Optional contextual description for AI analysis (e.g., 'Test coverage analysis for payment processing')"
+      "description": "Optional contextual description for AI analysis",
+      "examples": ["Test coverage analysis for payment processing", "Coverage gap identification in user authentication", "Quality assessment of API test suite"]
     }
   },
   "additionalProperties": false,

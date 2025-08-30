@@ -93,7 +93,8 @@
     },
     "🎯 analysis_context": {
       "type": "string",
-      "description": "Optional contextual description for AI analysis (e.g., 'Performance analysis of user authentication')"
+      "description": "Optional contextual description for AI analysis",
+      "examples": ["Performance analysis of user authentication", "Profiling slow API endpoint", "Database query optimization analysis"]
     }
   },
   "required": ["📁 profile_file", "📊 total_lines", "💾 file_size_bytes", "📏 file_size_formatted", "📈 functions_count", "👤 user_functions", "⚙️ internal_functions", "📞 total_calls", "🎯 bottleneck_functions", "💡 optimization_suggestions", "📋 specification", "🔗 schema"],
