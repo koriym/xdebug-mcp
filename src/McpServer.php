@@ -299,7 +299,7 @@ final class McpServer
             ],
             'x-debug' => [
                 'name' => 'x-debug',
-                'description' => 'Step debugging with breakpoints | ex) ./x-debug "php test.php" --break="test.php:15:$user==null" --steps=100',
+                'description' => 'Step debugging with breakpoints | ex) /x-debug --script="php test.php" --break="test.php:15:$user==null" --steps=100 --context="debug context"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -559,7 +559,7 @@ final class McpServer
                     ],
                     [
                         'name' => 'x-debug',
-                        'description' => 'Step debugging with breakpoints | ex) /x-debug --script="php test.php" --break="test.php:15" --steps=5 --context="debug context"',
+                        'description' => 'Step debugging with breakpoints | ex) /x-debug --script="php test.php" --break="test.php:15:$user==null" --steps=100 --context="debug context"',
                         'arguments' => [
                             [
                                 'name' => 'script',
@@ -1988,7 +1988,7 @@ final class McpServer
             }
 
             if (! empty($context)) {
-                $cmd .= ' --verbose';
+                $cmd .= ' --context=' . escapeshellarg($context);
             }
 
             // Add pattern as environment variable if specified
@@ -1997,7 +1997,17 @@ final class McpServer
                 $envPrefix = 'TRACE_TEST=' . escapeshellarg($pattern) . ' ';
             }
 
-            $cmd .= ' -- ' . $script;
+            $cmd .= ' -- ' . escapeshellarg($script);
+
+            // Pre-check: Ensure script file exists before executing
+            if (!file_exists($script)) {
+                throw new FileNotFoundException('Script file not found: ' . $script);
+            }
+
+            // Pre-check: Ensure script file is readable
+            if (!is_readable($script)) {
+                throw new InvalidArgumentException('Permission denied accessing: ' . $script);
+            }
 
             // Execute command with environment
             $fullCmd = $envPrefix . $cmd;
@@ -2007,13 +2017,6 @@ final class McpServer
 
             // Handle common error cases
             $outputText = implode("\n", $output);
-            if ($returnCode !== 0 && str_contains($outputText, 'No such file')) {
-                throw new FileNotFoundException('Script file not found: ' . $script);
-            }
-
-            if ($returnCode !== 0 && str_contains($outputText, 'Permission denied')) {
-                throw new InvalidArgumentException('Permission denied accessing: ' . $script);
-            }
 
             $result = [
                 'command' => $fullCmd,
