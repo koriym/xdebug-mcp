@@ -31,6 +31,7 @@
             "type": "integer",
             "minimum": 1
           },
+          "uniqueItems": true,
           "description": "Array of line numbers that are covered by tests"
         },
         "uncovered_lines": {
@@ -39,6 +40,7 @@
             "type": "integer",
             "minimum": 1
           },
+          "uniqueItems": true,
           "description": "Array of line numbers that are NOT covered by tests"
         }
       },
