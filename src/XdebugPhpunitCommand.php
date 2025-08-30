@@ -44,6 +44,7 @@ class XdebugPhpunitCommand
     private bool $verbose = false;
     private bool $dryRun = false;
     private string $mode = 'trace'; // trace or profile
+    private ?string $context = null;
 
     /** @var array<string> */
     private array $phpunitArgs = [];
@@ -116,6 +117,13 @@ class XdebugPhpunitCommand
 
                 case '--trace':
                     $this->mode = 'trace';
+                    break;
+
+                case '--context':
+                    if (empty($argv)) {
+                        throw new RuntimeException('--context requires a value');
+                    }
+                    $this->context = array_shift($argv);
                     break;
 
                 case '--':
@@ -394,7 +402,8 @@ class XdebugPhpunitCommand
         echo "  --dry-run         Show effective phpunit.xml and exit\n";
         echo "  --verbose         Show detailed operation logs\n";
         echo "  --profile         Profile mode (default: trace)\n";
-        echo "  --trace           Trace mode (explicit)\n\n";
+        echo "  --trace           Trace mode (explicit)\n";
+        echo "  --context=TEXT    Contextual description for AI analysis\n\n";
         echo "EXAMPLES:\n";
         echo "  $scriptName tests/UserTest.php::testLogin    # Trace specific method\n";
         echo "  $scriptName --profile tests/UserTest.php     # Profile entire test file\n";
