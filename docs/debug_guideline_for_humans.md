@@ -1,3 +1,10 @@
+---
+title: "Forward Trace™ Debugging Guide for Developers"
+description: "Complete guide for PHP developers: From var_dump debugging to Forward Trace methodology for runtime analysis without code modifications"
+permalink: /debug-guidelines/
+layout: default
+---
+
 # Forward Trace™ Debugging Guide for Developers
 
 ## 🚀 Quick Start: From var_dump to Forward Trace
