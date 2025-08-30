@@ -174,7 +174,7 @@ class XdebugProfiler
     /**
      * Analyze profile content for detailed statistics
      */
-    private function がいanalyzeProfileContent(string $profileFile): array
+    private function analyzeProfileContent(string $profileFile): array
     {
         $content = file_get_contents($profileFile);
         $lines = explode("\n", $content);
