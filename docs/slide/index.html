@@ -111,7 +111,8 @@ var_dump($result);    // Repeat...</code></pre>
                 </div>
                 <div class="fragment">
                     <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
-                        "This sophisticated AI was debugging like it was 1995 😱"
+                        <span style="font-size: 4em;">😱</span><br>
+                        "Hi-end AI was debugging like it was 1995"
                     </p>
                 </div>
             </section>
@@ -120,7 +121,7 @@ var_dump($result);    // Repeat...</code></pre>
             <section>
                 <h2>The Real Problem 🎯</h2>
                 <div class="fragment">
-                    <h3>It wasn't the AI's fault.</h3>
+                    <h3 style="color: #ffd43b;">It wasn't the AI's fault.</h3>
                     <p>We were asking a detective to solve a crime using only <strong>📷 crime scene photos</strong>.</p>
                 </div>
                 <div class="fragment">
@@ -183,12 +184,12 @@ var_dump($result);    // Repeat...</code></pre>
                 <h2>See the Magic ✨</h2>
                 <div class="fragment">
                     <h3>Traditional Approach</h3>
-                    <pre><code class="php code-small">// Multiple debugging attempts
+                    <pre><code class="php">// Multiple debugging attempts
 // Modify code, test, repeat...</code></pre>
                 </div>
                 <div class="fragment">
                     <h3>ForwardTrace Approach</h3>
-                    <pre><code class="bash code-small"># Conditional breakpoint: Stop when problem occurs
+                    <pre><code class="bash"># Conditional breakpoint: Stop when problem occurs
 ./vendor/bin/xdebug-debug --break='checkout.php:89:$total&lt;0' --steps=50 --exit-on-break -- php checkout.php
 
 # AI analyzes and reports:
@@ -452,17 +453,8 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
 }</code></pre>
                 </div>
                 <div class="fragment">
-                    <h3>Built-in Knowledge Links:</h3>
-                    <ul style="font-size: 0.8em;">
-                        <li>🔗 <strong>specification</strong>: https://xdebug.org/docs/trace - Official format docs</li>
-                        <li>🔗 <strong>debug-guide</strong>: Complete debugging methodology</li>
-                        <li>🔗 <strong>x-ai-strategies</strong>: Intelligent grep patterns for analysis</li>
-                        <li>🔗 <strong>x-trace-format</strong>: Column definitions and parsing instructions</li>
-                    </ul>
-                </div>
-                <div class="fragment">
                     <p style="text-align: center; color: #51cf66; font-size: 1.1em; font-weight: bold;">
-                        AI receives data + documentation + analysis strategies = Perfect understanding
+                        AI doesn't just parse data - it knows exactly what to look for
                     </p>
                 </div>
             </section>
@@ -495,13 +487,13 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
             <section data-background-gradient="linear-gradient(45deg, #2c3e50, #3498db)">
                 <h2>The Inflection Point ⚡</h2>
                 <div class="fragment">
-                    <p>We can continue treating AI as a sophisticated search engine...</p>
+                    <p style="text-align: center;">We can continue treating AI as a sophisticated search engine...</p>
                 </div>
                 <div class="fragment">
-                    <p><strong>Or we can build true partnership through radical transparency.</strong></p>
+                    <p style="text-align: center;"><strong>Or we can build true partnership through radical transparency.</strong></p>
                 </div>
                 <div class="fragment">
-                    <p>Not just sharing our code, but our <em>entire development context</em>.</p>
+                    <p style="text-align: center;">Not just sharing our code, but our <em>entire development context</em>.</p>
                 </div>
                 <div class="fragment">
                     <p style="text-align: center; margin-top: 50px;">
@@ -634,7 +626,7 @@ if ($userId === 0) {
                 <h2>xdebug-coverage: AI-Driven Coverage Analysis 📊</h2>
                 <div class="fragment">
                     <pre><code class="bash"># Generate comprehensive coverage data
-./vendor/bin/xdebug-coverage --context="Coverage analysis" tests/
+./vendor/bin/xdebug-coverage tests/
 
 # AI provides intelligent coverage insights
 # Identifies critical untested paths and suggests improvements</code></pre>
