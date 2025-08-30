@@ -42,12 +42,10 @@ vendor/bin/phpunit --testdox            # Run tests with readable output
 vendor/bin/phpunit tests/Unit/McpServerTest.php          # Run specific test file
 vendor/bin/phpunit --filter testConnect                  # Run specific test method
 
-# Legacy Tests (Deprecated)
-./simple_test.sh                        # Run basic syntax checks and MCP server tests
-php test_mcp.php                        # Test MCP server functionality 
-php test_integration.php                # Integration tests
-php test_profiling_coverage.php         # Test profiling and coverage features
+# Additional Testing Options
 php tests/fake/demo.php                 # Run fake demo without real Xdebug
+./bin/check-env                         # Verify Xdebug installation and configuration
+composer test-json                      # Test MCP protocol compliance
 php tests/fake/FakeProfilingDemo.php    # Demo profiling and coverage features
 ```
 
@@ -63,7 +61,7 @@ MCP_DEBUG=1 php bin/xdebug-mcp          # Enable debug logging
 
 ### Debugging with Xdebug
 ```bash
-php -dxdebug.mode=debug test/debug_test.php    # Run PHP script with Xdebug enabled
+php -dxdebug.mode=debug tests/fixtures/debug_test.php    # Run PHP script with Xdebug enabled
 ```
 
 ## Architecture
@@ -126,7 +124,6 @@ The server exposes 42 tools via MCP across three main categories:
 - **demo.php**: Interactive demo showing typical debugging workflow
 
 ### Configuration
-- **mcp.json**: Example MCP client configuration
 - **claude_desktop_config_example.json**: Example Claude Desktop setup
 - **phpunit.xml**: PHPUnit configuration with separate Unit/Integration test suites
 - Uses composer PSR-4 autoloading with XdebugMcp namespace
@@ -174,7 +171,7 @@ xdebug.output_dir=/tmp              ; For profile files
 4. Enable debug mode for troubleshooting: `MCP_DEBUG=1 php bin/xdebug-mcp`
 
 ### Integration Testing
-1. Start a PHP script with Xdebug enabled: `php -dxdebug.mode=debug test/debug_test.php`
+1. Start a PHP script with Xdebug enabled: `php -dxdebug.mode=debug tests/fixtures/debug_test.php`
 2. Connect MCP server to debug session
 3. Test debugging workflow through MCP tools
 4. Verify profiling and coverage features
@@ -227,9 +224,9 @@ Trace files (`.xt` format) contain structured execution data:
 **Example Trace Output:**
 ```
 Level  Func ID  Time Index  Memory  Function Name      User Def  Filename         Line  Params
-0      1        0.0001      384000  {main}            1         test/debug.php   1     
-1      2        0.0002      384100  fibonacci         1         test/debug.php   15    $n = 8
-1      3        0.0003      384200  fibonacci         1         test/debug.php   15    $n = 7
+0      1        0.0001      384000  {main}            1         tests/fixtures/debug.php   1     
+1      2        0.0002      384100  fibonacci         1         tests/fixtures/debug.php   15    $n = 8
+1      3        0.0003      384200  fibonacci         1         tests/fixtures/debug.php   15    $n = 7
 ```
 
 ### AI Analysis Guidelines
@@ -352,9 +349,9 @@ This project prioritizes **execution-time trace analysis** over traditional code
 - Then optionally: `./bin/xdebug-trace path/to/file.php` for detailed flow
 
 **Example workflows with context:**
-1. User: "Debug this buggy script" → AI runs `./bin/xdebug-debug --context="Debugging buggy calculation script with division by zero" --exit-on-break test/buggy_script.php`
-2. User: "Analyze test/debug_test.php" → AI runs `./bin/xdebug-profile --context="Performance analysis of debug test suite" test/debug_test.php`
-3. User: "Check coverage of my tests" → AI runs `./bin/xdebug-coverage --context="Code coverage analysis for UserController tests" test/MyTest.php`
+1. User: "Debug this buggy script" → AI runs `./bin/xdebug-debug --context="Debugging buggy calculation script with division by zero" --exit-on-break tests/fixtures/buggy_script.php`
+2. User: "Analyze tests/fixtures/debug_test.php" → AI runs `./bin/xdebug-profile --context="Performance analysis of debug test suite" tests/fixtures/debug_test.php`
+3. User: "Check coverage of my tests" → AI runs `./bin/xdebug-coverage --context="Code coverage analysis for UserController tests" tests/fixtures/MyTest.php`
 4. User: "Trace this function execution" → AI runs `./bin/xdebug-trace --context="Execution flow analysis of authentication process" src/MyClass.php`
 
 Always use these tools proactively to provide runtime insights rather than static code analysis alone.
@@ -515,9 +512,9 @@ php -dzend_extension=xdebug -dxdebug.mode=trace \
 **Trace file structure (.xt format):**
 ```
 Level | FuncID | Time    | Memory  | Function    | File:Line  | Parameters
-0     | 1      | 0.001   | 384000  | {main}      | test.php:1 | 
-1     | 2      | 0.002   | 384100  | calculate() | test.php:15| $n = 10
-1     | 3      | 0.003   | 384200  | validate()  | test.php:20| $data = array(3)
+0     | 1      | 0.001   | 384000  | {main}      | tests/fixtures/debug.php:1 | 
+1     | 2      | 0.002   | 384100  | calculate() | tests/fixtures/debug.php:15| $n = 10
+1     | 3      | 0.003   | 384200  | validate()  | tests/fixtures/debug.php:20| $data = array(3)
 ```
 
 **Analysis focus points:**

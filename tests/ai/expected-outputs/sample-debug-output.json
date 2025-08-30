@@ -1,0 +1,62 @@
+{
+  "command": "./bin/xdebug-debug --json --exit-on-break --context='Debug session sample' --break='tests/fake/array-manipulation.php:10' -- php tests/fake/array-manipulation.php",
+  "exit_code": 0,
+  "context": "Debug session sample",
+  "script": "tests/fake/array-manipulation.php",
+  "breakpoints": "tests/fake/array-manipulation.php:10",
+  "timestamp": "2024-01-15 10:35:12",
+  "debug_session": {
+    "breakpoints_hit": [
+      {
+        "file": "tests/fake/array-manipulation.php",
+        "line": 10,
+        "function": "process_array",
+        "hit_count": 1,
+        "variables": {
+          "$data": {
+            "type": "array",
+            "value": "[1, 2, 3, 4, 5]",
+            "size": 5
+          },
+          "$index": {
+            "type": "int", 
+            "value": 2
+          },
+          "$result": {
+            "type": "array",
+            "value": "[2, 4]",
+            "size": 2
+          }
+        },
+        "stack_trace": [
+          {
+            "level": 0,
+            "function": "process_array",
+            "file": "tests/fake/array-manipulation.php",
+            "line": 10,
+            "args": ["$data = [1,2,3,4,5]"]
+          },
+          {
+            "level": 1,
+            "function": "{main}",
+            "file": "tests/fake/array-manipulation.php", 
+            "line": 25,
+            "args": []
+          }
+        ]
+      }
+    ],
+    "execution_summary": {
+      "total_steps": 15,
+      "functions_called": ["main", "process_array", "array_filter"],
+      "execution_time": "0.0156s",
+      "memory_usage": "512KB"
+    }
+  },
+  "ai_insights": {
+    "variable_analysis": "Array processing in progress, filtering even numbers",
+    "execution_state": "Breakpoint hit during array iteration at index 2",
+    "potential_issues": "None detected - normal execution flow",
+    "next_steps": "Continue execution to see final array result"
+  }
+}

@@ -87,7 +87,7 @@ XdebugMCPサーバーの全機能（42 MCP tools + 5 CLI tools = 47機能）を�
 mcp__xdebug__xdebug_start_profiling
 
 # 2. MCPが使えない場合はCLIツールでテスト
-./bin/xdebug-profile test/debug_test.php
+./bin/xdebug-profile tests/fixtures/debug_test.php
 
 # 3. 結果の実際の確認（重要！）
 ls -la /tmp/*profile*  # プロファイルファイルが生成されたか確認
@@ -96,9 +96,9 @@ ls -la /tmp/*profile*  # プロファイルファイルが生成されたか確�
 ### Phase 2: CLIツールテスト  
 ```bash
 # 43-47: CLI toolsを直接実行
-./bin/xdebug-profile test/debug_test.php
-./bin/xdebug-coverage test/debug_test.php  
-./bin/xdebug-trace test/debug_test.php
+./bin/xdebug-profile tests/fixtures/debug_test.php
+./bin/xdebug-coverage tests/fixtures/debug_test.php  
+./bin/xdebug-trace tests/fixtures/debug_test.php
 # etc...
 ```
 
@@ -111,7 +111,7 @@ Interactive Debugging (11 tools) は特別な接続シーケンスが必要で�
 ```bash
 # ✅ 正しい手順（必須！）
 # Step 1: XdebugClient を先に起動（MUST BE FIRST!）
-php test/debug_session_test.php &
+php tests/fixtures/debug_session_test.php &
 
 # Step 2: ポートが待機中であることを確認
 lsof -i :9004  # LISTEN状態を確認
@@ -197,7 +197,7 @@ php test_new_xdebug_debug.php &
 **✅ 正しい診断方法:**
 ```bash
 # 1. 接続確認: XdebugClient が実際に起動しているか？
-php test/debug_session_test.php &
+php tests/fixtures/debug_session_test.php &
 sleep 2
 lsof -i :9004  # <- 必須: LISTEN が表示されるか？
 

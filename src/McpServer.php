@@ -7,11 +7,9 @@ namespace Koriym\XdebugMcp;
 use Koriym\XdebugMcp\Exceptions\FileNotFoundException;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\Exceptions\InvalidToolException;
-use Koriym\XdebugMcp\Exceptions\XdebugConnectionException;
 use Koriym\XdebugMcp\Exceptions\XdebugNotAvailableException;
 use Throwable;
 
-use function array_flip;
 use function array_merge;
 use function array_slice;
 use function array_values;
@@ -38,6 +36,8 @@ use function implode;
 use function in_array;
 use function ini_get;
 use function ini_set;
+use function is_numeric;
+use function is_string;
 use function json_decode;
 use function json_encode;
 use function json_last_error;
@@ -45,24 +45,24 @@ use function max;
 use function memory_get_peak_usage;
 use function memory_get_usage;
 use function microtime;
-use function ob_get_clean;
-use function ob_start;
 use function phpversion;
 use function preg_match;
 use function register_tick_function;
 use function restore_error_handler;
 use function round;
 use function set_error_handler;
-use function sprintf;
+use function str_contains;
 use function str_ends_with;
 use function str_repeat;
+use function str_starts_with;
+use function strlen;
+use function substr;
 use function trim;
 use function uasort;
 use function uniqid;
 use function unregister_tick_function;
 
 use const DEBUG_BACKTRACE_IGNORE_ARGS;
-use const DEBUG_BACKTRACE_PROVIDE_OBJECT;
 use const E_COMPILE_ERROR;
 use const E_COMPILE_WARNING;
 use const E_CORE_ERROR;
@@ -85,12 +85,11 @@ use const LOCK_EX;
 use const STDIN;
 use const STDOUT;
 
-class McpServer
+final class McpServer
 {
     protected array $tools = [];
     protected XdebugClient|null $xdebugClient = null;
     private bool $debugMode = false;
-    private array $contextMemory = [];
 
     public function __construct()
     {
@@ -204,11 +203,6 @@ class McpServer
                 'description' => 'Get peak memory usage information',
                 'inputSchema' => ['type' => 'object', 'properties' => (object) []],
             ],
-            'xdebug_get_stack_depth' => [
-                'name' => 'xdebug_get_stack_depth',
-                'description' => 'Get current stack depth level',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
             'xdebug_get_time_index' => [
                 'name' => 'xdebug_get_time_index',
                 'description' => 'Get time index since script start',
@@ -265,76 +259,95 @@ class McpServer
                 'description' => 'Get the filename of the current trace file',
                 'inputSchema' => ['type' => 'object', 'properties' => (object) []],
             ],
-            'xdebug_start_function_monitor' => [
-                'name' => 'xdebug_start_function_monitor',
-                'description' => 'Start monitoring specific functions',
+            'x-trace' => [
+                'name' => 'x-trace',
+                'description' => 'Trace PHP execution flow | ex) ./x-trace "php test.php" "Debug login flow"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'functions' => ['type' => 'array', 'items' => ['type' => 'string']],
+                        'script' => [
+                            'type' => 'string',
+                            'description' => 'PHP script to trace (e.g., "tests/fixtures/debug_test.php")',
+                        ],
+                        'context' => [
+                            'type' => 'string',
+                            'description' => 'Context description for AI analysis (e.g., "Testing user authentication flow")',
+                            'default' => '',
+                        ],
                     ],
-                    'required' => ['functions'],
+                    'required' => ['script'],
                 ],
             ],
-            'xdebug_stop_function_monitor' => [
-                'name' => 'xdebug_stop_function_monitor',
-                'description' => 'Stop function monitoring and return monitored calls',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_get_function_stack' => [
-                'name' => 'xdebug_get_function_stack',
-                'description' => 'Get detailed function stack with arguments and variables',
+            'x-profile' => [
+                'name' => 'x-profile',
+                'description' => 'Profile performance bottlenecks | ex) ./x-profile "php slow-app.php" "API performance"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'include_args' => ['type' => 'boolean', 'default' => true],
-                        'include_object' => ['type' => 'boolean', 'default' => true],
-                        'limit' => ['type' => 'integer', 'default' => 0],
+                        'script' => [
+                            'type' => 'string',
+                            'description' => 'PHP script to profile (e.g., "tests/fixtures/performance_test.php")',
+                        ],
+                        'context' => [
+                            'type' => 'string',
+                            'description' => 'Context description for performance analysis',
+                            'default' => '',
+                        ],
                     ],
+                    'required' => ['script'],
                 ],
             ],
-            'xdebug_print_function_stack' => [
-                'name' => 'xdebug_print_function_stack',
-                'description' => 'Print formatted function stack trace',
+            'x-debug' => [
+                'name' => 'x-debug',
+                'description' => 'Step debugging with breakpoints | ex) ./x-debug "php test.php" --break="test.php:15:$user==null" --steps=100',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'message' => ['type' => 'string', 'default' => 'Call Stack'],
-                        'options' => ['type' => 'integer', 'default' => 0],
+                        'script' => [
+                            'type' => 'string',
+                            'description' => 'PHP script to debug (e.g., "tests/fixtures/debug_test.php")',
+                        ],
+                        'breakpoints' => [
+                            'type' => 'string',
+                            'description' => 'Comma-separated breakpoint locations (e.g., "file.php:15,file.php:25")',
+                            'default' => '',
+                        ],
+                        'steps' => [
+                            'type' => 'string',
+                            'description' => 'Maximum debugging steps to execute',
+                            'default' => '100',
+                        ],
+                        'context' => [
+                            'type' => 'string',
+                            'description' => 'Context description for debugging session',
+                            'default' => '',
+                        ],
                     ],
+                    'required' => ['script'],
                 ],
             ],
-            'xdebug_call_info' => [
-                'name' => 'xdebug_call_info',
-                'description' => 'Get information about the calling context',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_get_features' => [
-                'name' => 'xdebug_get_features',
-                'description' => 'Get all available Xdebug features and their values',
-                'inputSchema' => ['type' => 'object', 'properties' => (object) []],
-            ],
-            'xdebug_set_feature' => [
-                'name' => 'xdebug_set_feature',
-                'description' => 'Set a specific Xdebug feature value',
+            'x-coverage' => [
+                'name' => 'x-coverage',
+                'description' => 'Analyze test coverage | ex) ./x-coverage "php vendor/bin/phpunit UserTest.php"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'feature_name' => ['type' => 'string'],
-                        'value' => ['type' => 'string'],
+                        'script' => [
+                            'type' => 'string',
+                            'description' => 'PHP script to analyze coverage (e.g., "vendor/bin/phpunit UserTest.php")',
+                        ],
+                        'context' => [
+                            'type' => 'string',
+                            'description' => 'Context description for coverage analysis',
+                            'default' => '',
+                        ],
+                        'format' => [
+                            'type' => 'string',
+                            'description' => 'Output format: html, xml, json, text',
+                            'default' => 'html',
+                        ],
                     ],
-                    'required' => ['feature_name', 'value'],
-                ],
-            ],
-            'xdebug_get_feature' => [
-                'name' => 'xdebug_get_feature',
-                'description' => 'Get a specific Xdebug feature value',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'feature_name' => ['type' => 'string'],
-                    ],
-                    'required' => ['feature_name'],
+                    'required' => ['script'],
                 ],
             ],
         ];
@@ -349,6 +362,7 @@ class McpServer
                 $input .= $line;
 
                 if ($this->isCompleteJsonRpc($input)) {
+                    error_log('DEBUG: Raw Claude CLI input = ' . trim($input));
                     $request = json_decode(trim($input), true);
 
                     if ($request === null) {
@@ -364,6 +378,7 @@ class McpServer
                         echo json_encode($errorResponse) . "\n";
                         fflush(STDOUT);
                     } else {
+                        error_log('DEBUG: Processing request method = ' . ($request['method'] ?? 'unknown'));
                         $this->debugLog('Received request', $request);
 
                         try {
@@ -375,6 +390,7 @@ class McpServer
                                 fflush(STDOUT);
                             }
                         } catch (Throwable $e) {
+                            error_log('DEBUG: MCP Server Error for method ' . ($request['method'] ?? 'unknown') . ': ' . $e->getMessage());
                             error_log('MCP Server Error: ' . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString());
 
                             $errorResponse = [
@@ -481,7 +497,7 @@ class McpServer
                 'capabilities' => [
                     'tools' => ['listChanged' => true],
                     'resources' => (object) [],
-                    'prompts' => (object) [],
+                    'prompts' => ['listChanged' => true],
                 ],
                 'serverInfo' => [
                     'name' => 'xdebug-mcp-server',
@@ -522,11 +538,11 @@ class McpServer
                 'prompts' => [
                     [
                         'name' => 'x-trace',
-                        'description' => 'Execute Forward Trace debugging with AI-optimized JSON output and analysis',
+                        'description' => 'Trace PHP execution flow | ex) /x-trace --script=test.php --context="Debug login flow"',
                         'arguments' => [
                             [
                                 'name' => 'script',
-                                'description' => 'PHP script to trace (e.g., "test/debug_test.php")',
+                                'description' => 'PHP script to trace (e.g., "tests/fixtures/debug_test.php")',
                                 'required' => true,
                             ],
                             [
@@ -543,21 +559,26 @@ class McpServer
                     ],
                     [
                         'name' => 'x-debug',
-                        'description' => 'Interactive step debugging with conditional breakpoints and context memory',
+                        'description' => 'Step debugging with breakpoints | ex) /x-debug "php test.php" "test.php:15" 5 "debug context"',
                         'arguments' => [
                             [
                                 'name' => 'script',
-                                'description' => 'PHP script to debug (e.g., "test/debug_test.php")',
+                                'description' => 'PHP script to debug (e.g., "tests/fixtures/debug_test.php")',
                                 'required' => true,
-                            ],
-                            [
-                                'name' => 'context',
-                                'description' => 'Context description for debugging session',
-                                'required' => false,
                             ],
                             [
                                 'name' => 'breakpoints',
                                 'description' => 'Comma-separated breakpoint locations (e.g., "file.php:15,file.php:25")',
+                                'required' => false,
+                            ],
+                            [
+                                'name' => 'steps',
+                                'description' => 'Maximum debugging steps to execute',
+                                'required' => false,
+                            ],
+                            [
+                                'name' => 'context',
+                                'description' => 'Context description for debugging session',
                                 'required' => false,
                             ],
                             [
@@ -569,11 +590,11 @@ class McpServer
                     ],
                     [
                         'name' => 'x-profile',
-                        'description' => 'Performance profiling with AI-optimized analysis output',
+                        'description' => 'Profile performance bottlenecks | ex) /x-profile --script=slow-app.php --context="API performance"',
                         'arguments' => [
                             [
                                 'name' => 'script',
-                                'description' => 'PHP script to profile (e.g., "test/performance_test.php")',
+                                'description' => 'PHP script to profile (e.g., "tests/fixtures/performance_test.php")',
                                 'required' => true,
                             ],
                             [
@@ -590,7 +611,7 @@ class McpServer
                     ],
                     [
                         'name' => 'x-coverage',
-                        'description' => 'Code coverage analysis with comprehensive reporting',
+                        'description' => 'Analyze test coverage | ex) /x-coverage --script="vendor/bin/phpunit UserTest.php"',
                         'arguments' => [
                             [
                                 'name' => 'script',
@@ -624,6 +645,29 @@ class McpServer
         $promptName = $params['name'] ?? '';
         $args = $params['arguments'] ?? [];
 
+        // Check if arguments contain CLI-style string that needs normalization
+        if (isset($args['cli']) && is_string($args['cli'])) {
+            try {
+                $normalizer = new CLIParamsNormalizer();
+                $normalizedArgs = $normalizer->normalize($args['cli']);
+                // Merge CLI-normalized params with any existing args (CLI takes precedence)
+                $args = array_merge($args, $normalizedArgs);
+                unset($args['cli']); // Remove the raw CLI string
+            } catch (\InvalidArgumentException $e) {
+                return [
+                    'jsonrpc' => '2.0',
+                    'id' => $id,
+                    'error' => [
+                        'code' => -32602,
+                        'message' => 'CLI引数正規化エラー: ' . $e->getMessage(),
+                    ],
+                ];
+            }
+        }
+
+        // Convert positional arguments to named arguments for each prompt type
+        $args = $this->normalizePositionalArgs($args, $promptName);
+
         switch ($promptName) {
             case 'x-trace':
                 return $this->executeXTrace($id, $args);
@@ -646,6 +690,132 @@ class McpServer
                         'message' => "Unknown prompt: {$promptName}",
                     ],
                 ];
+        }
+    }
+
+    /**
+     * Convert positional arguments to named arguments based on prompt type
+     */
+    private function normalizePositionalArgs(array $args, string $promptName): array
+    {
+        // Only process if we have numeric keys (positional arguments)
+        if (! isset($args[0])) {
+            return $args;
+        }
+
+        switch ($promptName) {
+            case 'x-trace':
+                if (isset($args[0])) {
+                    $args['script'] = $args[0];
+                }
+
+                if (isset($args[1])) {
+                    $args['context'] = $args[1];
+                }
+
+                break;
+
+            case 'x-debug':
+                if (isset($args[0])) {
+                    $args['script'] = $args[0];
+                }
+
+                if (isset($args[1])) {
+                    $args['breakpoints'] = $args[1];
+                }
+
+                if (isset($args[2])) {
+                    $args['steps'] = $args[2];
+                }
+
+                if (isset($args[3])) {
+                    $args['context'] = $args[3];
+                }
+
+                break;
+
+            case 'x-profile':
+                if (isset($args[0])) {
+                    $args['script'] = $args[0];
+                }
+
+                if (isset($args[1])) {
+                    $args['context'] = $args[1];
+                }
+
+                break;
+
+            case 'x-coverage':
+                if (isset($args[0])) {
+                    $args['script'] = $args[0];
+                }
+
+                if (isset($args[1])) {
+                    $args['context'] = $args[1];
+                }
+
+                if (isset($args[2])) {
+                    $args['format'] = $args[2];
+                }
+
+                break;
+        }
+
+        // Remove numeric keys to avoid confusion
+        $filteredArgs = [];
+        foreach ($args as $key => $value) {
+            if (! is_numeric($key)) {
+                $filteredArgs[$key] = $value;
+            }
+        }
+
+        return $filteredArgs;
+    }
+
+    /**
+     * Process script argument by removing Claude CLI quotes
+     */
+    private function processScriptArgument(string $script): string
+    {
+        // Handle empty script first
+        if (empty(trim($script))) {
+            return $script;
+        }
+
+        // Fix incomplete quotes from Claude CLI (handles truncated input)
+        if (str_starts_with($script, '"') && ! str_ends_with($script, '"')) {
+            // Remove leading quote from incomplete input
+            $script = substr($script, 1);
+        }
+        // Strip complete outer double quotes if present (Claude CLI client adds extra quotes)
+        elseif (strlen($script) >= 2 && str_starts_with($script, '"') && str_ends_with($script, '"')) {
+            $script = substr($script, 1, -1);
+        }
+        // Handle trailing quote without leading quote (Claude CLI parsing issue)
+        elseif (str_ends_with($script, '"') && ! str_starts_with($script, '"')) {
+            $script = substr($script, 0, -1);
+        }
+
+        // Auto-prepend 'php' if script doesn't start with a PHP binary
+        if (! preg_match('/^(\S*php)(\s+|$)/', $script)) {
+            $script = 'php ' . $script;
+        }
+
+        return $script;
+    }
+
+    /**
+     * Validate that script starts with PHP binary (any PHP executable)
+     */
+    private function validatePhpBinaryScript(string $script): void
+    {
+        if (empty($script)) {
+            throw new InvalidArgumentException('Script argument is required');
+        }
+
+        // Check that script starts with PHP binary (handles paths like /usr/bin/php, /path/to/php83/php)
+        if (! preg_match('/^(\S*php)(\s+|$)/', $script)) {
+            throw new InvalidArgumentException('Script must start with PHP binary. Examples: "php script.php", "/usr/bin/php script.php", "/path/to/php83/php script.php". Received: "' . $script . '"');
         }
     }
 
@@ -717,9 +887,6 @@ class McpServer
             case 'xdebug_get_peak_memory_usage':
                 return $this->getPeakMemoryUsage();
 
-            case 'xdebug_get_stack_depth':
-                return $this->getStackDepth();
-
             case 'xdebug_get_time_index':
                 return $this->getTimeIndex();
 
@@ -744,29 +911,25 @@ class McpServer
             case 'xdebug_get_tracefile_name':
                 return $this->getTracefileName();
 
-            case 'xdebug_start_function_monitor':
-                return $this->startFunctionMonitor($arguments);
+            case 'x-trace':
+                $result = $this->executeXTrace(null, $arguments);
 
-            case 'xdebug_stop_function_monitor':
-                return $this->stopFunctionMonitor();
+                return $result['result']['messages'][0]['content']['text'] ?? 'No result';
 
-            case 'xdebug_get_function_stack':
-                return $this->getFunctionStack($arguments);
+            case 'x-profile':
+                $result = $this->executeXProfile(null, $arguments);
 
-            case 'xdebug_print_function_stack':
-                return $this->printFunctionStack($arguments);
+                return $result['result']['messages'][0]['content']['text'] ?? 'No result';
 
-            case 'xdebug_call_info':
-                return $this->getCallInfo();
+            case 'x-debug':
+                $result = $this->executeXDebug(null, $arguments);
 
-            case 'xdebug_get_features':
-                return $this->getFeatures();
+                return $result['result']['messages'][0]['content']['text'] ?? 'No result';
 
-            case 'xdebug_set_feature':
-                return $this->setFeature($arguments);
+            case 'x-coverage':
+                $result = $this->executeXCoverage(null, $arguments);
 
-            case 'xdebug_get_feature':
-                return $this->getFeature($arguments);
+                return $result['result']['messages'][0]['content']['text'] ?? 'No result';
 
             default:
                 throw new InvalidToolException("Unknown tool: $toolName");
@@ -1222,20 +1385,6 @@ class McpServer
         return "Peak memory usage information:\n" . json_encode($info, JSON_PRETTY_PRINT);
     }
 
-    protected function getStackDepth(): string
-    {
-        $depth = 0;
-
-        if (function_exists('xdebug_get_stack_depth')) {
-            $depth = xdebug_get_stack_depth();
-        } else {
-            $stack = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-            $depth = count($stack);
-        }
-
-        return "Current stack depth: {$depth}";
-    }
-
     protected function getTimeIndex(): string
     {
         $startTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true);
@@ -1434,44 +1583,6 @@ class McpServer
         return self::$traceFile ?: 'No trace file active';
     }
 
-    protected function startFunctionMonitor(array $args): string
-    {
-        $functions = $args['functions'] ?? [];
-
-        if (empty($functions)) {
-            throw new InvalidArgumentException('No functions specified to monitor');
-        }
-
-        if (function_exists('xdebug_start_function_monitor')) {
-            xdebug_start_function_monitor($functions);
-
-            return 'Xdebug function monitor started for: ' . implode(', ', $functions);
-        }
-
-        self::$functionMonitor = array_flip($functions);
-        self::$monitoredCalls = [];
-
-        return 'Custom function monitor started for: ' . implode(', ', $functions);
-    }
-
-    protected function stopFunctionMonitor(): string
-    {
-        if (function_exists('xdebug_stop_function_monitor')) {
-            xdebug_stop_function_monitor();
-
-            return 'Xdebug function monitor stopped';
-        }
-
-        $calls = self::$monitoredCalls;
-        self::$functionMonitor = [];
-        self::$monitoredCalls = [];
-
-        $callCount = count($calls);
-
-        return "Custom function monitor stopped. Monitored {$callCount} calls:\n" .
-               json_encode($calls, JSON_PRETTY_PRINT);
-    }
-
     public function traceFunction(): void
     {
         if (! self::$tracingActive) {
@@ -1512,182 +1623,36 @@ class McpServer
         }
     }
 
-    protected function getFunctionStack(array $args): string
-    {
-        $includeArgs = $args['include_args'] ?? true;
-        $includeObject = $args['include_object'] ?? true;
-        $limit = $args['limit'] ?? 0;
-
-        if (function_exists('xdebug_get_function_stack')) {
-            $stack = xdebug_get_function_stack();
-        } else {
-            $options = DEBUG_BACKTRACE_PROVIDE_OBJECT;
-            if (! $includeObject) {
-                $options = DEBUG_BACKTRACE_IGNORE_ARGS;
-            }
-
-            $stack = debug_backtrace($options, $limit ?: 50);
-        }
-
-        if ($limit > 0) {
-            $stack = array_slice($stack, 0, $limit);
-        }
-
-        if (! $includeArgs && isset($stack[0]['args'])) {
-            foreach ($stack as &$frame) {
-                unset($frame['args']);
-            }
-        }
-
-        return "Function stack:\n" . json_encode($stack, JSON_PRETTY_PRINT);
-    }
-
-    protected function printFunctionStack(array $args): string
-    {
-        $message = $args['message'] ?? 'Call Stack';
-        $options = $args['options'] ?? 0;
-
-        if (function_exists('xdebug_print_function_stack')) {
-            ob_start();
-            xdebug_print_function_stack($message, $options);
-
-            return ob_get_clean();
-        }
-
-        $stack = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-        $output = $message . ":\n";
-
-        foreach ($stack as $i => $frame) {
-            $function = $frame['function'] ?? 'unknown';
-            $class = $frame['class'] ?? '';
-            $file = $frame['file'] ?? 'unknown';
-            $line = $frame['line'] ?? 0;
-
-            $fullFunction = $class ? "{$class}::{$function}" : $function;
-            $output .= sprintf("#%d %s() called at [%s:%d]\n", $i, $fullFunction, $file, $line);
-        }
-
-        return $output;
-    }
-
-    protected function getCallInfo(): string
-    {
-        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
-
-        $info = [
-            'current_function' => $backtrace[1]['function'] ?? 'unknown',
-            'current_class' => $backtrace[1]['class'] ?? null,
-            'current_file' => $backtrace[1]['file'] ?? 'unknown',
-            'current_line' => $backtrace[1]['line'] ?? 0,
-            'caller_function' => $backtrace[2]['function'] ?? null,
-            'caller_class' => $backtrace[2]['class'] ?? null,
-            'caller_file' => $backtrace[2]['file'] ?? null,
-            'caller_line' => $backtrace[2]['line'] ?? null,
-        ];
-
-        if (function_exists('xdebug_call_class')) {
-            $info['xdebug_call_class'] = xdebug_call_class();
-        }
-
-        if (function_exists('xdebug_call_function')) {
-            $info['xdebug_call_function'] = xdebug_call_function();
-        }
-
-        if (function_exists('xdebug_call_file')) {
-            $info['xdebug_call_file'] = xdebug_call_file();
-        }
-
-        if (function_exists('xdebug_call_line')) {
-            $info['xdebug_call_line'] = xdebug_call_line();
-        }
-
-        return "Call information:\n" . json_encode($info, JSON_PRETTY_PRINT);
-    }
-
-    protected function getFeatures(): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $features = $this->xdebugClient->getFeatures();
-
-        return "Available Xdebug features:\n" . json_encode($features, JSON_PRETTY_PRINT);
-    }
-
-    protected function setFeature(array $args): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $featureName = $args['feature_name'];
-        $value = $args['value'];
-
-        $result = $this->xdebugClient->setFeature($featureName, $value);
-        $success = $result['@attributes']['success'] ?? '0';
-
-        if ($success === '1') {
-            return "Feature '{$featureName}' set to '{$value}' successfully";
-        }
-
-        return "Failed to set feature '{$featureName}' to '{$value}'";
-    }
-
-    protected function getFeature(array $args): string
-    {
-        if (! $this->xdebugClient) {
-            throw new XdebugConnectionException('Not connected to Xdebug');
-        }
-
-        $featureName = $args['feature_name'];
-        $result = $this->xdebugClient->getFeature($featureName);
-
-        $value = $result['#text'] ?? $result['@attributes']['supported'] ?? 'unknown';
-
-        return "Feature '{$featureName}': {$value}";
-    }
-
     private function executeXTrace(mixed $id, array $args): array
     {
         try {
-            // Handle 'last' functionality
-            if (isset($args['last']) && $args['last'] === 'true') {
-                if (isset($this->contextMemory['x-trace'])) {
-                    $args = array_merge($args, $this->contextMemory['x-trace']);
-                }
-            }
-
-            $script = $args['script'] ?? '';
+            $originalScript = $args['script'] ?? '';
+            $script = $this->processScriptArgument($originalScript);
+            $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
 
-            if (empty($script)) {
-                throw new InvalidArgumentException('Script argument is required');
-            }
-
-            // Store context memory for next 'last' usage
-            $this->contextMemory['x-trace'] = [
-                'script' => $script,
-                'context' => $context,
-            ];
-
-            // Build command
-            $cmd = './bin/xdebug-trace --json';
-            if (! empty($context)) {
-                $cmd .= ' --context=' . escapeshellarg($context);
-            }
-
-            $cmd .= ' -- php ' . escapeshellarg($script);
+            // Build command - user must specify PHP binary explicitly
+            $cmd = './bin/xdebug-trace --json -- ' . $script;
 
             // Execute command
             $output = [];
             $returnCode = 0;
             exec($cmd . ' 2>&1', $output, $returnCode);
 
+            // Handle common error cases
+            $outputText = implode("\n", $output);
+            if ($returnCode !== 0 && str_contains($outputText, 'No such file')) {
+                throw new FileNotFoundException('Script file not found: ' . $script);
+            }
+
+            if ($returnCode !== 0 && str_contains($outputText, 'Permission denied')) {
+                throw new InvalidArgumentException('Permission denied accessing: ' . $script);
+            }
+
             $result = [
                 'command' => $cmd,
                 'exit_code' => $returnCode,
-                'output' => implode("\n", $output),
+                'output' => $outputText,
                 'context' => $context,
                 'script' => $script,
                 'timestamp' => date('Y-m-d H:i:s'),
@@ -1702,7 +1667,7 @@ class McpServer
                             'role' => 'assistant',
                             'content' => [
                                 'type' => 'text',
-                                'text' => "Forward Trace execution completed:\n\n**Script**: {$script}\n**Context**: {$context}\n**Exit Code**: {$returnCode}\n\n**Output**:\n```json\n" . implode("\n", $output) . "\n```",
+                                'text' => 'Forward Trace execution ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$originalScript}\n**Context**: {$context}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Output**:\n```\n" . $outputText . "\n```",
                             ],
                         ],
                     ],
@@ -1724,52 +1689,78 @@ class McpServer
     private function executeXDebug(mixed $id, array $args): array
     {
         try {
-            // Handle 'last' functionality
-            if (isset($args['last']) && $args['last'] === 'true') {
-                if (isset($this->contextMemory['x-debug'])) {
-                    $args = array_merge($args, $this->contextMemory['x-debug']);
+            $script = $args['script'] ?? '';
+            $script = $this->processScriptArgument($script);
+
+            // Claude CLI workaround: If script is just "php" and breakpoints contains a .php file, reconstruct
+            if (trim($script) === 'php') {
+                $breakpoints = $args['breakpoints'] ?? '';
+                $breakpoints = $this->processScriptArgument($breakpoints);
+
+                // If breakpoints contains what looks like a PHP file, use it to reconstruct the script
+                if (str_contains($breakpoints, '.php') && ! str_contains($breakpoints, ':')) {
+                    $script = 'php ' . $breakpoints;
+                    $args['breakpoints'] = ''; // Clear breakpoints since we used it for script reconstruction
                 }
             }
 
-            $script = $args['script'] ?? '';
+            $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
             $breakpoints = $args['breakpoints'] ?? '';
+            $breakpoints = $this->processScriptArgument($breakpoints); // Process quotes in breakpoints too
 
-            if (empty($script)) {
-                throw new InvalidArgumentException('Script argument is required');
+            // Claude CLI bug workaround: if breakpoints contains a script-like value, treat as empty
+            if (str_contains($breakpoints, '.php') && ! str_contains($breakpoints, ':')) {
+                $breakpoints = '';
             }
 
-            // Store context memory for next 'last' usage
-            $this->contextMemory['x-debug'] = [
-                'script' => $script,
-                'context' => $context,
-                'breakpoints' => $breakpoints,
-            ];
+            $steps = $args['steps'] ?? '100';
 
             // Build command
-            $cmd = './bin/xdebug-debug --json --exit-on-break';
-            if (! empty($context)) {
-                $cmd .= ' --context=' . escapeshellarg($context);
-            }
+            $cmd = './bin/xdebug-debug --exit-on-break';
 
+            // Add breakpoints if specified
             if (! empty($breakpoints)) {
                 $cmd .= ' --break=' . escapeshellarg($breakpoints);
             }
 
-            $cmd .= ' -- php ' . escapeshellarg($script);
+            if (! empty($context)) {
+                $cmd .= ' --context=' . escapeshellarg($context);
+            }
+
+            // Note: --steps parameter causes issues, temporarily disabled
+            // if (! empty($steps)) {
+            //     $cmd .= ' --steps=' . escapeshellarg($steps);
+            // }
+
+            // Build command - user must specify PHP binary explicitly
+            $cmd .= ' -- ' . $script;
 
             // Execute command
             $output = [];
             $returnCode = 0;
             exec($cmd . ' 2>&1', $output, $returnCode);
 
+            // Handle common error cases with user-friendly messages
+            $outputText = implode("\n", $output);
+            if ($returnCode === 255 && str_contains($outputText, 'Breakpoint file not found')) {
+                throw new InvalidArgumentException('Invalid breakpoint format. Use: file.php:line or file.php:line:condition');
+            }
+
+            if ($returnCode === 255 && str_contains($outputText, 'RuntimeException')) {
+                if (preg_match('/RuntimeException: (.+?) in/', $outputText, $matches)) {
+                    throw new InvalidArgumentException('Debug error: ' . $matches[1]);
+                }
+            }
+
             $result = [
                 'command' => $cmd,
                 'exit_code' => $returnCode,
-                'output' => implode("\n", $output),
+                'output' => $outputText,
                 'context' => $context,
                 'script' => $script,
                 'breakpoints' => $breakpoints,
+                'steps' => $steps,
                 'timestamp' => date('Y-m-d H:i:s'),
             ];
 
@@ -1782,7 +1773,7 @@ class McpServer
                             'role' => 'assistant',
                             'content' => [
                                 'type' => 'text',
-                                'text' => "Forward Trace debugging completed:\n\n**Script**: {$script}\n**Context**: {$context}\n**Breakpoints**: {$breakpoints}\n**Exit Code**: {$returnCode}\n\n**Debug Output**:\n```json\n" . implode("\n", $output) . "\n```",
+                                'text' => 'Forward Trace debugging ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Breakpoints**: {$breakpoints}\n**Steps**: {$steps}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Debug Output**:\n```\n" . $outputText . "\n```",
                             ],
                         ],
                     ],
@@ -1804,43 +1795,33 @@ class McpServer
     private function executeXProfile(mixed $id, array $args): array
     {
         try {
-            // Handle 'last' functionality
-            if (isset($args['last']) && $args['last'] === 'true') {
-                if (isset($this->contextMemory['x-profile'])) {
-                    $args = array_merge($args, $this->contextMemory['x-profile']);
-                }
-            }
-
             $script = $args['script'] ?? '';
+            $script = $this->processScriptArgument($script);
+            $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
 
-            if (empty($script)) {
-                throw new InvalidArgumentException('Script argument is required');
-            }
-
-            // Store context memory for next 'last' usage
-            $this->contextMemory['x-profile'] = [
-                'script' => $script,
-                'context' => $context,
-            ];
-
-            // Build command
-            $cmd = './bin/xdebug-profile --json';
-            if (! empty($context)) {
-                $cmd .= ' --context=' . escapeshellarg($context);
-            }
-
-            $cmd .= ' -- php ' . escapeshellarg($script);
+            // Build command - user must specify PHP binary explicitly
+            $cmd = './bin/xdebug-profile --json -- ' . $script;
 
             // Execute command
             $output = [];
             $returnCode = 0;
             exec($cmd . ' 2>&1', $output, $returnCode);
 
+            // Handle common error cases
+            $outputText = implode("\n", $output);
+            if ($returnCode !== 0 && str_contains($outputText, 'No such file')) {
+                throw new FileNotFoundException('Script file not found: ' . $script);
+            }
+
+            if ($returnCode !== 0 && str_contains($outputText, 'Permission denied')) {
+                throw new InvalidArgumentException('Permission denied accessing: ' . $script);
+            }
+
             $result = [
                 'command' => $cmd,
                 'exit_code' => $returnCode,
-                'output' => implode("\n", $output),
+                'output' => $outputText,
                 'context' => $context,
                 'script' => $script,
                 'timestamp' => date('Y-m-d H:i:s'),
@@ -1855,7 +1836,7 @@ class McpServer
                             'role' => 'assistant',
                             'content' => [
                                 'type' => 'text',
-                                'text' => "Performance profiling completed:\n\n**Script**: {$script}\n**Context**: {$context}\n**Exit Code**: {$returnCode}\n\n**Profile Analysis**:\n```json\n" . implode("\n", $output) . "\n```",
+                                'text' => 'Performance profiling ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Profile Analysis**:\n```\n" . $outputText . "\n```",
                             ],
                         ],
                     ],
@@ -1877,46 +1858,34 @@ class McpServer
     private function executeXCoverage(mixed $id, array $args): array
     {
         try {
-            // Handle 'last' functionality
-            if (isset($args['last']) && $args['last'] === 'true') {
-                if (isset($this->contextMemory['x-coverage'])) {
-                    $args = array_merge($args, $this->contextMemory['x-coverage']);
-                }
-            }
-
             $script = $args['script'] ?? '';
+            $script = $this->processScriptArgument($script);
+            $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
             $format = $args['format'] ?? 'json';
 
-            if (empty($script)) {
-                throw new InvalidArgumentException('Script argument is required');
-            }
-
-            // Store context memory for next 'last' usage
-            $this->contextMemory['x-coverage'] = [
-                'script' => $script,
-                'context' => $context,
-                'format' => $format,
-            ];
-
-            // Build command
-            $cmd = './bin/xdebug-coverage';
-            if (! empty($context)) {
-                $cmd .= ' --context=' . escapeshellarg($context);
-            }
-
-            $cmd .= ' --format=' . escapeshellarg($format);
-            $cmd .= ' -- php ' . escapeshellarg($script);
+            // Build command - user must specify PHP binary explicitly
+            $cmd = './bin/xdebug-coverage -- ' . $script;
 
             // Execute command
             $output = [];
             $returnCode = 0;
             exec($cmd . ' 2>&1', $output, $returnCode);
 
+            // Handle common error cases
+            $outputText = implode("\n", $output);
+            if ($returnCode !== 0 && str_contains($outputText, 'No such file')) {
+                throw new FileNotFoundException('Script file not found: ' . $script);
+            }
+
+            if ($returnCode !== 0 && str_contains($outputText, 'Permission denied')) {
+                throw new InvalidArgumentException('Permission denied accessing: ' . $script);
+            }
+
             $result = [
                 'command' => $cmd,
                 'exit_code' => $returnCode,
-                'output' => implode("\n", $output),
+                'output' => $outputText,
                 'context' => $context,
                 'script' => $script,
                 'format' => $format,
@@ -1932,7 +1901,7 @@ class McpServer
                             'role' => 'assistant',
                             'content' => [
                                 'type' => 'text',
-                                'text' => "Code coverage analysis completed:\n\n**Script**: {$script}\n**Context**: {$context}\n**Format**: {$format}\n**Exit Code**: {$returnCode}\n\n**Coverage Report**:\n```{$format}\n" . implode("\n", $output) . "\n```",
+                                'text' => 'Code coverage analysis ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Format**: {$format}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Coverage Report**:\n```\n" . $outputText . "\n```",
                             ],
                         ],
                     ],

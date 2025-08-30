@@ -4,17 +4,29 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Feeding the Beast: Why AI Needs Runtime Data</title>
-    
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/reveal.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/theme/black.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/plugin/highlight/monokai.css">
-    
+
     <style>
+        .reveal {
+            font-size: 32px; /* Default is 40px, reducing to 32px (20% smaller) */
+        }
         .reveal .slides section {
             text-align: left;
         }
         .reveal h1, .reveal h2, .reveal h3 {
             text-align: center;
+        }
+        .reveal h1 {
+            font-size: 2.2em; /* Slightly smaller than default 2.5em */
+        }
+        .reveal h2 {
+            font-size: 1.4em; /* Smaller than default 1.6em */
+        }
+        .reveal h3 {
+            font-size: 1.2em; /* Smaller than default 1.3em */
         }
         .reveal .progress {
             color: #00d9ff;
@@ -72,23 +84,23 @@
 <body>
     <div class="reveal">
         <div class="slides">
-            
+
             <!-- Title Slide -->
             <section data-background-gradient="linear-gradient(45deg, #000428, #004e92)">
-                <h1>🍽️ Feeding the Beast</h1>
-                <h3>Why AI Needs Runtime Data</h3>
-                <p>
-                    <small>From var_dump() to xdebug_start_trace()</small><br>
-                    <small>A Paradigm Shift in AI-Assisted Development</small>
-                </p>
-                <p style="text-align: center; margin-top: 50px;">
-                    <img src="https://koriym.github.io/xdebug-mcp/logo.jpeg" alt="xdebug-mcp" style="width: 200px; border-radius: 10px;">
-                </p>
+                <div style="text-align: center;">
+                    <img src="../images/title.jpg" alt="xdebug-mcp" style="width: 420px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin-bottom: 40px;">
+                    <p style="font-size: 1.5em; color: #ffd43b; font-weight: bold; margin-bottom: 15px;">
+                        From var_dump() to xdebug_start_trace()
+                    </p>
+                    <p style="font-size: 1.2em; color: #ffffff; opacity: 0.9;">
+                        A Paradigm Shift in AI-Assisted Development
+                    </p>
+                </div>
             </section>
 
             <!-- The Moment of Clarity -->
             <section>
-                <h2>The Moment of Clarity 💡</h2>
+                <h2>The Moment of Clarity 👀</h2>
                 <div class="fragment">
                     <p>I watched Claude Code debug PHP:</p>
                     <pre><code class="php">var_dump($variable);  // AI adds this
@@ -98,7 +110,9 @@ var_dump($other);     // AI adds another
 var_dump($result);    // Repeat...</code></pre>
                 </div>
                 <div class="fragment">
-                    <p class="quote">"This sophisticated AI was debugging like it was 1995."</p>
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        "This sophisticated AI was debugging like it was 1995 😱"
+                    </p>
                 </div>
             </section>
 
@@ -107,18 +121,18 @@ var_dump($result);    // Repeat...</code></pre>
                 <h2>The Real Problem 🎯</h2>
                 <div class="fragment">
                     <h3>It wasn't the AI's fault.</h3>
-                    <p>We were asking a detective to solve a crime using only <strong>photographs</strong> of the crime scene.</p>
+                    <p>We were asking a detective to solve a crime using only <strong>📷 crime scene photos</strong>.</p>
                 </div>
                 <div class="fragment">
                     <p>We give AI:</p>
                     <ul>
-                        <li>Static code structure</li>
-                        <li>Function signatures</li>
-                        <li>Comments and documentation</li>
+                        <li>📷 Static code structure (photos)</li>
+                        <li>📷 Function signatures (photos)</li>
+                        <li>📷 Comments and documentation (photos)</li>
                     </ul>
                 </div>
                 <div class="fragment">
-                    <p>But we <strong>never</strong> show AI what actually happens when code runs.</p>
+                    <p>But we <strong>never</strong> show AI the <strong>🎥 actual crime video</strong> — what happens when code runs!</p>
                 </div>
             </section>
 
@@ -168,17 +182,14 @@ var_dump($result);    // Repeat...</code></pre>
             <section>
                 <h2>See the Magic ✨</h2>
                 <div class="fragment">
-                    <h3>Old Way (2 hours of guessing)</h3>
-                    <pre><code class="php code-small">var_dump($cart);     // What's in cart?
-var_dump($discount); // Check discount  
-var_dump($total);    // Why is this negative?!
-die("HERE");         // Getting desperate...
-// 2 hours later: still guessing...</code></pre>
+                    <h3>Traditional Approach</h3>
+                    <pre><code class="php code-small">// Multiple debugging attempts
+// Modify code, test, repeat...</code></pre>
                 </div>
                 <div class="fragment">
-                    <h3>New Way (30 seconds of evidence)</h3>
+                    <h3>ForwardTrace Approach</h3>
                     <pre><code class="bash code-small"># Conditional breakpoint: Stop when problem occurs
-./vendor/bin/xdebug-debug --break=checkout.php:89:$total&lt;0 --exit-on-break
+./vendor/bin/xdebug-debug --break=checkout.php:89:$total&lt;0 --steps=50 --exit-on-break -- php checkout.php
 
 # AI analyzes and reports:
 "Found it: $50 discount applied to $30 cart = -$20 total
@@ -189,8 +200,9 @@ die("HERE");         // Getting desperate...
             <!-- Quick Start -->
             <section>
                 <h2>Try It Right Now 🏃‍♂️</h2>
-                <pre><code class="bash"># 1. Install
-composer require --dev koriym/xdebug-mcp
+                <pre><code class="bash"># 1. Clone from GitHub
+git clone https://github.com/koriym/xdebug-mcp.git
+cd xdebug-mcp && composer install
 
 # 2. Create a simple test
 echo '&lt;?php
@@ -200,10 +212,10 @@ echo $result;
 ?&gt;' > test.php
 
 # 3. Let AI analyze execution
-./vendor/bin/xdebug-trace --claude -- php test.php
+./vendor/bin/xdebug-trace --context="Find why \$result becomes null" -- php test.php
 claude --continue "Find why \$result becomes null"
 
-# 4. Enable full AI integration  
+# 4. Enable full AI integration
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
             </section>
 
@@ -213,8 +225,8 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                 <table style="font-size: 0.7em;">
                     <tr>
                         <th>Challenge</th>
-                        <th>Human with IDE</th>
-                        <th>AI with Runtime Data</th>
+                        <th>👤 Human with IDE</th>
+                        <th>🤖 AI with Runtime Data</th>
                     </tr>
                     <tr class="fragment">
                         <td><strong>Intermittent bugs</strong></td>
@@ -234,14 +246,14 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                 </table>
             </section>
 
-            <!-- The Tools Arsenal -->
+            <!-- The Forward Trace Arsenal -->
             <section>
-                <h2>The 43 Tools Arsenal 🛠️</h2>
+                <h2>The Forward Trace Arsenal 🛠️</h2>
                 <div class="fragment">
-                    <p><strong>Execution Tracing (4):</strong> Complete function flow with all data</p>
+                    <p><strong>23 AI-Optimized Tools</strong> designed for complete runtime analysis</p>
                 </div>
                 <div class="fragment">
-                    <p><strong>Conditional Debugging (11):</strong> Intelligent breakpoints with full traces</p>
+                    <p><strong>ForwardTrace (4):</strong> Complete execution flow with all data</p>
                 </div>
                 <div class="fragment">
                     <p><strong>Performance Profiling (4):</strong> Microsecond-precision timing analysis</p>
@@ -250,30 +262,120 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                     <p><strong>Code Coverage (6):</strong> Exact test coverage mapping</p>
                 </div>
                 <div class="fragment">
-                    <p><strong>Diagnostics (22):</strong> Memory, errors, stack, configuration</p>
+                    <p><strong>AI-Friendly Diagnostics (9):</strong> Memory, errors, configuration optimized for AI analysis</p>
                 </div>
                 <div class="fragment">
-                    <p style="text-align: center; margin-top: 30px;">
-                        <strong>Combined: AI with superhuman debugging capabilities</strong>
+                    <p style="text-align: center; margin-top: 30px; color: #ffd43b;">
+                        <strong>🎯 Fewer tools, smarter AI, better results</strong>
                     </p>
                 </div>
             </section>
 
-            <!-- Beyond Debugging -->
+            <!-- Transition: Why This Approach? -->
+            <section>
+                <div style="text-align: center; margin-top: 100px;">
+                    <h2 style="color: #ffd43b; font-size: 2em;">But Why Does This Work?</h2>
+                    <p style="font-size: 1.5em; margin-top: 50px; color: #ffffff;">
+                        The answer lies in how humans and AI process information differently
+                    </p>
+                </div>
+            </section>
+
+            <!-- Humans vs AI - Split view -->
             <section data-background-gradient="linear-gradient(45deg, #667db6, #0082c8)">
-                <h2>Beyond Debugging 🌟</h2>
-                <div class="fragment">
-                    <p>This isn't just about fixing bugs faster.</p>
+                <h2>Different Cognitive Patterns 🧠</h2>
+                <div style="display: flex; justify-content: space-between;">
+                    <div class="fragment" style="width: 45%;">
+                        <h3 style="color: #ff6b6b;">👤 Humans excel at:</h3>
+                        <ul>
+                            <li>Step-by-step reasoning</li>
+                            <li>Sequential understanding</li>
+                            <li>Interactive exploration</li>
+                            <li>Building mental models gradually</li>
+                        </ul>
+                    </div>
+                    <div class="fragment" style="width: 45%;">
+                        <h3 style="color: #51cf66;">🤖 AI excels at:</h3>
+                        <ul>
+                            <li>📊 Comprehensive data analysis</li>
+                            <li>🔍 Pattern recognition in massive datasets</li>
+                            <li>⚡ Simultaneous processing of all information</li>
+                            <li>🎯 Complete context understanding at once</li>
+                        </ul>
+                    </div>
                 </div>
-                <div class="fragment">
-                    <p><strong>It's about transforming human-AI collaboration.</strong></p>
+                <div class="fragment" style="margin-top: 40px;">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        "We've been forcing AI to debug like humans. Time to let AI debug like AI."
+                    </p>
                 </div>
+            </section>
+
+            <!-- Forward Trace Revolution - First slide -->
+            <section>
+                <h2>ForwardTrace<span style="color: #ffd43b;">™️</span>: AI-Native Debugging 🚀</h2>
+                <div style="display: flex; justify-content: space-between;">
+                    <div class="fragment" style="width: 48%;">
+                        <h3 style="color: #ff6b6b;">Interactive Debugging</h3>
+                        <p style="font-size: 0.8em; color: #ff6b6b; margin-bottom: 15px;">📷 Photo Shooting<br>(Fragmented Snapshots)</p>
+                        <pre><code class="php" style="font-size: 0.6em;">// Step 1: Set breakpoint
+// Step 2: Run to breakpoint (📷 snapshot)
+// Step 3: Check $user variable
+// Step 4: Step into function
+// Step 5: Another snapshot (📷)
+// Step 6: Check another variable...
+
+// → Multiple photos, missing the story</code></pre>
+                    </div>
+                    <div class="fragment" style="width: 48%;">
+                        <h3 style="color: #51cf66;">ForwardTrace</h3>
+                        <p style="font-size: 0.8em; color: #51cf66; margin-bottom: 15px;">🎥 Video Shooting<br>(Complete Recording)</p>
+                        <pre><code class="bash" style="font-size: 0.6em;"># Single command records entire movie
+./vendor/bin/xdebug-debug --break="script.php:10:$user==null" --steps=300 --exit-on-break -- php script.php
+
+# AI sees the complete 🎥 movie:
+# Step 1: $id = getUserId() → returns 42
+# Step 2: $user = findUser($id) → DB query success
+# Step 3: validateUser($user) → validation passes
+# Step 4: $permissions = getPermissions($user) → returns null
+# Step 5: checkAccess($permissions) → CRASH! null access</code></pre>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 30px;">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        AI processes complete context → Humans get immediate insights
+                    </p>
+                </div>
+            </section>
+
+            <!-- Forward Trace Benefits -->
+            <section>
+                <h2 style="font-size: 1.8em;">Why ForwardTrace Works for AI 🤖</h2>
                 <div class="fragment">
-                    <ul>
-                        <li>While humans get overwhelmed by thousands of function calls...</li>
-                        <li>AI instantly identifies patterns in massive trace files</li>
-                        <li>We're giving AI the rich, structured data it excels at</li>
-                    </ul>
+                    <h3 style="font-size: 1.2em; margin: 10px 0;">Real Example: Authentication Bug</h3>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                        <div style="width: 48%;">
+                            <h4 style="color: #ff6b6b; font-size: 1em; margin: 8px 0;">Traditional Way (2 hours)</h4>
+                            <ul style="font-size: 0.7em; line-height: 1.4; margin: 8px 0;">
+                                <li>Set breakpoints, step through code</li>
+                                <li>Check variables one by one</li>
+                                <li style="color: #ff6b6b;">Still guessing after 2 hours</li>
+                            </ul>
+                        </div>
+                        <div style="width: 48%;">
+                            <h4 style="color: #51cf66; font-size: 1em; margin: 8px 0;">ForwardTrace (30 seconds)</h4>
+                            <ul style="font-size: 0.7em; line-height: 1.4; margin: 8px 0;">
+                                <li>Capture complete execution flow</li>
+                                <li>AI analyzes all function calls instantly</li>
+                                <li style="color: #51cf66;">Problem solved in 30 seconds</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 20px;">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1em; font-weight: bold;">
+                        AI can process complexity that overwhelms humans
+                    </p>
                 </div>
             </section>
 
@@ -288,9 +390,6 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                         <li class="fragment">Every developer has professional debugging workflows</li>
                         <li class="fragment">AI assistants routinely use execution traces</li>
                     </ul>
-                </div>
-                <div class="fragment" style="margin-top: 40px;">
-                    <p class="quote">"Every time AI uses xdebug_start_trace() instead of var_dump(), we're elevating the entire profession."</p>
                 </div>
             </section>
 
@@ -341,7 +440,7 @@ if ($userId === 0) {
                 <div class="fragment">
                     <h4>Conditional Tracing (Smart):</h4>
                     <pre><code class="bash code-small"># Wait silently until condition met, then start tracing
-./vendor/bin/xdebug-debug --break='User.php:85:$userId==0' --exit-on-break -- php app.php
+./vendor/bin/xdebug-debug --break='User.php:85:$userId==0' --steps=100 --exit-on-break -- php app.php
 
 # Get complete execution history: how did we get $userId=0?
 claude --continue "Analyze where userId=0 comes from and which process causes the issue"</code></pre>
@@ -358,7 +457,7 @@ claude --continue "Analyze where userId=0 comes from and which process causes th
                 <h2>Another Example: "Crash Only When Array is Empty"</h2>
                 <div class="fragment">
                     <pre><code class="bash"># Catch condition-specific problems with certainty
-./vendor/bin/xdebug-debug --break='DataProcessor.php:42:empty($items)' --exit-on-break -- php batch.php
+./vendor/bin/xdebug-debug --break='DataProcessor.php:42:empty($items)' --steps=200 --exit-on-break -- php batch.php
 
 # AI analysis to identify root cause
 claude --continue "Analyze the path to empty array and why it crashes with empty data"</code></pre>
@@ -377,7 +476,7 @@ claude --continue "Analyze the path to empty array and why it crashes with empty
                 <h2>xdebug-profile: Performance Detective 🔍</h2>
                 <div class="fragment">
                     <pre><code class="bash"># Microsecond-precision performance profiling
-./vendor/bin/xdebug-profile slow_api.php
+./vendor/bin/xdebug-profile --context="API performance analysis" -- php slow_api.php
 
 # AI analyzes bottlenecks
 claude --continue "Analyze the profile data and suggest specific optimizations"</code></pre>
@@ -390,27 +489,27 @@ claude --continue "Analyze the profile data and suggest specific optimizations"<
                 </div>
             </section>
 
-            <!-- Step Debugging -->
+            <!-- Forward Trace Debugging -->
             <section>
-                <h2>xdebug-debug: AI-Controlled Step Debugging 🕵️</h2>
+                <h2>x-debug: ForwardTrace with Conditional Breakpoints 🕵️</h2>
                 <div class="fragment">
-                    <pre><code class="bash"># AI can directly control interactive debugging
-claude --continue "Debug this algorithm step by step, show variable changes"
+                    <pre><code class="bash"># AI-optimized debugging with complete context
+./vendor/bin/xdebug-debug --break="User.php:42:$user==null" --steps=150 --exit-on-break -- php app.php
 
-# AI executes MCP commands:
-# xdebug_connect, xdebug_step_into, xdebug_get_variables, 
-# xdebug_step_over, xdebug_continue, etc.</code></pre>
+# AI gets complete execution history leading to condition
+claude --continue "Analyze the complete path to null user and suggest fix"</code></pre>
                 </div>
                 <div class="fragment">
-                    <p><strong>AI autonomous debugging:</strong></p>
+                    <p><strong>AI receives comprehensive data:</strong></p>
                     <ul>
-                        <li><strong>Direct control:</strong> AI issues step_into, step_over commands</li>
-                        <li><strong>Real-time analysis:</strong> AI sees variables at each step</li>
-                        <li><strong>Intelligent flow:</strong> AI decides when to step vs continue</li>
+                        <li><strong>Complete execution trace:</strong> All function calls leading to breakpoint</li>
+                        <li><strong>Variable evolution:</strong> How $user became null</li>
+                        <li><strong>Full context:</strong> Stack trace, memory, timing</li>
+                        <li><strong>Conditional capture:</strong> Only records when condition met</li>
                     </ul>
                 </div>
                 <div class="fragment">
-                    <p><strong>Revolutionary:</strong> AI debugs like an expert human, but faster and more systematically</p>
+                    <p><strong>Revolutionary:</strong> AI sees the complete story, not just fragments</p>
                 </div>
             </section>
 
@@ -419,7 +518,7 @@ claude --continue "Debug this algorithm step by step, show variable changes"
                 <h2>xdebug-phpunit: Smart Test Tracing 🧪</h2>
                 <div class="fragment">
                     <pre><code class="bash"># Trace only your test code, not PHPUnit internals
-./vendor/bin/xdebug-phpunit tests/UserTest.php::testComplexWorkflow
+./vendor/bin/xdebug-phpunit --context="Test execution analysis" tests/UserTest.php::testComplexWorkflow
 
 # AI analyzes test execution
 claude --continue "Why is this test failing? Show me the execution path."</code></pre>
@@ -452,63 +551,34 @@ claude --continue "Analyze coverage gaps and suggest high-impact test cases"</co
                 </div>
             </section>
 
-            <!-- Schema Intelligence -->
+            <!-- Core Tools Focus -->
             <section>
-                <h2>schema/* : AI Data Intelligence 🧠</h2>
+                <h2>The Power of Focused Tools 🎯</h2>
                 <div class="fragment">
-                    <p><strong>Complete MCP Schema Documentation:</strong></p>
-                    <ul>
-                        <li>43 debugging tools with detailed parameters</li>
-                        <li>Data formats and output structures</li>
-                        <li>Integration patterns and best practices</li>
-                    </ul>
-                </div>
-                <div class="fragment">
-                    <p><strong>AI knows exactly:</strong></p>
-                    <ul>
-                        <li>Which tool to use for which problem</li>
-                        <li>How to parse and interpret results</li>
-                        <li>Optimal debugging strategies for different scenarios</li>
-                    </ul>
-                </div>
-                <div class="fragment">
-                    <p class="quote">"Self-documenting debugging: AI understands the full toolkit"</p>
-                </div>
-            </section>
-
-            <!-- The Bigger Picture -->
-            <section data-background-gradient="linear-gradient(45deg, #2c3e50, #3498db)">
-                <h2>The Inflection Point ⚡</h2>
-                <div class="fragment">
-                    <p>We can continue treating AI as a sophisticated search engine...</p>
-                </div>
-                <div class="fragment">
-                    <p><strong>Or we can build true partnership through radical transparency.</strong></p>
-                </div>
-                <div class="fragment">
-                    <p>Not just sharing our code, but our <em>entire development context</em>.</p>
-                </div>
-                <div class="fragment">
-                    <p style="text-align: center; margin-top: 50px;">
-                        <strong>This is proof that when we stop asking AI to guess and start giving it real data, we unlock capabilities we never imagined.</strong>
-                    </p>
-                </div>
-            </section>
-
-            <!-- The Vision -->
-            <section>
-                <h2>The Vision 🔮</h2>
-                <div class="fragment">
-                    <h3>A world where:</h3>
-                    <ul>
-                        <li class="fragment">Debugging becomes systematic and data-driven</li>
-                        <li class="fragment">Print statements feel as archaic as punch cards</li>
-                        <li class="fragment">Every developer has professional debugging workflows</li>
-                        <li class="fragment">AI assistants routinely use execution traces</li>
-                    </ul>
+                    <h3>4 Core AI-Optimized Tools:</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
+                            <h4 style="color: #51cf66;">🔍 ForwardTrace</h4>
+                            <p style="font-size: 0.8em;">Complete execution flow with all variable states</p>
+                        </div>
+                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
+                            <h4 style="color: #51cf66;">⚡ Conditional Breakpoints</h4>
+                            <p style="font-size: 0.8em;">Smart capture only when conditions met</p>
+                        </div>
+                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
+                            <h4 style="color: #51cf66;">📊 Performance Profiling</h4>
+                            <p style="font-size: 0.8em;">Comprehensive metrics and timing analysis</p>
+                        </div>
+                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
+                            <h4 style="color: #51cf66;">📈 Coverage Analysis</h4>
+                            <p style="font-size: 0.8em;">Full context test coverage mapping</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="fragment" style="margin-top: 40px;">
-                    <p class="quote">"Every time AI uses xdebug_start_trace() instead of var_dump(), we're elevating the entire profession."</p>
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        Each tool gives AI the complete picture it needs to excel
+                    </p>
                 </div>
             </section>
 
@@ -517,7 +587,7 @@ claude --continue "Analyze coverage gaps and suggest high-impact test cases"</co
                 <h2>Let AI See How Your Code Truly Runs 👁️</h2>
                 <div style="text-align: center;">
                     <p><strong>GitHub:</strong> <a href="https://github.com/koriym/xdebug-mcp">github.com/koriym/xdebug-mcp</a></p>
-                    <p><strong>Install:</strong> <code>composer require --dev koriym/xdebug-mcp</code></p>
+                    <p><strong>Install:</strong> <code>composer require koriym/xdebug-mcp</code></p>
                     <div style="margin: 40px 0;">
                         <p><strong>Status Badges:</strong></p>
                         <span class="badge badge-green">AI Native: YES</span>
@@ -525,7 +595,11 @@ claude --continue "Analyze coverage gaps and suggest high-impact test cases"</co
                         <span class="badge badge-red">var_dump(): NO</span>
                         <span class="badge badge-red">Guesswork: NO</span>
                     </div>
-                    <p style="margin-top: 50px;"><em>— Akihito Koriyama</em></p>
+                    <p style="margin-top: 30px; font-size: 0.9em; color: #ffffff; opacity: 0.8;">
+                        Special thanks to <strong>Derick Rethans</strong> for creating Xdebug,
+                        the foundation that makes all of this possible.
+                    </p>
+                    <p style="margin-top: 30px;"><em>— Akihito Koriyama (@koriym)</em></p>
                 </div>
             </section>
 

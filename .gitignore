@@ -32,3 +32,4 @@ mcp.json
 
 ## Home directory
 ~/
+*.phpcs-cache

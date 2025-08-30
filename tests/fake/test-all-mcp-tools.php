@@ -219,7 +219,8 @@ function generateMarkdownReport(array $results): string
             $markdown .= "**Arguments:**\n```json\n" . json_encode($result['arguments'], JSON_PRETTY_PRINT) . "\n```\n\n";
         }
         
-        $markdown .= "**Response:**\n```json\n" . json_encode($result['response'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n```\n\n";
+        $responseJson = json_encode($result['response'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $markdown .= "**Response:**\n```json\n" . maskLocalPaths((string)$responseJson) . "\n```\n\n";
         
         // Analysis
         if (isset($result['response']['result']['content'][0]['text'])) {
@@ -276,6 +277,39 @@ function generateMarkdownReport(array $results): string
     }
     
     return $markdown;
+}
+
+function maskLocalPaths(string $text): string
+{
+    // Get current working directory for repo root replacement
+    $repoRoot = getcwd();
+    if ($repoRoot === false) {
+        $repoRoot = __DIR__;
+    }
+    
+    // Get user home directory
+    $homeDir = $_SERVER['HOME'] ?? $_SERVER['USERPROFILE'] ?? '';
+    
+    $patterns = [
+        // Unix-style home directory paths
+        '~' . preg_quote($homeDir, '~') . '~' => '{HOME}',
+        // Windows-style home directory paths (C:\Users\username)
+        '~' . preg_quote(str_replace('/', '\\', $homeDir), '~') . '~i' => '{HOME_WIN}',
+        // Repository root paths
+        '~' . preg_quote($repoRoot, '~') . '~' => '{REPO_ROOT}',
+        // Windows-style repository root paths
+        '~' . preg_quote(str_replace('/', '\\', $repoRoot), '~') . '~i' => '{REPO_ROOT}',
+    ];
+    
+    $result = $text;
+    foreach ($patterns as $pattern => $replacement) {
+        $newResult = preg_replace($pattern, $replacement, $result);
+        if ($newResult !== null) {
+            $result = $newResult;
+        }
+    }
+    
+    return $result;
 }
 
 function getJsonStructure($data, int $depth = 0): string

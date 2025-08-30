@@ -1,6 +1,6 @@
 # PHP Xdebug MCP Server
 
-<img width="256" alt="xdebug-mcp" src="https://koriym.github.io/xdebug-mcp/logo.jpeg" />
+<img width="256" alt="xdebug-mcp" src="docs/images/logo.jpeg" />
 
 > **Error message is the crime photo. Trace is the crime footage.**  
 > Don't just see the crime. Watch how it happened.
@@ -35,7 +35,7 @@ This MCP server enables AI to debug PHP with superhuman capabilities:
 
 ```bash
 # 1. Install
-composer require --dev koriym/xdebug-mcp
+composer require koriym/xdebug-mcp
 
 # 2. Create a test bug
 echo '<?php
@@ -61,8 +61,16 @@ claude --continue "Why does \$result sometimes become null?"
 ./vendor/bin/xdebug-debug --break='test.php:2' --steps=10 --json -- php test.php
 # Output: JSON with variable state at each of 10 steps
 
-# 6. Enable AI autonomous debugging
+# 6. Enable AI Forward Trace debugging (transforms AI behavior)
+echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
+
+# 7. Enable AI autonomous debugging with MCP
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
+
+# 8. Use AI-friendly slash commands (in Claude Code)
+/x-debug "test.php" "test.php:3:$result==null" "" "Investigate null result bug"
+/x-trace script="test.php" context="Trace execution flow"
+/x-profile script="test.php" context="Performance analysis"
 ```
 
 ## 🔄 The Paradigm Shift: Backward → Forward
@@ -191,7 +199,7 @@ Forward Trace's `--steps` mode creates a **variable evolution timeline**:
   ],
   "trace": {
     "file": "/tmp/trace.1034012359.xt",
-    "content": ["Complete execution trace..."]
+    "content": ["..."]
   }
 }
 ```
@@ -221,6 +229,80 @@ This means:
 - **Team collaboration**: Share exact debug state
 - **Reproducible analysis**: Same data, consistent insights
 - **Historical debugging**: Analyze past issues with new AI capabilities
+
+## Usage Examples
+
+### For AI Assistants (Claude Code)
+
+**MCP Slash Commands** (Recommended for AI workflows):
+```bash
+# Variable debugging - replace var_dump() completely
+/x-debug "user.php" "user.php:42:$user==null" "" "Check user validation"
+
+# Performance analysis - identify bottlenecks instantly  
+/x-profile script="slow-endpoint.php" context="API performance investigation"
+
+# Execution tracing - understand complex logic flows
+/x-trace script="authentication.php" context="Login flow analysis"
+
+# Test coverage analysis
+/x-coverage script="vendor/bin/phpunit UserTest.php" context="Coverage verification"
+
+# Context memory - repeat with same settings
+/x-debug "test.php" "test.php:3" "" "Updated context"  # Standard positional format
+```
+
+### For Developers (CLI)
+
+**Direct CLI Commands** (Recommended for scripting/CI):
+```bash
+# Variable debugging with conditional breakpoints
+./bin/xdebug-debug --break='user.php:42:$user==null' --exit-on-break -- php user.php
+
+# Performance profiling with JSON output
+./bin/xdebug-profile --json -- php slow-endpoint.php
+
+# Execution tracing for AI analysis
+./bin/xdebug-trace --json -- php authentication.php
+
+# Code coverage generation
+./bin/xdebug-coverage -- php vendor/bin/phpunit UserTest.php
+```
+
+### Protocol-Level Access (Advanced)
+
+**Direct MCP JSON-RPC** (For custom integrations):
+```bash
+# List available commands
+echo '{"jsonrpc":"2.0","id":1,"method":"prompts/list"}' | php bin/xdebug-mcp
+
+# Execute trace command (structured parameters)
+echo '{"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"x-trace","arguments":{"script":"test.php","context":"Debug session"}}}' | php bin/xdebug-mcp
+
+# Execute with CLI-style normalization
+echo '{"jsonrpc":"2.0","id":3,"method":"prompts/get","params":{"name":"x-trace","arguments":{"cli":"--json:bool=true -- php test.php"}}}' | php bin/xdebug-mcp
+```
+
+### CLI Argument Normalization
+
+**Convert CLI-style arguments to MCP parameters** using strict normalization rules:
+```bash
+# Input: CLI string
+--json:bool=true --context:str="Debug session" -- php script.php
+
+# Output: MCP params
+{
+  "json": true,
+  "context": "Debug session", 
+  "args": ["php", "script.php"]
+}
+```
+
+**Normalization Rules:**
+- Long options only: `--key=value`
+- Type annotations: `--key:type=value` (str/int/float/bool/json)
+- Position args after `--`: stored in `args` array
+- No ambiguity: explicit types required for non-strings
 
 ## The Revolutionary Concept: Journey + Destination
 
@@ -348,7 +430,10 @@ cat /tmp/xdebug_trace_*.xt | less
 
 ```bash
 # Basic installation
-composer require --dev koriym/xdebug-mcp
+composer require koriym/xdebug-mcp
+
+# Enable AI Forward Trace methodology (transforms AI debugging behavior)
+echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
 
 # Enable AI autonomous debugging
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
@@ -436,8 +521,7 @@ Every bug has a story. Traditional debugging shows you the ending. Forward Trace
 |--------------------|------------|
 | **var_dump() Era** (1995) | See variable state |
 | **IDE Debugger Era** (2000) | Step through code |
-| **Trace Era** (2010) | Record everything |
-| **Forward Trace Era** (2025) | Record until problem |
+| **Forward Trace Era** (2025) | The era of sharing everything with AI |
 
 ## The Paradigm Shift
 
@@ -451,9 +535,34 @@ Every bug has a story. Traditional debugging shows you the ending. Forward Trace
 | One developer, one debugger | Any AI, any time, same debug data |
 | Reproduce bugs manually | Capture bugs automatically |
 
+## Troubleshooting
+
+Having issues? Check our comprehensive troubleshooting guide:
+
+📋 **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+
+**Quick Diagnostics:**
+```bash
+./bin/check-env          # Verify Xdebug installation
+composer test-json       # Test all functionality
+MCP_DEBUG=1 php bin/xdebug-mcp  # Enable debug mode
+```
+
+**Common Issues:**
+- **Context Memory**: Clear with `rm /tmp/xdebug-mcp-context.json`
+- **Breakpoint Format**: Use `file.php:line` or `file.php:line:condition`
+- **File Not Found**: Use absolute paths or check working directory
+- **Permission Denied**: Check file/directory permissions
+
 ## Resources
 
+**Essential Reading:**
+- 🎯 **[docs/debug-guidelines.md](docs/debug-guidelines.md)** - **READ FIRST** - Forward Trace methodology and best practices
 - 📖 [**MOTIVATION.md**](MOTIVATION.md) - Why we built this
+- 🔧 [**docs/TROUBLESHOOTING.md**](docs/TROUBLESHOOTING.md) - Common issues and solutions
+
+**Additional Resources:**
+- 🎬 [Forward Trace Revolution Presentation](docs/slide/) - Interactive slides showcasing the paradigm shift
 - 🎬 [Forward Trace Demo](https://github.com/koriym/xdebug-mcp/demo) - See it in action
 - 📚 [Xdebug Documentation](https://xdebug.org/docs/)
 - 🔧 [MCP Specification](https://modelcontextprotocol.io/)
