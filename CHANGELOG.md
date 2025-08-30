@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **AI Debugging Integration**
   - Published AI debugging principles to `docs/ai-debugging-with-debugger.md`
-  - Created practical AI analysis guidelines in `docs/debug-guidelines.md`
+  - Created practical AI analysis guidelines in `docs/debug_guideline_for_ai.md`
   - Integrated file size-based AI reading strategies (small/medium/large files)
   - Added Xdebug trace format documentation for AI systems
 

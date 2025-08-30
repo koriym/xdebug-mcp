@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp\Tests\Unit;
 
-use InvalidArgumentException;
 use Koriym\XdebugMcp\CLIParamsNormalizer;
+use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 class CLIParamsNormalizerTest extends TestCase
@@ -156,5 +156,16 @@ class CLIParamsNormalizerTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('位置引数は -- 後のみ許可');
         $this->normalizer->normalize('--name:str=test positional');
+    }
+
+    public function testPositionalZeroStringPreservation(): void
+    {
+        $result = $this->normalizer->normalize('--flag:bool=true -- php script.php 0');
+        $expected = [
+            'flag' => true,
+            'args' => ['php', 'script.php', '0'],
+        ];
+        $this->assertEquals($expected, $result);
+        $this->assertContains('0', $result['args'], 'The string "0" should be preserved as a positional argument');
     }
 }

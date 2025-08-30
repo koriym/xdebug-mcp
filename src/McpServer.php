@@ -299,7 +299,7 @@ final class McpServer
             ],
             'x-debug' => [
                 'name' => 'x-debug',
-                'description' => 'Step debugging with breakpoints | ex) ./x-debug "php test.php" --break="test.php:15:$user==null" --steps=100',
+                'description' => 'Step debugging with breakpoints | ex) /x-debug --script="php test.php" --break="test.php:15:$user==null" --steps=100 --context="debug context"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -559,7 +559,7 @@ final class McpServer
                     ],
                     [
                         'name' => 'x-debug',
-                        'description' => 'Step debugging with breakpoints | ex) /x-debug "php test.php" "test.php:15" 5 "debug context"',
+                        'description' => 'Step debugging with breakpoints | ex) /x-debug --script="php test.php" --break="test.php:15:$user==null" --steps=100 --context="debug context"',
                         'arguments' => [
                             [
                                 'name' => 'script',
@@ -635,6 +635,32 @@ final class McpServer
                             ],
                         ],
                     ],
+                    [
+                        'name' => 'x-test',
+                        'description' => 'Run PHPUnit tests with intelligent Xdebug tracing | ex) /x-test --script="vendor/bin/phpunit UserTest.php" --context="Testing user login" --mode="trace"',
+                        'arguments' => [
+                            [
+                                'name' => 'script',
+                                'description' => 'PHPUnit test command (e.g., "vendor/bin/phpunit tests/Unit/UserTest.php")',
+                                'required' => true,
+                            ],
+                            [
+                                'name' => 'context',
+                                'description' => 'Context description for test analysis',
+                                'required' => false,
+                            ],
+                            [
+                                'name' => 'mode',
+                                'description' => 'Analysis mode: trace (default) or profile',
+                                'required' => false,
+                            ],
+                            [
+                                'name' => 'pattern',
+                                'description' => 'Test pattern to trace (e.g., "UserTest::testLogin")',
+                                'required' => false,
+                            ],
+                        ],
+                    ],
                 ],
             ],
         ];
@@ -680,6 +706,9 @@ final class McpServer
 
             case 'x-coverage':
                 return $this->executeXCoverage($id, $args);
+
+            case 'x-test':
+                return $this->executeXTest($id, $args);
 
             default:
                 return [
@@ -756,6 +785,25 @@ final class McpServer
 
                 if (isset($args[2])) {
                     $args['format'] = $args[2];
+                }
+
+                break;
+
+            case 'x-test':
+                if (isset($args[0])) {
+                    $args['script'] = $args[0];
+                }
+
+                if (isset($args[1])) {
+                    $args['context'] = $args[1];
+                }
+
+                if (isset($args[2])) {
+                    $args['mode'] = $args[2];
+                }
+
+                if (isset($args[3])) {
+                    $args['pattern'] = $args[3];
                 }
 
                 break;
@@ -1915,6 +1963,95 @@ final class McpServer
                 'error' => [
                     'code' => -32000,
                     'message' => 'x-coverage execution failed: ' . $e->getMessage(),
+                ],
+            ];
+        }
+    }
+
+    private function executeXTest(mixed $id, array $args): array
+    {
+        try {
+            $script = $args['script'] ?? '';
+            $script = $this->processScriptArgument($script);
+            $this->validatePhpBinaryScript($script);
+            $context = $args['context'] ?? '';
+            $mode = $args['mode'] ?? 'trace';
+            $pattern = $args['pattern'] ?? '';
+
+            // Build command - use xdebug-phpunit wrapper
+            $cmd = './bin/xdebug-phpunit';
+
+            if ($mode === 'profile') {
+                $cmd .= ' --profile';
+            } else {
+                $cmd .= ' --trace';
+            }
+
+            if (! empty($context)) {
+                $cmd .= ' --context=' . escapeshellarg($context);
+            }
+
+            // Add pattern as environment variable if specified
+            $envPrefix = '';
+            if (! empty($pattern)) {
+                $envPrefix = 'TRACE_TEST=' . escapeshellarg($pattern) . ' ';
+            }
+
+            $cmd .= ' -- ' . escapeshellarg($script);
+
+            // Pre-check: Ensure script file exists before executing
+            if (!file_exists($script)) {
+                throw new FileNotFoundException('Script file not found: ' . $script);
+            }
+
+            // Pre-check: Ensure script file is readable
+            if (!is_readable($script)) {
+                throw new InvalidArgumentException('Permission denied accessing: ' . $script);
+            }
+
+            // Execute command with environment
+            $fullCmd = $envPrefix . $cmd;
+            $output = [];
+            $returnCode = 0;
+            exec($fullCmd . ' 2>&1', $output, $returnCode);
+
+            // Handle common error cases
+            $outputText = implode("\n", $output);
+
+            $result = [
+                'command' => $fullCmd,
+                'exit_code' => $returnCode,
+                'output' => $outputText,
+                'context' => $context,
+                'script' => $script,
+                'mode' => $mode,
+                'pattern' => $pattern,
+                'timestamp' => date('Y-m-d H:i:s'),
+            ];
+
+            return [
+                'jsonrpc' => '2.0',
+                'id' => $id,
+                'result' => [
+                    'messages' => [
+                        [
+                            'role' => 'assistant',
+                            'content' => [
+                                'type' => 'text',
+                                'text' => 'PHPUnit testing with Xdebug analysis ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Mode**: {$mode}\n**Pattern**: {$pattern}\n**Command**: `{$fullCmd}`\n**Exit Code**: {$returnCode}\n\n**Test Results**:\n```\n" . $outputText . "\n```",
+                            ],
+                        ],
+                    ],
+                    'debug_data' => $result,
+                ],
+            ];
+        } catch (Throwable $e) {
+            return [
+                'jsonrpc' => '2.0',
+                'id' => $id,
+                'error' => [
+                    'code' => -32000,
+                    'message' => 'x-test execution failed: ' . $e->getMessage(),
                 ],
             ];
         }

@@ -48,7 +48,7 @@ echo $result;
 # You'd add: var_dump($result); var_dump(rand(0,1)); die();
 
 # 4. AI-Native way (complete visibility)
-./vendor/bin/xdebug-trace --claude -- php test.php
+./vendor/bin/xdebug-trace --context="Investigating random null result bug" --claude -- php test.php
 claude --continue "Why does \$result sometimes become null?"
 
 # 5. Forward Trace™ (two powerful modes)
@@ -260,13 +260,13 @@ This means:
 ./bin/xdebug-debug --break='user.php:42:$user==null' --exit-on-break -- php user.php
 
 # Performance profiling with JSON output
-./bin/xdebug-profile --json -- php slow-endpoint.php
+./bin/xdebug-profile --context="API endpoint performance analysis" --json -- php slow-endpoint.php
 
 # Execution tracing for AI analysis
-./bin/xdebug-trace --json -- php authentication.php
+./bin/xdebug-trace --context="Authentication flow debugging" --json -- php authentication.php
 
 # Code coverage generation
-./bin/xdebug-coverage -- php vendor/bin/phpunit UserTest.php
+./bin/xdebug-coverage --context="User test coverage verification" -- php vendor/bin/phpunit UserTest.php
 ```
 
 ### Protocol-Level Access (Advanced)
@@ -375,7 +375,7 @@ die("HERE");         // Getting desperate...
 
 ```bash
 # Generate traces for manual inspection
-./vendor/bin/xdebug-trace -- php app.php
+./vendor/bin/xdebug-trace --context="Application startup analysis" -- php app.php
 cat /tmp/xdebug_trace_*.xt | less
 ```
 
@@ -396,12 +396,12 @@ cat /tmp/xdebug_trace_*.xt | less
 # Record 50 steps OR until condition met, whichever comes first
 
 # Schema-validated output for cross-AI analysis
-./vendor/bin/xdebug-debug --break='error.php:20' --steps=200 --json > debug-session.json
+./vendor/bin/xdebug-debug --context="Customer #12345 checkout failure" --break='error.php:20' --steps=200 --json > debug-session.json
 # Share debug-session.json with any AI for analysis
 
 # Direct AI integration
-./vendor/bin/xdebug-trace --claude -- php slow_endpoint.php
-./vendor/bin/xdebug-profile --claude -- php api.php
+./vendor/bin/xdebug-trace --context="Performance bottleneck investigation" --claude -- php slow_endpoint.php
+./vendor/bin/xdebug-profile --context="API response time analysis" --claude -- php api.php
 ```
 
 ## The 28 MCP Tools
@@ -557,7 +557,7 @@ MCP_DEBUG=1 php bin/xdebug-mcp  # Enable debug mode
 ## Resources
 
 **Essential Reading:**
-- 🎯 **[docs/debug-guidelines.md](docs/debug-guidelines.md)** - **READ FIRST** - Forward Trace methodology and best practices
+🎯 **[Forward Trace™ Debugging Guide](https://koriym.github.io/xdebug-mcp/docs/debug_guideline_for_ai.md)** - **READ FIRST** - Forward Trace methodology and best practices
 - 📖 [**MOTIVATION.md**](MOTIVATION.md) - Why we built this
 - 🔧 [**docs/TROUBLESHOOTING.md**](docs/TROUBLESHOOTING.md) - Common issues and solutions
 

@@ -8,6 +8,13 @@ use Koriym\XdebugMcp\Constants;
 use Koriym\XdebugMcp\Exceptions\InvalidLineException;
 
 /**
+ * Exception for invalid breakpoint format
+ */
+class InvalidBreakpointFormatException extends \RuntimeException
+{
+}
+
+/**
  * Parse breakpoint specifications
  * Format: file.php:line[:condition][,file2.php:line2,...]
  */
@@ -20,19 +27,48 @@ function parseBreakpoints(string $breakSpec): array
         $spec = trim($spec);
         if (empty($spec)) continue;
 
-        // Parse file:line[:condition]
-        $parts = explode(':', $spec);
-        if (count($parts) < 2) {
-            throw new RuntimeException("Invalid breakpoint format: $spec (expected file:line[:condition])");
+        // Parse file:line[:condition] (supports Windows paths and conditions with colons)
+        if (!preg_match('/^(.*):(\d+)(?::(.*))?$/', $spec, $m)) {
+            throw new InvalidBreakpointFormatException("Invalid breakpoint format: $spec\n" .
+                "Use: file.php:line or file.php:line:condition\n" .
+                "Examples:\n" .
+                "  - script.php:42\n" .
+                "  - script.php:42:\$user==null\n" .
+                "  - tests/fake/script.php:42\n" .
+                "  - file1.php:10,file2.php:20");
+        }
+        $file = $m[1];
+        $line = (int) $m[2];
+        $condition = $m[3] ?? null;
+
+        // Try to resolve file path - check both as-is and relative to current directory
+        $resolvedFile = null;
+        if (file_exists($file)) {
+            $resolvedFile = $file;
+        } elseif (!str_starts_with($file, '/') && file_exists(getcwd() . '/' . $file)) {
+            // Try relative to current working directory
+            $resolvedFile = getcwd() . '/' . $file;
+        } else {
+            // Try common project paths
+            $commonPaths = [
+                $file,
+                './' . $file,
+                'tests/fake/' . basename($file)  // Support common test locations
+            ];
+            
+            foreach ($commonPaths as $testPath) {
+                if (file_exists($testPath)) {
+                    $resolvedFile = $testPath;
+                    break;
+                }
+            }
         }
 
-        $file = $parts[0];
-        $line = (int)$parts[1];
-        $condition = isset($parts[2]) ? implode(':', array_slice($parts, 2)) : null;
-
-        if (!file_exists($file)) {
-            throw new RuntimeException("Breakpoint file not found: $file");
+        if (!$resolvedFile) {
+            throw new RuntimeException("Breakpoint file not found: $file (searched current dir and common paths)");
         }
+        
+        $file = $resolvedFile;
 
         if ($line <= 0) {
             throw new InvalidLineException("Invalid line number: $line in $file");
@@ -140,7 +176,7 @@ function parseBreakpoints(string $breakSpec): array
             echo "  file1.php:5,file2.php:10        # Multiple breakpoints\n";
             echo "  file.php:5:\$a>1,other.php:20    # Mixed conditions\n";
             echo "\n";
-            echo "Examples:\n";
+            echo "CLI Examples:\n";
             echo "  xdebug-debug test.php                                    # Auto-detect breakpoint\n";
             echo "  xdebug-debug --break=src/User.php:42 -- php main.php arg1 arg2\n";
             echo "  xdebug-debug --break=src/User.php:42:\$id>100 -- php main.php user123\n";
@@ -148,6 +184,13 @@ function parseBreakpoints(string $breakSpec): array
             echo "  xdebug-debug --break=app.php:50 --steps=100 --json -- php app.php\n";
             echo "  xdebug-debug --context=\"Login validation test\" --exit-on-break -- php UserTest.php\n";
             echo "  xdebug-debug test.php test.php 15                       # Legacy format\n";
+            echo "\n";
+            echo "MCP Usage Examples (via Claude/AI assistants):\n";
+            echo "  {\"script\":\"php app.php\", \"context\":\"Debug authentication\"}                # Basic debugging\n";
+            echo "  {\"script\":\"php test.php\", \"breakpoints\":\"test.php:15\"}                   # With breakpoint\n";  
+            echo "  {\"script\":\"php api.php\", \"breakpoints\":\"api.php:42:\$user==null\"}       # Conditional break\n";
+            echo "  {\"script\":\"php app.php\", \"breakpoints\":\"file1.php:10,file2.php:20\"}     # Multiple breakpoints\n";
+            echo "  {\"script\":\"php test.php\", \"steps\":50, \"context\":\"Variable tracking\"}  # Step recording\n";
             exit(0);
         }
 

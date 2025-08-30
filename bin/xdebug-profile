@@ -8,13 +8,14 @@ $projectRoot = require __DIR__ . '/autoload.php';
 
 function showHelp(string $scriptName): void
 {
-    echo "Usage: $scriptName [--json] [--claude] -- php script.php [args...]\n";
+    echo "Usage: $scriptName [--json] [--claude] [--context=TEXT] -- php script.php [args...]\n";
     echo "\n";
     echo "Profile PHP script execution performance with Xdebug.\n";
     echo "\n";
     echo "Options:\n";
-    echo "  --json    JSON output for AI analysis with emoji keys\n";
-    echo "  --claude  Auto-analyze with Claude after profiling\n";
+    echo "  --json           JSON output for AI analysis with emoji keys\n";
+    echo "  --claude         Auto-analyze with Claude after profiling\n";
+    echo "  --context=TEXT   Add contextual description for AI analysis\n";
     echo "\n";
     echo "Examples:\n";
     echo "  # Human-readable output with units:\n";
@@ -25,6 +26,9 @@ function showHelp(string $scriptName): void
     echo "\n";
     echo "  # Auto-analyze with Claude:\n";
     echo "  $scriptName --claude -- php app.php\n";
+    echo "\n";
+    echo "  # With context for self-explanatory analysis:\n";
+    echo "  $scriptName --context=\"Performance analysis of user authentication\" -- php UserTest.php\n";
     echo "\n";
     echo "Output:\n";
     echo "  - Default: Human-readable with proper units and KCachegrind suggestions\n";
@@ -41,9 +45,22 @@ if (isset($argv[1]) && ($argv[1] === '--help' || $argv[1] === '-h')) {
 // Parse flags
 $jsonOutput = in_array('--json', $argv);
 $claudeAnalysis = in_array('--claude', $argv);
+$context = null;
+
+// Parse --context= flag
+foreach ($argv as $arg) {
+    if (str_starts_with($arg, '--context=')) {
+        $context = substr($arg, 10);
+        break;
+    }
+}
 
 // Remove flags and find target file
-$args = array_values(array_diff($argv, ['--json', '--claude', '--']));
+$flagsToRemove = ['--json', '--claude', '--'];
+if ($context !== null) {
+    $flagsToRemove[] = '--context=' . $context;
+}
+$args = array_values(array_diff($argv, $flagsToRemove));
 array_shift($args); // remove script name
 
 // Skip 'php' if present
@@ -85,7 +102,7 @@ passthru($cmd, $exitCode);
 
 // Generate profile analysis
 try {
-    $result = generateEnhancedProfileData($xdebugOutputDir, $jsonOutput);
+    $result = generateEnhancedProfileData($xdebugOutputDir, $jsonOutput, $context);
 
     if ($jsonOutput) {
         // AI-optimized JSON output with emoji keys and units
@@ -114,7 +131,7 @@ try {
     exit(1);
 }
 
-function generateEnhancedProfileData(string $xdebugOutputDir, bool $jsonOutput = false): array
+function generateEnhancedProfileData(string $xdebugOutputDir, bool $jsonOutput = false, ?string $context = null): array
 {
     // Find the created profile file
     $profileFiles = glob("{$xdebugOutputDir}/cachegrind.out.*");
@@ -137,9 +154,18 @@ function generateEnhancedProfileData(string $xdebugOutputDir, bool $jsonOutput =
     // Comprehensive analysis
     $stats = analyzeCachegrindFile($profileFile);
     
+    // Add context to result if provided
+    if ($context !== null) {
+        if ($jsonOutput) {
+            $contextKey = '🎯 analysis_context';
+        } else {
+            $contextKey = 'analysis_context';
+        }
+    }
+
     if ($jsonOutput) {
         // Enhanced result with emoji keys and units for AI
-        return [
+        $result = [
             // Core file information
             '📁 profile_file' => $profileFile,
             '📊 total_lines' => $stats['total_lines'] . ' lines',
@@ -168,9 +194,15 @@ function generateEnhancedProfileData(string $xdebugOutputDir, bool $jsonOutput =
             '📋 specification' => 'https://kcachegrind.github.io/html/CallgrindFormat.html',
             '🔗 schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json'
         ];
+        
+        if ($context !== null) {
+            $result['🎯 analysis_context'] = $context;
+        }
+        
+        return $result;
     } else {
         // Human-readable result without emojis but with all data
-        return [
+        $result = [
             'profile_file' => $profileFile,
             'total_lines' => $stats['total_lines'],
             'file_size_bytes' => $fileSize,
@@ -186,6 +218,12 @@ function generateEnhancedProfileData(string $xdebugOutputDir, bool $jsonOutput =
             'bottleneck_functions' => $stats['bottleneck_functions'],
             'optimization_suggestions' => $stats['optimization_suggestions']
         ];
+        
+        if ($context !== null) {
+            $result['analysis_context'] = $context;
+        }
+        
+        return $result;
     }
 }
 
@@ -370,6 +408,9 @@ function analyzeCachegrindFile(string $profileFile): array
 function displayHumanReadableProfile(array $result): void
 {
     echo "✅ Profile complete: {$result['profile_file']}\n";
+    if (isset($result['analysis_context'])) {
+        echo "🎯 Context: {$result['analysis_context']}\n";
+    }
     echo "📊 Size: {$result['file_size_formatted']} ({$result['total_lines']} lines)\n";
     echo "📈 Functions: {$result['functions_count']} ({$result['user_functions']} user + {$result['internal_functions']} internal)\n";
     echo "📞 Calls: {$result['total_calls']}\n";

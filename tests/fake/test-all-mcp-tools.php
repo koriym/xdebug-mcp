@@ -292,9 +292,9 @@ function maskLocalPaths(string $text): string
     
     $patterns = [
         // Unix-style home directory paths
-        '~' . preg_quote($homeDir, '~') . '~' => '{HOME}',
+        ...($homeDir !== '' ? ['~' . preg_quote($homeDir, '~') . '~' => '{HOME}'] : []),
         // Windows-style home directory paths (C:\Users\username)
-        '~' . preg_quote(str_replace('/', '\\', $homeDir), '~') . '~i' => '{HOME_WIN}',
+        ...($homeDir !== '' ? ['~' . preg_quote(str_replace('/', '\\', $homeDir), '~') . '~i' => '{HOME_WIN}'] : []),
         // Repository root paths
         '~' . preg_quote($repoRoot, '~') . '~' => '{REPO_ROOT}',
         // Windows-style repository root paths

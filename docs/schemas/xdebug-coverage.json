@@ -1,0 +1,169 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json",
+  "title": "Xdebug Coverage Result",
+  "description": "AI-optimized code coverage data for PHP test analysis and quality assessment. Designed for identifying untested code paths and coverage gaps.",
+  "type": "object",
+  "patternProperties": {
+    "^(?:/|[A-Za-z]:\\\\).+\\.php$": {
+      "type": "object",
+      "description": "Coverage data for a specific PHP file",
+      "properties": {
+        "coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Coverage percentage for this file (0-100)"
+        },
+        "lines_total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total executable lines in the file"
+        },
+        "lines_covered": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of lines covered by tests"
+        },
+        "covered_lines": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Array of line numbers that are covered by tests"
+        },
+        "uncovered_lines": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Array of line numbers that are NOT covered by tests"
+        }
+      },
+      "required": ["coverage", "lines_total", "lines_covered", "covered_lines", "uncovered_lines"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "analysis_context": {
+      "type": "string",
+      "description": "Optional contextual description for AI analysis",
+      "examples": ["Test coverage analysis for payment processing", "Coverage gap identification in user authentication", "Quality assessment of API test suite"]
+    }
+  },
+  "additionalProperties": false,
+
+  "links": [
+    {
+      "rel": "specification",
+      "href": "https://xdebug.org/docs/code_coverage",
+      "title": "Official Xdebug Code Coverage Documentation",
+      "description": "Complete documentation of Xdebug code coverage functionality"
+    },
+    {
+      "rel": "debug-guide",
+      "href": "https://koriym.github.io/xdebug-mcp/debug_guideline_for_ai.md",
+      "title": "PHP Xdebug Coverage Analysis Guidelines",
+      "description": "Complete coverage analysis guide: test quality assessment, coverage gap identification, and improvement strategies"
+    },
+    {
+      "rel": "self",
+      "href": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json",
+      "title": "JSON Schema for Xdebug Coverage Results",
+      "description": "This schema definition with AI strategies and usage guidelines"
+    },
+    {
+      "rel": "related",
+      "href": "https://github.com/koriym/xdebug-mcp",
+      "title": "Xdebug MCP Server Repository",
+      "description": "Source code and documentation for the Xdebug MCP Server project"
+    },
+    {
+      "rel": "tool",
+      "href": "mcp://xdebug_start_coverage",
+      "title": "MCP Tool: Start Coverage",
+      "description": "MCP tool to generate coverage data programmatically"
+    },
+    {
+      "rel": "command",
+      "href": "file:///bin/xdebug-coverage",
+      "title": "Command Line Tool",
+      "description": "CLI command to generate coverage data with this schema"
+    }
+  ],
+
+  "x-ai-strategies": {
+    "analysis_approach": {
+      "high_coverage": {
+        "condition": "coverage >= 80",
+        "focus": "Identify specific uncovered edge cases and error handling paths",
+        "recommendations": "Focus on exception handling, boundary conditions, and error paths"
+      },
+      "medium_coverage": {
+        "condition": "50 <= coverage < 80",
+        "focus": "Prioritize uncovered main functionality and critical paths",
+        "recommendations": "Add tests for core business logic and primary user scenarios"
+      },
+      "low_coverage": {
+        "condition": "coverage < 50",
+        "focus": "Identify major uncovered functionality blocks",
+        "recommendations": "Start with basic functionality tests and main execution paths"
+      }
+    },
+
+    "coverage_patterns": {
+      "gap_analysis": {
+        "description": "Identify contiguous blocks of uncovered lines",
+        "method": "Group consecutive line numbers in uncovered_lines to find function/method gaps"
+      },
+      "critical_paths": {
+        "description": "Focus on uncovered lines in critical business logic",
+        "method": "Correlate uncovered lines with function names and business importance"
+      },
+      "error_handling": {
+        "description": "Identify untested error and exception handling code",
+        "method": "Look for uncovered lines containing 'throw', 'catch', 'error', 'exception' patterns"
+      },
+      "boundary_conditions": {
+        "description": "Find untested edge cases and input validation",
+        "method": "Identify uncovered lines in conditional statements and input validation"
+      }
+    },
+
+    "improvement_workflow": {
+      "step1": {
+        "name": "Coverage Assessment",
+        "action": "Analyze overall coverage percentage and identify files with low coverage"
+      },
+      "step2": {
+        "name": "Gap Prioritization",
+        "action": "Focus on uncovered lines in critical functionality first"
+      },
+      "step3": {
+        "name": "Test Creation",
+        "action": "Write tests targeting specific uncovered line ranges"
+      },
+      "step4": {
+        "name": "Verification",
+        "action": "Re-run coverage to confirm improvement and identify remaining gaps"
+      }
+    }
+  },
+
+  "x-coverage-capabilities": {
+    "line_coverage": "Track which lines of code are executed during test runs",
+    "function_coverage": "Identify untested functions and methods",
+    "branch_coverage": "Find untested conditional branches and decision paths",
+    "test_quality": "Assess overall test suite quality and completeness",
+    "regression_prevention": "Ensure critical paths remain tested over time",
+    "refactoring_safety": "Verify code changes don't break existing test coverage"
+  },
+
+  "x-mcp-integration": {
+    "tool_name": "xdebug_start_coverage",
+    "usage": "Call via MCP to generate coverage data during test execution",
+    "workflow": "1. Start coverage before tests, 2. Execute test suite, 3. Stop coverage and analyze results"
+  }
+}
