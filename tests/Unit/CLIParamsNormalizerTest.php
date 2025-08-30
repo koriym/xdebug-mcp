@@ -137,6 +137,13 @@ class CLIParamsNormalizerTest extends TestCase
         $this->normalizer->normalize('--count:int=abc');
     }
 
+    public function testErrorInvalidFloat(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('は数値ではありません');
+        $this->normalizer->normalize('--rate:float=not_a_number');
+    }
+
     public function testErrorInvalidBoolean(): void
     {
         $this->expectException(InvalidArgumentException::class);
