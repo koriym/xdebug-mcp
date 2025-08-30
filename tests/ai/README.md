@@ -4,11 +4,12 @@ This directory contains evaluation materials for testing the AI-friendliness and
 
 ## 🎯 Purpose
 
-Evaluate the MCP slash commands (`/x-debug`, `/x-trace`, `/x-profile`, `/x-coverage`) from a **fresh Claude perspective** to identify:
+Evaluate the simplified Xdebug tools (`xdebug-debug`, `xdebug-trace`, `xdebug-profile`, `xdebug-coverage`) from a **fresh Claude perspective** to identify:
 - Usability issues
 - Documentation gaps  
 - AI analysis quality
-- Forward Trace™ debugging effectiveness
+- Vendor filtering effectiveness (prepend_filter.php)
+- Forward Trace™ debugging methodology
 
 ## 🧠 Why Fresh Claude Evaluation?
 
@@ -37,38 +38,55 @@ Evaluate the MCP slash commands (`/x-debug`, `/x-trace`, `/x-profile`, `/x-cover
 2. Attempt MCP server setup following documentation
 3. **Document any confusion or missing steps**
 
-### Step 3: Slash Commands Testing
-Test each command systematically:
+### Step 3: Xdebug Tools Testing
+Test each simplified tool systematically:
 
 #### Basic Usage Tests
 ```bash
-# Test prompts discovery
-echo '{"jsonrpc":"2.0","id":1,"method":"prompts/list"}' | php bin/xdebug-mcp
+# Test tool discovery
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | php bin/xdebug-mcp
 
-# Test x-trace
-/x-trace script="tests/fake/loop-counter.php" context="Performance analysis"
+# Test xdebug-trace (execution flow analysis with vendor filtering)
+./bin/xdebug-trace --context="Performance analysis" tests/fake/loop-counter.php
 
-# Test x-debug  
-/x-debug script="tests/fake/array-manipulation.php" context="Debug test" breakpoints="tests/fake/array-manipulation.php:10"
+# Test xdebug-trace with PHPUnit (no vendor noise)
+./bin/xdebug-trace --context="Testing user authentication" -- php vendor/bin/phpunit --filter testToolsListRequest tests/Unit/McpServerTest.php
 
-# Test x-profile
-/x-profile script="tests/fake/loop-counter.php" context="Profiling test"
+# Test xdebug-debug (interactive debugging)
+./bin/xdebug-debug --context="Debug test" --break="tests/fake/array-manipulation.php:10" tests/fake/array-manipulation.php
 
-# Test x-coverage
-/x-coverage script="vendor/bin/phpunit tests/Unit/McpServerTest.php" context="Coverage test"
+# Test xdebug-profile (performance profiling with vendor filtering)
+./bin/xdebug-profile --context="Profiling test" tests/fake/loop-counter.php
+
+# Test xdebug-profile with PHPUnit (clean profiling data)
+./bin/xdebug-profile --context="Profile functionality verification" -- php vendor/bin/phpunit --filter testToolsListRequest tests/Unit/McpServerTest.php
+
+# Test xdebug-coverage (code coverage analysis)
+./bin/xdebug-coverage --context="Coverage test" -- php vendor/bin/phpunit tests/Unit/McpServerTest.php
+```
+
+#### Vendor Filtering Verification
+```bash
+# Verify clean trace output (should be ~83 lines, not 21,000+)
+./bin/xdebug-trace --context="Vendor filtering test" -- php vendor/bin/phpunit --filter testToolsListRequest tests/Unit/McpServerTest.php
+# Expected: Clean execution trace focusing only on user code, no Composer/vendor noise
+
+# Verify clean profile output
+./bin/xdebug-profile --context="Vendor filtering test" -- php vendor/bin/phpunit --filter testToolsListRequest tests/Unit/McpServerTest.php  
+# Expected: Profile data focused on user functions, not vendor library overhead
 ```
 
 
 #### Error Handling Tests
 ```bash
 # Test with invalid files
-/x-trace script="nonexistent.php"
+./bin/xdebug-trace nonexistent.php
 
 # Test with missing required parameters
-/x-trace context="No script specified"
+./bin/xdebug-trace
 
 # Test with invalid breakpoints
-/x-debug script="tests/fake/loop-counter.php" breakpoints="invalid:format"
+./bin/xdebug-debug --break="invalid:format" tests/fake/loop-counter.php
 ```
 
 ### Step 4: AI Analysis Evaluation
@@ -91,17 +109,20 @@ For each successful execution, evaluate:
    - Does it provide focused, actionable insights?
 
 ### Step 5: Integration Testing
-Test PHPUnit integration scenarios:
+Test simplified system integration:
 
 ```bash
-# Test with composer x-test
-composer x-test
+# Test basic PHPUnit execution with vendor filtering
+./bin/xdebug-trace --context="Unit test execution" -- php vendor/bin/phpunit tests/Unit/McpServerTest.php
 
-# Test specific test patterns
-composer x-test tests/Unit/McpServerTest.php::testConstructorWithValidScript
+# Test specific test methods with clean profiling
+./bin/xdebug-profile --context="Single test profiling" -- php vendor/bin/phpunit --filter testToolsListRequest tests/Unit/McpServerTest.php
 
-# Test failure scenarios
-/x-debug script="vendor/bin/phpunit --stop-on-failure tests/Unit/DebugServerTest.php" context="First failure debugging"
+# Test coverage analysis
+./bin/xdebug-coverage --context="Test coverage analysis" -- php vendor/bin/phpunit tests/Unit/McpServerTest.php
+
+# Test failure scenarios with clean debugging
+./bin/xdebug-debug --context="First failure debugging" --exit-on-break -- php vendor/bin/phpunit --stop-on-failure tests/Unit/DebugServerTest.php
 ```
 
 ## 📊 Evaluation Criteria
@@ -158,9 +179,19 @@ tests/ai/
 ## 🎯 Success Metrics
 
 A successful evaluation should demonstrate:
-- Fresh Claude can set up and use the system following docs alone
-- Slash commands provide genuinely useful AI debugging insights  
+- Fresh Claude can set up and use the simplified system following docs alone
+- Xdebug tools provide genuinely useful AI debugging insights with minimal vendor noise
+- Vendor filtering via prepend_filter.php works seamlessly (83 lines vs 21,000+ unfiltered)
 - Forward Trace™ methodology feels natural and effective
 - The system enhances rather than complicates the debugging workflow
+
+## 🔧 System Improvements (Post-Simplification)
+
+**Major Simplifications Achieved:**
+- **Vendor Filtering**: Replaced 200+ line TraceExtension system with single `xdebug_set_filter()` call
+- **Code Reduction**: Removed complex TraceHelper, XdebugPhpunitCommand classes entirely
+- **Coverage Improvement**: McpServer.php coverage increased from 13.6% to 61.79%
+- **API Compatibility**: Maintained existing tool interfaces while simplifying internals
+- **Automatic Filtering**: Uses `auto_prepend_file` for seamless vendor exclusion from startup
 
 **Ready to start? Launch that fresh Claude session!** 🚀

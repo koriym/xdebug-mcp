@@ -1,143 +1,56 @@
 #!/usr/bin/env php
 <?php
 
-declare(strict_types=1);
+// Create shutdown script for coverage collection
+$shutdownScript = tempnam(sys_get_temp_dir(), 'coverage_end_');
+file_put_contents($shutdownScript, '<?php
+$tempDir = sys_get_temp_dir();
+xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, [getcwd() . "/vendor/", getcwd() . "/tests/", $tempDir]);
+xdebug_start_code_coverage();
+register_shutdown_function(function() use ($tempDir) {
+    $coverage = xdebug_get_code_coverage();
+    // Remove temp files from coverage
+    $filtered = array_filter($coverage, function($path) use ($tempDir) {
+        return strpos($path, $tempDir) === false;
+    }, ARRAY_FILTER_USE_KEY);
+    $result = ["\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json", "coverage" => $filtered];
+    echo(json_encode($result, JSON_UNESCAPED_SLASHES));
+});
+');
 
-$projectRoot = require __DIR__ . '/autoload.php';
+// Parse arguments - handle -- separator for complex commands
+$args = array_slice($argv, 1);
+if (in_array('--', $args)) {
+    $separatorIndex = array_search('--', $args);
+    $args = array_slice($args, $separatorIndex + 1);
+}
 
-// Parse --context= flag
-$context = null;
-foreach ($argv as $arg) {
-    if (str_starts_with($arg, '--context=')) {
-        $context = substr($arg, 10);
+// Use PHP_BINARY constant instead of which php
+$phpPath = PHP_BINARY;
+
+// Check if Xdebug is already loaded
+$xdebugFlag = '';
+if (!extension_loaded('xdebug')) {
+    $xdebugFlag = ' -dzend_extension=xdebug';
+}
+
+// Properly escape all arguments and prepend file path
+$escapedArgs = array_map('escapeshellarg', $args);
+$escapedPrependFile = escapeshellarg($shutdownScript);
+
+// Execute PHP script with coverage enabled
+$cmd = escapeshellarg($phpPath) . $xdebugFlag . ' -dxdebug.mode=coverage -dauto_prepend_file=' . $escapedPrependFile . ' ' . implode(' ', $escapedArgs) . ' </dev/null 2>/dev/null';
+$output = shell_exec($cmd);
+
+// Extract only JSON from output (filter out script output)
+$lines = explode("\n", $output ?: '');
+foreach ($lines as $line) {
+    $line = trim($line);
+    if ($line && (str_starts_with($line, '{"') || str_contains($line, '"$schema"'))) {
+        echo $line . "\n";
         break;
     }
 }
 
-// Show help if requested
-// Remove context flag from argv for argument counting
-$filteredArgv = [];
-foreach ($argv as $arg) {
-    if (!str_starts_with($arg, '--context=')) {
-        $filteredArgv[] = $arg;
-    }
-}
-
-if (in_array('--help', $argv) || in_array('-h', $argv) || count($filteredArgv) < 4) {
-    fwrite(STDOUT, "Usage: xdebug-coverage [--context=TEXT] -- php script.php [args...]\n");
-    fwrite(STDOUT, "\n");
-    fwrite(STDOUT, "Executes PHP scripts with Xdebug code coverage and provides coverage analysis.\n");
-    fwrite(STDOUT, "\n");
-    fwrite(STDOUT, "Options:\n");
-    fwrite(STDOUT, "  --context=TEXT   Add contextual description for AI analysis\n");
-    fwrite(STDOUT, "\n");
-    fwrite(STDOUT, "Examples:\n");
-    fwrite(STDOUT, "  xdebug-coverage -- php test.php\n");
-    fwrite(STDOUT, "  xdebug-coverage -- php -f script.php arg1 arg2\n");
-    fwrite(STDOUT, "  xdebug-coverage --context=\"Testing payment processing\" -- php PaymentTest.php\n");
-    fwrite(STDOUT, "\n");
-    exit(0);
-}
-
-// Skip: [0]="xdebug-coverage" [1]="--" [2]="php"
-// Validate target file is provided
-if (!isset($filteredArgv[3]) || empty($filteredArgv[3])) {
-    fwrite(STDERR, "Error: Target PHP file not specified\n");
-    fwrite(STDERR, "Usage: xdebug-coverage [--context=TEXT] -- php <script.php> [args...]\n");
-    fwrite(STDERR, "Example: xdebug-coverage -- php test.php\n");
-    exit(1);
-}
-
-$targetFile = $filteredArgv[3];           // script.php
-
-// Validate target file exists and is readable
-if (!file_exists($targetFile)) {
-    fwrite(STDERR, "Error: Target file '$targetFile' does not exist\n");
-    exit(1);
-}
-
-if (!is_readable($targetFile)) {
-    fwrite(STDERR, "Error: Target file '$targetFile' is not readable\n");
-    exit(1);
-}
-
-$phpArgs = array_slice($filteredArgv, 4); // remaining args
-
-// Create coverage scripts
-// NOTE: Cannot use register_shutdown_function() directly in current process
-// because Xdebug functions require Xdebug to be enabled in the target process
-$srcPath = $projectRoot . '/src';
-
-$prependScript = tempnam(sys_get_temp_dir(), 'coverage_start_');
-$contextValue = $context;
-file_put_contents($prependScript, "<?php
-xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_INCLUDE, ['$srcPath/']);
-xdebug_start_code_coverage(XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
-
-register_shutdown_function(function() {
-    \$coverage = xdebug_get_code_coverage();
-    \$result = [];
-    
-    foreach (\$coverage as \$file => \$lines) {
-        \$covered = \$uncovered = [];
-        
-        foreach (\$lines as \$line => \$status) {
-            if (\$status === 1) {
-                \$covered[] = \$line;
-            } elseif (\$status === -1) {
-                \$uncovered[] = \$line;
-            }
-        }
-        
-        \$total = count(\$covered) + count(\$uncovered);
-        \$result[\$file] = [
-            'coverage' => \$total > 0 ? round(count(\$covered) / \$total * 100, 1) : 0,
-            'lines_total' => \$total,
-            'lines_covered' => count(\$covered),
-            'covered_lines' => \$covered,
-            'uncovered_lines' => \$uncovered
-        ];
-    }
-    
-    // Add context if provided
-    \$contextValue = " . var_export($contextValue, true) . ";
-    if (\$contextValue !== null) {
-        \$result['analysis_context'] = \$contextValue;
-    }
-    
-    echo json_encode(\$result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-});");
-
-// Execute with Xdebug coverage
-$xdebugOptions = [
-    '-dzend_extension=xdebug',
-    '-dxdebug.mode=coverage',
-    "-dauto_prepend_file=$prependScript"
-];
-
-$cmd = 'php ' . implode(' ', array_map('escapeshellarg', array_merge($xdebugOptions, [$targetFile], $phpArgs)));
-
-// Execute command and capture output with exit code
-$outputLines = [];
-$exitCode = null;
-exec($cmd . ' 2>&1', $outputLines, $exitCode);
-
-// Output results to STDOUT
-$output = implode("\n", $outputLines);
-fwrite(STDOUT, $output);
-if (!empty($output)) {
-    fwrite(STDOUT, "\n");
-}
-
-unlink($prependScript);
-
-// Show context in output if provided
-if ($context !== null) {
-    fwrite(STDERR, "\n🎯 Context: $context\n");
-}
-
-// Always suggest Claude analysis for coverage data  
-fwrite(STDERR, "\n💡 Analyze with Claude Code:\n");
-fwrite(STDERR, "   claude \"Analyze the code coverage data above\"\n");
-
-exit($exitCode);
+// Clean up temporary file
+unlink($shutdownScript);
