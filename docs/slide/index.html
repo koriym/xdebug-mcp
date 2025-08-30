@@ -189,7 +189,7 @@ var_dump($result);    // Repeat...</code></pre>
                 <div class="fragment">
                     <h3>ForwardTrace Approach</h3>
                     <pre><code class="bash code-small"># Conditional breakpoint: Stop when problem occurs
-./vendor/bin/xdebug-debug --break=checkout.php:89:$total&lt;0 --steps=50 --exit-on-break -- php checkout.php
+./vendor/bin/xdebug-debug --break='checkout.php:89:$total&lt;0' --steps=50 --exit-on-break -- php checkout.php
 
 # AI analyzes and reports:
 "Found it: $50 discount applied to $30 cart = -$20 total
@@ -213,7 +213,6 @@ echo $result;
 
 # 3. Let AI analyze execution
 ./vendor/bin/xdebug-trace --context="Find why \$result becomes null" -- php test.php
-claude --continue "Find why \$result becomes null"
 
 # 4. Enable full AI integration
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
@@ -331,7 +330,7 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                         <h3 style="color: #51cf66;">ForwardTrace</h3>
                         <p style="font-size: 0.8em; color: #51cf66; margin-bottom: 15px;">🎥 Video Shooting<br>(Complete Recording)</p>
                         <pre><code class="bash" style="font-size: 0.6em;"># Single command records entire movie
-./vendor/bin/xdebug-debug --break="script.php:10:$user==null" --steps=300 --exit-on-break -- php script.php
+./vendor/bin/xdebug-debug --break='script.php:10:$user==null' --steps=300 --exit-on-break -- php script.php
 
 # AI sees the complete 🎥 movie:
 # Step 1: $id = getUserId() → returns 42
@@ -393,7 +392,106 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                 </div>
             </section>
 
+            <!-- Schema Intelligence -->
+            <section>
+                <h2>Beyond Data: Schema Intelligence 🧠</h2>
+                <div class="fragment">
+                    <h3>Traditional Approach:</h3>
+                    <p style="font-size: 0.9em;">"Here's a trace file. Figure out what it means."</p>
+                </div>
+                <div class="fragment">
+                    <h3>Forward Trace™ Schema Approach:</h3>
+                    <div style="display: flex; justify-content: space-between;">
+                        <div style="width: 48%; background: rgba(81, 207, 102, 0.1); padding: 15px; border-radius: 8px;">
+                            <h4 style="color: #51cf66; font-size: 1em;">📋 Data Structure</h4>
+                            <ul style="font-size: 0.7em; line-height: 1.3;">
+                                <li>Level: Call hierarchy depth</li>
+                                <li>Time: Microsecond precision</li>
+                                <li>Memory: Exact usage tracking</li>
+                                <li>Parameters: Actual values</li>
+                            </ul>
+                        </div>
+                        <div style="width: 48%; background: rgba(255, 193, 7, 0.1); padding: 15px; border-radius: 8px;">
+                            <h4 style="color: #ffd43b; font-size: 1em;">🎯 Schema AI Instructions</h4>
+                            <ul style="font-size: 0.7em; line-height: 1.3;">
+                                <li>"Maximum function call depth reached. Critical for detecting recursion issues and stack depth analysis."</li>
+                                <li>"Total database queries executed. Essential for N+1 problem detection and database performance analysis."</li>
+                                <li>"Use this to decide optimal reading strategy for AI analysis."</li>
+                                <li>"Number of unique functions executed. Indicates application complexity and code coverage."</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 20px;">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        Schema = Data Structure + AI Usage Instructions
+                    </p>
+                </div>
+            </section>
+
+            <!-- Schema Example -->
+            <section>
+                <h2>Schema Shows AI How to Think 🤖💭</h2>
+                <div class="fragment">
+                    <h3>Xdebug Raw Output:</h3>
+                    <pre><code style="font-size: 0.5em;">2    1    0    0.000489    401872    testFunction    1    test.php    35    2    $a=null $b=10
+2    1    1    0.000521    403216
+2    1    R              array(3) { [0]=>int(1) [1]=>int(2) [2]=>int(3) }</code></pre>
+                </div>
+                <div class="fragment">
+                    <h3>Schema-Guided AI Analysis:</h3>
+                    <pre><code style="font-size: 0.6em;">{
+  "trace_file": "/tmp/trace.1034012359.xt",
+  "total_lines": 847,
+  "unique_functions": 23,
+  "max_call_depth": 12,
+  "database_queries": 15,
+  "specification": "https://xdebug.org/docs/trace",
+  "analysis_context": "Debugging user authentication flow with database queries",
+  "content": ["2\t1\t0\t0.000489\t401872\ttestFunction\t1\t\ttest.php\t35\t2\t$a=null $b=10"]
+}</code></pre>
+                </div>
+                <div class="fragment">
+                    <h3>Built-in Knowledge Links:</h3>
+                    <ul style="font-size: 0.8em;">
+                        <li>🔗 <strong>specification</strong>: https://xdebug.org/docs/trace - Official format docs</li>
+                        <li>🔗 <strong>debug-guide</strong>: Complete debugging methodology</li>
+                        <li>🔗 <strong>x-ai-strategies</strong>: Intelligent grep patterns for analysis</li>
+                        <li>🔗 <strong>x-trace-format</strong>: Column definitions and parsing instructions</li>
+                    </ul>
+                </div>
+                <div class="fragment">
+                    <p style="text-align: center; color: #51cf66; font-size: 1.1em; font-weight: bold;">
+                        AI receives data + documentation + analysis strategies = Perfect understanding
+                    </p>
+                </div>
+            </section>
+
             <!-- The Bigger Picture -->
+            <section data-background-gradient="linear-gradient(45deg, #2c3e50, #3498db)">
+                <h2>The Schema Revolution 🚀</h2>
+                <div class="fragment">
+                    <h3>Traditional Data Exchange:</h3>
+                    <p style="font-size: 0.9em; text-align: center;">"Here's data in format X. Good luck figuring out what's important."</p>
+                </div>
+                <div class="fragment">
+                    <h3>Schema-Driven Intelligence:</h3>
+                    <p style="font-size: 0.9em; text-align: center;">"Here's data with complete analysis instructions built-in."</p>
+                </div>
+                <div class="fragment">
+                    <p style="text-align: center; margin-top: 30px;">
+                        <strong>We're not just giving AI runtime data.</strong><br>
+                        <strong>We're giving AI the knowledge of how to use that data effectively.</strong>
+                    </p>
+                </div>
+                <div class="fragment">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        This is the future of human-AI collaboration.
+                    </p>
+                </div>
+            </section>
+
+            <!-- The Inflection Point -->
             <section data-background-gradient="linear-gradient(45deg, #2c3e50, #3498db)">
                 <h2>The Inflection Point ⚡</h2>
                 <div class="fragment">
@@ -443,7 +541,7 @@ if ($userId === 0) {
 ./vendor/bin/xdebug-debug --break='User.php:85:$userId==0' --steps=100 --exit-on-break -- php app.php
 
 # Get complete execution history: how did we get $userId=0?
-claude --continue "Analyze where userId=0 comes from and which process causes the issue"</code></pre>
+# AI analyzes complete execution trace leading to condition</code></pre>
                 </div>
                 <div class="fragment">
                     <p style="text-align: center; color: #51cf66; font-size: 1.2em;">
@@ -460,7 +558,7 @@ claude --continue "Analyze where userId=0 comes from and which process causes th
 ./vendor/bin/xdebug-debug --break='DataProcessor.php:42:empty($items)' --steps=200 --exit-on-break -- php batch.php
 
 # AI analysis to identify root cause
-claude --continue "Analyze the path to empty array and why it crashes with empty data"</code></pre>
+# Analyzes the complete path to empty array condition</code></pre>
                 </div>
                 <div class="fragment">
                     <h3>Why This is Revolutionary:</h3>
@@ -478,8 +576,8 @@ claude --continue "Analyze the path to empty array and why it crashes with empty
                     <pre><code class="bash"># Microsecond-precision performance profiling
 ./vendor/bin/xdebug-profile --context="API performance analysis" -- php slow_api.php
 
-# AI analyzes bottlenecks
-claude --continue "Analyze the profile data and suggest specific optimizations"</code></pre>
+# AI analyzes bottlenecks and provides optimization suggestions
+# Result: Complete performance profile with bottleneck identification</code></pre>
                 </div>
                 <div class="fragment">
                     <p class="quote">"Found: fetchUser() called 847 times (72% execution time). Add caching at line 42."</p>
@@ -494,10 +592,10 @@ claude --continue "Analyze the profile data and suggest specific optimizations"<
                 <h2>x-debug: ForwardTrace with Conditional Breakpoints 🕵️</h2>
                 <div class="fragment">
                     <pre><code class="bash"># AI-optimized debugging with complete context
-./vendor/bin/xdebug-debug --break="User.php:42:$user==null" --steps=150 --exit-on-break -- php app.php
+./vendor/bin/xdebug-debug --break='User.php:42:$user==null' --steps=150 --exit-on-break -- php app.php
 
 # AI gets complete execution history leading to condition
-claude --continue "Analyze the complete path to null user and suggest fix"</code></pre>
+# Provides comprehensive analysis of path to null user</code></pre>
                 </div>
                 <div class="fragment">
                     <p><strong>AI receives comprehensive data:</strong></p>
@@ -521,7 +619,7 @@ claude --continue "Analyze the complete path to null user and suggest fix"</code
 ./vendor/bin/xdebug-phpunit --context="Test execution analysis" tests/UserTest.php::testComplexWorkflow
 
 # AI analyzes test execution
-claude --continue "Why is this test failing? Show me the execution path."</code></pre>
+# Shows detailed test execution path and failure analysis</code></pre>
                 </div>
                 <div class="fragment">
                     <p><strong>Smart filtering:</strong> Traces your application code, ignores PHPUnit framework noise</p>
@@ -536,10 +634,10 @@ claude --continue "Why is this test failing? Show me the execution path."</code>
                 <h2>xdebug-coverage: AI-Driven Coverage Analysis 📊</h2>
                 <div class="fragment">
                     <pre><code class="bash"># Generate comprehensive coverage data
-./vendor/bin/xdebug-coverage tests/
+./vendor/bin/xdebug-coverage --context="Coverage analysis" tests/
 
-# AI provides intelligent insights
-claude --continue "Analyze coverage gaps and suggest high-impact test cases"</code></pre>
+# AI provides intelligent coverage insights
+# Identifies critical untested paths and suggests improvements</code></pre>
                 </div>
                 <div class="fragment">
                     <p><strong>AI can efficiently:</strong></p>
