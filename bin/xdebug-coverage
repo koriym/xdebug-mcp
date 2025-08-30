@@ -69,7 +69,7 @@ $phpArgs = array_slice($filteredArgv, 4); // remaining args
 $srcPath = $projectRoot . '/src';
 
 $prependScript = tempnam(sys_get_temp_dir(), 'coverage_start_');
-$contextValue = $context ?? 'null';
+$contextValue = $context;
 file_put_contents($prependScript, "<?php
 xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_INCLUDE, ['$srcPath/']);
 xdebug_start_code_coverage(XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
@@ -101,7 +101,7 @@ register_shutdown_function(function() {
     
     // Add context if provided
     \$contextValue = " . var_export($contextValue, true) . ";
-    if (\$contextValue !== null && \$contextValue !== 'null') {
+    if (\$contextValue !== null) {
         \$result['analysis_context'] = \$contextValue;
     }
     
