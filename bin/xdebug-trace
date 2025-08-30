@@ -10,13 +10,14 @@ use Koriym\XdebugMcp\XdebugTracer;
 
 // Parse command line arguments
 function showHelp(string $scriptName): void {
-    echo "Usage: $scriptName [--json] [--claude] -- php script.php [args...]\n";
+    echo "Usage: $scriptName [--json] [--claude] [--context=TEXT] -- php script.php [args...]\n";
     echo "\n";
     echo "Executes PHP scripts with Xdebug tracing and provides execution analysis.\n";
     echo "\n";
     echo "Options:\n";
-    echo "  --json    Output JSON format (for MCP/AI consumption)\n";
-    echo "  --claude  Auto-analyze with Claude after tracing\n";
+    echo "  --json           Output JSON format (for MCP/AI consumption)\n";
+    echo "  --claude         Auto-analyze with Claude after tracing\n";
+    echo "  --context=TEXT   Add contextual description for AI analysis\n";
     echo "\n";
     echo "Examples:\n";
     echo "  # Human-readable statistics (default):\n";
@@ -27,6 +28,9 @@ function showHelp(string $scriptName): void {
     echo "\n";
     echo "  # Auto-analyze with Claude:\n";
     echo "  $scriptName --claude -- php app.php\n";
+    echo "\n";
+    echo "  # With context for self-explanatory analysis:\n";
+    echo "  $scriptName --context=\"Debugging authentication flow\" -- php AuthTest.php\n";
     echo "\n";
     echo "Output:\n";
     echo "  - Default: Human-readable execution statistics\n";
@@ -43,9 +47,22 @@ if (isset($argv[1]) && ($argv[1] === '--help' || $argv[1] === '-h')) {
 // Parse flags
 $jsonOutput = in_array('--json', $argv);
 $claudeAnalysis = in_array('--claude', $argv);
+$context = null;
+
+// Parse --context= flag
+foreach ($argv as $arg) {
+    if (str_starts_with($arg, '--context=')) {
+        $context = substr($arg, 10);
+        break;
+    }
+}
 
 // Remove flags and find target file
-$args = array_values(array_diff($argv, ['--json', '--claude', '--']));
+$flagsToRemove = ['--json', '--claude', '--'];
+if ($context !== null) {
+    $flagsToRemove[] = '--context=' . $context;
+}
+$args = array_values(array_diff($argv, $flagsToRemove));
 array_shift($args); // remove script name
 
 // Skip 'php' if present
@@ -78,10 +95,18 @@ try {
             'database_queries' => $stats['db_operations'],
             'specification' => 'https://xdebug.org/docs/trace'
         ];
+        
+        if ($context !== null) {
+            $result['analysis_context'] = $context;
+        }
+        
         echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
     } else {
         // Simple trace metadata for CLI (consistent with profile style)
         echo "✅ Trace complete: $traceFile\n";
+        if ($context !== null) {
+            echo "🎯 Context: $context\n";
+        }
         echo "📊 {$stats['total_lines']} lines generated\n";
         
         $uniqueFunctionCount = count($stats['unique_functions']);

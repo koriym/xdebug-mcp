@@ -48,6 +48,11 @@
       "format": "uri",
       "const": "https://xdebug.org/docs/trace",
       "description": "Official Xdebug trace format documentation"
+    },
+    "analysis_context": {
+      "type": "string",
+      "description": "Optional contextual description for AI analysis",
+      "examples": ["Debugging authentication flow", "Tracing database query execution", "Analyzing recursive function behavior"]
     }
   },
   "required": ["trace_file", "total_lines", "unique_functions", "max_call_depth", "database_queries", "specification"],
@@ -62,7 +67,7 @@
     },
     {
       "rel": "debug-guide",
-      "href": "https://koriym.github.io/xdebug-mcp/debug-guidelines.md",
+      "href": "https://koriym.github.io/xdebug-mcp/debug_guideline_for_ai.md",
       "title": "PHP Xdebug Trace Analysis Guidelines",
       "description": "Complete debugging guide: Forward Trace methodology, conditional breakpoints, step recording, performance profiling, and trace analysis for runtime debugging without code modifications"
     },
