@@ -246,27 +246,6 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                 </table>
             </section>
 
-            <!-- The Forward Trace Arsenal -->
-            <section>
-                <h2>The Forward Trace Arsenal 🛠️</h2>
-                <div class="fragment">
-                    <p><strong>ForwardTrace (4):</strong> Complete execution flow with all data</p>
-                </div>
-                <div class="fragment">
-                    <p><strong>Performance Profiling (4):</strong> Microsecond-precision timing analysis</p>
-                </div>
-                <div class="fragment">
-                    <p><strong>Code Coverage (6):</strong> Exact test coverage mapping</p>
-                </div>
-                <div class="fragment">
-                    <p><strong>AI-Friendly Diagnostics (9):</strong> Memory, errors, configuration optimized for AI analysis</p>
-                </div>
-                <div class="fragment">
-                    <p style="text-align: center; margin-top: 30px; color: #ffd43b;">
-                        <strong>🎯 Fewer tools, smarter AI, better results</strong>
-                    </p>
-                </div>
-            </section>
 
             <!-- Transition: Why This Approach? -->
             <section>
@@ -620,20 +599,19 @@ if ($userId === 0) {
 
             <!-- Coverage Intelligence -->
             <section>
-                <h2>xdebug-coverage: AI-Driven Coverage Analysis 📊</h2>
+                <h2>xdebug-coverage: Raw Xdebug Coverage - Any PHP Script 📊</h2>
                 <div class="fragment">
-                    <pre><code class="bash"># Generate comprehensive coverage data
-./vendor/bin/xdebug-coverage tests/
+                    <pre><code class="bash"># Works with any PHP script, not just PHPUnit
+./vendor/bin/xdebug-coverage -- php ./vendor/bin/phpunit  # PHPUnit
+./vendor/bin/xdebug-coverage -- php my-script.php         # Any script
 
-# AI provides intelligent coverage insights
-# Identifies critical untested paths and suggests improvements</code></pre>
+# Native Xdebug format - fast AI understanding</code></pre>
                 </div>
                 <div class="fragment">
-                    <p><strong>AI can efficiently:</strong></p>
+                    <p><strong>Key advantages:</strong></p>
                     <ul>
-                        <li>Identify critical untested paths</li>
-                        <li>Prioritize test cases by business impact</li>
-                        <li>Suggest edge cases worth testing</li>
+                        <li>Native Xdebug format - no conversion overhead</li>
+                        <li>Clean JSON output with vendor/tests filtering</li>
                     </ul>
                 </div>
             </section>
@@ -659,10 +637,6 @@ if ($userId === 0) {
                         <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
                             <h4 style="color: #51cf66;">📈 Coverage Analysis</h4>
                             <p style="font-size: 0.8em;">Full context test coverage mapping</p>
-                        </div>
-                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
-                            <h4 style="color: #51cf66;">🧪 x-test</h4>
-                            <p style="font-size: 0.8em;">Run PHPUnit with context and profiling/trace modes</p>
                         </div>
                     </div>
                 </div>
