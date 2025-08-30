@@ -2077,81 +2077,85 @@ final class McpServer
 
         // Handle relative paths by checking if file exists relative to current directory
         $pathToCheck = $scriptPath;
-        if (!str_starts_with($pathToCheck, '/') && !str_starts_with($pathToCheck, '\\')) {
+        if (! str_starts_with($pathToCheck, '/') && ! str_starts_with($pathToCheck, '\\')) {
             $pathToCheck = './' . ltrim($pathToCheck, './');
         }
 
         // Check if the resolved path exists and is readable
-        if (!file_exists($pathToCheck)) {
+        if (! file_exists($pathToCheck)) {
             throw new FileNotFoundException('Script file not found: ' . $pathToCheck);
         }
 
-        if (!is_readable($pathToCheck)) {
+        if (! is_readable($pathToCheck)) {
             throw new InvalidArgumentException('Permission denied accessing: ' . $pathToCheck);
         }
     }
 
     /**
      * Extract the actual script path from command tokens
-     * 
+     *
      * @param array<string> $tokens Command tokens
+     *
      * @return string|null Script path if found, null otherwise
      */
-    private function extractScriptPathFromTokens(array $tokens): ?string
+    private function extractScriptPathFromTokens(array $tokens): string|null
     {
         $firstToken = $tokens[0];
-        
+
         // If first token contains path separators, validate it directly
         if (strpos($firstToken, '/') !== false || strpos($firstToken, '\\') !== false) {
             return $firstToken;
         }
-        
+
         // For PHP commands, look for the script path after the binary and options
         if (in_array(basename($firstToken), ['php', 'php.exe'], true)) {
             return $this->findScriptAfterPhpOptions($tokens);
         }
-        
+
         // For other binaries without path separators, skip validation (PATH resolution)
         return null;
     }
 
     /**
      * Find script path after PHP binary and its options
-     * 
+     *
      * @param array<string> $tokens Command tokens starting with php
+     *
      * @return string|null Script path if found, null otherwise
      */
-    private function findScriptAfterPhpOptions(array $tokens): ?string
+    private function findScriptAfterPhpOptions(array $tokens): string|null
     {
         // Skip the first token (php binary)
         for ($i = 1; $i < count($tokens); $i++) {
             $token = $tokens[$i];
-            
+
             // Skip options that start with '-'
             if (str_starts_with($token, '-')) {
                 // Handle options that take a value (like -d option=value)
                 if (in_array($token, ['-d', '-f', '-c', '-n'], true) && $i + 1 < count($tokens)) {
                     $i++; // Skip the option value
                 }
+
                 continue;
             }
-            
+
             // First non-option token should be the script
             if ($this->looksLikeScriptPath($token)) {
                 return $token;
             }
-            
+
             // If it doesn't look like a script path, stop looking
             break;
         }
-        
+
         return null;
     }
 
     /**
      * Check if a token looks like a script path
-     * 
+     *
      * @param string $token Token to check
+     *
      * @return bool True if it looks like a script path
      */
     private function looksLikeScriptPath(string $token): bool
@@ -2160,12 +2164,12 @@ final class McpServer
         if (strpos($token, '/') !== false || strpos($token, '\\') !== false) {
             return true;
         }
-        
+
         // Common script patterns
         if (str_starts_with($token, 'vendor/bin/') || str_starts_with($token, 'bin/')) {
             return true;
         }
-        
+
         // Known script extensions
         $scriptExtensions = ['.php', '.phar', '.sh', '.py', '.js', '.rb'];
         foreach ($scriptExtensions as $ext) {
@@ -2173,7 +2177,7 @@ final class McpServer
                 return true;
             }
         }
-        
+
         return false;
     }
 }
