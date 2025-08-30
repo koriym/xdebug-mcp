@@ -91,8 +91,13 @@ $xdebugOptions = [
     "-dxdebug.output_dir={$xdebugOutputDir}",
     '-dxdebug.profiler_output_name=cachegrind.out.%%s',
     '-dxdebug.use_compression=0',  // Disable compression for easier parsing
-    "-dauto_prepend_file={$prependFilter}",
 ];
+
+if (is_file($prependFilter)) {
+    $xdebugOptions[] = "-dauto_prepend_file={$prependFilter}";
+} else {
+    fwrite(STDERR, "⚠️ Warning: prepend_filter.php not found at $prependFilter; proceeding without vendor filter\n");
+}
 
 // Combine all arguments
 $allArgs = array_merge($xdebugOptions, [$targetFile], $phpArgs);
