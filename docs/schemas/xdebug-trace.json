@@ -51,7 +51,8 @@
     },
     "analysis_context": {
       "type": "string",
-      "description": "Optional contextual description for AI analysis (e.g., 'Debugging authentication flow')"
+      "description": "Optional contextual description for AI analysis",
+      "examples": ["Debugging authentication flow", "Tracing database query execution", "Analyzing recursive function behavior"]
     }
   },
   "required": ["trace_file", "total_lines", "unique_functions", "max_call_depth", "database_queries", "specification"],
