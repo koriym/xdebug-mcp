@@ -7,6 +7,8 @@ layout: default
 
 # Forward Trace™ Debugging Guide for Developers
 
+> 🤖 **For AI Assistants**: See [Forward Trace™ Debugging Guide for AI Assistants](debug_guideline_for_ai.md) for automated tool usage and MCP protocol integration.
+
 ## 🚀 Quick Start: From var_dump to Forward Trace
 
 **Problem**: Traditional debugging modifies your code with temporary debug statements.  
