@@ -327,9 +327,9 @@ class XdebugProfiler
 
     public function analyzeWithClaude(string $profileFile): void
     {
-        $localeOutput = shell_exec('defaults read -g AppleLocale') ?: '';
-        $lang = str_contains($localeOutput, 'ja_JP') ? 'Japanese' : 'English';
-        $claudePrompt = "Analyze this Cachegrind profile file for performance bottlenecks, slow functions, and optimization opportunities. Provide specific recommendations for improving performance: $profileFile. Answer in $lang.";
+        $languageOutput = shell_exec('defaults read -g AppleLanguages') ?: '';
+        $lang = str_contains($languageOutput, 'ja') ? 'Japanese' : 'English';
+        $claudePrompt = "Analyze this Cachegrind profile file for comprehensive code quality: 1) Performance bottlenecks (slow functions, memory usage, execution time), 2) Security concerns (resource exhaustion, timing attacks), 3) Efficiency violations (redundant computations, unnecessary I/O), 4) Architecture principles (separation of concerns, single responsibility). Focus especially on AI/Junior developer code that passes tests but has hidden performance and quality issues: $profileFile. Answer in $lang.";
 
         echo "\n🤖 Starting Claude Code analysis...\n";
         passthru('claude ' . escapeshellarg($claudePrompt));
