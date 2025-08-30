@@ -147,4 +147,6 @@ claude mcp list                          # Verify MCP integration
 
 **Stop debugging blind. Give AI the power of Forward Trace.**
 
+*Transform your PHP debugging from guesswork to intelligence.*
+
 *Debug once, analyze anywhere - with schema-validated JSON that any AI can understand.*
