@@ -1987,13 +1987,13 @@ final class McpServer
                 $cmd .= ' --trace';
             }
 
-            if (!empty($context)) {
+            if (! empty($context)) {
                 $cmd .= ' --verbose';
             }
 
             // Add pattern as environment variable if specified
             $envPrefix = '';
-            if (!empty($pattern)) {
+            if (! empty($pattern)) {
                 $envPrefix = 'TRACE_TEST=' . escapeshellarg($pattern) . ' ';
             }
 
