@@ -1,5 +1,7 @@
 # Forward Trace™ Debugging Guide for AI Assistants
 
+> 👨‍💻 **For Human Developers**: See [Forward Trace™ Debugging Guide for Developers](debug_guideline_for_humans.md) or [online guide](https://koriym.github.io/xdebug-mcp/debug-guidelines/) for practical workflows and IDE integration.
+
 ## 🎯 Core Philosophy: Runtime Data Over Static Analysis
 
 **CRITICAL PRINCIPLE**: Always use runtime data analysis instead of traditional debugging methods when working with PHP code.
