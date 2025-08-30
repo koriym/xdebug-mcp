@@ -25,11 +25,21 @@ if (in_array('--', $args)) {
     $args = array_slice($args, $separatorIndex + 1);
 }
 
-// Get PHP binary path
-$phpPath = trim(shell_exec('which php') ?: 'php');
+// Use PHP_BINARY constant instead of which php
+$phpPath = PHP_BINARY;
 
-// Execute PHP script with coverage enabled and input redirection (suppress stderr)
-$cmd = $phpPath . ' -dzend_extension=xdebug -dxdebug.mode=coverage -dauto_prepend_file=' . $shutdownScript . ' ' . implode(' ', $args) . ' </dev/null 2>/dev/null';
+// Check if Xdebug is already loaded
+$xdebugFlag = '';
+if (!extension_loaded('xdebug')) {
+    $xdebugFlag = ' -dzend_extension=xdebug';
+}
+
+// Properly escape all arguments and prepend file path
+$escapedArgs = array_map('escapeshellarg', $args);
+$escapedPrependFile = escapeshellarg($shutdownScript);
+
+// Execute PHP script with coverage enabled
+$cmd = escapeshellarg($phpPath) . $xdebugFlag . ' -dxdebug.mode=coverage -dauto_prepend_file=' . $escapedPrependFile . ' ' . implode(' ', $escapedArgs) . ' </dev/null 2>/dev/null';
 $output = shell_exec($cmd);
 
 // Extract only JSON from output (filter out script output)
