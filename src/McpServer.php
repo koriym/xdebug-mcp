@@ -37,6 +37,7 @@ use function in_array;
 use function ini_get;
 use function ini_set;
 use function is_numeric;
+use function is_readable;
 use function is_string;
 use function json_decode;
 use function json_encode;
@@ -2000,12 +2001,12 @@ final class McpServer
             $cmd .= ' -- ' . escapeshellarg($script);
 
             // Pre-check: Ensure script file exists before executing
-            if (!file_exists($script)) {
+            if (! file_exists($script)) {
                 throw new FileNotFoundException('Script file not found: ' . $script);
             }
 
             // Pre-check: Ensure script file is readable
-            if (!is_readable($script)) {
+            if (! is_readable($script)) {
                 throw new InvalidArgumentException('Permission denied accessing: ' . $script);
             }
 
