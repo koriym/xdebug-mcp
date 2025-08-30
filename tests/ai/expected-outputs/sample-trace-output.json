@@ -1,0 +1,51 @@
+{
+  "command": "./bin/xdebug-trace --json -- php tests/fake/loop-counter.php",
+  "exit_code": 0,
+  "context": "Sample trace execution for evaluation reference",
+  "script": "tests/fake/loop-counter.php",
+  "timestamp": "2024-01-15 10:30:45",
+  "trace_analysis": {
+    "total_function_calls": 25,
+    "execution_time": "0.0234 seconds",
+    "memory_peak": "1.2MB",
+    "hotspots": [
+      {
+        "function": "main",
+        "calls": 1,
+        "time": "0.0201s",
+        "percentage": "85.9%"
+      },
+      {
+        "function": "count_loop",
+        "calls": 10,
+        "time": "0.0189s",
+        "percentage": "80.8%"
+      }
+    ],
+    "call_graph": [
+      {
+        "level": 0,
+        "function": "{main}",
+        "file": "tests/fake/loop-counter.php",
+        "line": 1,
+        "time_start": "0.0001",
+        "memory": "384000"
+      },
+      {
+        "level": 1,
+        "function": "count_loop",
+        "file": "tests/fake/loop-counter.php", 
+        "line": 15,
+        "time_start": "0.0002",
+        "memory": "384100",
+        "parameters": ["$limit = 10"]
+      }
+    ]
+  },
+  "ai_insights": {
+    "performance_summary": "Simple loop execution with minimal overhead",
+    "potential_optimizations": ["Consider reducing loop iterations for better performance"],
+    "execution_flow": "Linear execution through main function and loop counter",
+    "memory_usage": "Stable memory usage with no leaks detected"
+  }
+}

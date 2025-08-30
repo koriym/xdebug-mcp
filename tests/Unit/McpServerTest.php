@@ -57,7 +57,7 @@ class McpServerTest extends TestCase
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('tools', $response['result']);
-        $this->assertCount(28, $response['result']['tools']);
+        $this->assertCount(23, $response['result']['tools']);
 
         $toolNames = array_column($response['result']['tools'], 'name');
         // Test that analysis tools are present

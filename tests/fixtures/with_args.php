@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 echo "Script started with arguments:\n";
 foreach ($argv as $i => $arg) {
     echo "  argv[$i] = $arg\n";

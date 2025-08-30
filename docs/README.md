@@ -1,102 +1,66 @@
-# PHP Xdebug MCP Server - Presentation
+# PHP Xdebug MCP Server - Documentation
 
-## AI時代のデバッグ革命
+## 📁 Files in this directory
 
-このフォルダには、PHP Xdebug MCP Serverの機能と価値を効果的にプレゼンテーションするためのreveal.jsスライドが含まれています。
+This folder contains documentation, guides, and presentation materials for the PHP Xdebug MCP Server.
 
-### 📖 プレゼンテーション内容
+## 📄 Documentation Files
 
-**メインメッセージ:** 
-> まさかAIがechoデバッグしてませんか？ソースコードとエラーコードとechoで開発してませんか？
+### Debugging Guides
+- **`debug_guideline_for_ai.md`** - AI assistant debugging methodology and Forward Trace™ concepts
+- **`debug_guideline_for_humans.md`** - Human developer workflow and practical usage patterns
+- **`TROUBLESHOOTING.md`** - Common issues and comprehensive solutions guide
 
-### 🎯 対象者
-- PHP開発者
-- AI開発ツールに興味のある開発者  
-- デバッグ効率化を求めるチーム
-- モダンな開発ワークフローを導入したい組織
+### Architecture & Decisions
+- **`ADR-001-forward-trace-only-approach.md`** - Architecture Decision Record for Forward Trace-only approach
 
-### 📋 スライド構成
+### Technical Specifications
+- **`schemas/`** - JSON schema definitions for tool outputs
+  - `xdebug-debug.json` - Debug session output schema
+  - `xdebug-profile.json` - Performance profiling schema
+  - `xdebug-trace.json` - Execution trace schema
+  - `alps.json` - ALPS API documentation
 
-1. **問題提起** - AI開発の現状への疑問
-2. **従来アプローチの限界** - 推測ベース・侵襲的デバッグ
-3. **革命的ソリューション** - 実行時データ分析
-4. **機能デモ** - Step, Profile, Trace, Coverage
-5. **統合** - CLI & MCP
-6. **実用例** - 具体的なユースケース
-7. **行動喚起** - プロ仕様デバッグへの招待
+### Presentation Materials
+- **`slide/index.html`** - Forward Trace Revolution presentation (reveal.js)
 
-### 🚀 プレゼンテーション実行
+### Assets
+- **`images/`** - Presentation and documentation images
+  - `title.jpg` - Main presentation title image
+  - `logo.jpeg` - Project logo
+  - `interactive-debugger.png` - Interactive debugger screenshot
+- **`css/`** - Stylesheets for documentation
+  - `semantic-portal.css` - Semantic styling for web documentation
 
-#### HTMLバージョン（完全版）
+## 📋 File Usage
+
+### For AI Setup (After Composer Installation)
+Enable AI debugging guide for your PHP project:
 ```bash
-# ローカルサーバーで表示
-cd docs
-python3 -m http.server 8000
-open http://localhost:8000/presentation.html
+# Install via Composer (if not already done)
+composer require koriym/xdebug-mcp
 
-# または直接ブラウザで開く
-open docs/presentation.html
+# Enable AI debugging guide for this project
+echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
+
+# Alternative: Global setup (affects ALL projects - use with caution)
+# mkdir -p ~/.claude
+# cp vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md ~/.claude/
+# echo "@debug_guideline_for_ai.md" >> ~/.claude/CLAUDE.md
 ```
 
-#### Markdownバージョン（編集しやすい）
+### For Presentations
+View the Forward Trace Revolution presentation:
 ```bash
-# ローカルサーバーで表示
-cd docs
-python3 -m http.server 8000
-open http://localhost:8000/presentation-md.html
-
-# Markdownファイルを編集
-code presentation.md
+cd slide && python3 -m http.server 8000
+open http://localhost:8000
 ```
 
-### 🎨 プレゼンテーション特徴
+### For Development Reference
+```bash
+# View human developer guide
+open vendor/koriym/xdebug-mcp/docs/debug_guideline_for_humans.md
 
-- **テンポ重視**: 1スライド1コンセプト
-- **視覚的インパクト**: Before/After比較
-- **実用性**: 実際のコマンド例とデモ出力（日本語解説付き）
-- **ストーリー性**: 問題→解決→未来の流れ
-- **理解促進**: コマンドの意図を日本語で併記
-
-### 📝 発表時のポイント
-
-**オープニング (強烈なインパクト)**
-- 「まさか2024年にAIがechoデバッグしてませんか？」
-- 実際のvar_dump提案例を示す
-
-**デモ部分 (説得力)**
-- 各ツールの実際の出力を見せる
-- 条件付きデバッグの威力を強調
-- claude コマンドの革新性
-
-**クロージング (行動喚起)**
-- 「Stop echo debugging. Start AI debugging.」
-- GitHub URL と即座の導入手順
-
-### 🔧 カスタマイズ
-
-プレゼンテーションをカスタマイズしたい場合：
-
-1. **スタイル変更**: `<style>` セクションを編集
-2. **内容追加**: 新しい `<section>` を追加
-3. **アニメーション**: `class="fragment"` で段階表示
-4. **テーマ変更**: reveal.jsテーマを変更
-
-### 🎭 発表Tips
-
-**導入部分**
-- 聴衆の開発経験を確認
-- 「誰がvar_dump使ったことある？」で参加意識
-
-**技術デモ**
-- 実際にコマンド実行（可能であれば）
-- 出力結果の解釈を丁寧に説明
-
-**質疑応答準備**
-- Xdebugのセットアップ方法
-- 他のデバッガーとの比較
-- パフォーマンスへの影響
-- 大規模プロジェクトでの使用例
-
----
-
-このプレゼンテーションは、AI開発者がより効率的で正確なデバッグ手法を採用するきっかけとなることを目指しています。
+# Or use your preferred editor
+code vendor/koriym/xdebug-mcp/docs/debug_guideline_for_humans.md
+```

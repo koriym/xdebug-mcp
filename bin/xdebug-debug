@@ -15,29 +15,29 @@ function parseBreakpoints(string $breakSpec): array
 {
     $breakpoints = [];
     $specs = explode(',', $breakSpec);
-    
+
     foreach ($specs as $spec) {
         $spec = trim($spec);
         if (empty($spec)) continue;
-        
+
         // Parse file:line[:condition]
         $parts = explode(':', $spec);
         if (count($parts) < 2) {
             throw new RuntimeException("Invalid breakpoint format: $spec (expected file:line[:condition])");
         }
-        
+
         $file = $parts[0];
         $line = (int)$parts[1];
         $condition = isset($parts[2]) ? implode(':', array_slice($parts, 2)) : null;
-        
+
         if (!file_exists($file)) {
             throw new RuntimeException("Breakpoint file not found: $file");
         }
-        
+
         if ($line <= 0) {
             throw new InvalidLineException("Invalid line number: $line in $file");
         }
-        
+
         // Validate line number against actual file content (include empty lines)
         $lines = file($file, FILE_IGNORE_NEW_LINES);
         if ($lines === false) {
@@ -47,20 +47,20 @@ function parseBreakpoints(string $breakSpec): array
         if ($line > $maxLine) {
             throw new InvalidLineException("Line $line does not exist in $file (file has $maxLine lines)");
         }
-        
+
         $breakpoints[] = [
             'file' => $file,
             'line' => $line,
             'condition' => $condition
         ];
     }
-    
+
     return $breakpoints;
 }
 
 (function () use ($argv){
     require_once __DIR__ . '/autoload.php';
-    
+
     // Parse command line arguments
     $breakpointFile = null;
     $breakpointLine = null;
@@ -71,47 +71,47 @@ function parseBreakpoints(string $breakSpec): array
     $jsonOutput = false;
     $context = null;
     $maxSteps = null;
-    
+
     for ($i = 1; $i < count($argv); $i++) {
         $arg = $argv[$i];
-        
+
         if ($parseOptions && $arg === '--') {
             $parseOptions = false;
             continue;
         }
-        
+
         if ($parseOptions && str_starts_with($arg, '--break=')) {
             $breakSpec = substr($arg, 8);
             $breakpoints = parseBreakpoints($breakSpec);
             continue;
         }
-        
+
         if ($parseOptions && str_starts_with($arg, '--file=')) {
             $breakpointFile = substr($arg, 7);
             continue;
         }
-        
+
         if ($parseOptions && str_starts_with($arg, '--line=')) {
             $breakpointLine = (int)substr($arg, 7);
             continue;
         }
-        
+
         if ($parseOptions && $arg === '--exit-on-break') {
             $traceOnly = true;
             $jsonOutput = true;  // Auto-enable JSON mode for trace-only sessions
             continue;
         }
-        
+
         if ($parseOptions && $arg === '--json') {
             $jsonOutput = true;
             continue;
         }
-        
+
         if ($parseOptions && str_starts_with($arg, '--context=')) {
             $context = substr($arg, 10);
             continue;
         }
-        
+
         if ($parseOptions && str_starts_with($arg, '--steps=')) {
             $maxSteps = (int)substr($arg, 8);
             if ($maxSteps <= 0) {
@@ -119,7 +119,7 @@ function parseBreakpoints(string $breakSpec): array
             }
             continue;
         }
-        
+
         if ($parseOptions && ($arg === '--help' || $arg === '-h')) {
             echo "Usage: xdebug-debug [options] [--] command\n";
             echo "       xdebug-debug script.php [breakpoint_file] [break_line]  # Legacy format\n";
@@ -150,17 +150,17 @@ function parseBreakpoints(string $breakSpec): array
             echo "  xdebug-debug test.php test.php 15                       # Legacy format\n";
             exit(0);
         }
-        
+
         if (!$parseOptions || !str_starts_with($arg, '--')) {
             $command[] = $arg;
         }
     }
-    
+
     // Determine target script and command to execute
     if (empty($command)) {
         throw new RuntimeException("No command specified. Run 'xdebug-debug --help' for usage information.");
     }
-    
+
     // Handle legacy format: script.php [breakpoint_file] [break_line]
     if (count($command) >= 1 && !str_contains($command[0], ' ') && file_exists($command[0])) {
         $targetScript = $command[0];
@@ -178,12 +178,12 @@ function parseBreakpoints(string $breakSpec): array
             throw new RuntimeException("Could not determine target script from command: " . implode(' ', $command));
         }
     }
-    
+
     // Validate target script
     if (!file_exists($targetScript)) {
         throw new RuntimeException("Target script not found: $targetScript");
     }
-    
+
     // Validate breakpoint file if specified
     if ($breakpointFile !== null) {
         if (!file_exists($breakpointFile)) {

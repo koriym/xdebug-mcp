@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
-echo "=== Xdebug MCP Server Demo ===\n\n";
+require_once __DIR__ . '/../../vendor/autoload.php';
 
-// Simple PHP calculation for tracing
+echo "=== Xdebug MCP Server Simple Demo ===\n\n";
+
+// Simple PHP calculation
 $numbers = [1, 2, 3, 4, 5];
 $sum = 0;
 
