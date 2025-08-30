@@ -55,7 +55,7 @@ class ContextOptionTest extends TestCase
         );
         $output = shell_exec($command);
         $this->assertNotNull($output);
-        $this->assertSzringContainsString($context, $output);
+        $this->assertStringContainsString($context, $output);
     }
 
     public function testXdebugTraceWithContext(): void
