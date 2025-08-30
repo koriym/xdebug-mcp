@@ -245,7 +245,7 @@ Every command produces JSON following schemas at `https://koriym.github.io/xdebu
 ## Specific Improvements Recommended
 
 ### High Priority
-1. **Fix Documentation References**: Update `debug-guidelines.md` reference
+1. **Fix Documentation References**: Update `debug-guidelines.md` reference to `debug_guideline_for_ai.md`
 2. **Relax Breakpoint Validation**: Allow more flexible breakpoint formats
 3. **Command Syntax Examples**: Add quick syntax reference in help
 
