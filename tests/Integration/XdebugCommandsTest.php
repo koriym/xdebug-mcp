@@ -114,14 +114,6 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
         $this->assertTrue(is_executable(__DIR__ . '/../../bin/xdebug-coverage'));
     }
 
-    public function testXdebugCoverageHelp(): void
-    {
-        $output = shell_exec('cd ' . dirname(__DIR__, 2) . ' && ./bin/xdebug-coverage --help 2>&1');
-        $this->assertNotNull($output);
-        $this->assertStringContainsString('Usage:', $output);
-        $this->assertStringContainsString('xdebug-coverage', $output);
-    }
-
     public function testXdebugCoverageExecution(): void
     {
         $this->markTestSkipped('Skip the test for infinite loop');

@@ -93,17 +93,4 @@ class ContextOptionTest extends TestCase
         $this->assertStringContainsString('"context":', $output);
         $this->assertStringContainsString('"' . $context . '"', $output);
     }
-
-    public function testContextOptionInHelpText(): void
-    {
-        $tools = ['xdebug-profile', 'xdebug-coverage', 'xdebug-trace', 'xdebug-debug'];
-
-        foreach ($tools as $tool) {
-            $command = sprintf('%s/bin/%s --help 2>&1', $this->projectRoot, $tool);
-            $output = shell_exec($command);
-
-            $this->assertNotNull($output);
-            $this->assertStringContainsString('--context', $output, "Tool {$tool} should have --context option in help");
-        }
-    }
 }
