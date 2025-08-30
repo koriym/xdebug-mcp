@@ -24,7 +24,4 @@
             <directory>src</directory>
         </include>
     </source>
-    <extensions>
-        <bootstrap class="Koriym\XdebugMcp\TraceExtension"/>
-    </extensions>
 </phpunit>

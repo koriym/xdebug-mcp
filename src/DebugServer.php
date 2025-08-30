@@ -231,6 +231,7 @@ final class DebugServer
                     $scriptName = basename($this->targetScript, '.php');
                     $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
                     // @todo Remove trace mode in 1.0 release
+                    $prependFilter = __DIR__ . '/prepend_filter.php';
                     $cmd = sprintf(
                         'XDEBUG_TRIGGER=1 php -dzend_extension=xdebug ' .
                         '-dxdebug.mode=debug,trace ' .
@@ -247,8 +248,10 @@ final class DebugServer
                         '-derror_reporting=E_ERROR ' .
                         '-dlog_errors=1 ' .
                         '-derror_log=/tmp/php.log ' .
+                        '-dauto_prepend_file=%s ' .
                         '%s',
                         $this->debugPort,
+                        escapeshellarg($prependFilter),
                         implode(' ', array_map('escapeshellarg', array_slice($command, 1))),
                     );
                     $this->traceFile = $traceFile;
@@ -259,6 +262,7 @@ final class DebugServer
                 // Default: simple script execution
                 $scriptName = basename($this->targetScript, '.php');
                 $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
+                $prependFilter = __DIR__ . '/prepend_filter.php';
                 $cmd = sprintf(
                     'XDEBUG_TRIGGER=1 php -dzend_extension=xdebug ' .
                     '-dxdebug.mode=debug,trace ' .
@@ -271,8 +275,10 @@ final class DebugServer
                     '-dxdebug.log=/tmp/xdebug.log ' .
                     '-dxdebug.log_level=7 ' .
                     '-dxdebug.connect_timeout_ms=5000 ' .
+                    '-dauto_prepend_file=%s ' .
                     '%s',
                     $this->debugPort,
+                    escapeshellarg($prependFilter),
                     escapeshellarg($this->targetScript),
                 );
                 $this->traceFile = $traceFile;

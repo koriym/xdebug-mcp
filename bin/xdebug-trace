@@ -32,6 +32,10 @@ function showHelp(string $scriptName): void {
     echo "  # With context for self-explanatory analysis:\n";
     echo "  $scriptName --context=\"Debugging authentication flow\" -- php AuthTest.php\n";
     echo "\n";
+    echo "  # PHPUnit test tracing:\n";
+    echo "  $scriptName -- php vendor/bin/phpunit --filter testMethodName TestClass.php\n";
+    echo "  $scriptName --context=\"Testing user registration\" -- php vendor/bin/phpunit UserTest.php\n";
+    echo "\n";
     echo "Output:\n";
     echo "  - Default: Human-readable execution statistics\n";
     echo "  - --json: JSON result with trace_file, total_lines, specification\n";

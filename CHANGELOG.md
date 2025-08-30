@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 0.2.0
+
+### Added
+- **Ultra-Simple Coverage Tool**: New 25-line `xdebug-coverage` implementation
+  - Native Xdebug format output with JSON schema validation
+  - Automatic vendor/ and tests/ directory filtering using `xdebug_set_filter()`
+  - Works with any PHP script, not just PHPUnit
+  - Clean JSON output with comprehensive schema documentation
+
+### Changed
+- **Simplified Architecture**: Removed complex vendor filtering in favor of native Xdebug filtering
+- **CLI Tool Consistency**: Standardized argument handling across all tools with `--` separator support
+- **Slide Presentation Completion**: Finalized "Forward Trace Revolution" presentation
+  - Removed framework-specific examples (Laravel/Pest) for universal focus
+  - Enhanced AI Code Quality messaging beyond "Tests Pass"
+  - Streamlined coverage tool advantages to core value propositions
+- **Documentation Improvements**: Fixed broken links and updated tool references
+  - Fixed `docs/index.html` broken links pointing to non-existent directories
+  - Updated all `test-coverage` references to `xdebug-coverage` in CLAUDE.md
+  - Enhanced JSON schema documentation with xdebug.org links
+
+### Removed  
+- Complex manual vendor directory filtering (replaced with native Xdebug filtering)
+- Redundant test methods for simplified tools
+- "Test framework independent" obvious advantage from coverage tool messaging
+
+### Fixed
+- Command injection vulnerabilities through proper argument escaping
+- Tool reliability issues by using PHP_BINARY instead of shell execution
+- Test suite alignment with simplified tool implementations
+
 ## [0.1.0] - 2025-08-26
 
 ### Added

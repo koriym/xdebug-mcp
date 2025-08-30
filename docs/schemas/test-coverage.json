@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://koriym.github.io/xdebug-mcp/schemas/test-coverage.json",
+  "title": "Test Coverage Result",
+  "description": "Ultra-simple test coverage data with raw Xdebug coverage information for AI analysis. Designed for generic PHP script coverage collection with vendor directory exclusion.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "https://koriym.github.io/xdebug-mcp/schemas/test-coverage.json",
+      "description": "JSON Schema reference for test coverage data"
+    },
+    "coverage": {
+      "type": "object",
+      "description": "Raw Xdebug code coverage data mapping file paths to line execution status",
+      "patternProperties": {
+        "^(?:/|[A-Za-z]:\\\\).+\\.php$": {
+          "type": "object",
+          "description": "Coverage data for a specific PHP file with line numbers as keys",
+          "patternProperties": {
+            "^[0-9]+$": {
+              "type": "integer",
+              "enum": [1, -1, -2],
+              "description": "Line execution status: 1 = executed, -1 = executable but not executed, -2 = not executable"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["$schema", "coverage"],
+  "additionalProperties": false,
+  
+  "examples": [
+    {
+      "$schema": "https://koriym.github.io/xdebug-mcp/schemas/test-coverage.json",
+      "coverage": {
+        "/path/to/MyClass.php": {
+          "10": 1,
+          "11": 1,
+          "12": -1,
+          "15": 1
+        },
+        "/path/to/AnotherClass.php": {
+          "5": 1,
+          "6": -1
+        }
+      }
+    }
+  ]
+}
