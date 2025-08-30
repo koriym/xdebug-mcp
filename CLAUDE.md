@@ -52,9 +52,9 @@ php tests/fake/FakeProfilingDemo.php    # Demo profiling and coverage features
 ### Coverage Analysis
 ```bash
 # Ultra-simple test coverage collection for any PHP script
-./bin/test-coverage script.php              # Collect coverage for any PHP script
-./bin/test-coverage vendor/bin/phpunit       # Collect coverage for PHPUnit tests
-./bin/test-coverage my-test-runner.php       # Works with any PHP-based test runner
+./bin/xdebug-coverage -- php script.php              # Collect coverage for any PHP script
+./bin/xdebug-coverage -- vendor/bin/phpunit           # Collect coverage for PHPUnit tests
+./bin/xdebug-coverage -- my-test-runner.php           # Works with any PHP-based test runner
 
 # Output: JSON format with ultra-simple schema
 # {
