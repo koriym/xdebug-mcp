@@ -25,8 +25,7 @@ We decided to **remove 8 interactive debugging tools** and focus exclusively on 
 - **Profiling**: `xdebug_start/stop_profiling`, `x-profile`
 - **Coverage**: `xdebug_start/stop_coverage`, `x-coverage`
 - **Diagnostics**: `xdebug_info`, memory usage, error collection
-- **AI-Optimized Commands**: `x-debug` (Forward Trace with breakpoints)
-
+- **AI-Optimized Commands**: `xdebug-debug` (Forward Trace with breakpoints)
 ## Rationale
 
 ### Why Interactive Debugging is Incompatible with AI
@@ -74,8 +73,9 @@ xdebug_set_breakpoint(...) → xdebug_step_into() → xdebug_get_variables()
 **After (Forward Trace)**:
 ```bash
 # Complete execution analysis with conditional capture
-/x-debug "script.php" "User.php:42:$user==null" "" "User validation analysis"
-```
+./bin/xdebug-debug script.php \
+  --breakpoint 'User.php:42:$user==null' \
+  --context 'User validation analysis'
 
 ## Consequences
 
