@@ -5,50 +5,50 @@ declare(strict_types=1);
 
 $projectRoot = require __DIR__ . '/autoload.php';
 
-// Parse --context= flag
-$context = null;
-foreach ($argv as $arg) {
-    if (str_starts_with($arg, '--context=')) {
-        $context = substr($arg, 10);
-        break;
-    }
-}
+// Parse options using getopt
+$options = getopt('h', ['help', 'json', 'context:']);
+$context = $options['context'] ?? null;
+$jsonMode = isset($options['json']);
 
 // Show help if requested
-// Remove context flag from argv for argument counting
-$filteredArgv = [];
-foreach ($argv as $arg) {
-    if (!str_starts_with($arg, '--context=')) {
-        $filteredArgv[] = $arg;
-    }
-}
-
-if (in_array('--help', $argv) || in_array('-h', $argv) || count($filteredArgv) < 4) {
-    fwrite(STDOUT, "Usage: xdebug-coverage [--context=TEXT] -- php script.php [args...]\n");
+if (isset($options['h']) || isset($options['help'])) {
+    fwrite(STDOUT, "Usage: xdebug-coverage [--context=TEXT] [--json] -- php script.php [args...]\n");
     fwrite(STDOUT, "\n");
     fwrite(STDOUT, "Executes PHP scripts with Xdebug code coverage and provides coverage analysis.\n");
     fwrite(STDOUT, "\n");
     fwrite(STDOUT, "Options:\n");
     fwrite(STDOUT, "  --context=TEXT   Add contextual description for AI analysis\n");
+    fwrite(STDOUT, "  --json          Output results in JSON format\n");
+    fwrite(STDOUT, "  -h, --help      Show this help message\n");
     fwrite(STDOUT, "\n");
     fwrite(STDOUT, "Examples:\n");
     fwrite(STDOUT, "  xdebug-coverage -- php test.php\n");
     fwrite(STDOUT, "  xdebug-coverage -- php -f script.php arg1 arg2\n");
+    fwrite(STDOUT, "  xdebug-coverage -- php vendor/bin/phpunit TestClass.php\n");
     fwrite(STDOUT, "  xdebug-coverage --context=\"Testing payment processing\" -- php PaymentTest.php\n");
+    fwrite(STDOUT, "  xdebug-coverage --json -- php vendor/bin/phpunit\n");
     fwrite(STDOUT, "\n");
     exit(0);
 }
 
-// Skip: [0]="xdebug-coverage" [1]="--" [2]="php"
-// Validate target file is provided
-if (!isset($filteredArgv[3]) || empty($filteredArgv[3])) {
-    fwrite(STDERR, "Error: Target PHP file not specified\n");
-    fwrite(STDERR, "Usage: xdebug-coverage [--context=TEXT] -- php <script.php> [args...]\n");
+// Find the -- separator to get script arguments
+$separatorIndex = array_search('--', $argv);
+if ($separatorIndex === false || $separatorIndex + 2 >= count($argv)) {
+    fwrite(STDERR, "Error: Must use -- separator before php command\n");
+    fwrite(STDERR, "Usage: xdebug-coverage [options] -- php <script.php> [args...]\n");
     fwrite(STDERR, "Example: xdebug-coverage -- php test.php\n");
     exit(1);
 }
 
-$targetFile = $filteredArgv[3];           // script.php
+// Extract script and arguments after --
+$scriptArgs = array_slice($argv, $separatorIndex + 1);
+if (count($scriptArgs) < 2) {
+    fwrite(STDERR, "Error: Must specify both 'php' and script file\n");
+    fwrite(STDERR, "Usage: xdebug-coverage [options] -- php <script.php> [args...]\n");
+    exit(1);
+}
+
+$targetFile = $scriptArgs[1];  // Second element after -- (php script.php -> script.php)
 
 // Validate target file exists and is readable
 if (!file_exists($targetFile)) {
@@ -61,7 +61,7 @@ if (!is_readable($targetFile)) {
     exit(1);
 }
 
-$phpArgs = array_slice($filteredArgv, 4); // remaining args
+$phpArgs = array_slice($scriptArgs, 2); // remaining args after "php script.php"
 
 // Create coverage scripts
 // NOTE: Cannot use register_shutdown_function() directly in current process
@@ -109,10 +109,12 @@ register_shutdown_function(function() {
 });");
 
 // Execute with Xdebug coverage
+$sharedPrependFilter = __DIR__ . '/../src/prepend_filter.php';
 $xdebugOptions = [
     '-dzend_extension=xdebug',
     '-dxdebug.mode=coverage',
-    "-dauto_prepend_file=$prependScript"
+    "-dauto_prepend_file=$prependScript",
+    // Note: coverage has its own specific filter, but we also add the shared filter for trace consistency
 ];
 
 $cmd = 'php ' . implode(' ', array_map('escapeshellarg', array_merge($xdebugOptions, [$targetFile], $phpArgs)));
