@@ -98,6 +98,7 @@ class XdebugTracer
         echo "🔍 Tracing: $targetFile\n";
 
         // Build command with Xdebug trace enabled (detailed mode)
+        $prependFilter = __DIR__ . '/prepend_filter.php';
         $xdebugOptions = [
             '-dzend_extension=xdebug',
             '-dxdebug.mode=trace',
@@ -107,6 +108,7 @@ class XdebugTracer
             "-dxdebug.output_dir={$xdebugOutputDir}",
             '-dxdebug.trace_format=1',
             '-dxdebug.use_compression=0',
+            "-dauto_prepend_file={$prependFilter}",
         ];
 
         // Combine all arguments

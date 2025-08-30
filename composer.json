@@ -35,14 +35,12 @@
         "bin/xdebug-trace",
         "bin/xdebug-profile",
         "bin/xdebug-coverage",
-        "bin/xdebug-phpunit",
         "bin/xdebug-debug",
         "bin/test-json"
     ],
 
     "scripts-descriptions": {
         "test-json": "Run comprehensive JSON test suite with all xdebug commands",
-        "x-test": "Run PHPUnit tests with xdebug-phpunit wrapper (no Xdebug by default)",
         "install-mcp": "Configure xdebug-mcp for Claude Code MCP integration",
         "install-desktop": "Configure xdebug-mcp for Claude Desktop integration",
         "check-env": "Check Xdebug environment and configuration"
@@ -63,7 +61,6 @@
             "@psalm"
         ],
         "test-json": "./bin/test-json",
-        "x-test": "./bin/xdebug-phpunit",
         "install-mcp": "./bin/check-env --install-mcp",
         "install-desktop": "./bin/check-env --install-desktop",
         "check-env": "./bin/check-env",

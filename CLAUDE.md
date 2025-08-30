@@ -49,6 +49,28 @@ composer test-json                      # Test MCP protocol compliance
 php tests/fake/FakeProfilingDemo.php    # Demo profiling and coverage features
 ```
 
+### Coverage Analysis
+```bash
+# Ultra-simple test coverage collection for any PHP script
+./bin/test-coverage script.php              # Collect coverage for any PHP script
+./bin/test-coverage vendor/bin/phpunit       # Collect coverage for PHPUnit tests
+./bin/test-coverage my-test-runner.php       # Works with any PHP-based test runner
+
+# Output: JSON format with ultra-simple schema
+# {
+#   "$schema": "https://koriym.github.io/xdebug-mcp/schemas/test-coverage.json",
+#   "coverage": {
+#     "/path/to/file.php": {"10": 1, "11": -1, "12": 1}
+#   }
+# }
+
+# Features:
+# - Raw Xdebug coverage data in JSON format
+# - Automatic vendor/ directory exclusion  
+# - AI-optimized for quick analysis
+# - Generic: works with any PHP script, not just PHPUnit
+```
+
 ### Running the MCP Server
 ```bash
 ./bin/xdebug-mcp             # MCP server entry point

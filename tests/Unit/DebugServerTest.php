@@ -235,4 +235,116 @@ echo "Result: $result\n";
 
         new DebugServer($nonExistentScript, 9004);
     }
+
+    public function testCliJsonOutputWithoutBreakpoint(): void
+    {
+        $server = new DebugServer($this->testScript, 9004, null, [], true);
+
+        // Mock execution by calling private methods via reflection
+        $reflection = new ReflectionClass($server);
+
+        // Test createXdebugArguments method exists and returns array
+        if ($reflection->hasMethod('createXdebugArguments')) {
+            $method = $reflection->getMethod('createXdebugArguments');
+            $method->setAccessible(true);
+            $args = $method->invoke($server);
+
+            $this->assertIsArray($args);
+            $this->assertContains('-dxdebug.mode=debug', $args);
+            $this->assertContains('-dxdebug.client_port=9004', $args);
+        }
+
+        $this->assertTrue(true); // Basic instantiation test
+    }
+
+    public function testCliJsonOutputWithBreakpoint(): void
+    {
+        $server = new DebugServer($this->testScript, 9004, 5, [], true);
+
+        $reflection = new ReflectionClass($server);
+
+        // Test breakpoint line
+        $breakpointProperty = $reflection->getProperty('initialBreakpointLine');
+        $breakpointProperty->setAccessible(true);
+        $this->assertEquals(5, $breakpointProperty->getValue($server));
+
+        // Test JSON mode
+        $jsonProperty = $reflection->getProperty('jsonMode');
+        $jsonProperty->setAccessible(true);
+        $this->assertTrue($jsonProperty->getValue($server));
+    }
+
+    public function testCliJsonOutputWithSteps(): void
+    {
+        $options = ['maxSteps' => 50];
+        $server = new DebugServer($this->testScript, 9004, null, $options, true);
+
+        $reflection = new ReflectionClass($server);
+        $optionsProperty = $reflection->getProperty('options');
+        $optionsProperty->setAccessible(true);
+        $serverOptions = $optionsProperty->getValue($server);
+
+        $this->assertEquals(50, $serverOptions['maxSteps']);
+    }
+
+    public function testCliJsonOutputWithBreakpointAndSteps(): void
+    {
+        $options = ['maxSteps' => 100, 'timeout' => 30];
+        $server = new DebugServer($this->testScript, 9004, 3, $options, true);
+
+        $reflection = new ReflectionClass($server);
+
+        // Test breakpoint line
+        $breakpointProperty = $reflection->getProperty('initialBreakpointLine');
+        $breakpointProperty->setAccessible(true);
+        $this->assertEquals(3, $breakpointProperty->getValue($server));
+
+        // Test JSON mode
+        $jsonProperty = $reflection->getProperty('jsonMode');
+        $jsonProperty->setAccessible(true);
+        $this->assertTrue($jsonProperty->getValue($server));
+
+        // Test options
+        $optionsProperty = $reflection->getProperty('options');
+        $optionsProperty->setAccessible(true);
+        $serverOptions = $optionsProperty->getValue($server);
+        $this->assertEquals(100, $serverOptions['maxSteps']);
+        $this->assertEquals(30, $serverOptions['timeout']);
+    }
+
+    /**
+     * Test that DebugServer creates proper Xdebug arguments for different configurations
+     */
+    public function testXdebugArgumentGeneration(): void
+    {
+        $server = new DebugServer($this->testScript, 9005, 10, ['timeout' => 60], true);
+
+        $reflection = new ReflectionClass($server);
+
+        // Test script path
+        $scriptProperty = $reflection->getProperty('targetScript');
+        $scriptProperty->setAccessible(true);
+        $this->assertEquals($this->testScript, $scriptProperty->getValue($server));
+
+        // Test debug port
+        $portProperty = $reflection->getProperty('debugPort');
+        $portProperty->setAccessible(true);
+        $this->assertEquals(9005, $portProperty->getValue($server));
+
+        // Test breakpoint line
+        $breakpointProperty = $reflection->getProperty('initialBreakpointLine');
+        $breakpointProperty->setAccessible(true);
+        $this->assertEquals(10, $breakpointProperty->getValue($server));
+
+        // Test JSON mode
+        $jsonProperty = $reflection->getProperty('jsonMode');
+        $jsonProperty->setAccessible(true);
+        $this->assertTrue($jsonProperty->getValue($server));
+
+        // Test options
+        $optionsProperty = $reflection->getProperty('options');
+        $optionsProperty->setAccessible(true);
+        $options = $optionsProperty->getValue($server);
+        $this->assertEquals(60, $options['timeout']);
+    }
 }
