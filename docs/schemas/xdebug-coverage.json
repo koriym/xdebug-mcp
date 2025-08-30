@@ -5,7 +5,7 @@
   "description": "AI-optimized code coverage data for PHP test analysis and quality assessment. Designed for identifying untested code paths and coverage gaps.",
   "type": "object",
   "patternProperties": {
-    "^/.+\\.php$": {
+    "^(?:/|[A-Za-z]:\\\\).+\\.php$": {
       "type": "object",
       "description": "Coverage data for a specific PHP file",
       "properties": {
