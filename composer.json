@@ -1,6 +1,5 @@
 {
     "name": "koriym/xdebug-mcp",
-    "version": "0.1.0",
     "description": "Universal PHP Xdebug MCP Server with AI-optimized debugging support",
     "type": "library",
     "keywords": ["xdebug", "debugging", "php", "mcp", "ai", "trace", "profiling"],
