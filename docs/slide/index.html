@@ -188,7 +188,7 @@ var_dump($result);    // Repeat...</code></pre>
 // Modify code, test, repeat...</code></pre>
                 </div>
                 <div class="fragment">
-                    <h3>ForwardTrace Approach</h3>
+                    <h3>Forward Trace Approach</h3>
                     <pre><code class="bash"># Conditional breakpoint: Stop when problem occurs
 ./vendor/bin/xdebug-debug --break='checkout.php:89:$total&lt;0' --steps=50 --exit-on-break -- php checkout.php
 
@@ -662,6 +662,10 @@ if ($userId === 0) {
                         <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
                             <h4 style="color: #51cf66;">📈 Coverage Analysis</h4>
                             <p style="font-size: 0.8em;">Full context test coverage mapping</p>
+                        </div>
+                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
+                            <h4 style="color: #51cf66;">🧪 x-test</h4>
+                            <p style="font-size: 0.8em;">Run PHPUnit with context and profiling/trace modes</p>
                         </div>
                     </div>
                 </div>
