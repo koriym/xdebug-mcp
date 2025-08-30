@@ -139,10 +139,10 @@ claude mcp list                          # Verify MCP integration
 
 ## Resources
 
-📋 **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Setup and common issues  
-🎯 **[Forward Trace Guide](docs/debug_guideline_for_ai.md)** - AI debugging methodology  
+📋 **[TROUBLESHOOTING.md](https://koriym.github.io/xdebug-mcp/TROUBLESHOOTING)** - Setup and common issues  
+🎯 **[Forward Trace Guide](https://koriym.github.io/debug_guideline_for_human)** - AI debugging methodology  
 📖 **[MOTIVATION.md](MOTIVATION.md)** - Why we built this  
-🎬 **[Interactive Presentation](docs/slide/)** - See the paradigm shift  
+🎬 **[Interactive Presentation](https://koriym.github.io/xdebug-mcp/slide/)** - See the paradigm shift  
 📚 **[Xdebug Documentation](https://xdebug.org/docs/)** - Official Xdebug docs  
 
 ---
