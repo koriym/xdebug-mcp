@@ -1,6 +1,41 @@
 #!/usr/bin/env php
 <?php
 
+// Show help if requested
+if (in_array('--help', $argv) || in_array('-h', $argv)) {
+    echo "Usage: " . $argv[0] . " [--include-vendor=PATTERNS] [--] php script.php [args...]\n";
+    echo "\n";
+    echo "Collect code coverage for any PHP script.\n";
+    echo "\n";
+    echo "Options:\n";
+    echo "  --include-vendor=PATTERNS  Vendor packages to include in coverage (e.g., \"bear/*,ray/di\")\n";
+    echo "  --help, -h                Show this help\n";
+    echo "\n";
+    echo "Examples:\n";
+    echo "  # Coverage with vendor excluded (default):\n";
+    echo "  " . $argv[0] . " -- php app.php\n";
+    echo "\n";
+    echo "  # Include specific vendor packages:\n";
+    echo "  " . $argv[0] . " --include-vendor=bear/resource,ray/di -- php app.php\n";
+    echo "\n";
+    echo "  # Include all vendor packages:\n";
+    echo "  " . $argv[0] . " --include-vendor=*/* -- php app.php\n";
+    echo "\n";
+    echo "Output:\n";
+    echo "  JSON format with ultra-simple schema\n";
+    echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json\n";
+    exit(0);
+}
+
+// Parse include-vendor option
+$includeVendor = null;
+foreach ($argv as $arg) {
+    if (str_starts_with($arg, '--include-vendor=')) {
+        $includeVendor = substr($arg, 16);
+        break;
+    }
+}
+
 // Create shutdown script for coverage collection
 $shutdownScript = tempnam(sys_get_temp_dir(), 'coverage_end_');
 file_put_contents($shutdownScript, '<?php
@@ -18,8 +53,18 @@ register_shutdown_function(function() use ($tempDir) {
 });
 ');
 
-// Parse arguments - handle -- separator for complex commands
+// Parse arguments - handle -- separator and remove include-vendor option
 $args = array_slice($argv, 1);
+
+// Remove --include-vendor=* option from args
+$filteredArgs = [];
+foreach ($args as $arg) {
+    if (!str_starts_with($arg, '--include-vendor=')) {
+        $filteredArgs[] = $arg;
+    }
+}
+$args = $filteredArgs;
+
 if (in_array('--', $args)) {
     $separatorIndex = array_search('--', $args);
     $args = array_slice($args, $separatorIndex + 1);
@@ -28,18 +73,28 @@ if (in_array('--', $args)) {
 // Use PHP_BINARY constant instead of which php
 $phpPath = PHP_BINARY;
 
-// Check if Xdebug is already loaded
-$xdebugFlag = '';
-if (!extension_loaded('xdebug')) {
-    $xdebugFlag = ' -dzend_extension=xdebug';
-}
+// Load autoloader and XdebugFinder for intelligent Xdebug detection
+require_once __DIR__ . '/autoload.php';
+use Koriym\XdebugMcp\XdebugFinder;
+
+// Get appropriate Xdebug flag (empty if already loaded)
+$xdebugFlag = XdebugFinder::getXdebugFlag();
 
 // Properly escape all arguments and prepend file path
 $escapedArgs = array_map('escapeshellarg', $args);
 $escapedPrependFile = escapeshellarg($shutdownScript);
 
+// Add prepend_filter.php for vendor filtering if include-vendor is specified
+$prependFilter = '';
+if ($includeVendor !== null) {
+    $filterPath = __DIR__ . '/../prepend_filter.php';
+    $prependFilter = ' -dauto_prepend_file=' . escapeshellarg($filterPath);
+    // Pass include-vendor as environment variable for prepend_filter.php to access
+    putenv('COVERAGE_INCLUDE_VENDOR=' . $includeVendor);
+}
+
 // Execute PHP script with coverage enabled
-$cmd = escapeshellarg($phpPath) . $xdebugFlag . ' -dxdebug.mode=coverage -dauto_prepend_file=' . $escapedPrependFile . ' ' . implode(' ', $escapedArgs) . ' </dev/null 2>/dev/null';
+$cmd = escapeshellarg($phpPath) . $xdebugFlag . ' -dxdebug.mode=coverage' . $prependFilter . ' -dauto_prepend_file=' . $escapedPrependFile . ' ' . implode(' ', $escapedArgs) . ' </dev/null 2>/dev/null';
 $output = shell_exec($cmd);
 
 // Extract only JSON from output (filter out script output)

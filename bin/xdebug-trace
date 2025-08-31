@@ -18,6 +18,7 @@ function showHelp(string $scriptName): void {
     echo "  --json           Output JSON format (for MCP/AI consumption)\n";
     echo "  --claude         Auto-analyze with Claude after tracing\n";
     echo "  --context=TEXT   Add contextual description for AI analysis\n";
+    echo "  --include-vendor=PATTERNS  Vendor packages to include in trace (e.g., \"bear/*,ray/di\")\n";
     echo "\n";
     echo "Examples:\n";
     echo "  # Human-readable statistics (default):\n";

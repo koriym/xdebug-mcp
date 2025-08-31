@@ -6,6 +6,8 @@ declare(strict_types=1);
 // Load autoloader and get project root
 $projectRoot = require __DIR__ . '/autoload.php';
 
+use Koriym\XdebugMcp\XdebugFinder;
+
 function showHelp(string $scriptName): void
 {
     echo "Usage: $scriptName [--json] [--claude] [--context=TEXT] -- php script.php [args...]\n";
@@ -16,6 +18,7 @@ function showHelp(string $scriptName): void
     echo "  --json           JSON output for AI analysis with emoji keys\n";
     echo "  --claude         Auto-analyze with Claude after profiling\n";
     echo "  --context=TEXT   Add contextual description for AI analysis\n";
+    echo "  --include-vendor=PATTERNS  Vendor packages to include in profile (e.g., \"bear/*,ray/di\")\n";
     echo "\n";
     echo "Examples:\n";
     echo "  # Human-readable output with units:\n";
@@ -83,9 +86,12 @@ $xdebugOutputDir = ini_get('xdebug.output_dir') ?: '/tmp';
 echo "📊 Profiling: $targetFile\n";
 
 // Build command with Xdebug profiling enabled
-$prependFilter = __DIR__ . '/../src/prepend_filter.php';
+$prependFilter = __DIR__ . '/../prepend_filter.php';
+
+// Get appropriate Xdebug flag (empty if already loaded)
+$xdebugFlag = XdebugFinder::getXdebugFlag();
+
 $xdebugOptions = [
-    '-dzend_extension=xdebug',
     '-dxdebug.mode=profile',
     '-dxdebug.start_with_request=yes',
     "-dxdebug.output_dir={$xdebugOutputDir}",
@@ -93,11 +99,12 @@ $xdebugOptions = [
     '-dxdebug.use_compression=0',  // Disable compression for easier parsing
 ];
 
-if (is_file($prependFilter)) {
-    $xdebugOptions[] = "-dauto_prepend_file={$prependFilter}";
-} else {
-    fwrite(STDERR, "⚠️ Warning: prepend_filter.php not found at $prependFilter; proceeding without vendor filter\n");
+// Add Xdebug extension flag if needed
+if ($xdebugFlag !== '') {
+    array_unshift($xdebugOptions, trim($xdebugFlag));
 }
+
+// No XDEBUG_FILTER_PROFILING - skip prepend_filter
 
 // Combine all arguments
 $allArgs = array_merge($xdebugOptions, [$targetFile], $phpArgs);
