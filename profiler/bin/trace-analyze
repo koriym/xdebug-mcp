@@ -1,0 +1,113 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Xdebug Trace Analyzer - Main CLI Tool
+ *
+ * AI-optimized trace analysis with JSON output
+ *
+ * Usage: ./trace-analyze <trace-file> [options]
+ */
+
+// Find the TraceAnalyzer class
+$possiblePaths = [
+    __DIR__ . '/../src/TraceAnalyzer.php',
+    dirname(__DIR__) . '/src/TraceAnalyzer.php',
+    __DIR__ . '/../TraceAnalyzer.php'
+];
+
+$analyzerPath = null;
+foreach ($possiblePaths as $path) {
+    if (file_exists($path)) {
+        $analyzerPath = $path;
+        break;
+    }
+}
+
+if (!$analyzerPath) {
+    echo json_encode([
+        'error' => 'TraceAnalyzer.php not found',
+        'searched_paths' => $possiblePaths
+    ], JSON_PRETTY_PRINT) . "\n";
+    exit(1);
+}
+
+require_once $analyzerPath;
+
+// CLI usage
+if ($argc < 2) {
+    echo json_encode([
+        'error' => 'Missing arguments',
+        'usage' => './trace-analyze <trace-file> [options]',
+        'options' => [
+            '--context="description"' => 'Add analysis context',
+            '--compact' => 'Output compact JSON',
+            '--search="function"' => 'Search for specific function',
+            '--validate' => 'Validate result against schema'
+        ],
+        'examples' => [
+            './trace-analyze /tmp/trace.xt --context="User login flow analysis"',
+            './trace-analyze trace.xt --search="authenticate" --compact',
+            './trace-analyze trace.xt --validate'
+        ]
+    ], JSON_PRETTY_PRINT) . "\n";
+    exit(1);
+}
+
+$traceFile = $argv[1];
+$options = [];
+$context = '';
+$searchFunction = '';
+
+// Parse command line options
+for ($i = 2; $i < $argc; $i++) {
+    $arg = $argv[$i];
+    if (strpos($arg, '--context=') === 0) {
+        $context = substr($arg, 10);
+        $context = trim($context, '"\'');
+    } elseif (strpos($arg, '--search=') === 0) {
+        $searchFunction = substr($arg, 9);
+        $searchFunction = trim($searchFunction, '"\'');
+    } elseif ($arg === '--compact') {
+        $options['compact'] = true;
+    } elseif ($arg === '--validate') {
+        $options['validate'] = true;
+    }
+}
+
+try {
+    $analyzer = new XdebugTraceAnalyzerV2($traceFile);
+
+    if (!empty($searchFunction)) {
+        $result = $analyzer->analyzeTrace($context);
+        $searchResults = $analyzer->searchFunction($searchFunction);
+        echo json_encode([
+            'search_query' => $searchFunction,
+            'results' => $searchResults,
+            'total_matches' => count($searchResults),
+            'context' => $context
+        ], ($options['compact'] ?? false) ? JSON_UNESCAPED_SLASHES : JSON_PRETTY_PRINT) . "\n";
+    } else {
+        $result = $analyzer->analyzeTrace($context);
+
+        if ($options['validate'] ?? false) {
+            $validationErrors = $analyzer->validateSchema();
+            if (!empty($validationErrors)) {
+                echo json_encode([
+                    'validation_errors' => $validationErrors,
+                    'trace_file' => $traceFile
+                ], JSON_PRETTY_PRINT) . "\n";
+                exit(1);
+            }
+        }
+
+        echo $analyzer->exportJson($options) . "\n";
+    }
+} catch (Exception $e) {
+    echo json_encode([
+        'error' => $e->getMessage(),
+        'trace_file' => $traceFile,
+        'line' => $e->getLine(),
+        'file' => $e->getFile()
+    ], JSON_PRETTY_PRINT) . "\n";
+    exit(1);
+}

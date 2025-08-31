@@ -1,0 +1,449 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bear.sunday/schemas/trace-analysis-schema.json",
+  "title": "Xdebug Trace Analysis Result",
+  "description": "Comprehensive AI-optimized trace analysis data for PHP performance debugging, bottleneck identification, and execution flow analysis",
+  "type": "object",
+  "properties": {
+    "📊 metadata": {
+      "type": "object",
+      "description": "Analysis metadata and summary statistics",
+      "properties": {
+        "🕒 generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Analysis generation timestamp in ISO 8601 format"
+        },
+        "📁 source_trace_file": {
+          "type": "string",
+          "pattern": "^/.+\\.xt$",
+          "description": "Absolute path to source Xdebug trace file"
+        },
+        "📏 source_file_size": {
+          "type": "string",
+          "pattern": "^[\\d.]+\\s?(B|KB|MB|GB)$",
+          "description": "Human-readable source file size"
+        },
+        "📋 total_trace_lines": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total lines in source trace file"
+        },
+        "⏱️ total_execution_time": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total execution time in seconds"
+        },
+        "💾 peak_memory_usage": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Peak memory usage in bytes"
+        },
+        "🔍 analysis_version": {
+          "type": "string",
+          "description": "Version of trace analyzer used"
+        }
+      },
+      "required": ["generated_at", "source_trace_file", "total_trace_lines", "total_execution_time", "peak_memory_usage"],
+      "additionalProperties": false
+    },
+
+    "📈 statistics": {
+      "type": "object",
+      "description": "High-level execution statistics",
+      "properties": {
+        "🔢 unique_functions_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of unique functions executed"
+        },
+        "📂 unique_files_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of unique files involved in execution"
+        },
+        "📞 total_function_calls": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of function call entries"
+        },
+        "📊 performance_entries_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of complete function entry-exit pairs analyzed"
+        },
+        "🏗️ max_call_depth": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum function call depth reached"
+        },
+        "🏷️ vendor_vs_user": {
+          "type": "object",
+          "description": "Breakdown of vendor vs user-defined code execution",
+          "properties": {
+            "👤 user_functions": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of user-defined function calls"
+            },
+            "📦 vendor_functions": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of vendor/library function calls"
+            },
+            "⚙️ internal_functions": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of PHP internal function calls"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["unique_functions_count", "unique_files_count", "total_function_calls", "performance_entries_count", "max_call_depth"],
+      "additionalProperties": false
+    },
+
+    "🚀 performance_analysis": {
+      "type": "object",
+      "description": "Performance analysis results and bottleneck identification",
+      "properties": {
+        "🐌 slowest_functions": {
+          "type": "array",
+          "description": "Top slowest functions by execution duration",
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/$defs/performance_entry"
+          }
+        },
+        "💾 memory_intensive_functions": {
+          "type": "array",
+          "description": "Functions with highest memory usage/allocation",
+          "maxItems": 30,
+          "items": {
+            "$ref": "#/$defs/memory_entry"
+          }
+        },
+        "🔄 frequently_called_functions": {
+          "type": "array",
+          "description": "Most frequently called functions",
+          "maxItems": 25,
+          "items": {
+            "$ref": "#/$defs/frequency_entry"
+          }
+        },
+        "⚠️ performance_warnings": {
+          "type": "array",
+          "description": "Detected performance issues and warnings",
+          "items": {
+            "type": "object",
+            "properties": {
+              "🏷️ type": {
+                "type": "string",
+                "enum": ["deep_recursion", "memory_leak", "slow_function", "excessive_calls", "long_execution"]
+              },
+              "📄 message": {
+                "type": "string",
+                "description": "Human-readable warning message"
+              },
+              "🎯 function_name": {
+                "type": "string",
+                "description": "Function name associated with the warning"
+              },
+              "📊 severity": {
+                "type": "string",
+                "enum": ["low", "medium", "high", "critical"]
+              },
+              "💡 suggestion": {
+                "type": "string",
+                "description": "Optimization suggestion"
+              }
+            },
+            "required": ["type", "message", "severity"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["slowest_functions", "memory_intensive_functions", "frequently_called_functions", "performance_warnings"],
+      "additionalProperties": false
+    },
+
+    "🗂️ function_index": {
+      "type": "object",
+      "description": "Complete index of all function calls with execution details",
+      "patternProperties": {
+        "^.+$": {
+          "type": "array",
+          "description": "Array of all calls for this function",
+          "items": {
+            "$ref": "#/$defs/function_call_entry"
+          }
+        }
+      }
+    },
+
+    "📂 file_index": {
+      "type": "object",
+      "description": "Index organized by file path",
+      "patternProperties": {
+        "^/.+$": {
+          "type": "array",
+          "description": "Array of function calls within this file",
+          "items": {
+            "$ref": "#/$defs/file_function_entry"
+          }
+        }
+      }
+    },
+
+    "🎯 analysis_context": {
+      "type": "string",
+      "description": "Optional contextual description for AI analysis",
+      "examples": ["BEAR.Sunday application bootstrap analysis", "Database query performance investigation", "Memory leak detection in user authentication"]
+    },
+
+    "🔗 specification": {
+      "type": "string",
+      "format": "uri",
+      "const": "https://xdebug.org/docs/trace",
+      "description": "Official Xdebug trace format documentation"
+    },
+
+    "📋 schema": {
+      "type": "string",
+      "format": "uri",
+      "const": "https://bear.sunday/schemas/trace-analysis-schema.json",
+      "description": "This schema URL"
+    }
+  },
+
+  "required": ["metadata", "statistics", "performance_analysis", "function_index", "specification", "schema"],
+  "additionalProperties": false,
+
+  "$defs": {
+    "performance_entry": {
+      "type": "object",
+      "description": "Performance data for a single function execution",
+      "properties": {
+        "🏷️ function_name": {
+          "type": "string",
+          "description": "Full function name including class/namespace"
+        },
+        "⏱️ duration_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Execution duration in seconds"
+        },
+        "💾 memory_delta_bytes": {
+          "type": "integer",
+          "description": "Memory change in bytes (can be negative)"
+        },
+        "📊 memory_delta_formatted": {
+          "type": "string",
+          "pattern": "^[+-]?[\\d.]+\\s?(B|KB|MB|GB)$",
+          "description": "Human-readable memory change with sign"
+        },
+        "📍 trace_start_line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Line number in trace file where function entry occurred"
+        },
+        "📍 trace_end_line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Line number in trace file where function exit occurred"
+        },
+        "🏗️ call_depth_level": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Function call depth level"
+        },
+        "📂 file_path": {
+          "type": "string",
+          "description": "File where function is defined (if available)"
+        },
+        "📏 source_line": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Source code line number (if available)"
+        }
+      },
+      "required": ["function_name", "duration_seconds", "memory_delta_bytes", "memory_delta_formatted", "trace_start_line", "call_depth_level"],
+      "additionalProperties": false
+    },
+
+    "memory_entry": {
+      "type": "object",
+      "description": "Memory usage data for a function",
+      "properties": {
+        "🏷️ function_name": {
+          "type": "string",
+          "description": "Function name"
+        },
+        "💾 memory_delta_bytes": {
+          "type": "integer",
+          "description": "Memory change in bytes"
+        },
+        "📊 memory_delta_formatted": {
+          "type": "string",
+          "pattern": "^[+-]?[\\d.]+\\s?(B|KB|MB|GB)$",
+          "description": "Human-readable memory change"
+        },
+        "⏱️ duration_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Execution duration"
+        },
+        "🏗️ call_depth_level": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Call depth"
+        }
+      },
+      "required": ["function_name", "memory_delta_bytes", "memory_delta_formatted", "duration_seconds", "call_depth_level"],
+      "additionalProperties": false
+    },
+
+    "frequency_entry": {
+      "type": "object",
+      "description": "Function call frequency data",
+      "properties": {
+        "🏷️ function_name": {
+          "type": "string",
+          "description": "Function name"
+        },
+        "🔢 call_count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of times function was called"
+        },
+        "⏱️ total_duration_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Cumulative execution time"
+        },
+        "📊 average_duration_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Average execution time per call"
+        },
+        "💾 total_memory_delta_bytes": {
+          "type": "integer",
+          "description": "Cumulative memory change"
+        }
+      },
+      "required": ["function_name", "call_count", "total_duration_seconds", "average_duration_seconds", "total_memory_delta_bytes"],
+      "additionalProperties": false
+    },
+
+    "function_call_entry": {
+      "type": "object",
+      "description": "Individual function call details",
+      "properties": {
+        "📍 trace_line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Line number in trace file"
+        },
+        "🕒 timestamp": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Execution timestamp"
+        },
+        "💾 memory_usage": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Memory usage at function entry"
+        },
+        "📂 file_path": {
+          "type": "string",
+          "description": "File path where function is called from"
+        },
+        "📏 source_line": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Source line number"
+        },
+        "🏗️ call_depth_level": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Function call depth"
+        }
+      },
+      "required": ["trace_line", "timestamp", "memory_usage", "call_depth_level"],
+      "additionalProperties": false
+    },
+
+    "file_function_entry": {
+      "type": "object",
+      "description": "Function call within a specific file",
+      "properties": {
+        "🏷️ function_name": {
+          "type": "string",
+          "description": "Function name"
+        },
+        "📍 trace_line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Line number in trace file"
+        },
+        "🕒 timestamp": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Execution timestamp"
+        },
+        "💾 memory_usage": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Memory usage"
+        },
+        "📏 source_line": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Source file line number"
+        }
+      },
+      "required": ["function_name", "trace_line", "timestamp", "memory_usage"],
+      "additionalProperties": false
+    }
+  },
+
+  "links": [
+    {
+      "rel": "specification",
+      "href": "https://xdebug.org/docs/trace",
+      "title": "Official Xdebug Trace Format Documentation",
+      "description": "Complete documentation of Xdebug trace file format and configuration options"
+    },
+    {
+      "rel": "self",
+      "href": "https://bear.sunday/schemas/trace-analysis-schema.json",
+      "title": "JSON Schema for Trace Analysis Results",
+      "description": "This comprehensive schema definition for trace analysis data"
+    }
+  ],
+
+  "x-ai-strategies": {
+    "analysis_approach": {
+      "performance_first": "Prioritize performance analysis - identify bottlenecks before diving into detailed execution flow",
+      "context_aware": "Use analysis_context to tailor insights to specific debugging scenarios",
+      "hierarchical": "Start with high-level statistics, then drill down to specific functions and files",
+      "actionable": "Focus on performance_warnings and suggestions for immediate improvement opportunities"
+    },
+
+    "optimization_workflow": {
+      "step1": "Review performance_warnings for critical issues",
+      "step2": "Analyze slowest_functions for optimization targets",
+      "step3": "Check memory_intensive_functions for memory leaks",
+      "step4": "Examine frequently_called_functions for caching opportunities",
+      "step5": "Use function_index and file_index for detailed code analysis"
+    },
+
+    "interpretation_guide": {
+      "execution_time": "Functions with duration > 0.1s typically warrant investigation",
+      "memory_usage": "Memory deltas > 1MB indicate significant allocations",
+      "call_frequency": "Functions called > 100 times may benefit from optimization",
+      "call_depth": "Depth > 50 levels may indicate recursion issues"
+    }
+  }
+}

@@ -1,0 +1,170 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Xdebug Trace Bottleneck Extractor
+ *
+ * Extract and rank performance bottlenecks from trace analysis
+ *
+ * Usage: ./trace-bottlenecks <analysis.json> [limit]
+ */
+
+// Find the TraceUtils class
+$possiblePaths = [
+    __DIR__ . '/../src/TraceUtils.php',
+    dirname(__DIR__) . '/src/TraceUtils.php',
+    __DIR__ . '/../TraceUtils.php'
+];
+
+$utilsPath = null;
+foreach ($possiblePaths as $path) {
+    if (file_exists($path)) {
+        $utilsPath = $path;
+        break;
+    }
+}
+
+if (!$utilsPath) {
+    echo json_encode([
+        'error' => 'TraceUtils.php not found',
+        'searched_paths' => $possiblePaths
+    ], JSON_PRETTY_PRINT) . "\n";
+    exit(1);
+}
+
+require_once $utilsPath;
+
+if ($argc < 2) {
+    echo json_encode([
+        'error' => 'Missing arguments',
+        'usage' => './trace-bottlenecks <analysis.json> [limit]',
+        'description' => 'Extract and rank performance bottlenecks from trace analysis',
+        'parameters' => [
+            'analysis.json' => 'Path to trace analysis result file',
+            'limit' => 'Number of bottlenecks to extract (default: 10)'
+        ],
+        'output' => [
+            'top_bottlenecks' => 'Ranked list of performance bottlenecks',
+            'optimization_priority' => 'Priority level (critical/high/medium/low)',
+            'impact_score' => 'Numerical impact score (0-100)',
+            'recommendations' => 'Specific optimization suggestions'
+        ],
+        'examples' => [
+            './trace-bottlenecks analysis-result.json',
+            './trace-bottlenecks slow-execution.json 5',
+            './trace-bottlenecks performance-test.json 20'
+        ]
+    ], JSON_PRETTY_PRINT) . "\n";
+    exit(1);
+}
+
+$analysisFile = $argv[1];
+$limit = $argc >= 3 ? (int)$argv[2] : 10;
+
+// Validate limit
+if ($limit < 1 || $limit > 100) {
+    echo json_encode([
+        'error' => 'Invalid limit',
+        'provided_limit' => $limit,
+        'valid_range' => '1-100',
+        'default' => 10
+    ], JSON_PRETTY_PRINT) . "\n";
+    exit(1);
+}
+
+try {
+    if (!file_exists($analysisFile)) {
+        throw new InvalidArgumentException("Analysis file not found: $analysisFile");
+    }
+
+    $analysis = json_decode(file_get_contents($analysisFile), true);
+    if ($analysis === null) {
+        throw new InvalidArgumentException("Invalid JSON in file: $analysisFile");
+    }
+
+    // Extract bottlenecks
+    $bottlenecks = TraceUtils::extractTopBottlenecks($analysis, $limit);
+
+    // Calculate summary statistics
+    $totalFunctions = count($analysis['🚀 performance_analysis']['🐌 slowest_functions'] ?? []);
+    $criticalCount = count(array_filter($bottlenecks, fn($b) => $b['💡 optimization_priority'] === 'critical'));
+    $highCount = count(array_filter($bottlenecks, fn($b) => $b['💡 optimization_priority'] === 'high'));
+    $mediumCount = count(array_filter($bottlenecks, fn($b) => $b['💡 optimization_priority'] === 'medium'));
+    $lowCount = count(array_filter($bottlenecks, fn($b) => $b['💡 optimization_priority'] === 'low'));
+
+    $totalDuration = array_sum(array_column($bottlenecks, '⏱️ duration_seconds'));
+    $totalExecutionTime = $analysis['📊 metadata']['⏱️ total_execution_time'] ?? 1;
+    $bottleneckPercentage = round(($totalDuration / $totalExecutionTime) * 100, 1);
+
+    // Generate recommendations
+    $recommendations = [];
+    foreach ($bottlenecks as $index => $bottleneck) {
+        $rank = $index + 1;
+        $priority = $bottleneck['💡 optimization_priority'];
+        $functionName = $bottleneck['🏷️ function_name'];
+        $duration = $bottleneck['⏱️ duration_seconds'];
+
+        switch ($priority) {
+            case 'critical':
+                $recommendations[] = "🚨 Priority #$rank: $functionName ({$duration}s) requires immediate optimization";
+                break;
+            case 'high':
+                $recommendations[] = "⚠️ Priority #$rank: $functionName ({$duration}s) should be optimized soon";
+                break;
+            case 'medium':
+                $recommendations[] = "📊 Priority #$rank: $functionName ({$duration}s) could benefit from optimization";
+                break;
+            case 'low':
+                $recommendations[] = "📝 Priority #$rank: $functionName ({$duration}s) minor optimization opportunity";
+                break;
+        }
+    }
+
+    // Prepare output
+    $result = [
+        '🎯 bottleneck_analysis' => [
+            '📁 source_file' => basename($analysisFile),
+            '🎯 analysis_context' => $analysis['🎯 analysis_context'] ?? 'Unknown',
+            '🕒 extracted_at' => date('c'),
+            '🔢 requested_limit' => $limit,
+            '🔢 extracted_count' => count($bottlenecks)
+        ],
+
+        '📊 summary_statistics' => [
+            '🔢 total_analyzed_functions' => $totalFunctions,
+            '⏱️ total_bottleneck_time' => round($totalDuration, 6),
+            '📊 bottleneck_percentage_of_execution' => $bottleneckPercentage,
+            '🚨 critical_priority_count' => $criticalCount,
+            '⚠️ high_priority_count' => $highCount,
+            '📊 medium_priority_count' => $mediumCount,
+            '📝 low_priority_count' => $lowCount
+        ],
+
+        '🎯 top_bottlenecks' => $bottlenecks,
+
+        '💡 optimization_recommendations' => $recommendations,
+
+        '🔧 analysis_metadata' => [
+            '⏱️ total_execution_time' => $analysis['📊 metadata']['⏱️ total_execution_time'] ?? 0,
+            '💾 peak_memory_usage' => $analysis['📊 metadata']['💾 peak_memory_usage'] ?? 0,
+            '🔢 unique_functions_analyzed' => $analysis['📈 statistics']['🔢 unique_functions_count'] ?? 0,
+            '📂 files_involved' => $analysis['📈 statistics']['📂 unique_files_count'] ?? 0
+        ]
+    ];
+
+    // Add performance score if available
+    if (method_exists('TraceUtils', 'calculateOverallPerformanceScore')) {
+        $result['📊 summary_statistics']['🎯 overall_performance_score'] = TraceUtils::calculateOverallPerformanceScore($analysis);
+    }
+
+    echo json_encode($result, JSON_PRETTY_PRINT) . "\n";
+
+} catch (Exception $e) {
+    echo json_encode([
+        'error' => $e->getMessage(),
+        'analysis_file' => $analysisFile,
+        'limit' => $limit,
+        'line' => $e->getLine(),
+        'file' => $e->getFile()
+    ], JSON_PRETTY_PRINT) . "\n";
+    exit(1);
+}
