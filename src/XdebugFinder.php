@@ -8,10 +8,9 @@ use function escapeshellarg;
 use function extension_loaded;
 use function file_exists;
 use function fwrite;
-use function glob;
 use function ini_get;
-use function rtrim;
 
+use const DIRECTORY_SEPARATOR;
 use const PHP_MAJOR_VERSION;
 use const PHP_MINOR_VERSION;
 use const PHP_OS_FAMILY;
@@ -81,20 +80,10 @@ final class XdebugFinder
         // 3. Check standard extension_dir
         $extensionDir = ini_get('extension_dir');
         if ($extensionDir !== false && $extensionDir !== '') {
-            // Use appropriate extension based on OS
             $extension = PHP_OS_FAMILY === 'Windows' ? 'php_xdebug.dll' : 'xdebug.so';
-            $separator = PHP_OS_FAMILY === 'Windows' ? '\\' : '/';
-            $standardPath = rtrim($extensionDir, '/\\') . $separator . $extension;
+            $standardPath = $extensionDir . DIRECTORY_SEPARATOR . $extension;
             if (file_exists($standardPath)) {
                 return $standardPath;
-            }
-        }
-
-        // 4. Check common system paths as fallback
-        if (PHP_OS_FAMILY !== 'Windows') {
-            $matches = glob('/usr/lib/php/extensions/*/xdebug.so');
-            if (! empty($matches)) {
-                return $matches[0];
             }
         }
 
