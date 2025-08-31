@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Feeding the Beast: Why AI Needs Runtime Data</title>
+    <title>FEEDING THE BEAST: Why AI Needs Runtime Data</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/reveal.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/theme/black.css">
@@ -73,7 +73,7 @@
             color: white;
         }
         .quote {
-            font-style: italic;
+            font-style: normal;
             font-size: 1.2em;
             text-align: center;
             color: #ffd43b;
@@ -107,7 +107,7 @@
 // Run tests, analyze output
 var_dump($other);     // AI adds another
 // Remove first, add third...
-var_dump($result);    // Repeat...</code></pre>
+var_dump($result);    // Repeat... and cleanup...</code></pre>
                 </div>
                 <div class="fragment">
                     <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
@@ -119,21 +119,22 @@ var_dump($result);    // Repeat...</code></pre>
 
             <!-- The Real Problem -->
             <section>
-                <h2>The Real Problem 🎯</h2>
+                <h2>The Root Cause 🎯</h2>
                 <div class="fragment">
-                    <h3 style="color: #ffd43b;">It wasn't the AI's fault.</h3>
+                    <h3 style="color: #ffd43b;">It wasn't the AI's fault</h3>
                     <p>We were asking a detective to solve a crime using only <strong>📷 crime scene photos</strong>.</p>
                 </div>
                 <div class="fragment">
-                    <p>We give AI:</p>
+                    <p>What we provide:</p>
                     <ul>
-                        <li>📷 Static code structure (photos)</li>
-                        <li>📷 Function signatures (photos)</li>
-                        <li>📷 Comments and documentation (photos)</li>
+                        <li>📷 Code structure (static)</li>
+                        <li>📷 Function signatures (static)</li>
+                        <li>📷 Comments and documentation (static)</li>
+                        <li>📷 Error messages (static)</li>
                     </ul>
                 </div>
                 <div class="fragment">
-                    <p>But we <strong>never</strong> show AI the <strong>🎥 actual crime video</strong> — what happens when code runs!</p>
+                    <p>But we <strong>never show what actually happened</strong>! 📹📺🎥</p>
                 </div>
             </section>
 
@@ -141,7 +142,7 @@ var_dump($result);    // Repeat...</code></pre>
             <section data-background-gradient="linear-gradient(45deg, #134e5e, #71b280)">
                 <h2>🍽️ Feed the Beast</h2>
                 <div class="fragment">
-                    <p class="quote">"AI is always hungry for data, and we've been giving it scraps."</p>
+                    <p class="quote">"AI is always hungry for data."</p>
                 </div>
                 <div class="fragment">
                     <p>What AI really needs:</p>
@@ -181,7 +182,7 @@ var_dump($result);    // Repeat...</code></pre>
 
             <!-- Live Demo Concept -->
             <section>
-                <h2>See the Magic ✨</h2>
+                <h2>GO AI NATIVE ✨</h2>
                 <div class="fragment">
                     <h3>Traditional Approach</h3>
                     <pre><code class="php">// Multiple debugging attempts
@@ -247,45 +248,6 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
             </section>
 
 
-            <!-- Transition: Why This Approach? -->
-            <section>
-                <div style="text-align: center; margin-top: 100px;">
-                    <h2 style="color: #ffd43b; font-size: 2em;">But Why Does This Work?</h2>
-                    <p style="font-size: 1.5em; margin-top: 50px; color: #ffffff;">
-                        The answer lies in how humans and AI process information differently
-                    </p>
-                </div>
-            </section>
-
-            <!-- Humans vs AI - Split view -->
-            <section data-background-gradient="linear-gradient(45deg, #667db6, #0082c8)">
-                <h2>Different Cognitive Patterns 🧠</h2>
-                <div style="display: flex; justify-content: space-between;">
-                    <div class="fragment" style="width: 45%;">
-                        <h3 style="color: #ff6b6b;">👤 Humans excel at:</h3>
-                        <ul>
-                            <li>Step-by-step reasoning</li>
-                            <li>Sequential understanding</li>
-                            <li>Interactive exploration</li>
-                            <li>Building mental models gradually</li>
-                        </ul>
-                    </div>
-                    <div class="fragment" style="width: 45%;">
-                        <h3 style="color: #51cf66;">🤖 AI excels at:</h3>
-                        <ul>
-                            <li>📊 Comprehensive data analysis</li>
-                            <li>🔍 Pattern recognition in massive datasets</li>
-                            <li>⚡ Simultaneous processing of all information</li>
-                            <li>🎯 Complete context understanding at once</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="fragment" style="margin-top: 40px;">
-                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
-                        "We've been forcing AI to debug like humans. Time to let AI debug like AI."
-                    </p>
-                </div>
-            </section>
 
             <!-- Forward Trace Revolution - First slide -->
             <section>
@@ -319,7 +281,7 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                 </div>
                 <div class="fragment" style="margin-top: 30px;">
                     <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
-                        AI processes complete context → Humans get immediate insights
+                        AI processes complete context → Provides insights to humans
                     </p>
                 </div>
             </section>
@@ -362,9 +324,10 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                     <h3>A world where:</h3>
                     <ul>
                         <li class="fragment">Debugging becomes systematic and data-driven</li>
-                        <li class="fragment">Print statements feel as archaic as punch cards</li>
+                        <li class="fragment">var_dump() and dd() feel like relics</li>
                         <li class="fragment">Every developer has professional debugging workflows</li>
-                        <li class="fragment">AI assistants routinely use execution traces</li>
+                        <li class="fragment">AI assistants prefer to use execution traces themselves</li>
+                        <li class="fragment">Analysis over intuition using profiler data</li>
                     </ul>
                 </div>
             </section>
@@ -401,7 +364,7 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                 </div>
                 <div class="fragment" style="margin-top: 20px;">
                     <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
-                        Schema = Data Structure + AI Usage Instructions
+                        Schema = Meaning + Data Structure + AI Guidance
                     </p>
                 </div>
             </section>
@@ -430,14 +393,14 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                 </div>
                 <div class="fragment">
                     <p style="text-align: center; color: #51cf66; font-size: 1.1em; font-weight: bold;">
-                        AI doesn't just parse data - it knows exactly what to look for
+                        AI doesn't just parse data - it knows its mission
                     </p>
                 </div>
             </section>
 
             <!-- The Bigger Picture -->
             <section data-background-gradient="linear-gradient(45deg, #2c3e50, #3498db)">
-                <h2>The Schema Revolution 🚀</h2>
+                <h2>Schema-Driven Intelligence 🚀</h2>
                 <div class="fragment">
                     <h3>Traditional Data Exchange:</h3>
                     <p style="font-size: 0.9em; text-align: center;">"Here's data in format X. Good luck figuring out what's important."</p>
@@ -454,33 +417,33 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                 </div>
                 <div class="fragment">
                     <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
-                        This is the future of human-AI collaboration.
+                        Bridging the understanding gap between humans and AI
                     </p>
                 </div>
             </section>
 
             <!-- The Inflection Point -->
             <section data-background-gradient="linear-gradient(45deg, #2c3e50, #3498db)">
-                <h2>The Inflection Point ⚡</h2>
+                <h2>Inflection Point ⚡</h2>
                 <div class="fragment">
-                    <p style="text-align: center;">We can continue treating AI as a sophisticated search engine...</p>
+                    <p style="text-align: center;">We can continue treating AI as a sophisticated autocomplete engine...</p>
                 </div>
                 <div class="fragment">
-                    <p style="text-align: center;"><strong>Or we can build true partnership through radical transparency.</strong></p>
+                    <p style="text-align: center;"><strong>Or we can make AI our partner through complete transparency</strong></p>
                 </div>
                 <div class="fragment">
-                    <p style="text-align: center;">Not just sharing our code, but our <em>entire development context</em>.</p>
+                    <p style="text-align: center;">Not just sharing our code, but our <strong>entire development context</strong>.</p>
                 </div>
                 <div class="fragment">
                     <p style="text-align: center; margin-top: 50px;">
-                        <strong>This is proof that when we stop asking AI to guess and start giving it real data, we unlock capabilities we never imagined.</strong>
+                        <strong>I wondered what kind of development that would lead to</strong>
                     </p>
                 </div>
             </section>
 
             <!-- Conditional Tracing Tips - Problem -->
             <section>
-                <h2>Debug Like a Pro: Conditional Tracing Power 🎯</h2>
+                <h2>Conditional Tracing Power 🎯</h2>
                 <div class="fragment">
                     <h3>Scenario: "Error only occurs when User ID is 0"</h3>
                 </div>
@@ -495,7 +458,7 @@ if ($userId === 0) {
                 </div>
                 <div class="fragment">
                     <p style="text-align: center; color: #ff6b6b; font-size: 1.2em;">
-                        <strong>Problems:</strong> Code pollution, production risks, manual cleanup
+                        <strong>Problems:</strong> Code pollution, production risks, cleanup
                     </p>
                 </div>
             </section>
@@ -513,7 +476,7 @@ if ($userId === 0) {
                 </div>
                 <div class="fragment">
                     <p style="text-align: center; color: #51cf66; font-size: 1.2em;">
-                        <strong>Benefits:</strong> No code changes, complete context, production-safe
+                        <strong>Benefits:</strong> No code changes, complete context, safe
                     </p>
                 </div>
             </section>
@@ -529,7 +492,7 @@ if ($userId === 0) {
 # Analyzes the complete path to empty array condition</code></pre>
                 </div>
                 <div class="fragment">
-                    <h3>Why This is Revolutionary:</h3>
+                    <h3>break + step + trace</h3>
                     <ul>
                         <li class="fragment highlight-red">❌ Standard Xdebug: Breaks every time (inefficient)</li>
                         <li class="fragment highlight-green">✅ Conditional Tracing: Fast execution until problem, detailed recording only when needed</li>
@@ -539,7 +502,7 @@ if ($userId === 0) {
 
             <!-- Performance Profiling -->
             <section>
-                <h2>xdebug-profile: Performance Detective 🔍</h2>
+                <h2>xdebug-profile: See Performance 🔍</h2>
                 <div class="fragment">
                     <pre><code class="bash"># Microsecond-precision performance profiling
 ./vendor/bin/xdebug-profile --context="API performance analysis" -- php slow_api.php
@@ -618,7 +581,7 @@ if ($userId === 0) {
 
             <!-- Core Tools Focus -->
             <section>
-                <h2>The Power of Focused Tools 🎯</h2>
+                <h2>MCP Tools 🎯</h2>
                 <div class="fragment">
                     <h3>4 Core AI-Optimized Tools:</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
@@ -642,24 +605,23 @@ if ($userId === 0) {
                 </div>
                 <div class="fragment" style="margin-top: 40px;">
                     <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
-                        Each tool gives AI the complete picture it needs to excel
+                        I want to see AI use these tools freely in the future
                     </p>
                 </div>
             </section>
 
             <!-- AI Code Quality Verification -->
             <section data-background-gradient="linear-gradient(45deg, #9b59b6, #8e44ad)">
-                <h2>AI Code Quality: Beyond "Tests Pass" ✅➡️⚡</h2>
+                <h2>Beyond "Tests Pass"</h2>
                 <div style="font-size: 0.9em;">
                     <div class="fragment" style="margin-bottom: 30px;">
                         <h3 style="color: #e74c3c; text-align: center;">The Modern Problem 🤖</h3>
                         <div style="background: rgba(231, 76, 60, 0.1); padding: 20px; border-radius: 10px; margin: 20px 0;">
-                            <p><strong>AI/Junior code often passes all quality gates:</strong></p>
+                            <p><strong>Quality Problem🤖: Is "Passing Checks" Enough?</strong></p>
                             <ul style="list-style: none; margin-left: 0;">
                                 <li>✅ Unit Tests: 100% pass</li>
                                 <li>✅ Code Coverage: 100%</li>
-                                <li>✅ Static Analysis: Clean</li>
-                                <li>✅ Type Safety: Strict mode OK</li>
+                                <li>✅ Static Analysis: MAX</li>
                             </ul>
                             <p style="text-align: center; color: #f39c12; font-weight: bold; margin-top: 20px;">
                                 But is the code actually <em>efficient</em>? 🤔
@@ -694,6 +656,64 @@ Time: 2.3 seconds
                             "Correctness" ➡️ "Efficiency" - The quality evolution AI demands
                         </p>
                     </div>
+                </div>
+            </section>
+
+            <!-- The Discovery -->
+            <section data-background-gradient="linear-gradient(45deg, #2c3e50, #34495e)">
+                <h2>The Discovery Story 📖</h2>
+                <div style="display: flex; align-items: center; gap: 40px;">
+                    <div style="flex: 1;">
+                        <img src="../images/interactive-debugger.png" alt="Interactive Debugger Shell" style="width: 100%; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                    </div>
+                    <div style="flex: 1;">
+                        <div class="fragment">
+                            <h3 style="color: #e74c3c;">Original Vision 🎯</h3>
+                            <p style="font-size: 0.9em;">"AI that uses IDE like human developers"</p>
+                            <ul style="font-size: 0.8em;">
+                                <li>Interactive Xdebug shell</li>
+                                <li>All 47 Xdebug commands supported</li>
+                                <li>Step-by-step execution</li>
+                            </ul>
+                        </div>
+                        <div class="fragment" style="margin-top: 20px;">
+                            <h3 style="color: #f39c12;">Technical Challenge ⚙️</h3>
+                            <p style="font-size: 0.8em;">Stateless MCP ⚡ Stateful Xdebug</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- The Revelation -->
+            <section data-background-gradient="linear-gradient(45deg, #2c3e50, #34495e)">
+                <h2>Learning from AI 💡</h2>
+                <div class="fragment">
+                    <div style="background: rgba(52, 152, 219, 0.1); padding: 30px; border-radius: 15px; margin: 20px 0;">
+                        <h3 style="color: #3498db; text-align: center;">"AI doesn't need this kind of interactive mechanism"</h3>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+                    <div class="fragment" style="width: 48%; background: rgba(231, 76, 60, 0.1); padding: 20px; border-radius: 10px;">
+                        <h4 style="color: #e74c3c;">🛠️ Developer's Intuition</h4>
+                        <ul style="font-size: 0.8em;">
+                            <li>"AI should use IDE like us"</li>
+                            <li>"Step execution is necessary"</li>
+                            <li>"Must provide all features"</li>
+                        </ul>
+                    </div>
+                    <div class="fragment" style="width: 48%; background: rgba(46, 204, 113, 0.1); padding: 20px; border-radius: 10px;">
+                        <h4 style="color: #2ecc71;">🤖 AI's Actual Voice</h4>
+                        <ul style="font-size: 0.8em;">
+                            <li>"Give me all data at once"</li>
+                            <li>"I want to find patterns"</li>
+                            <li>"Interaction is unnecessary"</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 30px; text-align: center;">
+                    <p style="color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        47 commands → Single Forward Trace
+                    </p>
                 </div>
             </section>
 

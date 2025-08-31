@@ -248,46 +248,6 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
             </section>
 
 
-            <!-- Transition: Why This Approach? -->
-            <section>
-                <div style="text-align: center; margin-top: 100px;">
-                    <h2 style="color: #ffd43b; font-size: 2em;">なぜこのアプローチ？</h2>
-                    <p style="font-size: 1.5em; margin-top: 50px; color: #ffffff;">
-                        答えは人間とAIが情報を処理する方法の違いにある
-                    </p>
-                </div>
-            </section>
-
-            <!-- Humans vs AI - Split view -->
-            <section data-background-gradient="linear-gradient(45deg, #667db6, #0082c8)">
-                <h2>異なる認知パターン 🧠</h2>
-                <div style="display: flex; justify-content: space-between;">
-                    <div class="fragment" style="width: 45%;">
-                        <h3 style="color: #ff6b6b;">👤 人間が得意なこと:</h3>
-                        <ul>
-                            <li>段階的推論</li>
-                            <li>順次理解</li>
-                            <li>インタラクティブ探索</li>
-                            <li>徐々にメンタルモデル構築</li>
-                        </ul>
-                    </div>
-                    <div class="fragment" style="width: 45%;">
-                        <h3 style="color: #51cf66;">🤖 AIが得意なこと:</h3>
-                        <ul>
-                            <li>📊 包括的データ分析</li>
-                            <li>🔍 巨大データセットでのパターン認識</li>
-                            <li>⚡ 全情報の同時処理</li>
-                            <li>🎯 完全なコンテキストの一括理解</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="fragment" style="margin-top: 40px;">
-                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
-                        「AIはAIが望むようなデバッグ手法がある」
-                    </p>
-                    ...と思ってこのライブラリを作った。
-                </div>
-            </section>
 
             <!-- Forward Trace Revolution - First slide -->
             <section>
@@ -695,6 +655,64 @@ DBクエリ: 10,000行
                             「正確性」 ➡️ 「効率性」 - AIが求める品質進化
                         </p>
                     </div>
+                </div>
+            </section>
+
+            <!-- The Discovery -->
+            <section data-background-gradient="linear-gradient(45deg, #2c3e50, #34495e)">
+                <h2>発見の物語 📖</h2>
+                <div style="display: flex; align-items: center; gap: 40px;">
+                    <div style="flex: 1;">
+                        <img src="../images/interactive-debugger.png" alt="Interactive Debugger Shell" style="width: 100%; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                    </div>
+                    <div style="flex: 1;">
+                        <div class="fragment">
+                            <h3 style="color: #e74c3c;">当初のビジョン 🎯</h3>
+                            <p style="font-size: 0.9em;">「AIが人間の開発者のようにIDEを使う」</p>
+                            <ul style="font-size: 0.8em;">
+                                <li>インタラクティブXdebugシェル</li>
+                                <li>47個全てのXdebugコマンド対応</li>
+                                <li>ステップバイステップ実行</li>
+                            </ul>
+                        </div>
+                        <div class="fragment" style="margin-top: 20px;">
+                            <h3 style="color: #f39c12;">技術的困難 ⚙️</h3>
+                            <p style="font-size: 0.8em;">ステートレスMCP ⚡ ステートフルXdebug</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- The Revelation -->
+            <section data-background-gradient="linear-gradient(45deg, #2c3e50, #34495e)">
+                <h2>AIからの学び 💡</h2>
+                <div class="fragment">
+                    <div style="background: rgba(52, 152, 219, 0.1); padding: 30px; border-radius: 15px; margin: 20px 0;">
+                        <h3 style="color: #3498db; text-align: center;">「このようなインタラクティブな仕組みはAIにはいらない」</h3>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+                    <div class="fragment" style="width: 48%; background: rgba(231, 76, 60, 0.1); padding: 20px; border-radius: 10px;">
+                        <h4 style="color: #e74c3c;">🛠️ 開発者の直感</h4>
+                        <ul style="font-size: 0.8em;">
+                            <li>「AIもIDEのように使うはず」</li>
+                            <li>「ステップ実行が必要」</li>
+                            <li>「全機能を提供すべき」</li>
+                        </ul>
+                    </div>
+                    <div class="fragment" style="width: 48%; background: rgba(46, 204, 113, 0.1); padding: 20px; border-radius: 10px;">
+                        <h4 style="color: #2ecc71;">🤖 AIの実際の声</h4>
+                        <ul style="font-size: 0.8em;">
+                            <li>「一度に全データが欲しい」</li>
+                            <li>「パターンを見つけたい」</li>
+                            <li>「インタラクションは不要」</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 30px; text-align: center;">
+                    <p style="color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        47個のコマンド → フォワードトレース一発
+                    </p>
                 </div>
             </section>
 
