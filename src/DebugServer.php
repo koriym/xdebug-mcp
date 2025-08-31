@@ -231,7 +231,7 @@ final class DebugServer
                     $scriptName = basename($this->targetScript, '.php');
                     $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
                     // @todo Remove trace mode in 1.0 release
-                    $prependFilter = __DIR__ . '/prepend_filter.php';
+                    $prependFilter = __DIR__ . '/../prepend_filter.php';
                     $cmd = sprintf(
                         'XDEBUG_TRIGGER=1 php -dzend_extension=xdebug ' .
                         '-dxdebug.mode=debug,trace ' .
@@ -262,7 +262,7 @@ final class DebugServer
                 // Default: simple script execution
                 $scriptName = basename($this->targetScript, '.php');
                 $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
-                $prependFilter = __DIR__ . '/prepend_filter.php';
+                $prependFilter = __DIR__ . '/../prepend_filter.php';
                 $cmd = sprintf(
                     'XDEBUG_TRIGGER=1 php -dzend_extension=xdebug ' .
                     '-dxdebug.mode=debug,trace ' .
