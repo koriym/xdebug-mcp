@@ -9,6 +9,10 @@ declare(strict_types=1);
  * Checks Xdebug environment and optionally configures MCP integration
  */
 
+// Load XdebugFinder for intelligent Xdebug detection
+require_once dirname(__DIR__) . '/src/XdebugFinder.php';
+use Koriym\XdebugMcp\XdebugFinder;
+
 $action = $argv[1] ?? null;
 
 echo "🔧 Xdebug MCP Environment Check\n";
@@ -30,57 +34,52 @@ if (version_compare($phpVersion, '8.0.0', '>=')) {
     echo "❌ (Requires PHP 8.0+)\n";
 }
 
-// Check if Xdebug is loaded by default (should NOT be)
-echo "🔍 Xdebug default loading: ";
-$defaultLoaded = extension_loaded('xdebug');
-if ($defaultLoaded) {
-    echo "❌ (Loaded by default - may impact performance)\n";
-    echo "   Consider removing xdebug from php.ini for production\n";
-} else {
-    echo "✅ (Not loaded by default - good for performance)\n";
+// Check Xdebug status directly
+$loaded = extension_loaded('xdebug');
+$available = XdebugFinder::isXdebugAvailable();
+$detectedPath = XdebugFinder::detectXdebugPath();
+
+echo "🔍 Xdebug Status:\n";
+echo "   Default loading: " . ($loaded ? "❌ (Loaded by default - may impact performance)" : "✅ (Not loaded by default - good for performance)") . "\n";
+echo "   Availability: " . ($available ? "✅ Available" : "❌ Not available") . "\n";
+
+if ($available && !$loaded) {
+    echo "   Detection: ✅ (Found at: {$detectedPath})\n";
+    $xdebugFlag = XdebugFinder::getXdebugFlag();
+    echo "   Loading flag: {$xdebugFlag}\n";
+} elseif (!$available) {
+    echo "   Status: ❌ (Not found - installation required)\n";
+    XdebugFinder::showInstallationGuidance(false);
 }
 
-// Check if Xdebug can be loaded with -d
-echo "🔍 Xdebug -d loading: ";
-$phpBin = escapeshellcmd(PHP_BINARY);
-$zendCandidates = ['-dzend_extension=xdebug.so', '-dzend_extension=xdebug'];
-$extDir = trim(shell_exec($phpBin . ' -r "echo ini_get(\'extension_dir\');" 2>/dev/null'));
-$dll = (PHP_OS_FAMILY === 'Windows') ? 'php_xdebug.dll' : 'xdebug.so';
-if ($extDir) {
-    $zendCandidates[] = "-dzend_extension={$extDir}/{$dll}";
-}
-$canLoadXdebug = false;
-$zendFlag = null;
-foreach ($zendCandidates as $zc) {
-    $probe = [];
-    exec("$phpBin $zc -m 2>/dev/null", $probe);
-    if (in_array('xdebug', $probe, true)) {
-        $canLoadXdebug = true;
-        $zendFlag = $zc;
-        break;
-    }
-}
-if ($canLoadXdebug) {
-    echo "✅ (Can load with {$zendFlag})\n";
-} else {
-    echo "❌ (Cannot load Xdebug)\n";
-    echo "   Install with: pecl install xdebug (macOS) or apt-get install php-xdebug (Linux)\n";
-}
+$canLoadXdebug = $available;
+$zendFlag = $available ? XdebugFinder::getXdebugFlag() : null;
 
 // Check Xdebug version if available
 if ($canLoadXdebug) {
-    $output = [];
-    exec(sprintf(
-        '%s %s -r "echo phpversion(\'xdebug\');" 2>/dev/null',
-        $phpBin,
-        $zendFlag
-    ), $output);
-    if (!empty($output[0])) {
-        echo "🔍 Xdebug version: {$output[0]} ";
-        if (version_compare($output[0], '3.0.0', '>=')) {
+    if ($loaded) {
+        $version = phpversion('xdebug') ?: 'Unknown';
+        echo "🔍 Xdebug version: {$version} ";
+        if (version_compare($version, '3.0.0', '>=')) {
             echo "✅\n";
         } else {
             echo "⚠️  (Consider upgrading to 3.0+)\n";
+        }
+    } else {
+        $phpBin = escapeshellcmd(PHP_BINARY);
+        $output = [];
+        exec(sprintf(
+            '%s %s -r "echo phpversion(\'xdebug\');" 2>/dev/null',
+            $phpBin,
+            $zendFlag
+        ), $output);
+        if (!empty($output[0])) {
+            echo "🔍 Xdebug version: {$output[0]} ";
+            if (version_compare($output[0], '3.0.0', '>=')) {
+                echo "✅\n";
+            } else {
+                echo "⚠️  (Consider upgrading to 3.0+)\n";
+            }
         }
     }
 }
@@ -88,15 +87,23 @@ if ($canLoadXdebug) {
 // Check Xdebug modes
 if ($canLoadXdebug) {
     echo "🔍 Xdebug modes: ";
-    $output = [];
-    exec(sprintf(
-        "%s %s -dxdebug.mode=debug,profile,coverage,trace -r \"echo ini_get('xdebug.mode');\" 2>/dev/null",
-        $phpBin,
-        $zendFlag
-    ), $output);
-    echo (!empty($output) && strpos($output[0], 'debug') !== false)
-        ? "✅ (Modes ok)\n"
-        : "⚠️  (Mode verification inconclusive)\n";
+    if ($loaded) {
+        $modes = ini_get('xdebug.mode') ?: 'Unknown';
+        echo ($modes && strpos($modes, 'debug') !== false)
+            ? "✅ ({$modes})\n"
+            : "⚠️  ({$modes})\n";
+    } else {
+        $phpBin = escapeshellcmd(PHP_BINARY);
+        $output = [];
+        exec(sprintf(
+            "%s %s -dxdebug.mode=debug,profile,coverage,trace -r \"echo ini_get('xdebug.mode');\" 2>/dev/null",
+            $phpBin,
+            $zendFlag
+        ), $output);
+        echo (!empty($output) && strpos($output[0], 'debug') !== false)
+            ? "✅ (Modes ok)\n"
+            : "⚠️  (Mode verification inconclusive)\n";
+    }
 }
 
 // Check required PHP extensions
@@ -201,5 +208,5 @@ if ($action === '--install-mcp') {
     echo "   ./bin/xdebug-profile --json -- php your-script.php\n\n";
 }
 
-$hasIssues = !$canLoadXdebug || $defaultLoaded || !extension_loaded('sockets') || !extension_loaded('xml');
+$hasIssues = !$canLoadXdebug || $loaded || !extension_loaded('sockets') || !extension_loaded('xml');
 exit($hasIssues ? 1 : 0);

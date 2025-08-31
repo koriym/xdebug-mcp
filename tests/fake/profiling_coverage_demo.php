@@ -183,4 +183,4 @@ echo "- コードカバレッジ: 実行されたコード行を追跡\n";
 echo "- レポート生成: HTML、XML、JSON、テキスト形式対応\n";
 echo "- PHPUnit連携: テストカバレッジの自動計測\n";
 echo "\n";
-echo "💡 実際の使用時は php -dzend_extension=xdebug でXdebugを有効にしてください\n";
+echo "💡 実際の使用時はXdebugが有効な環境で実行してください（自動検出されます）\n";

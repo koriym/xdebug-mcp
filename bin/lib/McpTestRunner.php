@@ -45,10 +45,14 @@ class McpTestRunner
 
     private function setupXdebugCommand(): void
     {
+        // Load XdebugFinder for intelligent Xdebug detection
+        require_once __DIR__ . '/../../src/XdebugFinder.php';
+        $xdebugFlag = \Koriym\XdebugMcp\XdebugFinder::getXdebugFlag();
+        
         if ($this->sessionMode) {
-            $this->xdebugMcp = 'php -dzend_extension=xdebug.so -dxdebug.mode=debug,profile,coverage,trace bin/xdebug-mcp';
+            $this->xdebugMcp = 'php' . $xdebugFlag . ' -dxdebug.mode=debug,profile,coverage,trace bin/xdebug-mcp';
         } else {
-            $this->xdebugMcp = 'php -dzend_extension=xdebug.so -dxdebug.mode=profile,coverage,trace bin/xdebug-mcp';
+            $this->xdebugMcp = 'php' . $xdebugFlag . ' -dxdebug.mode=profile,coverage,trace bin/xdebug-mcp';
         }
     }
 
@@ -141,11 +145,16 @@ class McpTestRunner
 
     public function checkPrerequisites(): bool
     {
-        if (extension_loaded('xdebug')) {
-            echo self::RED . "❌ Xdebug is currently loaded in php.ini\n" . self::RESET;
-            echo self::YELLOW . "💡 Please comment out Xdebug in php.ini for optimal performance:\n" . self::RESET;
-            echo "   ;zend_extension=xdebug\n\n";
+        // Use XdebugFinder to check if Xdebug is available
+        if (!\Koriym\XdebugMcp\XdebugFinder::isXdebugAvailable()) {
+            echo self::RED . "❌ Xdebug not found. Please install Xdebug to run these tests.\n" . self::RESET;
+            \Koriym\XdebugMcp\XdebugFinder::showInstallationGuidance(false);
             return false;
+        }
+        
+        if (extension_loaded('xdebug')) {
+            echo self::YELLOW . "💡 Xdebug is loaded in php.ini - tests will run but may be slower\n" . self::RESET;
+            echo self::YELLOW . "   For optimal performance, consider using: ;zend_extension=xdebug in php.ini\n" . self::RESET;
         }
 
         echo self::GREEN . "✅ Xdebug is not loaded (good - as recommended)\n" . self::RESET;

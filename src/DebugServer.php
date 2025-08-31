@@ -232,8 +232,13 @@ final class DebugServer
                     $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
                     // @todo Remove trace mode in 1.0 release
                     $prependFilter = __DIR__ . '/../prepend_filter.php';
+
+                    // Get appropriate Xdebug flag (empty if already loaded)
+                    $xdebugFlag = XdebugFinder::getXdebugFlag();
+                    $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
+
                     $cmd = sprintf(
-                        'XDEBUG_TRIGGER=1 php -dzend_extension=xdebug ' .
+                        'XDEBUG_TRIGGER=1 php %s' .
                         '-dxdebug.mode=debug,trace ' .
                         '-dxdebug.client_host=127.0.0.1 ' .
                         '-dxdebug.client_port=%d ' .
@@ -249,6 +254,7 @@ final class DebugServer
                         '-derror_log=/tmp/php.log ' .
                         '-dauto_prepend_file=%s ' .
                         '%s',
+                        $xdebugPart,
                         $this->debugPort,
                         escapeshellarg($prependFilter),
                         implode(' ', array_map('escapeshellarg', array_slice($command, 1))),
@@ -262,8 +268,13 @@ final class DebugServer
                 $scriptName = basename($this->targetScript, '.php');
                 $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
                 $prependFilter = __DIR__ . '/../prepend_filter.php';
+
+                // Get appropriate Xdebug flag (empty if already loaded)
+                $xdebugFlag = XdebugFinder::getXdebugFlag();
+                $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
+
                 $cmd = sprintf(
-                    'XDEBUG_TRIGGER=1 php -dzend_extension=xdebug ' .
+                    'XDEBUG_TRIGGER=1 php %s' .
                     '-dxdebug.mode=debug,trace ' .
                     '-dxdebug.client_host=127.0.0.1 ' .
                     '-dxdebug.client_port=%d ' .
@@ -275,6 +286,7 @@ final class DebugServer
                     '-dxdebug.connect_timeout_ms=5000 ' .
                     '-dauto_prepend_file=%s ' .
                     '%s',
+                    $xdebugPart,
                     $this->debugPort,
                     escapeshellarg($prependFilter),
                     escapeshellarg($this->targetScript),

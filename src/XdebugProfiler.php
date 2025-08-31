@@ -14,6 +14,7 @@ use function array_map;
 use function array_merge;
 use function array_slice;
 use function array_sum;
+use function array_unshift;
 use function count;
 use function end;
 use function escapeshellarg;
@@ -68,14 +69,21 @@ class XdebugProfiler
         }
 
         // Build command with Xdebug profiling enabled
+        // Get appropriate Xdebug flag (empty if already loaded)
+        $xdebugFlag = XdebugFinder::getXdebugFlag();
+
         $xdebugOptions = [
-            '-dzend_extension=xdebug',
             '-dxdebug.mode=profile',
             '-dxdebug.start_with_request=yes',
             "-dxdebug.output_dir={$xdebugOutputDir}",
             '-dxdebug.profiler_output_name=cachegrind.out.%u',
             '-dxdebug.use_compression=0',
         ];
+
+        // Add Xdebug extension flag if needed
+        if ($xdebugFlag !== '') {
+            array_unshift($xdebugOptions, trim($xdebugFlag));
+        }
 
         // Combine all arguments
         $allArgs = array_merge($xdebugOptions, [$targetFile], $phpArgs);
