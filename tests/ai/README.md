@@ -74,6 +74,18 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | php bin/xdebug-mcp
 # Verify clean profile output
 ./bin/xdebug-profile --context="Vendor filtering test" -- php vendor/bin/phpunit --filter testToolsListRequest tests/Unit/McpServerTest.php  
 # Expected: Profile data focused on user functions, not vendor library overhead
+
+# Test selective vendor inclusion (NEW FEATURE)
+./bin/xdebug-trace --include-vendor=bear/resource,ray/di --context="Selective vendor analysis" -- php app.php
+# Expected: Trace includes only specified vendor packages, excludes all others
+
+# Test wildcard vendor patterns (NEW FEATURE)  
+./bin/xdebug-trace --include-vendor=bear/* --context="Framework component debugging" -- php app.php
+# Expected: Trace includes all packages matching pattern (bear/*)
+
+# Test full vendor inclusion (NEW FEATURE)
+./bin/xdebug-trace --include-vendor=*/* --context="Complete system analysis" -- php app.php
+# Expected: Trace includes all vendor code for comprehensive analysis
 ```
 
 
@@ -123,6 +135,10 @@ Test simplified system integration:
 
 # Test failure scenarios with clean debugging
 ./bin/xdebug-debug --context="First failure debugging" --exit-on-break -- php vendor/bin/phpunit --stop-on-failure tests/Unit/DebugServerTest.php
+
+# Test MCP integration with vendor filtering (NEW FEATURE)
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"x-debug","arguments":{"script":"tests/fixtures/debug_test.php","include_vendor":"bear/*","context":"MCP vendor filtering test"}}}' | ./bin/xdebug-mcp
+# Expected: MCP tool accepts include_vendor parameter and passes it to underlying debug command
 ```
 
 ## 📊 Evaluation Criteria
@@ -138,6 +154,7 @@ Test simplified system integration:
 - [ ] **Problem Identification**: Can you spot issues quickly?
 - [ ] **Performance Insights**: Are bottlenecks obvious?
 - [ ] **Debugging Effectiveness**: Does it help solve real problems?
+- [ ] **Vendor Filtering Effectiveness**: Does selective vendor inclusion help focus analysis? (NEW)
 
 ### Forward Trace™ Methodology (1-5 scale)
 - [ ] **Non-Invasiveness**: No code modification required?
@@ -193,5 +210,12 @@ A successful evaluation should demonstrate:
 - **Coverage Improvement**: McpServer.php coverage increased from 13.6% to 61.79%
 - **API Compatibility**: Maintained existing tool interfaces while simplifying internals
 - **Automatic Filtering**: Uses `auto_prepend_file` for seamless vendor exclusion from startup
+
+**NEW: Dynamic Vendor Filtering (Latest Addition):**
+- **CLI Arguments**: `--include-vendor=PATTERNS` support across all tools
+- **Pattern Matching**: Supports specific packages, wildcards (`bear/*`), and full inclusion (`*/*`)
+- **MCP Integration**: `include_vendor` parameter available in all MCP tools
+- **AI-Driven**: Allows AI assistants to dynamically focus analysis on relevant code sections
+- **Flexible Filtering**: From complete vendor exclusion to selective package inclusion
 
 **Ready to start? Launch that fresh Claude session!** 🚀

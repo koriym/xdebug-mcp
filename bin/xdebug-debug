@@ -156,19 +156,25 @@ function parseBreakpoints(string $breakSpec): array
             continue;
         }
 
+        if ($parseOptions && str_starts_with($arg, '--include-vendor=')) {
+            // This flag is passed directly to prepend_filter.php via auto_prepend_file
+            continue;
+        }
+
         if ($parseOptions && ($arg === '--help' || $arg === '-h')) {
             echo "Usage: xdebug-debug [options] [--] command\n";
             echo "       xdebug-debug script.php [breakpoint_file] [break_line]  # Legacy format\n";
             echo "\n";
             echo "Options:\n";
-            echo "  --break=SPEC     Advanced breakpoint specification\n";
-            echo "  --file=FILE      File to set breakpoint in (legacy)\n";
-            echo "  --line=LINE      Line number to break at (legacy)\n";
-            echo "  --exit-on-break  Auto-continue and output trace (automatically enables JSON mode)\n";
-            echo "  --steps=N        Enable Step Recording mode - record N steps of variable evolution\n";
-            echo "  --context=TEXT   Add contextual description for AI analysis\n";
-            echo "  --json           Force JSON output format (implied by --exit-on-break)\n";
-            echo "  --help, -h       Show this help\n";
+            echo "  --break=SPEC        Advanced breakpoint specification\n";
+            echo "  --file=FILE         File to set breakpoint in (legacy)\n";
+            echo "  --line=LINE         Line number to break at (legacy)\n";
+            echo "  --exit-on-break     Auto-continue and output trace (automatically enables JSON mode)\n";
+            echo "  --steps=N           Enable Step Recording mode - record N steps of variable evolution\n";
+            echo "  --context=TEXT      Add contextual description for AI analysis\n";
+            echo "  --include-vendor=PATTERNS  Vendor packages to include in trace (e.g., \"bear/*,ray/di\")\n";
+            echo "  --json              Force JSON output format (implied by --exit-on-break)\n";
+            echo "  --help, -h          Show this help\n";
             echo "\n";
             echo "Breakpoint Specification (--break=SPEC):\n";
             echo "  file.php:line                    # Simple breakpoint\n";
