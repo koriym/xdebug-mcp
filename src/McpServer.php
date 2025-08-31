@@ -127,6 +127,11 @@ final class McpServer
                             'description' => 'Context description for debugging session',
                             'default' => '',
                         ],
+                        'include_vendor' => [
+                            'type' => 'string',
+                            'description' => 'Vendor packages to include in trace (e.g., "bear/resource,ray/di", "bear/*", "*/*")',
+                            'default' => '',
+                        ],
                     ],
                     'required' => ['script'],
                 ],
@@ -785,6 +790,7 @@ final class McpServer
             }
 
             $steps = $args['steps'] ?? '100';
+            $includeVendor = $args['include_vendor'] ?? '';
 
             // Build command
             $cmd = './bin/xdebug-debug --exit-on-break';
@@ -802,6 +808,11 @@ final class McpServer
             // if (! empty($steps)) {
             //     $cmd .= ' --steps=' . escapeshellarg($steps);
             // }
+
+            // Add include_vendor option if specified
+            if (! empty($includeVendor)) {
+                $cmd .= ' --include-vendor=' . escapeshellarg($includeVendor);
+            }
 
             // Build command - user must specify PHP binary explicitly
             $cmd .= ' -- ' . $script;

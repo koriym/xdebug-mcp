@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - 0.2.0
 
 ### Added
+- **Dynamic Vendor Filtering System**: Intelligent vendor package inclusion/exclusion
+  - CLI `--include-vendor` option with pattern matching support using `fnmatch()`
+  - Support for specific packages (`bear/resource,ray/di`), wildcards (`bear/*`), and full inclusion (`*/*`)
+  - Integration with MCP tools via `include_vendor` parameter for AI-driven filtering
+  - Robust CLI argument parsing using `getopt()` instead of manual parsing
+  - Backward compatibility with default vendor exclusion behavior
 - **Ultra-Simple Coverage Tool**: New 25-line `xdebug-coverage` implementation
   - Native Xdebug format output with JSON schema validation
   - Automatic vendor/ and tests/ directory filtering using `xdebug_set_filter()`
@@ -15,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Clean JSON output with comprehensive schema documentation
 
 ### Changed
-- **Simplified Architecture**: Removed complex vendor filtering in favor of native Xdebug filtering
+- **Enhanced Vendor Filtering**: Replaced environment variable-based filtering with advanced CLI argument system
 - **CLI Tool Consistency**: Standardized argument handling across all tools with `--` separator support
 - **Slide Presentation Completion**: Finalized "Forward Trace Revolution" presentation
   - Removed framework-specific examples (Laravel/Pest) for universal focus
@@ -27,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced JSON schema documentation with xdebug.org links
 
 ### Removed  
-- Complex manual vendor directory filtering (replaced with native Xdebug filtering)
+- Environment variable-based vendor filtering (`XDEBUG_MCP_DISABLE_VENDOR_FILTER`)
 - Redundant test methods for simplified tools
 - "Test framework independent" obvious advantage from coverage tool messaging
 

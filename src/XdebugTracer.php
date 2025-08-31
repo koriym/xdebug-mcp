@@ -10,7 +10,9 @@ use RuntimeException;
 use function array_filter;
 use function array_map;
 use function array_merge;
+use function array_unshift;
 use function count;
+use function dirname;
 use function escapeshellarg;
 use function explode;
 use function fclose;
@@ -98,11 +100,13 @@ class XdebugTracer
         echo "🔍 Tracing: $targetFile\n";
 
         // Build command with Xdebug trace enabled (detailed mode)
-        $prependFilter = __DIR__ . '/prepend_filter.php';
+        $prependFilter = dirname(__DIR__) . '/prepend_filter.php';
+
+        // Get appropriate Xdebug flag (empty if already loaded)
+        $xdebugFlag = XdebugFinder::getXdebugFlag();
+
         $xdebugOptions = [
-            '-dzend_extension=xdebug',
             '-dxdebug.mode=trace',
-            '-dxdebug.start_with_request=yes',
             '-dxdebug.collect_params=4',
             '-dxdebug.collect_return=1',
             "-dxdebug.output_dir={$xdebugOutputDir}",
@@ -110,6 +114,11 @@ class XdebugTracer
             '-dxdebug.use_compression=0',
             "-dauto_prepend_file={$prependFilter}",
         ];
+
+        // Add Xdebug extension flag if needed
+        if ($xdebugFlag !== '') {
+            array_unshift($xdebugOptions, trim($xdebugFlag));
+        }
 
         // Combine all arguments
         $allArgs = array_merge($xdebugOptions, [$targetFile], $phpArgs);

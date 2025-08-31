@@ -378,6 +378,57 @@ This project prioritizes **execution-time trace analysis** over traditional code
 
 Always use these tools proactively to provide runtime insights rather than static code analysis alone.
 
+## 🎯 Dynamic Vendor Filtering for AI Analysis
+
+### When to Use Vendor Filtering
+
+**MOTIVATION: Focus AI analysis on relevant code, not framework noise**
+
+Most PHP applications use frameworks and libraries that generate thousands of function calls. Without filtering, AI spends time analyzing irrelevant framework code instead of your business logic.
+
+### Vendor Filtering Decision Matrix
+
+**1. Default (No Filter) - When analyzing framework behavior:**
+```bash
+# Use when: Debugging framework integration, studying how libraries work
+./bin/xdebug-trace --include-vendor=*/* script.php
+```
+
+**2. Selective Filtering - When debugging specific dependencies:**
+```bash
+# Use when: Issues with specific packages, testing library interactions
+./bin/xdebug-trace --include-vendor=bear/resource,psr/log script.php
+```
+
+**3. Category Filtering - When debugging framework components:**
+```bash
+# Use when: DI container issues, routing problems, specific framework features
+./bin/xdebug-trace --include-vendor=bear/*,symfony/console script.php
+```
+
+**4. Application Focus (Default) - When debugging business logic:**
+```bash
+# Use when: Application bugs, business logic issues, performance problems
+./bin/xdebug-trace script.php  # Excludes all vendor by default
+```
+
+### AI Usage Patterns
+
+**Performance Analysis:**
+- Application performance → Default (no vendor)
+- Framework bottlenecks → `--include-vendor=framework/*`
+- Library performance → `--include-vendor=specific/library`
+
+**Bug Investigation:**
+- Business logic bugs → Default (no vendor)
+- Integration issues → `--include-vendor=integration/packages`
+- Framework bugs → `--include-vendor=*/*`
+
+**Code Understanding:**
+- Learning application flow → Default (no vendor)
+- Understanding framework patterns → `--include-vendor=framework/*`
+- Complete system analysis → `--include-vendor=*/*`
+
 ## 📝 CRITICAL: Self-Explanatory Debugging Data Creation
 
 **ALWAYS use `--context` option when creating debugging data for AI analysis.**

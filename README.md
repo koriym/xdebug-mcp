@@ -92,10 +92,22 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
 ./vendor/bin/xdebug-trace --context="AI generated algorithm efficiency check" ai_code.php
 ```
 
+**Vendor Filtering** (Focus on specific packages):
+```bash
+# Include only specific vendor packages in trace
+./vendor/bin/xdebug-trace --include-vendor=bear/resource,ray/di script.php
+
+# Use wildcards for package groups  
+./vendor/bin/xdebug-trace --include-vendor=bear/* script.php
+
+# Include all vendor code
+./vendor/bin/xdebug-trace --include-vendor=*/* script.php
+```
+
 **AI Slash Commands** (Claude Code):
 ```bash
 /x-debug "script.php" "script.php:42:$error!=null" "" "Debug error handling"
-/x-trace script="auth.php" context="Login flow analysis"
+/x-trace script="auth.php" context="Login flow analysis" include_vendor="bear/*"
 ```
 
 
@@ -116,6 +128,7 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
 - **42+ MCP Tools**: Performance profiling, code coverage, execution tracing, memory diagnostics, error tracking
 - **Slash Commands**: `/x-debug`, `/x-profile`, `/x-trace`, `/x-coverage` for Claude Code
 - **Schema-Validated Output**: JSON that any AI can understand and analyze
+- **Dynamic Vendor Filtering**: AI can specify which vendor packages to include/exclude during analysis
 
 ## Installation
 
