@@ -73,7 +73,7 @@ class XdebugProfiler
             '-dxdebug.mode=profile',
             '-dxdebug.start_with_request=yes',
             "-dxdebug.output_dir={$xdebugOutputDir}",
-            '-dxdebug.profiler_output_name=cachegrind.out.%%s',
+            '-dxdebug.profiler_output_name=cachegrind.out.%u',
             '-dxdebug.use_compression=0',
         ];
 
