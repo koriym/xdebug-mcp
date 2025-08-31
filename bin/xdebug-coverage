@@ -73,11 +73,12 @@ if (in_array('--', $args)) {
 // Use PHP_BINARY constant instead of which php
 $phpPath = PHP_BINARY;
 
-// Check if Xdebug is already loaded
-$xdebugFlag = '';
-if (!extension_loaded('xdebug')) {
-    $xdebugFlag = ' -dzend_extension=xdebug';
-}
+// Load autoloader and XdebugFinder for intelligent Xdebug detection
+require_once __DIR__ . '/autoload.php';
+use Koriym\XdebugMcp\XdebugFinder;
+
+// Get appropriate Xdebug flag (empty if already loaded)
+$xdebugFlag = XdebugFinder::getXdebugFlag();
 
 // Properly escape all arguments and prepend file path
 $escapedArgs = array_map('escapeshellarg', $args);
