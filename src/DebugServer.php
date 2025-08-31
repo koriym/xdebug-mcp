@@ -237,7 +237,6 @@ final class DebugServer
                         '-dxdebug.mode=debug,trace ' .
                         '-dxdebug.client_host=127.0.0.1 ' .
                         '-dxdebug.client_port=%d ' .
-                        '-dxdebug.start_with_request=trigger ' .
                         '-dxdebug.trace_output_name=trace-%%s ' .
                         '-dxdebug.trace_format=1 ' .
                         '-dxdebug.use_compression=0 ' .
@@ -268,7 +267,6 @@ final class DebugServer
                     '-dxdebug.mode=debug,trace ' .
                     '-dxdebug.client_host=127.0.0.1 ' .
                     '-dxdebug.client_port=%d ' .
-                    '-dxdebug.start_with_request=trigger ' .
                     '-dxdebug.trace_output_name=trace-%%s ' .
                     '-dxdebug.trace_format=1 ' .
                     '-dxdebug.use_compression=0 ' .

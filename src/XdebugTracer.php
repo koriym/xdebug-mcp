@@ -102,7 +102,6 @@ class XdebugTracer
         $xdebugOptions = [
             '-dzend_extension=xdebug',
             '-dxdebug.mode=trace',
-            '-dxdebug.start_with_request=yes',
             '-dxdebug.collect_params=4',
             '-dxdebug.collect_return=1',
             "-dxdebug.output_dir={$xdebugOutputDir}",
