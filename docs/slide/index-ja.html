@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FEEDING THE BEAST: なぜAIには実行時データが必要なのか</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/theme/black.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/plugin/highlight/monokai.css">
+
+    <style>
+        .reveal {
+            font-size: 32px; /* Default is 40px, reducing to 32px (20% smaller) */
+        }
+        .reveal .slides section {
+            text-align: left;
+        }
+        .reveal h1, .reveal h2, .reveal h3 {
+            text-align: center;
+        }
+        .reveal h1 {
+            font-size: 2.2em; /* Slightly smaller than default 2.5em */
+        }
+        .reveal h2 {
+            font-size: 1.4em; /* Smaller than default 1.6em */
+        }
+        .reveal h3 {
+            font-size: 1.2em; /* Smaller than default 1.3em */
+        }
+        .reveal .progress {
+            color: #00d9ff;
+        }
+        .reveal .controls {
+            color: #00d9ff;
+        }
+        .comparison-table {
+            font-size: 0.8em;
+            margin: 20px 0;
+        }
+        .comparison-table td {
+            padding: 10px;
+            border: 1px solid #666;
+        }
+        .old-way {
+            background: rgba(255, 0, 0, 0.2);
+        }
+        .new-way {
+            background: rgba(0, 255, 0, 0.2);
+        }
+        .code-small {
+            font-size: 0.6em;
+        }
+        .fragment.highlight-red {
+            color: #ff6b6b;
+        }
+        .fragment.highlight-green {
+            color: #51cf66;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7em;
+            margin: 2px;
+        }
+        .badge-red {
+            background: #ff6b6b;
+            color: white;
+        }
+        .badge-green {
+            background: #51cf66;
+            color: white;
+        }
+        .quote {
+            font-style: normal;
+            font-size: 1.2em;
+            text-align: center;
+            color: #ffd43b;
+            margin: 40px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- Title Slide -->
+            <section data-background-gradient="linear-gradient(45deg, #000428, #004e92)">
+                <div style="text-align: center;">
+                    <img src="../images/title.jpg" alt="xdebug-mcp" style="width: 420px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin-bottom: 40px;">
+                    <p style="font-size: 1.5em; color: #ffd43b; font-weight: bold; margin-bottom: 15px;">
+                        var_dump()からxdebug_start_trace()へ
+                    </p>
+                    <p style="font-size: 1.2em; color: #ffffff; opacity: 0.9;">
+                        AI支援開発におけるパラダイムシフト
+                    </p>
+                </div>
+            </section>
+
+            <!-- The Moment of Clarity -->
+            <section>
+                <h2>気づきの瞬間 👀</h2>
+                <div class="fragment">
+                    <p>Claude CodeがPHPをデバッグする様子を見ていた時:</p>
+                    <pre><code class="php">var_dump($variable);  // AIがこれを追加
+// テスト実行、結果分析
+var_dump($other);     // AIがもう一つ追加
+// 最初のを削除、3つ目を追加...
+var_dump($result);    // 繰り返し...削除もします...</code></pre>
+                </div>
+                <div class="fragment">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        <span style="font-size: 3em;">😱</span><br>
+                        「最先端のAIが1995年のようにデバッグしている」
+                    </p>
+                </div>
+            </section>
+
+            <!-- The Real Problem -->
+            <section>
+                <h2>問題の本質 🎯</h2>
+                <div class="fragment">
+                    <h3 style="color: #ffd43b;">AIのせいではない</h3>
+                    <p>我々は探偵に<strong>📷 現場写真</strong>だけで犯罪を解決するよう求めていた。</p>
+                </div>
+                <div class="fragment">
+                    <p>提示物:</p>
+                    <ul>
+                        <li>📷 コード構造（静的）</li>
+                        <li>📷 関数シグネチャ（静的）</li>
+                        <li>📷 コメントとドキュメント（静的）</li>
+                        <li>📷 エラーメッセージ（静的）</li>
+                    </ul>
+                </div>
+                <div class="fragment">
+                    <p>しかし<strong>何が起きてたか</strong>は見せてない！📹📺🎥</p>
+                </div>
+            </section>
+
+            <!-- Feed the Beast -->
+            <section data-background-gradient="linear-gradient(45deg, #134e5e, #71b280)">
+                <h2>🍽️ 野獣に餌を</h2>
+                <div class="fragment">
+                    <p class="quote">「AIは常にデータに飢えている。」</p>
+                </div>
+                <div class="fragment">
+                    <p>AIが本当に必要とするもの:</p>
+                    <ul>
+                        <li class="fragment">関数呼び出しの正確な順序</li>
+                        <li class="fragment">各ステップでの変数の状態</li>
+                        <li class="fragment">メモリスナップショットとパフォーマンス指標</li>
+                        <li class="fragment">推測ではなく、完全な実行時動作</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Before vs After -->
+            <section>
+                <h2>変革 🚀</h2>
+                <table class="comparison-table">
+                    <tr>
+                        <th>以前（静的解析）</th>
+                        <th>以後（実行時インテリジェンス）</th>
+                    </tr>
+                    <tr>
+                        <td class="old-way">
+                            <span class="badge badge-red">var_dump()</span><br>
+                            AIがコード構造を検査<br>
+                            → 推測を行う<br>
+                            → プリントデバッグを提案
+                        </td>
+                        <td class="new-way">
+                            <span class="badge badge-green">xdebug_start_trace()</span><br>
+                            AIが実行トレースを分析<br>
+                            → 正確な障害点を特定<br>
+                            → 的確な修正を提供
+                        </td>
+                    </tr>
+                </table>
+            </section>
+
+            <!-- Live Demo Concept -->
+            <section>
+                <h2>GO AI NATIVE ✨</h2>
+                <div class="fragment">
+                    <h3>従来のアプローチ</h3>
+                    <pre><code class="php">// 複数のデバッグ試行
+// コード変更、テスト、繰り返し...</code></pre>
+                </div>
+                <div class="fragment">
+                    <h3>フォワードトレースアプローチ</h3>
+                    <pre><code class="bash"># 条件ブレークポイント: 問題発生時に停止
+./vendor/bin/xdebug-debug --break='checkout.php:89:$total&lt;0' --steps=50 --exit-on-break -- php checkout.php
+
+# AIが分析して報告:
+"発見: $50割引が$30のカートに適用され = -$20の合計
+修正: removeItem()後に$this->recalculateDiscount()を追加"</code></pre>
+                </div>
+            </section>
+
+            <!-- Quick Start -->
+            <section>
+                <h2>今すぐ試してみる 🏃‍♂️</h2>
+                <pre><code class="bash"># 1. GitHubからクローン
+git clone https://github.com/koriym/xdebug-mcp.git
+cd xdebug-mcp && composer install
+
+# 2. 簡単なテストを作成
+echo '&lt;?php
+$result = "success";
+if (rand(0,1)) { $result = null; }
+echo $result;
+?&gt;' > test.php
+
+# 3. AIに実行を分析させる
+./vendor/bin/xdebug-trace --context="\$resultがnullになる理由を発見" -- php test.php
+
+# 4. 完全なAI統合を有効化
+claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
+            </section>
+
+            <!-- What AI Can Do -->
+            <section>
+                <h2>AI超人能力 🦾</h2>
+                <table style="font-size: 0.7em;">
+                    <tr>
+                        <th>課題</th>
+                        <th>👤 IDE使いの人間</th>
+                        <th>🤖 実行時データ持ちのAI</th>
+                    </tr>
+                    <tr class="fragment">
+                        <td><strong>間欠的バグ</strong></td>
+                        <td class="old-way">ブレークポイント設定、捕まえられることを期待</td>
+                        <td class="new-way">条件ブレークポイント設定、全発生を捕獲</td>
+                    </tr>
+                    <tr class="fragment">
+                        <td><strong>複雑なフロー</strong></td>
+                        <td class="old-way">手動ステップ実行、詳細を見落とし</td>
+                        <td class="new-way">完全な実行トレース処理、全パターン特定</td>
+                    </tr>
+                    <tr class="fragment">
+                        <td><strong>競合状態</strong></td>
+                        <td class="old-way">捕獲はほぼ不可能</td>
+                        <td class="new-way">時間ベース条件設定、正確なタイミング捕獲</td>
+                    </tr>
+                </table>
+            </section>
+
+
+            <!-- Transition: Why This Approach? -->
+            <section>
+                <div style="text-align: center; margin-top: 100px;">
+                    <h2 style="color: #ffd43b; font-size: 2em;">なぜこのアプローチ？</h2>
+                    <p style="font-size: 1.5em; margin-top: 50px; color: #ffffff;">
+                        答えは人間とAIが情報を処理する方法の違いにある
+                    </p>
+                </div>
+            </section>
+
+            <!-- Humans vs AI - Split view -->
+            <section data-background-gradient="linear-gradient(45deg, #667db6, #0082c8)">
+                <h2>異なる認知パターン 🧠</h2>
+                <div style="display: flex; justify-content: space-between;">
+                    <div class="fragment" style="width: 45%;">
+                        <h3 style="color: #ff6b6b;">👤 人間が得意なこと:</h3>
+                        <ul>
+                            <li>段階的推論</li>
+                            <li>順次理解</li>
+                            <li>インタラクティブ探索</li>
+                            <li>徐々にメンタルモデル構築</li>
+                        </ul>
+                    </div>
+                    <div class="fragment" style="width: 45%;">
+                        <h3 style="color: #51cf66;">🤖 AIが得意なこと:</h3>
+                        <ul>
+                            <li>📊 包括的データ分析</li>
+                            <li>🔍 巨大データセットでのパターン認識</li>
+                            <li>⚡ 全情報の同時処理</li>
+                            <li>🎯 完全なコンテキストの一括理解</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 40px;">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        「AIはAIが望むようなデバッグ手法がある」
+                    </p>
+                    ...と思ってこのライブラリを作った。
+                </div>
+            </section>
+
+            <!-- Forward Trace Revolution - First slide -->
+            <section>
+                <h2>フォワードトレース<span style="color: #ffd43b;">™️</span>: AIネイティブデバッグ 🚀</h2>
+                <div style="display: flex; justify-content: space-between;">
+                    <div class="fragment" style="width: 48%;">
+                        <h3 style="color: #ff6b6b;">インタラクティブデバッグ</h3>
+                        <p style="font-size: 0.8em; color: #ff6b6b; margin-bottom: 15px;">📷 写真撮影<br>（断片的スナップショット）</p>
+                        <pre><code class="php" style="font-size: 0.6em;">// ステップ1: ブレークポイント設定
+// ステップ2: ブレークポイントまで実行（📷 スナップショット）
+// ステップ3: $user変数をチェック
+// ステップ4: 関数にステップイン
+// ステップ5: もう一つのスナップショット（📷）
+// ステップ6: 別の変数をチェック...
+
+// → 複数の写真、ストーリーが欠けている</code></pre>
+                    </div>
+                    <div class="fragment" style="width: 48%;">
+                        <h3 style="color: #51cf66;">フォワードトレース</h3>
+                        <p style="font-size: 0.8em; color: #51cf66; margin-bottom: 15px;">🎥 動画撮影<br>（完全記録）</p>
+                        <pre><code class="bash" style="font-size: 0.6em;"># 単一コマンドで全体を記録
+./vendor/bin/xdebug-debug --break='script.php:10:$user==null' --steps=300 --exit-on-break -- php script.php
+
+# AIが完全な🎥映像を見る:
+# ステップ1: $id = getUserId() → 42を返す
+# ステップ2: $user = findUser($id) → DBクエリ成功
+# ステップ3: validateUser($user) → 検証通過
+# ステップ4: $permissions = getPermissions($user) → nullを返す
+# ステップ5: checkAccess($permissions) → クラッシュ！nullアクセス</code></pre>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 30px;">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        AIが完全なコンテキストを処理 → 人間に洞察を提供
+                    </p>
+                </div>
+            </section>
+
+            <!-- Forward Trace Benefits -->
+            <section>
+                <h2 style="font-size: 1.8em;">なぜフォワードトレースがAIに効くのか 🤖</h2>
+                <div class="fragment">
+                    <h3 style="font-size: 1.2em; margin: 10px 0;">実例：認証バグ</h3>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                        <div style="width: 48%;">
+                            <h4 style="color: #ff6b6b; font-size: 1em; margin: 8px 0;">従来の方法（2時間）</h4>
+                            <ul style="font-size: 0.7em; line-height: 1.4; margin: 8px 0;">
+                                <li>ブレークポイント設定、コードをステップ実行</li>
+                                <li>変数を一つずつチェック</li>
+                                <li style="color: #ff6b6b;">2時間後もまだ推測中</li>
+                            </ul>
+                        </div>
+                        <div style="width: 48%;">
+                            <h4 style="color: #51cf66; font-size: 1em; margin: 8px 0;">フォワードトレース（30秒）</h4>
+                            <ul style="font-size: 0.7em; line-height: 1.4; margin: 8px 0;">
+                                <li>完全な実行フロー捕獲</li>
+                                <li>AIが全関数呼び出しを即座に分析</li>
+                                <li style="color: #51cf66;">30秒で問題解決</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 20px;">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1em; font-weight: bold;">
+                        AIは人間を圧倒する複雑さを処理できる
+                    </p>
+                </div>
+            </section>
+
+            <!-- The Vision -->
+            <section>
+                <h2>ビジョン 🔮</h2>
+                <div class="fragment">
+                    <h3>こんな世界を目指したい:</h3>
+                    <ul>
+                        <li class="fragment">デバッグが体系的でデータ駆動になる</li>
+                        <li class="fragment">var_dump()やdd()が遺物のように感じられる</li>
+                        <li class="fragment">すべての開発者がプロのデバッグワークフローを持つ</li>
+                        <li class="fragment">AIアシスタントが自らトレースを使いたがる</li>
+                        <li class="fragment">勘よりプロファイラーデータからの分析</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Schema Intelligence -->
+            <section>
+                <h2>データを超えて：スキーマインテリジェンス 🧠</h2>
+                <div class="fragment">
+                    <h3>従来のアプローチ:</h3>
+                    <p style="font-size: 0.9em;">「トレースファイルです。何を意味するか解釈してください。」</p>
+                </div>
+                <div class="fragment">
+                    <h3>Forward Trace™ スキーマアプローチ:</h3>
+                    <div style="display: flex; justify-content: space-between;">
+                        <div style="width: 48%; background: rgba(81, 207, 102, 0.1); padding: 15px; border-radius: 8px;">
+                            <h4 style="color: #51cf66; font-size: 1em;">📋 データ構造</h4>
+                            <ul style="font-size: 0.7em; line-height: 1.3;">
+                                <li>レベル: 呼び出し階層の深さ</li>
+                                <li>時間: マイクロ秒精度</li>
+                                <li>メモリ: 正確な使用量追跡</li>
+                                <li>パラメータ: 実際の値</li>
+                            </ul>
+                        </div>
+                        <div style="width: 48%; background: rgba(255, 193, 7, 0.1); padding: 15px; border-radius: 8px;">
+                            <h4 style="color: #ffd43b; font-size: 1em;">🎯 スキーマAI指示</h4>
+                            <ul style="font-size: 0.7em; line-height: 1.3;">
+                                <li>「最大関数呼び出し深度到達。再帰問題とスタック深度分析に重要。」</li>
+                                <li>「実行されたデータベースクエリの総数。N+1問題検出とDBパフォーマンス分析に必須。」</li>
+                                <li>「実行されたユニーク関数数。アプリ複雑度とコードカバレッジを示す。」</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 20px;">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        スキーマ = 意味 + データ構造 + AIガイドンス
+                    </p>
+                </div>
+            </section>
+
+            <!-- Schema Example -->
+            <section>
+                <h2>スキーマがAIの思考を導く 🤖💭</h2>
+                <div class="fragment">
+                    <h3>Xdebug生出力:</h3>
+                    <pre><code style="font-size: 0.5em;">2    1    0    0.000489    401872    testFunction    1    test.php    35    2    $a=null $b=10
+2    1    1    0.000521    403216
+2    1    R              array(3) { [0]=>int(1) [1]=>int(2) [2]=>int(3) }</code></pre>
+                </div>
+                <div class="fragment">
+                    <h3>スキーマ指導によるAI分析:</h3>
+                    <pre><code style="font-size: 0.6em;">{
+  "trace_file": "/tmp/trace.1034012359.xt",
+  "total_lines": 847,
+  "unique_functions": 23,
+  "max_call_depth": 12,
+  "database_queries": 15,
+  "specification": "https://xdebug.org/docs/trace",
+  "analysis_context": "データベースクエリを含むユーザー認証フローのデバッグ",
+  "content": ["2\t1\t0\t0.000489\t401872\ttestFunction\t1\t\ttest.php\t35\t2\t$a=null $b=10"]
+}</code></pre>
+                </div>
+                <div class="fragment">
+                    <p style="text-align: center; color: #51cf66; font-size: 1.1em; font-weight: bold;">
+                        AIはデータを解析するだけでなく、使命を知っている
+                    </p>
+                </div>
+            </section>
+
+            <!-- The Bigger Picture -->
+            <section data-background-gradient="linear-gradient(45deg, #2c3e50, #3498db)">
+                <h2>スキーマ指向 🚀</h2>
+                <div class="fragment">
+                    <h3>従来のデータ交換:</h3>
+                    <p style="font-size: 0.9em; text-align: center;">「フォーマットXのデータです。何が重要かは頑張って解釈してください。」</p>
+                </div>
+                <div class="fragment">
+                    <h3>スキーマ駆動インテリジェンス:</h3>
+                    <p style="font-size: 0.9em; text-align: center;">「完全な分析指示を組み込んだデータです。」</p>
+                </div>
+                <div class="fragment">
+                    <p style="text-align: center; margin-top: 30px;">
+                        <strong>AIに実行時データを与えているだけではなく</strong><br>
+                        <strong>そのデータを効果的に使用する方法の知識もAIに与えている。</strong>
+                    </p>
+                </div>
+                <div class="fragment">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        人間とAIの理解ギャップを取り除く
+                    </p>
+                </div>
+            </section>
+
+            <!-- The Inflection Point -->
+            <section data-background-gradient="linear-gradient(45deg, #2c3e50, #3498db)">
+                <h2>Inflection Point
+                    ⚡</h2>
+                <div class="fragment">
+                    <p style="text-align: center;">AIを高度な補完エンジンとして扱い続けることもできる...</p>
+                </div>
+                <div class="fragment">
+                    <p style="text-align: center;"><strong>または完全な透明性を通じてパートナーにもなれる</strong></p>
+                </div>
+                <div class="fragment">
+                    <p style="text-align: center;">コードを共有するだけでなく、<strong>開発コンテキスト全体</strong>を共有する。</p>
+                </div>
+                <div class="fragment">
+                    <p style="text-align: center; margin-top: 50px;">
+                        <strong>どんな開発になるんだろうと考えた</strong>
+                    </p>
+                </div>
+            </section>
+
+            <!-- Conditional Tracing Tips - Problem -->
+            <section>
+                <h2> 条件トレースの威力 🎯</h2>
+                <div class="fragment">
+                    <h3>シナリオ: 「User IDが0の時のみエラー発生」</h3>
+                </div>
+                <div class="fragment">
+                    <h4>従来の方法（痛い）:</h4>
+                    <pre><code class="php code-small">// コードを汚染しなければならない
+if ($userId === 0) {
+    var_dump($userData, $permissions, $sessionData);
+    error_log("Debug: User ID 0 detected");
+    // 本番環境で削除し忘れるリスク...
+}</code></pre>
+                </div>
+                <div class="fragment">
+                    <p style="text-align: center; color: #ff6b6b; font-size: 1.2em;">
+                        <strong>問題:</strong> コード汚染、本番リスク、手動クリーンアップ
+                    </p>
+                </div>
+            </section>
+
+            <!-- Conditional Tracing Tips - Solution -->
+            <section>
+                <h2>xdebug-mcpソリューション ✨</h2>
+                <div class="fragment">
+                    <h4>条件トレース（スマート）:</h4>
+                    <pre><code class="bash code-small"># 条件満たされるまで静かに待機、その後トレース開始
+./vendor/bin/xdebug-debug --break='User.php:85:$userId==0' --steps=100 --exit-on-break -- php app.php
+
+# 完全実行履歴取得: どうやって$userId=0になったのか？
+# AIが条件に至る完全実行トレースを分析</code></pre>
+                </div>
+                <div class="fragment">
+                    <p style="text-align: center; color: #51cf66; font-size: 1.2em;">
+                        <strong>メリット:</strong> コード変更なし、完全コンテキスト、安全
+                    </p>
+                </div>
+            </section>
+
+            <!-- Another Example -->
+            <section>
+                <h2>別の例: 「配列が空の時のみクラッシュ」</h2>
+                <div class="fragment">
+                    <pre><code class="bash"># 条件固有の問題を確実に捕獲
+./vendor/bin/xdebug-debug --break='DataProcessor.php:42:empty($items)' --steps=200 --exit-on-break -- php batch.php
+
+# AI分析で根本原因特定
+# 空配列条件への完全パス分析</code></pre>
+                </div>
+                <div class="fragment">
+                    <h3>break + step + trace</h3>
+                    <ul>
+                        <li class="fragment highlight-red">❌ 標準Xdebug: 毎回ブレーク（非効率）</li>
+                        <li class="fragment highlight-green">✅ 条件トレース: 問題まで高速実行、必要時のみ詳細記録</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Performance Profiling -->
+            <section>
+                <h2>xdebug-profile: パフォーマンスを見よう 🔍</h2>
+                <div class="fragment">
+                    <pre><code class="bash"># マイクロ秒精度パフォーマンスプロファイリング
+./vendor/bin/xdebug-profile --context="API性能解析" -- php slow_api.php
+
+# AIがボトルネック分析と最適化提案を提供
+# 結果: ボトルネック特定付き完全性能プロファイル</code></pre>
+                </div>
+                <div class="fragment">
+                    <p class="quote">「発見: fetchUser()が847回呼出（実行時間の72%）。42行目にキャッシュ追加。」</p>
+                </div>
+                <div class="fragment">
+                    <p><strong>AIが見るもの:</strong> 関数呼び出し回数、実行時間、メモリ使用パターン</p>
+                </div>
+            </section>
+
+            <!-- Forward Trace Debugging -->
+            <section>
+                <h2>xdebug-debug: 条件ブレークポイント付きフォワードトレース 🕵️</h2>
+                <div class="fragment">
+                    <pre><code class="bash"># 完全コンテキスト付きAI最適化デバッグ
+./vendor/bin/xdebug-debug --break='User.php:42:$user==null' --steps=150 --exit-on-break -- php app.php
+
+# AIが条件に至る完全実行履歴を取得
+# null userへのパス包括分析を提供</code></pre>
+                </div>
+                <div class="fragment">
+                    <p><strong>AIが受信する包括的データ:</strong></p>
+                    <ul>
+                        <li><strong>完全実行トレース:</strong> ブレークポイントに至る全関数呼び出し</li>
+                        <li><strong>変数進化:</strong> $userがnullになった経緯</li>
+                        <li><strong>完全コンテキスト:</strong> スタックトレース、メモリ、タイミング</li>
+                        <li><strong>条件捕獲:</strong> 条件満たされた時のみ記録</li>
+                    </ul>
+                </div>
+                <div class="fragment">
+                    <p><strong>革命的:</strong> AIが断片でなく完全なストーリーを見る</p>
+                </div>
+            </section>
+
+            <!-- Test Tracing -->
+            <section>
+                <h2>xdebug-phpunit: スマートテストトレース 🧪</h2>
+                <div class="fragment">
+                    <pre><code class="bash"># PHPUnit内部でなくテストコードのみトレース
+./vendor/bin/xdebug-phpunit --context="テスト実行解析" tests/UserTest.php::testComplexWorkflow
+
+# AIがテスト実行を分析
+# 詳細なテスト実行パスと失敗分析を表示</code></pre>
+                </div>
+                <div class="fragment">
+                    <p><strong>スマートフィルタリング:</strong> アプリケーションコードをトレース、PHPUnitフレームワークノイズを無視</p>
+                </div>
+                <div class="fragment">
+                    <p><strong>AIの利益:</strong> テストフレームワーク詳細でなく実際のビジネスロジックに集中</p>
+                </div>
+            </section>
+
+            <!-- Coverage Intelligence -->
+            <section>
+                <h2>xdebug-coverage: 生Xdebugカバレッジ - 任意のPHPスクリプト 📊</h2>
+                <div class="fragment">
+                    <pre><code class="bash"># PHPUnitだけでなく任意のPHPスクリプトで動作
+./vendor/bin/xdebug-coverage -- php ./vendor/bin/phpunit  # PHPUnit
+./vendor/bin/xdebug-coverage -- php my-script.php         # 任意のスクリプト
+
+# ネイティブXdebugフォーマット - AI理解が高速</code></pre>
+                </div>
+                <div class="fragment">
+                    <p><strong>主要メリット:</strong></p>
+                    <ul>
+                        <li>ネイティブXdebugフォーマット - 変換オーバーヘッドなし</li>
+                        <li>vendor/testsフィルタリング付きクリーンJSON出力</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Core Tools Focus -->
+            <section>
+                <h2>MCP Tool 🎯</h2>
+                <div class="fragment">
+                    <h3>4つのコアAI最適化ツール:</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
+                            <h4 style="color: #51cf66;">🔍 フォワードトレース</h4>
+                            <p style="font-size: 0.8em;">全変数状態付き完全実行フロー</p>
+                        </div>
+                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
+                            <h4 style="color: #51cf66;">⚡ 条件ブレークポイント</h4>
+                            <p style="font-size: 0.8em;">条件満たされた時のみスマート捕獲</p>
+                        </div>
+                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
+                            <h4 style="color: #51cf66;">📊 パフォーマンスプロファイリング</h4>
+                            <p style="font-size: 0.8em;">包括的指標とタイミング分析</p>
+                        </div>
+                        <div style="padding: 20px; background: rgba(81, 207, 102, 0.1); border-radius: 10px;">
+                            <h4 style="color: #51cf66;">📈 カバレッジ分析</h4>
+                            <p style="font-size: 0.8em;">完全コンテキストテストカバレッジマッピング</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="fragment" style="margin-top: 40px;">
+                    <p style="text-align: center; color: #ffd43b; font-size: 1.2em; font-weight: bold;">
+                        AIが自ら自由に使いこなす未来を見たい
+                    </p>
+                </div>
+            </section>
+
+            <!-- AI Code Quality Verification -->
+            <section data-background-gradient="linear-gradient(45deg, #9b59b6, #8e44ad)">
+                <h2>「テストOK」を超えて</h2>
+                <div style="font-size: 0.9em;">
+                    <div class="fragment" style="margin-bottom: 30px;">
+                        <div style="background: rgba(231, 76, 60, 0.1); padding: 20px; border-radius: 10px; margin: 20px 0;">
+                            <p><strong>品質問題🤖: 「検査通過」したら良いのか:</strong></p>
+                            <ul style="list-style: none; margin-left: 0;">
+                                <li>✅ 単体テスト: 100%通過</li>
+                                <li>✅ コードカバレッジ: 100%</li>
+                                <li>✅ 静的解析: MAX</li>
+                            </ul>
+                            <p style="text-align: center; color: #f39c12; font-weight: bold; margin-top: 20px;">
+                                しかし、コードは実際に<em>効率的</em>なのか？ 🤔
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="fragment">
+                        <h3 style="color: #2ecc71; text-align: center;">フォワードトレースが真実を明かす 🔍</h3>
+                        <div style="background: rgba(46, 204, 113, 0.1); padding: 20px; border-radius: 10px;">
+                            <div style="display: flex; gap: 30px;">
+                                <div style="flex: 1;">
+                                    <h4 style="color: #e67e22;">従来のテスト 📊</h4>
+                                    <pre style="font-size: 0.6em; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;"><code>// テスト通過 ✅
+assert($result === "John");
+// しかし、どうやって取得された？</code></pre>
+                                </div>
+                                <div style="flex: 1;">
+                                    <h4 style="color: #3498db;">フォワードトレース分析 🎯</h4>
+                                    <pre style="font-size: 0.6em; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;"><code>// 実行時が現実を明かす
+DBクエリ: 10,000行
+ループ: 8,743回反復
+時間: 2.3秒
+// あるべき: 0.003秒！</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="fragment" style="margin-top: 30px; text-align: center;">
+                        <p style="color: #ffd43b; font-size: 1.1em; font-weight: bold;">
+                            「正確性」 ➡️ 「効率性」 - AIが求める品質進化
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Call to Action -->
+            <section data-background-gradient="linear-gradient(45deg, #ff6b6b, #ffa500)">
+                <h2>AIにあなたのコードがどう動くかを見せよう 👁️</h2>
+                <div style="text-align: center;">
+                    <p><strong>GitHub:</strong> <a href="https://github.com/koriym/xdebug-mcp">github.com/koriym/xdebug-mcp</a></p>
+                    <p><strong>インストール:</strong> <code>composer require koriym/xdebug-mcp</code></p>
+                    <div style="margin: 40px 0;">
+                        <span class="badge badge-green">AIネイティブ: YES</span>
+                        <span class="badge badge-green">実行時データ: YES</span>
+                        <span class="badge badge-red">var_dump(): NO</span>
+                        <span class="badge badge-red">推測: NO</span>
+                    </div>
+                    <p style="margin-top: 30px; font-size: 0.7em; color: #ffffff; opacity: 0.8;">
+                        Xdebugを作成しこれら全てを可能にしてくれた
+                        <strong>Derick Rethans</strong>氏に特別な感謝を。
+                    </p>
+                    <p style="margin-top: 30px;"><em>— 郡山昭仁 (@koriym)</em></p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/plugin/highlight/highlight.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.3.1/plugin/notes/notes.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            transition: 'slide',
+            transitionSpeed: 'default',
+            backgroundTransition: 'fade',
+            controls: true,
+            progress: true,
+            center: true,
+            touch: true,
+            loop: false,
+            rtl: false,
+            navigationMode: 'default',
+            shuffle: false,
+            fragments: true,
+            fragmentInURL: false,
+            embedded: false,
+            help: true,
+            showNotes: false,
+            autoPlayMedia: null,
+            autoSlide: 0,
+            autoSlideStoppable: true,
+            mouseWheel: false,
+            hideInactiveCursor: true,
+            hideCursorTime: 5000,
+            previewLinks: false,
+            keyboard: true,
+            plugins: [ RevealHighlight, RevealNotes ]
+        });
+    </script>
+</body>
+</html>
