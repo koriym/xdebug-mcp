@@ -1,0 +1,131 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Xdebug Trace Comparison Tool
+ *
+ * Compare two trace analysis results to identify performance changes
+ *
+ * Usage: ./trace-compare <analysis1.json> <analysis2.json>
+ */
+
+// Find the TraceUtils class
+$possiblePaths = [
+    __DIR__ . '/../src/TraceUtils.php',
+    dirname(__DIR__) . '/src/TraceUtils.php',
+    __DIR__ . '/../TraceUtils.php'
+];
+
+$utilsPath = null;
+foreach ($possiblePaths as $path) {
+    if (file_exists($path)) {
+        $utilsPath = $path;
+        break;
+    }
+}
+
+if (!$utilsPath) {
+    echo json_encode([
+        'error' => 'TraceUtils.php not found',
+        'searched_paths' => $possiblePaths
+    ], JSON_PRETTY_PRINT) . "\n";
+    exit(1);
+}
+
+require_once $utilsPath;
+
+if ($argc < 3) {
+    echo json_encode([
+        'error' => 'Missing arguments',
+        'usage' => './trace-compare <analysis1.json> <analysis2.json>',
+        'description' => 'Compare two trace analysis results to identify performance changes',
+        'output' => [
+            'execution_time_diff' => 'Overall execution time comparison',
+            'memory_usage_diff' => 'Peak memory usage comparison',
+            'performance_comparison' => 'Function-level improvements and regressions',
+            'warning_changes' => 'New and resolved performance warnings'
+        ],
+        'examples' => [
+            './trace-compare baseline.json optimized.json',
+            './trace-compare before-cache.json after-cache.json'
+        ]
+    ], JSON_PRETTY_PRINT) . "\n";
+    exit(1);
+}
+
+$file1 = $argv[1];
+$file2 = $argv[2];
+
+try {
+    if (!file_exists($file1)) {
+        throw new InvalidArgumentException("First analysis file not found: $file1");
+    }
+    if (!file_exists($file2)) {
+        throw new InvalidArgumentException("Second analysis file not found: $file2");
+    }
+
+    $analysis1 = json_decode(file_get_contents($file1), true);
+    $analysis2 = json_decode(file_get_contents($file2), true);
+
+    if ($analysis1 === null) {
+        throw new InvalidArgumentException("Invalid JSON in first file: $file1");
+    }
+    if ($analysis2 === null) {
+        throw new InvalidArgumentException("Invalid JSON in second file: $file2");
+    }
+
+    // Add file information to the comparison
+    $comparison = TraceUtils::compareTwoAnalyses($analysis1, $analysis2);
+    $comparison['🔧 comparison_info'] = [
+        '📁 baseline_file' => basename($file1),
+        '📁 comparison_file' => basename($file2),
+        '🕒 comparison_timestamp' => date('c'),
+        '🎯 baseline_context' => $analysis1['🎯 analysis_context'] ?? 'Unknown',
+        '🎯 comparison_context' => $analysis2['🎯 analysis_context'] ?? 'Unknown'
+    ];
+
+    // Add interpretation
+    $executionDiff = $comparison['📈 execution_time_diff']['📊 percentage_change'] ?? 0;
+    $memoryDiff = $comparison['💾 memory_usage_diff']['📊 percentage_change'] ?? 0;
+    $improvementCount = $comparison['🚀 performance_comparison']['📊 summary']['total_improvements'] ?? 0;
+    $regressionCount = $comparison['🚀 performance_comparison']['📊 summary']['total_regressions'] ?? 0;
+
+    $interpretation = [];
+
+    if ($executionDiff < -5) {
+        $interpretation[] = "🚀 Significant performance improvement: " . abs(round($executionDiff, 1)) . "% faster execution";
+    } elseif ($executionDiff > 5) {
+        $interpretation[] = "⚠️ Performance regression: " . round($executionDiff, 1) . "% slower execution";
+    } else {
+        $interpretation[] = "📊 Execution time remained stable (< 5% change)";
+    }
+
+    if ($memoryDiff < -10) {
+        $interpretation[] = "💾 Memory usage improved: " . abs(round($memoryDiff, 1)) . "% less memory";
+    } elseif ($memoryDiff > 10) {
+        $interpretation[] = "⚠️ Memory usage increased: " . round($memoryDiff, 1) . "% more memory";
+    } else {
+        $interpretation[] = "💾 Memory usage remained stable (< 10% change)";
+    }
+
+    if ($improvementCount > $regressionCount) {
+        $interpretation[] = "✅ Overall function performance improved ($improvementCount improvements vs $regressionCount regressions)";
+    } elseif ($regressionCount > $improvementCount) {
+        $interpretation[] = "❌ Overall function performance degraded ($regressionCount regressions vs $improvementCount improvements)";
+    } else {
+        $interpretation[] = "🔄 Mixed function performance changes ($improvementCount improvements, $regressionCount regressions)";
+    }
+
+    $comparison['💡 interpretation'] = $interpretation;
+
+    echo json_encode($comparison, JSON_PRETTY_PRINT) . "\n";
+
+} catch (Exception $e) {
+    echo json_encode([
+        'error' => $e->getMessage(),
+        'file1' => $file1,
+        'file2' => $file2,
+        'line' => $e->getLine(),
+        'file' => $e->getFile()
+    ], JSON_PRETTY_PRINT) . "\n";
+    exit(1);
+}

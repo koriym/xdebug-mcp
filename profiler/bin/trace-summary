@@ -1,0 +1,137 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Xdebug Trace Summary Generator
+ *
+ * Generate executive summaries and comparisons from trace analysis results
+ *
+ * Usage: ./trace-summary <command> [arguments]
+ */
+
+// Find the TraceUtils class
+$possiblePaths = [
+    __DIR__ . '/../src/TraceUtils.php',
+    dirname(__DIR__) . '/src/TraceUtils.php',
+    __DIR__ . '/../TraceUtils.php'
+];
+
+$utilsPath = null;
+foreach ($possiblePaths as $path) {
+    if (file_exists($path)) {
+        $utilsPath = $path;
+        break;
+    }
+}
+
+if (!$utilsPath) {
+    echo json_encode([
+        'error' => 'TraceUtils.php not found',
+        'searched_paths' => $possiblePaths
+    ], JSON_PRETTY_PRINT) . "\n";
+    exit(1);
+}
+
+require_once $utilsPath;
+
+if ($argc < 2) {
+    echo json_encode([
+        'error' => 'Missing command',
+        'usage' => './trace-summary <command> [options]',
+        'commands' => [
+            'summary <analysis.json>' => 'Generate executive summary report',
+            'compare <analysis1.json> <analysis2.json>' => 'Compare two analyses',
+            'bottlenecks <analysis.json> [limit]' => 'Extract top bottlenecks (default: 10)'
+        ],
+        'examples' => [
+            './trace-summary summary /tmp/analysis-result.json',
+            './trace-summary compare before.json after.json',
+            './trace-summary bottlenecks analysis.json 5'
+        ]
+    ], JSON_PRETTY_PRINT) . "\n";
+    exit(1);
+}
+
+$command = $argv[1];
+
+try {
+    switch ($command) {
+        case 'summary':
+            if ($argc < 3) {
+                throw new InvalidArgumentException('Analysis file required for summary command');
+            }
+
+            if (!file_exists($argv[2])) {
+                throw new InvalidArgumentException("Analysis file not found: {$argv[2]}");
+            }
+
+            $analysis = json_decode(file_get_contents($argv[2]), true);
+            if ($analysis === null) {
+                throw new InvalidArgumentException("Invalid JSON in file: {$argv[2]}");
+            }
+
+            $summary = TraceUtils::generateSummaryReport($analysis);
+            echo json_encode($summary, JSON_PRETTY_PRINT) . "\n";
+            break;
+
+        case 'compare':
+            if ($argc < 4) {
+                throw new InvalidArgumentException('Two analysis files required for compare command');
+            }
+
+            if (!file_exists($argv[2])) {
+                throw new InvalidArgumentException("First analysis file not found: {$argv[2]}");
+            }
+            if (!file_exists($argv[3])) {
+                throw new InvalidArgumentException("Second analysis file not found: {$argv[3]}");
+            }
+
+            $analysis1 = json_decode(file_get_contents($argv[2]), true);
+            $analysis2 = json_decode(file_get_contents($argv[3]), true);
+
+            if ($analysis1 === null) {
+                throw new InvalidArgumentException("Invalid JSON in first file: {$argv[2]}");
+            }
+            if ($analysis2 === null) {
+                throw new InvalidArgumentException("Invalid JSON in second file: {$argv[3]}");
+            }
+
+            $comparison = TraceUtils::compareTwoAnalyses($analysis1, $analysis2);
+            echo json_encode($comparison, JSON_PRETTY_PRINT) . "\n";
+            break;
+
+        case 'bottlenecks':
+            if ($argc < 3) {
+                throw new InvalidArgumentException('Analysis file required for bottlenecks command');
+            }
+
+            if (!file_exists($argv[2])) {
+                throw new InvalidArgumentException("Analysis file not found: {$argv[2]}");
+            }
+
+            $analysis = json_decode(file_get_contents($argv[2]), true);
+            if ($analysis === null) {
+                throw new InvalidArgumentException("Invalid JSON in file: {$argv[2]}");
+            }
+
+            $limit = $argc >= 4 ? (int)$argv[3] : 10;
+            $bottlenecks = TraceUtils::extractTopBottlenecks($analysis, $limit);
+
+            echo json_encode([
+                'top_bottlenecks' => $bottlenecks,
+                'limit' => $limit,
+                'analysis_context' => $analysis['🎯 analysis_context'] ?? 'Unknown'
+            ], JSON_PRETTY_PRINT) . "\n";
+            break;
+
+        default:
+            throw new InvalidArgumentException("Unknown command: $command");
+    }
+} catch (Exception $e) {
+    echo json_encode([
+        'error' => $e->getMessage(),
+        'command' => $command,
+        'line' => $e->getLine(),
+        'file' => $e->getFile()
+    ], JSON_PRETTY_PRINT) . "\n";
+    exit(1);
+}

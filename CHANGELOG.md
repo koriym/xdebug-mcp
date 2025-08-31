@@ -5,7 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 0.2.0
+## [0.2.1] - 2025-08-31
+
+### Added
+- **Unified Trace Analysis System**: New comprehensive trace analysis infrastructure
+  - Added `xdebug-analyze` unified CLI tool for all trace analysis needs
+  - Support for multiple analysis modes: summary, comparison, bottlenecks extraction, function search
+  - Emoji-prefixed JSON output for enhanced AI readability and navigation
+  - Context-aware analysis with `--context` option for self-explanatory debugging data
+- **Advanced Profiler Integration**: Complete profiler directory structure
+  - `TraceAnalyzer.php` and `TraceUtils.php` for large file processing (>10MB)
+  - Comprehensive bin tools: `trace-analyze`, `trace-bottlenecks`, `trace-compare`, `trace-summary`
+  - AI integration strategy and architecture documentation
+  - JSON schema for trace analysis standardization
+- **AI-Optimized Debugging Workflow**: Strategic integration planning
+  - `INTEGRATION_PLAN.md` with phased implementation roadmap
+  - Navigation tools for large trace file analysis
+  - AI-driven performance bottleneck identification
+  - Self-contained analysis data with contextual metadata
+
+### Enhanced
+- **Trace Analysis Capabilities**: Multi-mode analysis support
+  - Executive summary generation for quick insights
+  - Performance comparison between trace files
+  - Targeted bottleneck extraction with configurable limits
+  - Function search and call pattern analysis
+- **Documentation**: Complete profiler architecture documentation
+  - AI integration strategy and technical implementation details
+  - Usage examples and workflow guidelines
+  - Schema validation and output standardization
+
+## [0.2.0] - 2025-08-30
 
 ### Added
 - **Dynamic Vendor Filtering System**: Intelligent vendor package inclusion/exclusion
@@ -96,4 +126,6 @@ This initial release introduces revolutionary AI-powered PHP debugging capabilit
 - Enhance AI analysis capabilities based on real-world usage
 - Build community around modern PHP debugging practices
 
+[0.2.1]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.2.1
+[0.2.0]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.2.0
 [0.1.0]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.1.0
