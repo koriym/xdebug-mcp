@@ -16,6 +16,7 @@ function showHelp(string $scriptName): void
     echo "  --json           JSON output for AI analysis with emoji keys\n";
     echo "  --claude         Auto-analyze with Claude after profiling\n";
     echo "  --context=TEXT   Add contextual description for AI analysis\n";
+    echo "  --include-vendor=PATTERNS  Vendor packages to include in profile (e.g., \"bear/*,ray/di\")\n";
     echo "\n";
     echo "Examples:\n";
     echo "  # Human-readable output with units:\n";
