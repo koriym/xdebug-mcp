@@ -91,7 +91,7 @@ php -dxdebug.mode=debug tests/fixtures/debug_test.php    # Run PHP script with X
 ### Core Components
 
 - **McpServer.php**: Main MCP protocol handler that processes JSON-RPC requests and delegates to XdebugClient
-  - Implements 42 MCP tools across debugging, profiling, and coverage categories
+  - Implements multiple MCP tools across debugging, profiling, and coverage categories
   - Handles JSON-RPC 2.0 protocol validation and routing
   - Supports debug mode via MCP_DEBUG environment variable
 - **XdebugClient.php**: Xdebug protocol client that communicates directly with Xdebug via sockets
@@ -103,7 +103,7 @@ php -dxdebug.mode=debug tests/fixtures/debug_test.php    # Run PHP script with X
   - Standard input/output handling for MCP protocol
 
 ### MCP Tools Available
-The server exposes 42 tools via MCP across three main categories:
+The server exposes multiple tools via MCP across main categories:
 
 **Debugging Tools (11 tools)**
 - `xdebug_connect/disconnect`: Session management
@@ -344,7 +344,16 @@ This project prioritizes **execution-time trace analysis** over traditional code
 - `./bin/xdebug-profile` - Performance profiling
 - `./bin/xdebug-coverage` - Code coverage analysis  
 - `./bin/xdebug-trace` - Execution tracing
+- `./bin/xdebug-analyze` - Analysis tool
 - `./bin/xdebug-mcp` - MCP server entry point
+
+#### MCP Slash Commands for Claude Code:
+- `/x-debug` - Interactive debugging with breakpoints
+- `/x-profile` - Performance profiling and analysis
+- `/x-trace` - Execution flow tracing
+- `/x-coverage` - Code coverage analysis
+
+These slash commands provide direct access to Xdebug functionality within Claude Code, making PHP debugging more efficient and accessible.
 
 #### Automatic Tool Selection:
 
