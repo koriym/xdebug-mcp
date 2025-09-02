@@ -61,15 +61,8 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
     exit(0);
 }
 
-// Parse options using getopt
-$options = getopt('', ['include-vendor::', 'help', 'h']);
-
-// Show help if requested
-if (isset($options['help']) || isset($options['h'])) {
-    echo "Usage: " . $argv[0] . " [--include-vendor=PATTERNS] [--] php script.php [args...]\n";
-    // ... rest of help text
-    exit(0);
-}
+// Parse options using getopt (help handled above to keep single source of truth)
+$options = getopt('', ['include-vendor::']);
 
 $includeVendor = $options['include-vendor'] ?? null;
 
