@@ -16,10 +16,10 @@ return (function (){
 
         $scriptName = basename($GLOBALS['argv'][0]);
 
-        // Handle xdebug-debug separately (different format)
-        if ($scriptName === 'xdebug-debug') {
-            // Let xdebug-debug handle its own argument validation and help display
-            return; // xdebug-debug uses different format, skip other validation
+        // Handle xdebug-debug and xdebug-coverage separately (different formats)
+        if ($scriptName === 'xdebug-debug' || $scriptName === 'xdebug-coverage') {
+            // Let these tools handle their own argument validation and help display
+            return; // These tools use different formats, skip other validation
         }
 
         // Only validate for specific xdebug tools with -- php format
