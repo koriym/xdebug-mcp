@@ -18,11 +18,7 @@ return (function (){
 
         // Handle xdebug-debug separately (different format)
         if ($scriptName === 'xdebug-debug') {
-            if (!isset($GLOBALS['argv'][1])) {
-                fwrite(STDERR, "❌ Error: Script file is required\n");
-                fwrite(STDERR, "Usage: {$scriptName} <script.php>\n");
-                exit(1);
-            }
+            // Let xdebug-debug handle its own argument validation and help display
             return; // xdebug-debug uses different format, skip other validation
         }
 

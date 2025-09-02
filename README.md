@@ -43,7 +43,13 @@ composer require koriym/xdebug-mcp
 echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
 
-# Example: Catch null bugs automatically
+# 🎯 Start with AI-optimized help (recommended first step)
+./vendor/bin/xdebug-debug --help     # Learn optimal AI debugging workflow
+./vendor/bin/xdebug-coverage --help  # Understand AI coverage analysis
+./vendor/bin/xdebug-trace --help     # Master execution flow tracing
+./vendor/bin/xdebug-profile --help   # Performance optimization guidance
+
+# Example: Catch null bugs automatically  
 ./vendor/bin/xdebug-debug --break='script.php:42:$user==null' --exit-on-break -- php script.php
 ```
 
@@ -113,16 +119,49 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
 
 ## Available Tools
 
-### Core CLI Tools
-- **`xdebug-debug`** - Interactive debugging shell with conditional breakpoints and step recording
+### 🤖 AI-Optimized CLI Tools
+All tools now feature comprehensive AI-optimized help documentation. **Always run `--help` first** to understand optimal usage patterns:
+
+- **`xdebug-debug`** 🔍 - Interactive debugging shell with conditional breakpoints and step recording
   ```bash
+  ./vendor/bin/xdebug-debug --help  # 📖 Essential reading: AI debugging workflow
   # Interactive REPL debugger with commands: s(tep), o(ver), c(ontinue), p <var>, claude, q(uit)
   ./vendor/bin/xdebug-debug -- php app.php
   ```
-- **`xdebug-profile`** - Performance profiling with microsecond precision
-- **`xdebug-trace`** - Complete execution flow tracing
-- **`xdebug-coverage`** - Code coverage analysis with multiple output formats
+
+- **`xdebug-coverage`** 🎯 - Superior alternative to PHPUnit HTML/XML coverage for AI analysis
+  ```bash
+  ./vendor/bin/xdebug-coverage --help  # 📖 Learn why this beats HTML reports
+  ./vendor/bin/xdebug-coverage         # Auto-detects PHPUnit, outputs TestDox + JSON
+  ```
+
+- **`xdebug-trace`** 📊 - Ultimate alternative to static code analysis  
+  ```bash
+  ./vendor/bin/xdebug-trace --help     # 📖 Runtime reality vs theoretical analysis
+  ```
+
+- **`xdebug-profile`** ⚡ - Scientific performance optimization with precision metrics
+  ```bash
+  ./vendor/bin/xdebug-profile --help   # 📖 AI-driven optimization workflow
+  ```
+
 - **`xdebug-phpunit`** - PHPUnit integration with Xdebug profiling and coverage
+
+### 🎯 AI-First Design Philosophy
+
+**Start Here**: Every tool includes comprehensive AI-optimized help documentation designed to teach optimal usage patterns:
+
+```bash
+# Recommended AI prompt for any PHP debugging task:
+"Run [tool] --help first to understand this tool, then help me debug this issue"
+```
+
+**What makes this AI-optimized?**
+- ✅ **Value Proposition Clear**: Why this beats traditional debugging methods
+- ✅ **Workflow Integration**: Step-by-step AI collaboration processes  
+- ✅ **Practical Examples**: Real-world usage patterns with context
+- ✅ **Output Optimization**: JSON formats designed for AI consumption
+- ✅ **Cognitive Load Reduction**: Mixed output streams AI can parse efficiently
 
 ### AI Integration Features
 - **42+ MCP Tools**: Performance profiling, code coverage, execution tracing, memory diagnostics, error tracking
