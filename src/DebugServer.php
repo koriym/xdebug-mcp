@@ -240,6 +240,7 @@ final class DebugServer
                     $cmd = sprintf(
                         'XDEBUG_TRIGGER=1 php %s' .
                         '-dxdebug.mode=debug,trace ' .
+                        '-dxdebug.start_with_request=yes ' .
                         '-dxdebug.client_host=127.0.0.1 ' .
                         '-dxdebug.client_port=%d ' .
                         '-dxdebug.trace_output_name=trace-%%s ' .
@@ -276,6 +277,7 @@ final class DebugServer
                 $cmd = sprintf(
                     'XDEBUG_TRIGGER=1 php %s' .
                     '-dxdebug.mode=debug,trace ' .
+                    '-dxdebug.start_with_request=yes ' .
                     '-dxdebug.client_host=127.0.0.1 ' .
                     '-dxdebug.client_port=%d ' .
                     '-dxdebug.trace_output_name=trace-%%s ' .
