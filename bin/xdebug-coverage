@@ -62,7 +62,8 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
 }
 
 // Parse options using getopt (help handled above to keep single source of truth)
-$options = getopt('', ['include-vendor::']);
+$optind = 0;
+$options = getopt('', ['include-vendor::'], $optind);
 
 $includeVendor = $options['include-vendor'] ?? null;
 
@@ -89,20 +90,8 @@ if (getenv('COVERAGE_DEBUG')) {
     fwrite(STDERR, "[COVERAGE_DEBUG] argv: " . json_encode($argv) . "\n");
 }
 
-// Manual parsing to handle -- separator properly
-$args = [];
-$foundSeparator = false;
-for ($i = 1; $i < count($argv); $i++) {
-    if ($argv[$i] === '--') {
-        $foundSeparator = true;
-        continue;
-    }
-    if ($foundSeparator) {
-        $args[] = $argv[$i];
-    } elseif (!str_starts_with($argv[$i], '--')) {
-        $args[] = $argv[$i];
-    }
-}
+// Use optind from getopt to get remaining arguments
+$args = $optind !== null ? array_slice($argv, $optind) : [];
 
 // If first argument is 'php', remove it (we're already using PHP_BINARY)
 if (!empty($args) && $args[0] === 'php') {
