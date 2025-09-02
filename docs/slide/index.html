@@ -593,6 +593,37 @@ if ($userId === 0) {
                 </div>
             </section>
 
+            <!-- NEW: Branch Coverage with GraphViz -->
+            <section>
+                <h2>🌳 NEW: Branch Coverage + GraphViz Visualization</h2>
+                <div class="fragment">
+                    <pre><code class="bash"># New feature: Visual branch/path coverage analysis
+./bin/xdebug-coverage --branch-coverage -- php app.php
+
+# Single execution, multiple AI-ready outputs:
+# ✅ Detailed branch coverage JSON
+# ✅ GraphViz dot file (/tmp/paths.dot)  
+# ✅ Visualization command included
+
+# AI can immediately visualize
+dot -Tpng /tmp/paths.dot -o /tmp/coverage_paths.png</code></pre>
+                </div>
+                <div class="fragment">
+                    <p><strong>AI Benefits:</strong></p>
+                    <ul>
+                        <li>🟢 Executed paths (green/solid lines)</li>
+                        <li>🔴 Unexecuted paths (red/dashed lines)</li>
+                        <li>📊 Branch-level detailed analysis</li>
+                        <li>🎯 Visual pattern recognition</li>
+                    </ul>
+                </div>
+                <div class="fragment" style="margin-top: 30px;">
+                    <p style="text-align: center; color: #ffd43b; font-style: italic;">
+                        "AI can see and understand code path diagrams"
+                    </p>
+                </div>
+            </section>
+
             <!-- Core Tools Focus -->
             <section>
                 <h2>MCP Tools 🎯</h2>
