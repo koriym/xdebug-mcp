@@ -614,7 +614,7 @@ final class McpServer
         }
 
         // Auto-prepend 'php' if script doesn't start with a PHP binary
-        if (! preg_match('/^(\S*php)(\s+|$)/', $script)) {
+        if (! preg_match('/^(\S*php)(\s+)/', $script)) {
             $script = 'php ' . $script;
         }
 
