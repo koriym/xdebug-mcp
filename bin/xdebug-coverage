@@ -42,6 +42,13 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
     echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json\n";
     echo "  Benefits: AI can distinguish test output from coverage data automatically\n";
     echo "\n";
+    echo "📋 JSON SCHEMA RESOURCES (Essential for AI):\n";
+    echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json\n";
+    echo "  Xdebug Coverage Docs: https://xdebug.org/docs/code_coverage\n";
+    echo "  Function Reference: https://xdebug.org/docs/code_coverage#xdebug_get_code_coverage\n";
+    echo "  MCP Tool: mcp://xdebug_start_coverage\n";
+    echo "  AI Analysis Tips: Schema includes x-interpretation-guide for optimal analysis\n";
+    echo "\n";
     echo "AI WORKFLOW INTEGRATION:\n";
     echo "  1. Run: ./bin/xdebug-coverage\n";
     echo "  2. AI analyzes: Test results (success/failures) + Coverage gaps\n";
