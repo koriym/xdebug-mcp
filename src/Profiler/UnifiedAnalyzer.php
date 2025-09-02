@@ -110,7 +110,7 @@ class UnifiedAnalyzer
             return $this->generateSummary();
         }
 
-        if ($this->options['bottlenecks'] > 0) {
+        if ((int)$this->options['bottlenecks'] > 0) {
             return $this->extractBottlenecks();
         }
 
