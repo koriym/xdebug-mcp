@@ -3,38 +3,68 @@
 
 // Show help if requested
 if (in_array('--help', $argv) || in_array('-h', $argv)) {
-    echo "Usage: " . $argv[0] . " [--include-vendor=PATTERNS] [--] php script.php [args...]\n";
+    echo "Usage: " . $argv[0] . " [--include-vendor=PATTERNS] [--] [php script.php [args...]]\n";
     echo "\n";
-    echo "Collect code coverage for any PHP script.\n";
+    echo "🎯 AI-Optimized PHP Code Coverage Collection Tool\n";
     echo "\n";
-    echo "Options:\n";
-    echo "  --include-vendor=PATTERNS  Vendor packages to include in coverage (e.g., \"bear/*,ray/di\")\n";
+    echo "PURPOSE:\n";
+    echo "  Superior alternative to PHPUnit's HTML/XML coverage reports for AI analysis.\n";
+    echo "  Provides streamlined JSON coverage data that AI can immediately analyze\n";
+    echo "  without browser interaction or file navigation overhead.\n";
+    echo "\n";
+    echo "KEY BENEFITS FOR AI DEVELOPMENT:\n";
+    echo "  ✅ Zero-config PHPUnit auto-detection (covers 80% of use cases)\n";
+    echo "  ✅ Mixed output: Test results + JSON coverage in single stream\n";
+    echo "  ✅ Conflict-free: Uses --no-coverage to avoid PHPUnit interference\n";
+    echo "  ✅ Universal: Works with any PHP script, not just PHPUnit\n";
+    echo "  ✅ Immediate AI consumption: No HTML files or XML parsing required\n";
+    echo "  ✅ TestDox format: Human-readable test descriptions for context\n";
+    echo "\n";
+    echo "OPTIONS:\n";
+    echo "  --include-vendor=PATTERNS  Include vendor packages (e.g., \"bear/*,ray/di\")\n";
     echo "  --help, -h                Show this help\n";
     echo "\n";
-    echo "Examples:\n";
-    echo "  # Coverage with vendor excluded (default):\n";
+    echo "COMMON USAGE PATTERNS:\n";
+    echo "  # Most common: Auto-detect and run PHPUnit with coverage\n";
+    echo "  " . $argv[0] . "\n";
+    echo "\n";
+    echo "  # Coverage for any PHP script (not just PHPUnit)\n";
     echo "  " . $argv[0] . " -- php app.php\n";
     echo "\n";
-    echo "  # Include specific vendor packages:\n";
-    echo "  " . $argv[0] . " --include-vendor=bear/resource,ray/di -- php app.php\n";
+    echo "  # Include specific vendor packages for framework debugging\n";
+    echo "  " . $argv[0] . " --include-vendor=bear/resource,ray/di\n";
     echo "\n";
-    echo "  # Include all vendor packages:\n";
+    echo "  # Full vendor analysis (use sparingly - generates noise)\n";
     echo "  " . $argv[0] . " --include-vendor=*/* -- php app.php\n";
     echo "\n";
-    echo "Output:\n";
-    echo "  JSON format with ultra-simple schema\n";
+    echo "OUTPUT FORMAT:\n";
+    echo "  Mixed: PHPUnit TestDox results + JSON coverage data\n";
     echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json\n";
+    echo "  Benefits: AI can distinguish test output from coverage data automatically\n";
+    echo "\n";
+    echo "AI WORKFLOW INTEGRATION:\n";
+    echo "  1. Run: ./bin/xdebug-coverage\n";
+    echo "  2. AI analyzes: Test results (success/failures) + Coverage gaps\n";
+    echo "  3. AI identifies: Untested lines, missing test cases, code quality issues\n";
+    echo "  4. AI suggests: Specific improvements with line numbers\n";
+    echo "\n";
+    echo "RECOMMENDED AI PROMPT:\n";
+    echo "  'Run xdebug-coverage --help first to understand this tool, then analyze my code coverage'\n";
+    echo "\n";
     exit(0);
 }
 
-// Parse include-vendor option
-$includeVendor = null;
-foreach ($argv as $arg) {
-    if (str_starts_with($arg, '--include-vendor=')) {
-        $includeVendor = substr($arg, 16);
-        break;
-    }
+// Parse options using getopt
+$options = getopt('', ['include-vendor::', 'help', 'h']);
+
+// Show help if requested
+if (isset($options['help']) || isset($options['h'])) {
+    echo "Usage: " . $argv[0] . " [--include-vendor=PATTERNS] [--] php script.php [args...]\n";
+    // ... rest of help text
+    exit(0);
 }
+
+$includeVendor = $options['include-vendor'] ?? null;
 
 // Create shutdown script for coverage collection
 $shutdownScript = tempnam(sys_get_temp_dir(), 'coverage_end_');
@@ -53,21 +83,35 @@ register_shutdown_function(function() use ($tempDir) {
 });
 ');
 
-// Parse arguments - handle -- separator and remove include-vendor option
-$args = array_slice($argv, 1);
+// Debug: Check OPTIND and argv
+if (getenv('COVERAGE_DEBUG')) {
+    fwrite(STDERR, "[COVERAGE_DEBUG] OPTIND: " . ($GLOBALS['OPTIND'] ?? 'not set') . "\n");
+    fwrite(STDERR, "[COVERAGE_DEBUG] argv: " . json_encode($argv) . "\n");
+}
 
-// Remove --include-vendor=* option from args
-$filteredArgs = [];
-foreach ($args as $arg) {
-    if (!str_starts_with($arg, '--include-vendor=')) {
-        $filteredArgs[] = $arg;
+// Manual parsing to handle -- separator properly
+$args = [];
+$foundSeparator = false;
+for ($i = 1; $i < count($argv); $i++) {
+    if ($argv[$i] === '--') {
+        $foundSeparator = true;
+        continue;
+    }
+    if ($foundSeparator) {
+        $args[] = $argv[$i];
+    } elseif (!str_starts_with($argv[$i], '--')) {
+        $args[] = $argv[$i];
     }
 }
-$args = $filteredArgs;
 
-if (in_array('--', $args)) {
-    $separatorIndex = array_search('--', $args);
-    $args = array_slice($args, $separatorIndex + 1);
+// If first argument is 'php', remove it (we're already using PHP_BINARY)
+if (!empty($args) && $args[0] === 'php') {
+    $args = array_slice($args, 1);
+}
+
+// Debug: Check parsed args
+if (getenv('COVERAGE_DEBUG')) {
+    fwrite(STDERR, "[COVERAGE_DEBUG] Parsed args: " . json_encode($args) . "\n");
 }
 
 // Use PHP_BINARY constant instead of which php
@@ -80,8 +124,6 @@ use Koriym\XdebugMcp\XdebugFinder;
 // Get appropriate Xdebug flag (empty if already loaded)
 $xdebugFlag = XdebugFinder::getXdebugFlag();
 
-// Properly escape all arguments and prepend file path
-$escapedArgs = array_map('escapeshellarg', $args);
 $escapedPrependFile = escapeshellarg($shutdownScript);
 
 // Add prepend_filter.php for vendor filtering if include-vendor is specified
@@ -93,19 +135,41 @@ if ($includeVendor !== null) {
     putenv('COVERAGE_INCLUDE_VENDOR=' . $includeVendor);
 }
 
-// Execute PHP script with coverage enabled
-$cmd = escapeshellarg($phpPath) . $xdebugFlag . ' -dxdebug.mode=coverage' . $prependFilter . ' -dauto_prepend_file=' . $escapedPrependFile . ' ' . implode(' ', $escapedArgs) . ' </dev/null 2>/dev/null';
-$output = shell_exec($cmd);
-
-// Extract only JSON from output (filter out script output)
-$lines = explode("\n", $output ?: '');
-foreach ($lines as $line) {
-    $line = trim($line);
-    if ($line && (str_starts_with($line, '{"') || str_contains($line, '"$schema"'))) {
-        echo $line . "\n";
-        break;
+// Default to PHPUnit if no arguments provided
+if (empty($args)) {
+    if (file_exists('./vendor/bin/phpunit')) {
+        $args = ['./vendor/bin/phpunit', '--no-coverage', '--testdox', '--no-progress', '--colors=never'];
+        echo "# Auto-detected: Running PHPUnit tests with xdebug-mcp coverage (AI-optimized output)\n";
+    } else {
+        echo "Usage: " . $argv[0] . " [--include-vendor=PATTERNS] [--] php script.php [args...]\n";
+        echo "No arguments provided and ./vendor/bin/phpunit not found.\n";
+        echo "Run with --help for more information.\n";
+        exit(1);
     }
 }
+
+// Properly escape arguments after PHPUnit detection
+$escapedArgs = array_map('escapeshellarg', $args);
+
+// Execute PHP script with coverage enabled (keep output visible for troubleshooting)
+$cmd = escapeshellarg($phpPath) . $xdebugFlag . ' -dxdebug.mode=coverage' . $prependFilter . ' -dauto_prepend_file=' . $escapedPrependFile . ' ' . implode(' ', $escapedArgs);
+
+// Debug: Log command to stderr
+if (getenv('COVERAGE_DEBUG')) {
+    fwrite(STDERR, "[COVERAGE_DEBUG] Command: $cmd\n");
+    fwrite(STDERR, "[COVERAGE_DEBUG] Shutdown script content:\n" . file_get_contents($shutdownScript) . "\n");
+}
+
+$output = shell_exec($cmd);
+
+// Debug: Log raw output
+if (getenv('COVERAGE_DEBUG')) {
+    fwrite(STDERR, "[COVERAGE_DEBUG] Raw output: " . ($output ?: '(empty)') . "\n");
+}
+
+// Output everything (PHPUnit output + JSON coverage data)
+// AI can distinguish between test output and JSON coverage
+echo $output;
 
 // Clean up temporary file
 unlink($shutdownScript);
