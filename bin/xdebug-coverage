@@ -87,7 +87,15 @@ $branchCoverage = isset($options['branch-coverage']);
 // Create shutdown script for coverage collection
 $shutdownScript = tempnam(sys_get_temp_dir(), 'coverage_end_');
 $branchFlag = $branchCoverage ? 'true' : 'false';
+$includeVendorRequire = '';
+if ($includeVendor !== null) {
+    $filterPath = __DIR__ . '/../prepend_filter.php';
+    $includeVendorRequire = 'require_once ' . var_export($filterPath, true) . ';';
+    // Pass include-vendor as environment variable for prepend_filter.php to access
+    putenv('COVERAGE_INCLUDE_VENDOR=' . $includeVendor);
+}
 file_put_contents($shutdownScript, '<?php
+' . $includeVendorRequire . '
 $tempDir = sys_get_temp_dir();
 $branchCoverage = ' . $branchFlag . ';
 if ($branchCoverage) {
@@ -258,15 +266,6 @@ use Koriym\XdebugMcp\XdebugFinder;
 $xdebugFlag = XdebugFinder::getXdebugFlag();
 
 $escapedPrependFile = escapeshellarg($shutdownScript);
-
-// Add prepend_filter.php for vendor filtering if include-vendor is specified
-$prependFilter = '';
-if ($includeVendor !== null) {
-    $filterPath = __DIR__ . '/../prepend_filter.php';
-    $prependFilter = ' -dauto_prepend_file=' . escapeshellarg($filterPath);
-    // Pass include-vendor as environment variable for prepend_filter.php to access
-    putenv('COVERAGE_INCLUDE_VENDOR=' . $includeVendor);
-}
 
 // Default to PHPUnit if no arguments provided
 if (empty($args)) {
