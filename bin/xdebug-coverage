@@ -96,7 +96,7 @@ if ($branchCoverage) {
     xdebug_start_code_coverage(XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE | XDEBUG_CC_BRANCH_CHECK);
 } else {
     xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, [getcwd() . "/vendor/", getcwd() . "/tests/", $tempDir]);
-    xdebug_start_code_coverage();
+    xdebug_start_code_coverage(XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
 }
 register_shutdown_function(function() use ($tempDir, $branchCoverage) {
     $coverage = xdebug_get_code_coverage();
@@ -144,14 +144,84 @@ register_shutdown_function(function() use ($tempDir, $branchCoverage) {
             "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xdebug-branch-coverage.json", 
             "coverage_type" => "branch",
             "coverage" => $filtered,
+            "graphviz_dot" => $dotContent,
             "graphviz_dot_file" => $dotFilePath,
             "visualization_command" => "dot -Tpng $dotFilePath -o /tmp/coverage_paths.png"
         ];
     } else {
+        // Generate GraphViz dot file for line coverage visualization
+        $dotFilePath = "/tmp/lines.dot";
+        $dotContent = "digraph line_coverage {\n";
+        $dotContent .= "  rankdir=TB;\n";
+        $dotContent .= "  node [shape=box];\n\n";
+        
+        foreach ($filtered as $file => $lines) {
+            if (is_array($lines)) {
+                $fileName = basename($file);
+                $dotContent .= "  // File: $fileName\n";
+                
+                // Group consecutive lines for better visualization
+                $lineGroups = [];
+                $currentGroup = [];
+                $lastLine = -1;
+                
+                foreach ($lines as $lineNum => $hitCount) {
+                    if (is_numeric($lineNum)) {
+                        if ($lineNum == $lastLine + 1 && count($currentGroup) < 5) {
+                            $currentGroup[] = [$lineNum, $hitCount];
+                        } else {
+                            if (!empty($currentGroup)) {
+                                $lineGroups[] = $currentGroup;
+                            }
+                            $currentGroup = [[$lineNum, $hitCount]];
+                        }
+                        $lastLine = $lineNum;
+                    }
+                }
+                if (!empty($currentGroup)) {
+                    $lineGroups[] = $currentGroup;
+                }
+                
+                foreach ($lineGroups as $groupIndex => $group) {
+                    $startLine = $group[0][0];
+                    $endLine = end($group)[0];
+                    $allHit = true;
+                    $anyHit = false;
+                    
+                    foreach ($group as [$line, $hit]) {
+                        if ($hit <= 0) $allHit = false;
+                        if ($hit > 0) $anyHit = true;
+                    }
+                    
+                    $label = $startLine == $endLine ? "Line $startLine" : "Lines $startLine-$endLine";
+                    if ($allHit) {
+                        $color = "lightgreen";
+                        $style = "filled,solid";
+                    } elseif ($anyHit) {
+                        $color = "lightyellow"; 
+                        $style = "filled,solid";
+                    } else {
+                        $color = "lightcoral";
+                        $style = "filled,dashed";
+                    }
+                    
+                    $nodeId = str_replace(["/", ".", " "], "_", $fileName) . "_group_" . $groupIndex;
+                    $dotContent .= "  \"$nodeId\" [label=\"$label\\n$fileName\", style=\"$style\", fillcolor=\"$color\"];\n";
+                }
+                $dotContent .= "\n";
+            }
+        }
+        
+        $dotContent .= "}\n";
+        file_put_contents($dotFilePath, $dotContent);
+        
         $result = [
             "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json", 
             "coverage_type" => "line",
-            "coverage" => $filtered
+            "coverage" => $filtered,
+            "graphviz_dot" => $dotContent,
+            "graphviz_dot_file" => $dotFilePath,
+            "visualization_command" => "dot -Tpng $dotFilePath -o /tmp/line_coverage.png"
         ];
     }
     echo(json_encode($result, JSON_UNESCAPED_SLASHES));
