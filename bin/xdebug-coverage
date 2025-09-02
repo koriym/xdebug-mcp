@@ -174,9 +174,14 @@ if (getenv('COVERAGE_DEBUG')) {
     fwrite(STDERR, "[COVERAGE_DEBUG] Raw output: " . ($output ?: '(empty)') . "\n");
 }
 
+// Capture both STDOUT and STDERR, and the exit code
+$lines = [];
+$exitCode = 0;
+exec($cmd . ' 2>&1', $lines, $exitCode);
+$output = implode("\n", $lines);
+
 // Output everything (PHPUnit output + JSON coverage data)
 // AI can distinguish between test output and JSON coverage
 echo $output;
-
 // Clean up temporary file
 unlink($shutdownScript);
