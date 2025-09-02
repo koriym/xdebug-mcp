@@ -8,11 +8,16 @@ use function count;
 use function date;
 use function filesize;
 use function floor;
+use function is_array;
+use function is_readable;
+use function is_string;
 use function log;
 use function max;
 use function min;
 use function pow;
+use function realpath;
 use function round;
+use function trim;
 
 /**
  * Unified Trace Analyzer - Single tool for all trace analysis needs
@@ -21,8 +26,77 @@ use function round;
  */
 class UnifiedAnalyzer
 {
-    public function __construct(private array $traceFiles, private array $options)
+    private array $traceFiles;
+    private array $options;
+
+    public function __construct(array $traceFiles, array $options)
     {
+        // Normalize and validate trace files
+        $this->traceFiles = $this->normalizeTraceFiles($traceFiles);
+        
+        // Normalize and validate options with defaults
+        $this->options = $this->normalizeOptions($options);
+    }
+
+    private function normalizeTraceFiles(array $traceFiles): array
+    {
+        $normalized = [];
+        
+        foreach ($traceFiles as $file) {
+            // Filter non-strings
+            if (!is_string($file)) {
+                continue;
+            }
+            
+            // Trim whitespace
+            $file = trim($file);
+            if ($file === '') {
+                continue;
+            }
+            
+            // Try to resolve to realpath
+            $realPath = realpath($file);
+            if ($realPath === false) {
+                // If realpath fails, use original path for final readability check
+                $realPath = $file;
+            }
+            
+            // Skip if not readable
+            if (!is_readable($realPath)) {
+                continue;
+            }
+            
+            $normalized[] = $realPath;
+        }
+        
+        return $normalized;
+    }
+
+    private function normalizeOptions(array $options): array
+    {
+        // Coerce to array and apply defaults
+        if (!is_array($options)) {
+            $options = [];
+        }
+        
+        return [
+            'compare' => $options['compare'] ?? false,
+            'summary' => $options['summary'] ?? false,
+            'bottlenecks' => $options['bottlenecks'] ?? 0,
+            'context' => $options['context'] ?? '',
+            'limit' => $options['limit'] ?? 1000,
+            'threshold' => $options['threshold'] ?? 0.0,
+        ];
+    }
+
+    private function safeFilesize(string $path): int
+    {
+        if (!is_readable($path)) {
+            return 0;
+        }
+        
+        $size = filesize($path);
+        return $size === false ? 0 : $size;
     }
 
     public function analyze(): array
@@ -53,8 +127,8 @@ class UnifiedAnalyzer
             '📊 metadata' => [
                 '🕒 generated_at' => date('c'),
                 '📁 source_trace_file' => $traceFile,
-                '📏 source_file_size' => $this->formatBytes(filesize($traceFile)),
-                '🎯 analysis_context' => $this->options['context'] ?: 'General analysis',
+                '📏 source_file_size' => $this->formatBytes($this->safeFilesize($traceFile)),
+                '🎯 analysis_context' => $this->options['context'] ?? 'General analysis',
                 '🔍 analysis_version' => '2.0.0-unified',
             ],
             '📈 statistics' => $this->generateStatistics($traceFile),
@@ -95,8 +169,8 @@ class UnifiedAnalyzer
         // Executive summary - key metrics only
         return [
             '📊 executive_summary' => [
-                '🎯 context' => $this->options['context'] ?: 'Executive summary',
-                '📏 file_size' => $this->formatBytes(filesize($traceFile)),
+                '🎯 context' => $this->options['context'] ?? 'Executive summary',
+                '📏 file_size' => $this->formatBytes($this->safeFilesize($traceFile)),
                 '⏱️ key_performance_issues' => $this->getTopIssues($traceFile, 3),
                 '🎯 recommendations' => $this->generateRecommendations($traceFile),
                 '🚨 critical_warnings' => $this->getCriticalWarnings($traceFile),
