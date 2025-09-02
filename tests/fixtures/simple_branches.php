@@ -1,13 +1,18 @@
 <?php
 
-function processValue($value) {
+declare(strict_types=1);
+
+function processValue($value)
+{
     if ($value > 0) {
         echo "Positive: $value\n";
-        return "positive";
-    } else {
-        echo "Non-positive: $value\n";
-        return "non_positive";
+
+        return 'positive';
     }
+
+    echo "Non-positive: $value\n";
+
+    return 'non_positive';
 }
 
 // Test one branch only
