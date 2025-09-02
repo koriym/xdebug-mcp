@@ -98,7 +98,7 @@ final class DebugServer
     private const DEFAULT_CONNECTION_TIMEOUT = 30.0;  // Initial connection only
     private const DEFAULT_EXECUTION_TIMEOUT = 3600.0;  // 1 hour for long debugging sessions
     private const DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
-    private const MAX_STEPS = 100;  // Default maximum steps for step recording
+    private const MAX_STEPS = 200;  // Default maximum steps for step recording
 
     private DeferredFuture|null $listenerReady = null;
     private DeferredFuture|null $xdebugConnected = null;
@@ -240,6 +240,7 @@ final class DebugServer
                     $cmd = sprintf(
                         'XDEBUG_TRIGGER=1 php %s' .
                         '-dxdebug.mode=debug,trace ' .
+                        '-dxdebug.start_with_request=yes ' .
                         '-dxdebug.client_host=127.0.0.1 ' .
                         '-dxdebug.client_port=%d ' .
                         '-dxdebug.trace_output_name=trace-%%s ' .
@@ -276,6 +277,7 @@ final class DebugServer
                 $cmd = sprintf(
                     'XDEBUG_TRIGGER=1 php %s' .
                     '-dxdebug.mode=debug,trace ' .
+                    '-dxdebug.start_with_request=yes ' .
                     '-dxdebug.client_host=127.0.0.1 ' .
                     '-dxdebug.client_port=%d ' .
                     '-dxdebug.trace_output_name=trace-%%s ' .
