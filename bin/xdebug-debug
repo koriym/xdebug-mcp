@@ -70,6 +70,13 @@ function showHelp(): void
     echo "  JSON: Complete execution trace with variable states (--exit-on-break)\n";
     echo "  Benefits: AI can analyze exact variable values at breakpoints without guesswork\n";
     echo "\n";
+    echo "📋 JSON SCHEMA RESOURCES (Essential for AI):\n";
+    echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json\n";
+    echo "  Xdebug Trace Docs: https://xdebug.org/docs/trace\n";
+    echo "  Debug Guidelines: https://koriym.github.io/xdebug-mcp/debug_guideline_for_ai.md\n";
+    echo "  Forward Trace™ Guide: Complete methodology for AI-powered PHP debugging\n";
+    echo "  Schema Note: Combines 'crime scene photo' (breakpoints) + 'surveillance footage' (traces)\n";
+    echo "\n";
     echo "AI WORKFLOW INTEGRATION:\n";
     echo "  1. Set contextual breakpoints based on error analysis\n";
     echo "  2. Execute script with breakpoint conditions\n";

@@ -64,6 +64,13 @@ function showHelp(string $scriptName): void
     echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json\n";
     echo "  Benefits: AI can rank bottlenecks, suggest optimizations, compare before/after\n";
     echo "\n";
+    echo "📋 JSON SCHEMA RESOURCES (Essential for AI):\n";
+    echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json\n";
+    echo "  Xdebug Profiling Docs: https://xdebug.org/docs/profiler\n";
+    echo "  Cachegrind Format: https://valgrind.org/docs/manual/cg-manual.html\n";
+    echo "  KCachegrind Tool: https://kcachegrind.github.io/ - Visual profile analysis\n";
+    echo "  Emoji Keys: Schema uses 📁📊💾📏📈 prefixes for AI-friendly navigation\n";
+    echo "\n";
     echo "AI WORKFLOW INTEGRATION:\n";
     echo "  1. Profile current performance with contextual description\n";
     echo "  2. AI analyzes metrics and identifies top bottlenecks\n";
