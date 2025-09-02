@@ -115,7 +115,8 @@ register_shutdown_function(function() use ($tempDir, $branchCoverage) {
     
     if ($branchCoverage) {
         // Generate GraphViz dot file from branch coverage data
-        $dotFilePath = "/tmp/paths.dot";
+        $dotFilePath = tempnam(sys_get_temp_dir(), "xdebug_branch_coverage_");
+        $dotFilePath = $dotFilePath . ".dot";
         $dotContent = "digraph coverage {\n";
         $dotContent .= "  rankdir=TB;\n";
         $dotContent .= "  node [shape=box];\n\n";
@@ -148,17 +149,21 @@ register_shutdown_function(function() use ($tempDir, $branchCoverage) {
         $dotContent .= "}\n";
         file_put_contents($dotFilePath, $dotContent);
         
+        // Generate unique output PNG path
+        $outputPath = pathinfo($dotFilePath, PATHINFO_DIRNAME) . "/" . pathinfo($dotFilePath, PATHINFO_FILENAME) . ".png";
+        
         $result = [
             "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xdebug-branch-coverage.json", 
             "coverage_type" => "branch",
             "coverage" => $filtered,
             "graphviz_dot" => $dotContent,
             "graphviz_dot_file" => $dotFilePath,
-            "visualization_command" => "dot -Tpng $dotFilePath -o /tmp/coverage_paths.png"
+            "visualization_command" => "dot -Tpng " . escapeshellarg($dotFilePath) . " -o " . escapeshellarg($outputPath)
         ];
     } else {
         // Generate GraphViz dot file for line coverage visualization
-        $dotFilePath = "/tmp/lines.dot";
+        $dotFilePath = tempnam(sys_get_temp_dir(), "xdebug_line_coverage_");
+        $dotFilePath = $dotFilePath . ".dot";
         $dotContent = "digraph line_coverage {\n";
         $dotContent .= "  rankdir=TB;\n";
         $dotContent .= "  node [shape=box];\n\n";
@@ -223,13 +228,16 @@ register_shutdown_function(function() use ($tempDir, $branchCoverage) {
         $dotContent .= "}\n";
         file_put_contents($dotFilePath, $dotContent);
         
+        // Generate unique output PNG path
+        $outputPath = pathinfo($dotFilePath, PATHINFO_DIRNAME) . "/" . pathinfo($dotFilePath, PATHINFO_FILENAME) . ".png";
+        
         $result = [
             "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json", 
             "coverage_type" => "line",
             "coverage" => $filtered,
             "graphviz_dot" => $dotContent,
             "graphviz_dot_file" => $dotFilePath,
-            "visualization_command" => "dot -Tpng $dotFilePath -o /tmp/line_coverage.png"
+            "visualization_command" => "dot -Tpng " . escapeshellarg($dotFilePath) . " -o " . escapeshellarg($outputPath)
         ];
     }
     echo(json_encode($result, JSON_UNESCAPED_SLASHES));
