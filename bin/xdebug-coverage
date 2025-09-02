@@ -159,8 +159,12 @@ if (empty($args)) {
 $escapedArgs = array_map('escapeshellarg', $args);
 
 // Execute PHP script with coverage enabled (keep output visible for troubleshooting)
-$cmd = escapeshellarg($phpPath) . $xdebugFlag . ' -dxdebug.mode=coverage' . $prependFilter . ' -dauto_prepend_file=' . $escapedPrependFile . ' ' . implode(' ', $escapedArgs);
-
+$cmd = escapeshellarg($phpPath) 
+     . $xdebugFlag 
+     . ' -dxdebug.mode=coverage -dauto_prepend_file=' 
+     . $escapedPrependFile 
+     . ' ' 
+     . implode(' ', $escapedArgs);
 // Debug: Log command to stderr
 if (getenv('COVERAGE_DEBUG')) {
     fwrite(STDERR, "[COVERAGE_DEBUG] Command: $cmd\n");
