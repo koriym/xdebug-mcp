@@ -593,6 +593,37 @@ if ($userId === 0) {
                 </div>
             </section>
 
+            <!-- NEW: Branch Coverage with GraphViz -->
+            <section>
+                <h2>🌳 NEW: ブランチカバレッジ + GraphViz可視化</h2>
+                <div class="fragment">
+                    <pre><code class="bash"># 新機能: ブランチ/パスカバレッジの視覚化
+./bin/xdebug-coverage --branch-coverage -- php app.php
+
+# 一度の実行で同時生成:
+# ✅ 詳細ブランチカバレッジJSON
+# ✅ GraphViz dot ファイル (/tmp/paths.dot)
+# ✅ 可視化コマンド付き
+
+# AIが即座に視覚化可能
+dot -Tpng /tmp/paths.dot -o /tmp/coverage_paths.png</code></pre>
+                </div>
+                <div class="fragment">
+                    <p><strong>AI向け改善点:</strong></p>
+                    <ul>
+                        <li>🟢 実行されたパス（緑色/実線）</li>
+                        <li>🔴 未実行パス（赤色/点線）</li>
+                        <li>📊 ブランチレベルの詳細分析</li>
+                        <li>🎯 視覚的パターン認識</li>
+                    </ul>
+                </div>
+                <div class="fragment" style="margin-top: 30px;">
+                    <p style="text-align: center; color: #ffd43b; font-style: italic;">
+                        「AIが見て理解できるコードパス図」
+                    </p>
+                </div>
+            </section>
+
             <!-- Core Tools Focus -->
             <section>
                 <h2>MCP Tool 🎯</h2>
