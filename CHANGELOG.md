@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **🤖 AI-Optimized Help Documentation**: Revolutionary comprehensive help system for all xdebug tools
+  - Enhanced `--help` output for `xdebug-coverage`, `xdebug-debug`, `xdebug-profile`, and `xdebug-trace`
+  - AI-first design philosophy with clear value propositions and workflow integration
+  - Practical usage patterns and benefits comparison vs traditional debugging methods
+  - Recommended AI prompts: "Run [tool] --help first to understand this tool"
+  
+### Enhanced  
+- **🎯 xdebug-coverage**: Superior alternative to PHPUnit HTML/XML coverage for AI analysis
+  - Auto-detection of PHPUnit with `--no-coverage` and TestDox format integration
+  - Mixed output streams: PHPUnit results + JSON coverage data in single command
+  - Reduced cognitive load for AI analysis vs browser-based HTML reports
+  - AI-optimized JSON schema with comprehensive coverage metadata
+  
+- **🔍 xdebug-debug**: Non-invasive interactive debugging with comprehensive AI guidance  
+  - Revolutionary approach emphasizing zero source code modification
+  - Conditional breakpoints and step recording capabilities highlighted
+  - JSON output optimization for AI consumption and analysis
+  - Clear workflow: Set breakpoints → Analyze runtime data → Done (no cleanup needed)
+  
+- **📊 xdebug-trace**: Ultimate alternative to static code analysis
+  - Runtime reality vs theoretical analysis emphasis
+  - Complete execution flow with function calls, parameters, and timing data
+  - Universal compatibility with PHPUnit, frameworks, and any PHP script
+  - AI capabilities: identify unexpected paths, performance bottlenecks, parameter issues
+  
+- **⚡ xdebug-profile**: Scientific performance optimization with precision metrics
+  - AI-driven optimization workflow with before/after measurements
+  - Comprehensive metrics: CPU time, memory usage, function calls, I/O operations
+  - Precision bottleneck identification with microsecond timing accuracy
+  - Production-safe profiling without code modification
+
+### Documentation
+- Updated README.md with AI-first design philosophy section
+- Enhanced PACKAGE_USAGE.md with AI-optimized help guidance
+- Added unified recommendation: Always run `--help` first for optimal AI collaboration
+
 ## [0.2.1] - 2025-08-31
 
 ### Added

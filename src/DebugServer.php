@@ -28,6 +28,7 @@ use Throwable;
 use function Amp\async;
 use function Amp\delay;
 use function Amp\Socket\listen;
+use function array_filter;
 use function array_map;
 use function array_merge;
 use function array_slice;
@@ -65,6 +66,7 @@ use function parse_str;
 use function preg_match;
 use function preg_replace;
 use function realpath;
+use function register_shutdown_function;
 use function round;
 use function shell_exec;
 use function simplexml_load_string;
@@ -122,6 +124,12 @@ final class DebugServer
         if (! file_exists($targetScript)) {
             throw new InvalidArgumentException("Script not found: {$targetScript}");
         }
+
+        // Check for existing sessions (warning only)
+        $this->checkExistingSessions();
+
+        // Register shutdown handler to ensure cleanup
+        register_shutdown_function([$this, 'emergencyCleanup']);
     }
 
     /**
@@ -150,9 +158,7 @@ final class DebugServer
 
             throw new DebugSessionException('Debug session failed', 0, $e);
         } finally {
-            $this->cleanup();
-            // Force exit after cleanup to prevent AMP event loop from continuing
-            exit(0);
+            $this->gracefulExit(0);
         }
     }
 
@@ -238,7 +244,7 @@ final class DebugServer
                     $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
 
                     $cmd = sprintf(
-                        'XDEBUG_TRIGGER=1 php %s' .
+                        'XDEBUG_SESSION=xdebug-mcp php %s' .
                         '-dxdebug.mode=debug,trace ' .
                         '-dxdebug.start_with_request=yes ' .
                         '-dxdebug.client_host=127.0.0.1 ' .
@@ -275,7 +281,7 @@ final class DebugServer
                 $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
 
                 $cmd = sprintf(
-                    'XDEBUG_TRIGGER=1 php %s' .
+                    'XDEBUG_SESSION=xdebug-mcp php %s' .
                     '-dxdebug.mode=debug,trace ' .
                     '-dxdebug.start_with_request=yes ' .
                     '-dxdebug.client_host=127.0.0.1 ' .
@@ -384,7 +390,9 @@ final class DebugServer
                     $this->processMultipleBreakpoints();
                 }
 
-                exit(0);
+                $this->gracefulExit(0);
+
+                return; // Never reached, but explicit for readability
             }
 
             // Interactive mode: Use step_into to stop at first executable line
@@ -1001,7 +1009,9 @@ final class DebugServer
 
             if ($this->executeUserCommand($command)) {
                 $this->outputTraceFile();
-                exit(0);
+                $this->gracefulExit(0);
+
+                return; // Never reached, but explicit for readability
             }
         }
     }
@@ -1972,6 +1982,67 @@ final class DebugServer
 
         $timestamp = date('H:i:s');
         echo "[{$timestamp}] {$message}\n";
+    }
+
+    /**
+     * Check for existing Xdebug sessions on our port (now session-key aware)
+     */
+    private function checkExistingSessions(): void
+    {
+        $command = sprintf('lsof -ti :%d 2>/dev/null', $this->debugPort);
+        $pids = shell_exec($command);
+
+        if ($pids) {
+            $pidList = array_filter(explode("\n", trim($pids)));
+            if (! empty($pidList)) {
+                $this->log(sprintf('🔌 Port %d shared with other sessions: %s', $this->debugPort, implode(', ', $pidList)));
+                $this->log('🎯 Using session key "xdebug-mcp" for isolation');
+                $this->log('💡 IDEs can use different session keys (PHPSTORM, vscode, etc.)');
+            }
+        }
+    }
+
+    /**
+     * Graceful exit with proper cleanup
+     */
+    private function gracefulExit(int $code = 0): void
+    {
+        $this->log('🏁 Gracefully exiting with proper cleanup...');
+
+        // Close Xdebug connection if active
+        if ($this->xdebugSocket && ! $this->xdebugSocket->isClosed()) {
+            $this->xdebugSocket->close();
+        }
+
+        // Perform emergency cleanup to ensure resources are freed
+        $this->emergencyCleanup();
+
+        // Exit with specified code
+        exit($code);
+    }
+
+    /**
+     * Emergency cleanup called by register_shutdown_function
+     * This ensures cleanup even on abnormal termination
+     */
+    public function emergencyCleanup(): void
+    {
+        static $alreadyCalled = false;
+
+        // Prevent multiple calls
+        if ($alreadyCalled) {
+            return;
+        }
+
+        $alreadyCalled = true;
+
+        $this->log('🚨 Emergency cleanup triggered');
+        $this->cleanup();
+
+        // Only kill our own xdebug-mcp processes on abnormal termination
+        // This preserves other sessions (IDE) using the same port with different keys
+        $command = 'pkill -f "XDEBUG_SESSION=xdebug-mcp" 2>/dev/null || true';
+        shell_exec($command);
     }
 
     /**
