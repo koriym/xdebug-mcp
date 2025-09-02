@@ -21,6 +21,7 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
     echo "  ✅ TestDox format: Human-readable test descriptions for context\n";
     echo "\n";
     echo "OPTIONS:\n";
+    echo "  --branch-coverage         Enable detailed branch/path coverage analysis with GraphViz\n";
     echo "  --include-vendor=PATTERNS  Include vendor packages (e.g., \"bear/*,ray/di\")\n";
     echo "  --help, -h                Show this help\n";
     echo "\n";
@@ -34,26 +35,41 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
     echo "  # Include specific vendor packages for framework debugging\n";
     echo "  " . $argv[0] . " --include-vendor=bear/resource,ray/di\n";
     echo "\n";
+    echo "  # Branch/path coverage with GraphViz visualization\n";
+    echo "  " . $argv[0] . " --branch-coverage -- php app.php\n";
+    echo "\n";
     echo "  # Full vendor analysis (use sparingly - generates noise)\n";
     echo "  " . $argv[0] . " --include-vendor=*/* -- php app.php\n";
     echo "\n";
     echo "OUTPUT FORMAT:\n";
-    echo "  Mixed: PHPUnit TestDox results + JSON coverage data\n";
+    echo "  📊 Standard: PHPUnit TestDox results + JSON line coverage data\n";
+    echo "  🌳 Branch Mode: PHPUnit TestDox + JSON branch coverage + GraphViz dot file\n";
     echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json\n";
     echo "  Benefits: AI can distinguish test output from coverage data automatically\n";
     echo "\n";
     echo "📋 JSON SCHEMA RESOURCES (Essential for AI):\n";
     echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json\n";
+    echo "  Branch Coverage Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-branch-coverage.json\n";
     echo "  Xdebug Coverage Docs: https://xdebug.org/docs/code_coverage\n";
     echo "  Function Reference: https://xdebug.org/docs/code_coverage#xdebug_get_code_coverage\n";
+    echo "  Branch Coverage: https://xdebug.org/docs/code_coverage#XDEBUG_CC_BRANCH_CHECK\n";
     echo "  MCP Tool: mcp://xdebug_start_coverage\n";
+    echo "  GraphViz Integration: Generates /tmp/paths.dot for path visualization\n";
     echo "  AI Analysis Tips: Schema includes x-interpretation-guide for optimal analysis\n";
     echo "\n";
     echo "AI WORKFLOW INTEGRATION:\n";
-    echo "  1. Run: ./bin/xdebug-coverage\n";
-    echo "  2. AI analyzes: Test results (success/failures) + Coverage gaps\n";
-    echo "  3. AI identifies: Untested lines, missing test cases, code quality issues\n";
-    echo "  4. AI suggests: Specific improvements with line numbers\n";
+    echo "  📊 Standard Mode:\n";
+    echo "    1. Run: ./bin/xdebug-coverage\n";
+    echo "    2. AI analyzes: Test results (success/failures) + Line coverage gaps\n";
+    echo "    3. AI identifies: Untested lines, missing test cases, code quality issues\n";
+    echo "    4. AI suggests: Specific improvements with line numbers\n";
+    echo "\n";
+    echo "  🌳 Branch Coverage Mode:\n";
+    echo "    1. Run: ./bin/xdebug-coverage --branch-coverage\n";
+    echo "    2. AI analyzes: Branch/path coverage + GraphViz visualization data\n";
+    echo "    3. AI identifies: Unexecuted code paths, branch coverage gaps\n";
+    echo "    4. AI visualizes: Code flow with dot file (use 'dot -Tpng /tmp/paths.dot')\n";
+    echo "    5. AI suggests: Path-specific test improvements and edge case coverage\n";
     echo "\n";
     echo "RECOMMENDED AI PROMPT:\n";
     echo "  'Run xdebug-coverage --help first to understand this tool, then analyze my code coverage'\n";
@@ -63,23 +79,167 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
 
 // Parse options using getopt (help handled above to keep single source of truth)
 $optind = 0;
-$options = getopt('', ['include-vendor::'], $optind);
+$options = getopt('', ['include-vendor::', 'branch-coverage'], $optind);
 
 $includeVendor = $options['include-vendor'] ?? null;
+$branchCoverage = isset($options['branch-coverage']);
 
 // Create shutdown script for coverage collection
 $shutdownScript = tempnam(sys_get_temp_dir(), 'coverage_end_');
+$branchFlag = $branchCoverage ? 'true' : 'false';
+$includeVendorRequire = '';
+if ($includeVendor !== null) {
+    $filterPath = __DIR__ . '/../prepend_filter.php';
+    $includeVendorRequire = 'require_once ' . var_export($filterPath, true) . ';';
+    // Pass include-vendor as environment variable for prepend_filter.php to access
+    putenv('COVERAGE_INCLUDE_VENDOR=' . $includeVendor);
+}
 file_put_contents($shutdownScript, '<?php
+' . $includeVendorRequire . '
 $tempDir = sys_get_temp_dir();
-xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, [getcwd() . "/vendor/", getcwd() . "/tests/", $tempDir]);
-xdebug_start_code_coverage();
-register_shutdown_function(function() use ($tempDir) {
+$branchCoverage = ' . $branchFlag . ';
+if ($branchCoverage) {
+    // For branch coverage, be more permissive with filtering to capture test files
+    xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, [getcwd() . "/vendor/", $tempDir]);
+    xdebug_start_code_coverage(XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE | XDEBUG_CC_BRANCH_CHECK);
+} else {
+    xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, [getcwd() . "/vendor/", getcwd() . "/tests/", $tempDir]);
+    xdebug_start_code_coverage(XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
+}
+register_shutdown_function(function() use ($tempDir, $branchCoverage) {
     $coverage = xdebug_get_code_coverage();
     // Remove temp files from coverage
     $filtered = array_filter($coverage, function($path) use ($tempDir) {
         return strpos($path, $tempDir) === false;
     }, ARRAY_FILTER_USE_KEY);
-    $result = ["\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json", "coverage" => $filtered];
+    
+    if ($branchCoverage) {
+        // Generate GraphViz dot file from branch coverage data
+        $dotFilePath = tempnam(sys_get_temp_dir(), "xdebug_branch_coverage_");
+        $dotFilePath = $dotFilePath . ".dot";
+        $dotContent = "digraph coverage {\n";
+        $dotContent .= "  rankdir=TB;\n";
+        $dotContent .= "  node [shape=box];\n\n";
+        
+        foreach ($filtered as $file => $data) {
+            if (isset($data["functions"])) {
+                foreach ($data["functions"] as $function => $funcData) {
+                    if (isset($funcData["branches"])) {
+                        $dotContent .= "  // Function: $function\n";
+                        foreach ($funcData["branches"] as $branchId => $branch) {
+                            $label = "Branch $branchId\\nLines {$branch["line_start"]}-{$branch["line_end"]}";
+                            $style = $branch["hit"] > 0 ? "filled,solid" : "filled,dashed";
+                            $color = $branch["hit"] > 0 ? "lightgreen" : "lightcoral";
+                            $dotContent .= "  \"$function-$branchId\" [label=\"$label\", style=\"$style\", fillcolor=\"$color\"];\n";
+                            
+                            // Add edges for branch connections
+                            foreach ($branch["out"] as $i => $targetBranch) {
+                                if ($targetBranch !== 2147483645) { // Skip exit branches
+                                    $edgeStyle = ($branch["out_hit"][$i] ?? 0) > 0 ? "solid" : "dashed";
+                                    $dotContent .= "  \"$function-$branchId\" -> \"$function-$targetBranch\" [style=\"$edgeStyle\"];\n";
+                                }
+                            }
+                        }
+                        $dotContent .= "\n";
+                    }
+                }
+            }
+        }
+        
+        $dotContent .= "}\n";
+        file_put_contents($dotFilePath, $dotContent);
+        
+        // Generate unique output PNG path
+        $outputPath = pathinfo($dotFilePath, PATHINFO_DIRNAME) . "/" . pathinfo($dotFilePath, PATHINFO_FILENAME) . ".png";
+        
+        $result = [
+            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xdebug-branch-coverage.json", 
+            "coverage_type" => "branch",
+            "coverage" => $filtered,
+            "graphviz_dot" => $dotContent,
+            "graphviz_dot_file" => $dotFilePath,
+            "visualization_command" => "dot -Tpng " . escapeshellarg($dotFilePath) . " -o " . escapeshellarg($outputPath)
+        ];
+    } else {
+        // Generate GraphViz dot file for line coverage visualization
+        $dotFilePath = tempnam(sys_get_temp_dir(), "xdebug_line_coverage_");
+        $dotFilePath = $dotFilePath . ".dot";
+        $dotContent = "digraph line_coverage {\n";
+        $dotContent .= "  rankdir=TB;\n";
+        $dotContent .= "  node [shape=box];\n\n";
+        
+        foreach ($filtered as $file => $lines) {
+            if (is_array($lines)) {
+                $fileName = basename($file);
+                $dotContent .= "  // File: $fileName\n";
+                
+                // Group consecutive lines for better visualization
+                $lineGroups = [];
+                $currentGroup = [];
+                $lastLine = -1;
+                
+                foreach ($lines as $lineNum => $hitCount) {
+                    if (is_numeric($lineNum)) {
+                        if ($lineNum == $lastLine + 1 && count($currentGroup) < 5) {
+                            $currentGroup[] = [$lineNum, $hitCount];
+                        } else {
+                            if (!empty($currentGroup)) {
+                                $lineGroups[] = $currentGroup;
+                            }
+                            $currentGroup = [[$lineNum, $hitCount]];
+                        }
+                        $lastLine = $lineNum;
+                    }
+                }
+                if (!empty($currentGroup)) {
+                    $lineGroups[] = $currentGroup;
+                }
+                
+                foreach ($lineGroups as $groupIndex => $group) {
+                    $startLine = $group[0][0];
+                    $endLine = end($group)[0];
+                    $allHit = true;
+                    $anyHit = false;
+                    
+                    foreach ($group as [$line, $hit]) {
+                        if ($hit <= 0) $allHit = false;
+                        if ($hit > 0) $anyHit = true;
+                    }
+                    
+                    $label = $startLine == $endLine ? "Line $startLine" : "Lines $startLine-$endLine";
+                    if ($allHit) {
+                        $color = "lightgreen";
+                        $style = "filled,solid";
+                    } elseif ($anyHit) {
+                        $color = "lightyellow"; 
+                        $style = "filled,solid";
+                    } else {
+                        $color = "lightcoral";
+                        $style = "filled,dashed";
+                    }
+                    
+                    $nodeId = str_replace(["/", ".", " "], "_", $fileName) . "_group_" . $groupIndex;
+                    $dotContent .= "  \"$nodeId\" [label=\"$label\\n$fileName\", style=\"$style\", fillcolor=\"$color\"];\n";
+                }
+                $dotContent .= "\n";
+            }
+        }
+        
+        $dotContent .= "}\n";
+        file_put_contents($dotFilePath, $dotContent);
+        
+        // Generate unique output PNG path
+        $outputPath = pathinfo($dotFilePath, PATHINFO_DIRNAME) . "/" . pathinfo($dotFilePath, PATHINFO_FILENAME) . ".png";
+        
+        $result = [
+            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json", 
+            "coverage_type" => "line",
+            "coverage" => $filtered,
+            "graphviz_dot" => $dotContent,
+            "graphviz_dot_file" => $dotFilePath,
+            "visualization_command" => "dot -Tpng " . escapeshellarg($dotFilePath) . " -o " . escapeshellarg($outputPath)
+        ];
+    }
     echo(json_encode($result, JSON_UNESCAPED_SLASHES));
 });
 ');
@@ -115,22 +275,17 @@ $xdebugFlag = XdebugFinder::getXdebugFlag();
 
 $escapedPrependFile = escapeshellarg($shutdownScript);
 
-// Add prepend_filter.php for vendor filtering if include-vendor is specified
-$prependFilter = '';
-if ($includeVendor !== null) {
-    $filterPath = __DIR__ . '/../prepend_filter.php';
-    $prependFilter = ' -dauto_prepend_file=' . escapeshellarg($filterPath);
-    // Pass include-vendor as environment variable for prepend_filter.php to access
-    putenv('COVERAGE_INCLUDE_VENDOR=' . $includeVendor);
-}
-
 // Default to PHPUnit if no arguments provided
 if (empty($args)) {
     if (file_exists('./vendor/bin/phpunit')) {
         $args = ['./vendor/bin/phpunit', '--no-coverage', '--testdox', '--no-progress', '--colors=never'];
-        echo "# Auto-detected: Running PHPUnit tests with xdebug-mcp coverage (AI-optimized output)\n";
+        if ($branchCoverage) {
+            echo "# Auto-detected: Running PHPUnit tests with branch coverage analysis + GraphViz visualization\n";
+        } else {
+            echo "# Auto-detected: Running PHPUnit tests with xdebug-mcp coverage (AI-optimized output)\n";
+        }
     } else {
-        echo "Usage: " . $argv[0] . " [--include-vendor=PATTERNS] [--] php script.php [args...]\n";
+        echo "Usage: " . $argv[0] . " [--branch-coverage] [--include-vendor=PATTERNS] [--] php script.php [args...]\n";
         echo "No arguments provided and ./vendor/bin/phpunit not found.\n";
         echo "Run with --help for more information.\n";
         exit(1);

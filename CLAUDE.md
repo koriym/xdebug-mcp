@@ -167,13 +167,53 @@ zend_extension=xdebug
 xdebug.mode=debug,profile,coverage  ; Enable all modes
 xdebug.start_with_request=yes
 xdebug.client_host=127.0.0.1
-xdebug.client_port=9004             ; Uses 9004 (IDEs use 9003)
+xdebug.client_port=9004             ; Shared port with session key isolation
 xdebug.output_dir=/tmp              ; For profile files
 ```
 
-**Port Usage:**
-- **IDE/Editors (VS Code, PhpStorm)**: Port 9003
-- **This Xdebug MCP Server**: Port 9004 (conflict-free)
+### Session Key Management
+
+The xdebug-mcp server uses **session key isolation** to coexist with IDEs:
+
+```bash
+# MCP Server automatically uses:
+XDEBUG_SESSION=xdebug-mcp
+
+# IDEs typically use:
+XDEBUG_SESSION=PHPSTORM   # PhpStorm
+XDEBUG_SESSION=vscode     # VS Code
+XDEBUG_SESSION=netbeans   # NetBeans
+```
+
+**Benefits:**
+- ✅ **Port 9004 sharing**: IDEs and MCP can use same port
+- ✅ **Zero conflicts**: Complete session isolation
+- ✅ **Concurrent debugging**: IDE + MCP sessions simultaneously
+- ✅ **Clean separation**: Each session key is independent
+
+**Session Isolation:**
+- **IDE Sessions**: Use `XDEBUG_SESSION=PHPSTORM` or `XDEBUG_SESSION=vscode`
+- **MCP Sessions**: Use `XDEBUG_SESSION=xdebug-mcp` for complete isolation
+- **Port Sharing**: Both can use port 9004 simultaneously with different session keys
+- **No Conflicts**: Session keys provide complete separation
+
+## Session Cleanup and Management
+
+The server implements robust session management:
+
+```php
+// Automatic cleanup on normal exit
+register_shutdown_function([$this, 'emergencyCleanup']);
+
+// Emergency cleanup preserves other sessions
+pkill -f "XDEBUG_SESSION=xdebug-mcp"  // Only kills our sessions
+```
+
+**Session Lifecycle:**
+1. **Startup**: Check for existing sessions (warning only)
+2. **Execution**: Use `XDEBUG_SESSION=xdebug-mcp` for isolation
+3. **Normal Exit**: Clean shutdown via detach command
+4. **Emergency Exit**: Process cleanup preserving other sessions
 
 ## Key Features Integration
 - **Without Xdebug session**: Profiling and coverage work standalone using Xdebug functions
