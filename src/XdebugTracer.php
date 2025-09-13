@@ -35,6 +35,7 @@ use function is_readable;
 use function max;
 use function number_format;
 use function passthru;
+use function preg_replace;
 use function round;
 use function shell_exec;
 use function str_contains;
@@ -132,8 +133,16 @@ class XdebugTracer
             throw new RuntimeException("PHP execution failed with exit code: $exitCode");
         }
 
-        // Find the created trace file (Xdebug generates its own filename)
-        $traceFiles = glob("{$xdebugOutputDir}/trace.*.xt");
+        // Find the created trace file using dynamic pattern detection
+        // Get current trace_output_name setting
+        $traceOutputName = ini_get('xdebug.trace_output_name') ?: 'trace.%c';
+        // Convert Xdebug format specifiers to glob wildcards
+        // %c=CRC32, %p=PID, %r=Random, %s=Script, %t=Timestamp, %u=Microseconds, etc.
+        // @see https://xdebug.org/docs/trace#trace_output_name
+        $filePattern = preg_replace('/%(c|p|r|s|t|u|H|R|U|S)/', '*', $traceOutputName);
+
+        // Find trace files using dynamic pattern
+        $traceFiles = glob("{$xdebugOutputDir}/{$filePattern}.xt");
         if (empty($traceFiles)) {
             throw new RuntimeException('Trace file not created. Check Xdebug installation.');
         }
