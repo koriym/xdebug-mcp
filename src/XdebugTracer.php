@@ -97,6 +97,8 @@ class XdebugTracer
 
         // Get Xdebug output directory
         $xdebugOutputDir = ini_get('xdebug.output_dir') ?: '/tmp';
+        // Get current trace_output_name setting
+        $traceOutputName = ini_get('xdebug.trace_output_name') ?: 'trace.%c';
 
         echo "🔍 Tracing: $targetFile\n";
 
@@ -111,6 +113,7 @@ class XdebugTracer
             '-dxdebug.collect_params=4',
             '-dxdebug.collect_return=1',
             "-dxdebug.output_dir={$xdebugOutputDir}",
+            "-dxdebug.trace_output_name={$traceOutputName}",
             '-dxdebug.trace_format=1',
             '-dxdebug.use_compression=0',
             "-dauto_prepend_file={$prependFilter}",
@@ -134,8 +137,6 @@ class XdebugTracer
         }
 
         // Find the created trace file using dynamic pattern detection
-        // Get current trace_output_name setting
-        $traceOutputName = ini_get('xdebug.trace_output_name') ?: 'trace.%c';
         // Convert Xdebug format specifiers to glob wildcards
         // %c=CRC32, %p=PID, %r=Random, %s=Script, %t=Timestamp, %u=Microseconds, etc.
         // @see https://xdebug.org/docs/trace#trace_output_name
