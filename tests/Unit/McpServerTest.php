@@ -272,15 +272,6 @@ class McpServerTest extends TestCase
         $this->assertEquals('2025-06-18', $response['result']['protocolVersion']);
     }
 
-    public function testCoverageSummaryWithoutXdebug(): void
-    {
-        $this->markTestSkipped('Coverage summary method removed - use x-coverage tool instead');
-    }
-
-    public function testAnalyzeCoverageWithTextFormat(): void
-    {
-        $this->markTestSkipped('Coverage analysis method removed - use x-coverage tool instead');
-    }
 
     public function testValidatePhpBinaryScript(): void
     {
@@ -371,10 +362,6 @@ class McpServerTest extends TestCase
         $this->assertStringContainsString('tests/fake/loop-counter.php', $response['result']['content'][0]['text']);
     }
 
-    public function testAnalyzeCoverageWithHtmlFormat(): void
-    {
-        $this->markTestSkipped('Coverage analysis method removed - use x-coverage tool instead');
-    }
 
     public function testPromptsGetXTrace(): void
     {
@@ -464,30 +451,6 @@ class McpServerTest extends TestCase
         $this->assertArrayHasKey('debug_data', $response['result']);
     }
 
-    public function testPromptsGetXCoverage(): void
-    {
-        $this->markTestSkipped('Skip the test for infinite loop');
-        $request = [
-            'jsonrpc' => '2.0',
-            'id' => 203,
-            'method' => 'prompts/get',
-            'params' => [
-                'name' => 'x-coverage',
-                'arguments' => [
-                    'script' => 'php tests/fake/loop-counter.php',
-                    'context' => 'Test x-coverage prompt',
-                ],
-            ],
-        ];
-
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
-
-        $this->assertArrayHasKey('result', $response);
-        $this->assertEquals('2.0', $response['jsonrpc']);
-        $this->assertEquals(203, $response['id']);
-        $this->assertArrayHasKey('messages', $response['result']);
-        $this->assertArrayHasKey('debug_data', $response['result']);
-    }
 
     private function invokePrivateMethod(object $object, string $methodName, array $parameters = []): mixed
     {
