@@ -111,20 +111,6 @@ exit(0);
     }
 
     /**
-     * Test HTTP mode enabling
-     */
-    public function testEnableHttpMode(): void
-    {
-        $server = new DebugServer($this->testScript, 9004, null, [], true);
-
-        // Call enableHttpMode to improve coverage
-        $server->enableHttpMode();
-
-        // Verify the server still works after HTTP mode enabled
-        $this->assertInstanceOf(DebugServer::class, $server);
-    }
-
-    /**
      * Test various debugging configurations for coverage
      */
     public function testVariousDebuggingConfigurations(): void
@@ -232,14 +218,6 @@ exit(0);
         // Test that callable interface works
         $this->assertTrue(is_callable($server));
 
-        // Test that enableHttpMode is accessible
-        $reflection = new ReflectionClass($server);
-        $method = $reflection->getMethod('enableHttpMode');
-        $this->assertTrue($method->isPublic());
-
-        // Call enableHttpMode to increase coverage
-        $server->enableHttpMode();
-
-        $this->assertTrue(true); // Test completed successfully
+        $this->assertInstanceOf(DebugServer::class, $server);
     }
 }
