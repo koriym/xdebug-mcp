@@ -42,21 +42,6 @@ class ContextOptionTest extends TestCase
         $this->assertStringContainsString('"' . $context . '"', $output);
     }
 
-    public function testXdebugCoverageWithContext(): void
-    {
-        $this->markTestSkipped('Coverage context test temporarily disabled due to PHPUnit interaction issues');
-
-        $context = 'Test context for coverage';
-        $command = sprintf(
-            '%s/bin/xdebug-coverage --context="%s" -- php %s 2>/dev/null',
-            $this->projectRoot,
-            $context,
-            $this->testScript,
-        );
-        $output = shell_exec($command);
-        $this->assertNotNull($output);
-        $this->assertStringContainsString($context, $output);
-    }
 
     public function testXdebugTraceWithContext(): void
     {

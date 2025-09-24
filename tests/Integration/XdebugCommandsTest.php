@@ -114,28 +114,6 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
         $this->assertTrue(is_executable(__DIR__ . '/../../bin/xdebug-coverage'));
     }
 
-    public function testXdebugCoverageExecution(): void
-    {
-        $this->markTestSkipped('Skip the test for infinite loop');
-        $command = sprintf(
-            'cd %s && ./bin/xdebug-coverage -- php %s 2>/dev/null',
-            dirname(__DIR__, 2),
-            $this->testScript,
-        );
-
-        $output = shell_exec($command);
-        $this->assertNotNull($output);
-
-        // Coverage tool outputs JSON with schema and coverage data
-        $this->assertStringContainsString('"$schema":"https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json"', $output);
-        $this->assertStringContainsString('"coverage":', $output);
-
-        // Validate JSON structure
-        $data = json_decode($output, true);
-        $this->assertIsArray($data);
-        $this->assertArrayHasKey('$schema', $data);
-        $this->assertArrayHasKey('coverage', $data);
-    }
 
     public function testXdebugDebugCommandExists(): void
     {
@@ -149,18 +127,6 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
         $this->assertNotNull($output);
         $this->assertStringContainsString('Usage:', $output);
         $this->assertStringContainsString('xdebug-debug', $output);
-    }
-
-    public function testXdebugPhpunitCommandExists(): void
-    {
-        $this->markTestSkipped('xdebug-phpunit command removed - use x-trace instead');
-    }
-
-    /** @codeCoverageIgnore */
-    public function testXdebugPhpunitHelp(): void
-    {
-        // Skip this test as it can cause issues with PHPUnit execution
-        $this->markTestSkipped('PHPUnit help test can interfere with test execution');
     }
 
     public function testAllCommandsAreExecutable(): void

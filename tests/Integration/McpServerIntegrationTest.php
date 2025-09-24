@@ -70,16 +70,6 @@ class McpServerIntegrationTest extends TestCase
         }
     }
 
-    public function testStandaloneProfilingWorkflow(): void
-    {
-        $this->markTestSkipped('Standalone profiling tools have been removed due to stateless nature of MCP');
-    }
-
-    public function testCoverageAnalysisWorkflow(): void
-    {
-        $this->markTestSkipped('Coverage analysis tools have been removed from MCP server - use x-coverage command instead');
-    }
-
     public function testErrorHandling(): void
     {
         // Test invalid method
