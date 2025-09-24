@@ -35,6 +35,7 @@ use function is_readable;
 use function max;
 use function number_format;
 use function passthru;
+use function preg_replace;
 use function round;
 use function shell_exec;
 use function str_contains;
@@ -96,6 +97,8 @@ class XdebugTracer
 
         // Get Xdebug output directory
         $xdebugOutputDir = ini_get('xdebug.output_dir') ?: '/tmp';
+        // Get current trace_output_name setting
+        $traceOutputName = ini_get('xdebug.trace_output_name') ?: 'trace.%c';
 
         echo "🔍 Tracing: $targetFile\n";
 
@@ -110,6 +113,7 @@ class XdebugTracer
             '-dxdebug.collect_params=4',
             '-dxdebug.collect_return=1',
             "-dxdebug.output_dir={$xdebugOutputDir}",
+            "-dxdebug.trace_output_name={$traceOutputName}",
             '-dxdebug.trace_format=1',
             '-dxdebug.use_compression=0',
             "-dauto_prepend_file={$prependFilter}",
@@ -132,10 +136,23 @@ class XdebugTracer
             throw new RuntimeException("PHP execution failed with exit code: $exitCode");
         }
 
-        // Find the created trace file (Xdebug generates its own filename)
-        $traceFiles = glob("{$xdebugOutputDir}/trace.*.xt");
+        // Find the created trace file using dynamic pattern detection
+        // First escape special glob characters to prevent unintended matches
+        $escapedTraceOutputName = preg_replace('/([*?\[\]])/', '\\\\$1', $traceOutputName);
+
+        // Convert Xdebug format specifiers to glob wildcards
+        // %c=CRC32, %p=PID, %r=Random, %s=Script, %t=Timestamp, %u=Microseconds, etc.
+        // @see https://xdebug.org/docs/trace#trace_output_name
+        $filePattern = preg_replace('/%(c|p|r|s|t|u|H|R|U|S)/', '*', $escapedTraceOutputName);
+
+        // Find trace files using dynamic pattern
+        $traceFiles = glob("{$xdebugOutputDir}/{$filePattern}.xt");
         if (empty($traceFiles)) {
-            throw new RuntimeException('Trace file not created. Check Xdebug installation.');
+            throw new RuntimeException(sprintf(
+                'Trace file not found. Looked in "%s" with pattern based on trace_output_name "%s".',
+                $xdebugOutputDir,
+                $traceOutputName
+            ));
         }
 
         // Get the most recent trace file
