@@ -137,15 +137,22 @@ class XdebugTracer
         }
 
         // Find the created trace file using dynamic pattern detection
+        // First escape special glob characters to prevent unintended matches
+        $escapedTraceOutputName = preg_replace('/([*?\[\]])/', '\\\\$1', $traceOutputName);
+
         // Convert Xdebug format specifiers to glob wildcards
         // %c=CRC32, %p=PID, %r=Random, %s=Script, %t=Timestamp, %u=Microseconds, etc.
         // @see https://xdebug.org/docs/trace#trace_output_name
-        $filePattern = preg_replace('/%(c|p|r|s|t|u|H|R|U|S)/', '*', $traceOutputName);
+        $filePattern = preg_replace('/%(c|p|r|s|t|u|H|R|U|S)/', '*', $escapedTraceOutputName);
 
         // Find trace files using dynamic pattern
         $traceFiles = glob("{$xdebugOutputDir}/{$filePattern}.xt");
         if (empty($traceFiles)) {
-            throw new RuntimeException('Trace file not created. Check Xdebug installation.');
+            throw new RuntimeException(sprintf(
+                'Trace file not found. Looked in "%s" with pattern based on trace_output_name "%s".',
+                $xdebugOutputDir,
+                $traceOutputName
+            ));
         }
 
         // Get the most recent trace file
