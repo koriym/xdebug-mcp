@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2025-09-24
+
+### Fixed
+- Escape special glob characters in trace_output_name pattern
+- Improve error messages for trace file detection
+
+### Changed
+- Remove obsolete skipped tests
+- Clean up test suite
+
+## [0.3.0] - Previous Release
+
 ### Added
 - **🤖 AI-Optimized Help Documentation**: Revolutionary comprehensive help system for all xdebug tools
   - Enhanced `--help` output for `xdebug-coverage`, `xdebug-debug`, `xdebug-profile`, and `xdebug-trace`
