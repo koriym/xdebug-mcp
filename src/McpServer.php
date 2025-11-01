@@ -41,10 +41,13 @@ final class McpServer
 {
     protected array $tools = [];
     private bool $debugMode = false;
+    private string $binDir;
 
     public function __construct()
     {
         $this->debugMode = (bool) (getenv('MCP_DEBUG') ?: false);
+        // Use absolute path to bin directory for standalone execution
+        $this->binDir = dirname(__DIR__) . '/bin';
         $this->initializeTools();
     }
 
@@ -705,7 +708,7 @@ final class McpServer
             $context = $args['context'] ?? '';
 
             // Build command - user must specify PHP binary explicitly
-            $cmd = './bin/xdebug-trace --json -- ' . $script;
+            $cmd = $this->binDir . '/xdebug-trace --json -- ' . $script;
 
             // Execute command
             $output = [];
@@ -793,7 +796,7 @@ final class McpServer
             $includeVendor = $args['include_vendor'] ?? '';
 
             // Build command
-            $cmd = './bin/xdebug-debug --exit-on-break';
+            $cmd = $this->binDir . '/xdebug-debug --exit-on-break';
 
             // Add breakpoints if specified
             if (! empty($breakpoints)) {
@@ -884,7 +887,7 @@ final class McpServer
             $context = $args['context'] ?? '';
 
             // Build command - user must specify PHP binary explicitly
-            $cmd = './bin/xdebug-profile --json -- ' . $script;
+            $cmd = $this->binDir . '/xdebug-profile --json -- ' . $script;
 
             // Execute command
             $output = [];
@@ -950,7 +953,7 @@ final class McpServer
             $format = $args['format'] ?? 'json';
 
             // Build command - user must specify PHP binary explicitly
-            $cmd = './bin/xdebug-coverage -- ' . $script;
+            $cmd = $this->binDir . '/xdebug-coverage -- ' . $script;
 
             // Execute command
             $output = [];
