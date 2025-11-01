@@ -50,6 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Replaced relative paths (`./bin/*`) with absolute paths using `dirname(__DIR__)`
   - Enables Claude Code to invoke xdebug-mcp tools regardless of current working directory
   - All MCP tools (x-trace, x-debug, x-profile, x-coverage) now work standalone
+- **Profiler Filename Placeholder**: Fixed cachegrind output filename to display actual process ID ([#28](https://github.com/koriym/xdebug-mcp/issues/28))
+  - Changed placeholder from `%s` (script name) to `%p` (process ID) in profiler_output_name
+  - Output now shows `/tmp/cachegrind.out.12345` instead of `/tmp/cachegrind.out.%s`
+  - Makes profile files easy to identify and use with analysis tools
 
 ## [0.2.1] - 2025-08-31
 
