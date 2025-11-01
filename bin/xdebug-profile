@@ -28,7 +28,7 @@ function showHelp(string $scriptName): void
     echo "  ✅ Comprehensive metrics: CPU time, memory, function calls, I/O operations\n";
     echo "\n";
     echo "CORE OPTIONS:\n";
-    echo "  --json                      AI-optimized JSON output with comprehensive metrics\n";
+    echo "  --json                      AI-optimized JSON output (suppresses script output for clean parsing)\n";
     echo "  --claude                    Auto-analyze profile data with Claude AI\n";
     echo "  --context=TEXT             Add contextual description for AI analysis\n";
     echo "  --include-vendor=PATTERNS  Include vendor packages in performance analysis\n";
@@ -51,6 +51,9 @@ function showHelp(string $scriptName): void
     echo "  # 5. Test suite performance optimization\n";
     echo "  $scriptName --context=\"PHPUnit test suite performance\" -- php vendor/bin/phpunit\n";
     echo "\n";
+    echo "  # 6. JSON output for tooling (clean parsing with jq)\n";
+    echo "  $scriptName --json -- php script.php | jq '.\"🎯 bottleneck_functions\"'\n";
+    echo "\n";
     echo "PERFORMANCE ANALYSIS CAPABILITIES:\n";
     echo "  🚀 Function Timing: Identify slowest functions with microsecond precision\n";
     echo "  💾 Memory Analysis: Track memory usage patterns and identify leaks\n";
@@ -60,7 +63,8 @@ function showHelp(string $scriptName): void
     echo "\n";
     echo "OUTPUT FORMATS:\n";
     echo "  Default: Human-readable with proper time/memory units and KCachegrind suggestions\n";
-    echo "  --json: AI-optimized JSON with emoji keys and comprehensive performance metrics\n";
+    echo "  --json: Pure JSON output (script stdout/stderr suppressed for clean parsing with jq)\n";
+    echo "          AI-optimized with emoji keys and comprehensive performance metrics\n";
     echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json\n";
     echo "  Benefits: AI can rank bottlenecks, suggest optimizations, compare before/after\n";
     echo "\n";
@@ -158,9 +162,16 @@ if ($xdebugFlag !== '') {
 $allArgs = array_merge($xdebugOptions, [$targetFile], $phpArgs);
 $cmd = 'php ' . implode(' ', array_map('escapeshellarg', $allArgs));
 
-// Execute with passthru to show output
+// Execute command
 $exitCode = 0;
-passthru($cmd, $exitCode);
+if ($jsonOutput) {
+    // JSON mode: suppress script output for clean JSON parsing
+    $cmd .= ' > /dev/null 2>&1';
+    exec($cmd, $output, $exitCode);
+} else {
+    // Human-readable mode: show script output
+    passthru($cmd, $exitCode);
+}
 
 // Generate profile analysis
 try {
