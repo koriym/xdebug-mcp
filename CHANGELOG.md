@@ -45,6 +45,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Standalone Execution Support**: Fixed MCP server to work when invoked from any working directory ([#27](https://github.com/koriym/xdebug-mcp/issues/27))
+  - Replaced relative paths (`./bin/*`) with absolute paths using `dirname(__DIR__)`
+  - Enables Claude Code to invoke xdebug-mcp tools regardless of current working directory
+  - All MCP tools (x-trace, x-debug, x-profile, x-coverage) now work standalone
+
 ## [0.2.1] - 2025-08-31
 
 ### Added
