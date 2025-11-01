@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2025-01-02
 
 ## [0.3.1] - 2025-09-24
 
@@ -20,41 +20,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.0] - Previous Release
 
 ### Added
-- **🤖 AI-Optimized Help Documentation**: Revolutionary comprehensive help system for all xdebug tools
-  - Enhanced `--help` output for `xdebug-coverage`, `xdebug-debug`, `xdebug-profile`, and `xdebug-trace`
-  - AI-first design philosophy with clear value propositions and workflow integration
-  - Practical usage patterns and benefits comparison vs traditional debugging methods
-  - Recommended AI prompts: "Run [tool] --help first to understand this tool"
-  
-### Enhanced  
-- **🎯 xdebug-coverage**: Superior alternative to PHPUnit HTML/XML coverage for AI analysis
-  - Auto-detection of PHPUnit with `--no-coverage` and TestDox format integration
-  - Mixed output streams: PHPUnit results + JSON coverage data in single command
-  - Reduced cognitive load for AI analysis vs browser-based HTML reports
-  - AI-optimized JSON schema with comprehensive coverage metadata
-  
-- **🔍 xdebug-debug**: Non-invasive interactive debugging with comprehensive AI guidance  
-  - Revolutionary approach emphasizing zero source code modification
-  - Conditional breakpoints and step recording capabilities highlighted
-  - JSON output optimization for AI consumption and analysis
-  - Clear workflow: Set breakpoints → Analyze runtime data → Done (no cleanup needed)
-  
-- **📊 xdebug-trace**: Ultimate alternative to static code analysis
-  - Runtime reality vs theoretical analysis emphasis
-  - Complete execution flow with function calls, parameters, and timing data
-  - Universal compatibility with PHPUnit, frameworks, and any PHP script
-  - AI capabilities: identify unexpected paths, performance bottlenecks, parameter issues
-  
-- **⚡ xdebug-profile**: Scientific performance optimization with precision metrics
-  - AI-driven optimization workflow with before/after measurements
-  - Comprehensive metrics: CPU time, memory usage, function calls, I/O operations
-  - Precision bottleneck identification with microsecond timing accuracy
-  - Production-safe profiling without code modification
+- **AI-Optimized Help Documentation**: Comprehensive `--help` output for all xdebug tools with AI-first design philosophy
+
+### Fixed
+- **MCP Tool Security**: Added proper shell escaping with `escapeshellarg()` to prevent command injection
+- **Claude Code Compatibility**: Fixed x-coverage MCP tool not responding in interface
+- **Argument Parsing**: Improved handling of quotes and spaces in MCP tool arguments
+- **Default Behavior**: x-coverage now defaults to `php vendor/bin/phpunit --no-coverage` when no arguments provided
+
+### Enhanced
+- **xdebug-coverage**: AI-optimized JSON output with PHPUnit integration and automatic `--no-coverage` flag
+- **xdebug-debug**: Non-invasive debugging with JSON output for AI consumption
+- **xdebug-trace**: Runtime execution analysis as alternative to static code analysis
+- **xdebug-profile**: Precision performance metrics with microsecond timing
+- **MCP Tools**: All 4 slash commands (x-trace, x-debug, x-profile, x-coverage) now work reliably in Claude Code
+
+### Security
+- Fixed shell injection vulnerability in x-coverage tool
+- Added comprehensive argument validation across all MCP tools
 
 ### Documentation
-- Updated README.md with AI-first design philosophy section
-- Enhanced PACKAGE_USAGE.md with AI-optimized help guidance
-- Added unified recommendation: Always run `--help` first for optimal AI collaboration
+- Updated README.md with AI-first design philosophy
+- Enhanced PACKAGE_USAGE.md with tool usage guidance
+
+## [Unreleased]
+
+### Fixed
+- **Standalone Execution Support**: Fixed MCP server to work when invoked from any working directory ([#27](https://github.com/koriym/xdebug-mcp/issues/27))
+  - Replaced relative paths (`./bin/*`) with absolute paths using `dirname(__DIR__)`
+  - Enables Claude Code to invoke xdebug-mcp tools regardless of current working directory
+  - All MCP tools (x-trace, x-debug, x-profile, x-coverage) now work standalone
 
 ## [0.2.1] - 2025-08-31
 
