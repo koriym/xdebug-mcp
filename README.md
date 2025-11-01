@@ -37,7 +37,7 @@ This MCP server enables AI to debug PHP with superhuman capabilities:
 
 ```bash
 # Install
-composer require koriym/xdebug-mcp
+composer require --dev koriym/xdebug-mcp
 
 # Enable AI debugging
 echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
