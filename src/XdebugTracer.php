@@ -38,6 +38,7 @@ use function passthru;
 use function preg_replace;
 use function round;
 use function shell_exec;
+use function sprintf;
 use function str_contains;
 use function str_ends_with;
 use function strtolower;
@@ -151,7 +152,7 @@ class XdebugTracer
             throw new RuntimeException(sprintf(
                 'Trace file not found. Looked in "%s" with pattern based on trace_output_name "%s".',
                 $xdebugOutputDir,
-                $traceOutputName
+                $traceOutputName,
             ));
         }
 

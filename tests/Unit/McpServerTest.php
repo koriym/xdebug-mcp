@@ -272,7 +272,6 @@ class McpServerTest extends TestCase
         $this->assertEquals('2025-06-18', $response['result']['protocolVersion']);
     }
 
-
     public function testValidatePhpBinaryScript(): void
     {
         // Test valid PHP script - should not throw exception
@@ -362,7 +361,6 @@ class McpServerTest extends TestCase
         $this->assertStringContainsString('tests/fake/loop-counter.php', $response['result']['content'][0]['text']);
     }
 
-
     public function testPromptsGetXTrace(): void
     {
         $request = [
@@ -450,7 +448,6 @@ class McpServerTest extends TestCase
         $this->assertArrayHasKey('messages', $response['result']);
         $this->assertArrayHasKey('debug_data', $response['result']);
     }
-
 
     private function invokePrivateMethod(object $object, string $methodName, array $parameters = []): mixed
     {

@@ -12,6 +12,7 @@ use Throwable;
 use function array_merge;
 use function array_values;
 use function date;
+use function dirname;
 use function error_log;
 use function escapeshellarg;
 use function exec;
