@@ -54,6 +54,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Changed placeholder from `%s` (script name) to `%p` (process ID) in profiler_output_name
   - Output now shows `/tmp/cachegrind.out.12345` instead of `/tmp/cachegrind.out.%s`
   - Makes profile files easy to identify and use with analysis tools
+- **JSON Output Parsing**: Fixed `xdebug-profile --json` to suppress script output for clean JSON ([#28](https://github.com/koriym/xdebug-mcp/issues/28))
+  - Script stdout/stderr now automatically suppressed in JSON mode
+  - Enables clean piping to jq: `... | jq '.["🎯 bottleneck_functions"]'`
+  - Human-readable mode unchanged (still shows script output)
+  - Updated documentation with jq usage examples
 
 ## [0.2.1] - 2025-08-31
 

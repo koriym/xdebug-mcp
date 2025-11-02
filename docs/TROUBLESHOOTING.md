@@ -215,10 +215,23 @@ rm /tmp/trace.*.xt /tmp/cachegrind.out.*
 
 **Issue**: Output not in expected format or missing data
 
+**Common Problem - Script Output Mixing with JSON**:
+```bash
+# ❌ Before v0.x.x: Script output breaks jq parsing
+./bin/xdebug-profile --json -- php script.php | jq '.'
+# parse error: Invalid numeric literal at line 1, column 8
+
+# ✅ Now: Clean JSON output (script stdout/stderr automatically suppressed)
+./bin/xdebug-profile --json -- php script.php | jq '.["🎯 bottleneck_functions"]'
+```
+
 **Format Solutions**:
 ```bash
 # Ensure JSON output for AI processing
 ./bin/xdebug-profile --json -- php script.php
+
+# Pipe to jq for filtering
+./bin/xdebug-profile --json -- php script.php | jq '.["⏱️ execution_time_ms"]'
 
 # Verify schema compliance
 ./bin/validate-profile-json profile-output.json
