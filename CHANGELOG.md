@@ -5,7 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - 2025-01-02
+## [Unreleased]
+
+## [0.3.2] - 2025-11-03
+
+### Fixed
+- **Standalone Execution Support**: Fixed MCP server to work when invoked from any working directory ([#27](https://github.com/koriym/xdebug-mcp/issues/27))
+  - Replaced relative paths (`./bin/*`) with absolute paths using `dirname(__DIR__)`
+  - Enables Claude Code to invoke xdebug-mcp tools regardless of current working directory
+  - All MCP tools (x-trace, x-debug, x-profile, x-coverage) now work standalone
+- **Profiler Filename Placeholder**: Fixed cachegrind output filename to display actual process ID ([#28](https://github.com/koriym/xdebug-mcp/issues/28))
+  - Changed placeholder from `%s` (script name) to `%p` (process ID) in profiler_output_name
+  - Output now shows `/tmp/cachegrind.out.12345` instead of `/tmp/cachegrind.out.%s`
+  - Makes profile files easy to identify and use with analysis tools
+- **JSON Output Parsing**: Fixed `xdebug-profile --json` to suppress script output for clean JSON ([#28](https://github.com/koriym/xdebug-mcp/issues/28))
+  - Script stdout/stderr now automatically suppressed in JSON mode
+  - Enables clean piping to jq: `... | jq '.["🎯 bottleneck_functions"]'`
+  - Human-readable mode unchanged (still shows script output)
+- **Windows Compatibility**: Cross-platform output suppression in JSON mode
+  - Detect platform using `PHP_OS_FAMILY`
+  - Use 'NUL' on Windows, '/dev/null' on Unix for output redirection
+  - Fixes `xdebug-profile --json` to work on Windows systems
 
 ## [0.3.1] - 2025-09-24
 
@@ -17,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove obsolete skipped tests
 - Clean up test suite
 
-## [0.3.0] - Previous Release
+## [0.3.0] - 2025-01-02
 
 ### Added
 - **AI-Optimized Help Documentation**: Comprehensive `--help` output for all xdebug tools with AI-first design philosophy
@@ -42,23 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 - Updated README.md with AI-first design philosophy
 - Enhanced PACKAGE_USAGE.md with tool usage guidance
-
-## [Unreleased]
-
-### Fixed
-- **Standalone Execution Support**: Fixed MCP server to work when invoked from any working directory ([#27](https://github.com/koriym/xdebug-mcp/issues/27))
-  - Replaced relative paths (`./bin/*`) with absolute paths using `dirname(__DIR__)`
-  - Enables Claude Code to invoke xdebug-mcp tools regardless of current working directory
-  - All MCP tools (x-trace, x-debug, x-profile, x-coverage) now work standalone
-- **Profiler Filename Placeholder**: Fixed cachegrind output filename to display actual process ID ([#28](https://github.com/koriym/xdebug-mcp/issues/28))
-  - Changed placeholder from `%s` (script name) to `%p` (process ID) in profiler_output_name
-  - Output now shows `/tmp/cachegrind.out.12345` instead of `/tmp/cachegrind.out.%s`
-  - Makes profile files easy to identify and use with analysis tools
-- **JSON Output Parsing**: Fixed `xdebug-profile --json` to suppress script output for clean JSON ([#28](https://github.com/koriym/xdebug-mcp/issues/28))
-  - Script stdout/stderr now automatically suppressed in JSON mode
-  - Enables clean piping to jq: `... | jq '.["🎯 bottleneck_functions"]'`
-  - Human-readable mode unchanged (still shows script output)
-  - Updated documentation with jq usage examples
 
 ## [0.2.1] - 2025-08-31
 
@@ -181,6 +184,9 @@ This initial release introduces revolutionary AI-powered PHP debugging capabilit
 - Enhance AI analysis capabilities based on real-world usage
 - Build community around modern PHP debugging practices
 
+[0.3.2]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.3.2
+[0.3.1]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.3.1
+[0.3.0]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.3.0
 [0.2.1]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.2.1
 [0.2.0]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.2.0
 [0.1.0]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.1.0
