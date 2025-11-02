@@ -114,7 +114,6 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
         $this->assertTrue(is_executable(__DIR__ . '/../../bin/xdebug-coverage'));
     }
 
-
     public function testXdebugDebugCommandExists(): void
     {
         $this->assertTrue(file_exists(__DIR__ . '/../../bin/xdebug-debug'));

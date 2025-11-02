@@ -33,7 +33,7 @@ class UnifiedAnalyzer
     {
         // Normalize and validate trace files
         $this->traceFiles = $this->normalizeTraceFiles($traceFiles);
-        
+
         // Normalize and validate options with defaults
         $this->options = $this->normalizeOptions($options);
     }
@@ -41,44 +41,44 @@ class UnifiedAnalyzer
     private function normalizeTraceFiles(array $traceFiles): array
     {
         $normalized = [];
-        
+
         foreach ($traceFiles as $file) {
             // Filter non-strings
-            if (!is_string($file)) {
+            if (! is_string($file)) {
                 continue;
             }
-            
+
             // Trim whitespace
             $file = trim($file);
             if ($file === '') {
                 continue;
             }
-            
+
             // Try to resolve to realpath
             $realPath = realpath($file);
             if ($realPath === false) {
                 // If realpath fails, use original path for final readability check
                 $realPath = $file;
             }
-            
+
             // Skip if not readable
-            if (!is_readable($realPath)) {
+            if (! is_readable($realPath)) {
                 continue;
             }
-            
+
             $normalized[] = $realPath;
         }
-        
+
         return $normalized;
     }
 
     private function normalizeOptions(array $options): array
     {
         // Coerce to array and apply defaults
-        if (!is_array($options)) {
+        if (! is_array($options)) {
             $options = [];
         }
-        
+
         return [
             'compare' => $options['compare'] ?? false,
             'summary' => $options['summary'] ?? false,
@@ -91,11 +91,12 @@ class UnifiedAnalyzer
 
     private function safeFilesize(string $path): int
     {
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             return 0;
         }
-        
+
         $size = filesize($path);
+
         return $size === false ? 0 : $size;
     }
 
@@ -110,7 +111,7 @@ class UnifiedAnalyzer
             return $this->generateSummary();
         }
 
-        if ((int)$this->options['bottlenecks'] > 0) {
+        if ((int) $this->options['bottlenecks'] > 0) {
             return $this->extractBottlenecks();
         }
 

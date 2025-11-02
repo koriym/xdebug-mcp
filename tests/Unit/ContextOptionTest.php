@@ -42,7 +42,6 @@ class ContextOptionTest extends TestCase
         $this->assertStringContainsString('"' . $context . '"', $output);
     }
 
-
     public function testXdebugTraceWithContext(): void
     {
         $context = 'Test context for trace';

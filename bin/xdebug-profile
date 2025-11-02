@@ -166,7 +166,9 @@ $cmd = 'php ' . implode(' ', array_map('escapeshellarg', $allArgs));
 $exitCode = 0;
 if ($jsonOutput) {
     // JSON mode: suppress script output for clean JSON parsing
-    $cmd .= ' > /dev/null 2>&1';
+    // Cross-platform null device (Windows: NUL, Unix: /dev/null)
+    $nullDevice = (PHP_OS_FAMILY === 'Windows') ? 'NUL' : '/dev/null';
+    $cmd .= " > {$nullDevice} 2>&1";
     exec($cmd, $output, $exitCode);
 } else {
     // Human-readable mode: show script output
