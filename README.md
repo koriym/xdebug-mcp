@@ -207,8 +207,8 @@ composer global require koriym/xdebug-mcp
 
 ```bash
 # Environment verification
-~/.composer/vendor/bin/check-env         # Verify Xdebug installation
-php -dxdebug.mode=debug --version        # Test Xdebug loading
+composer check-env # Verify Xdebug installation
+php -dzend_extension=xdebug.so -dxdebug.mode=debug --version # Test Xdebug loading
 
 # MCP connection test
 /mcp                                     # Check MCP server status in Claude Code
