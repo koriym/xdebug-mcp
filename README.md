@@ -36,21 +36,32 @@ This MCP server enables AI to debug PHP with superhuman capabilities:
 ## Quick Start
 
 ```bash
-# Install
-composer require --dev koriym/xdebug-mcp
+# Install globally
+composer global require koriym/xdebug-mcp
 
-# Enable AI debugging
-echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
-claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
+# Configure Claude Desktop MCP (~/.claude/claude_desktop_config.json)
+{
+  "mcpServers": {
+    "xdebug": {
+      "command": "php",
+      "args": ["$HOME/.composer/vendor/bin/xdebug-mcp"],
+      "env": {
+        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    }
+  }
+}
+
+# Restart Claude Code to connect MCP server
 
 # 🎯 Start with AI-optimized help (recommended first step)
-./vendor/bin/xdebug-debug --help     # Learn optimal AI debugging workflow
-./vendor/bin/xdebug-coverage --help  # Understand AI coverage analysis
-./vendor/bin/xdebug-trace --help     # Master execution flow tracing
-./vendor/bin/xdebug-profile --help   # Performance optimization guidance
+~/.composer/vendor/bin/xdebug-debug --help     # Learn optimal AI debugging workflow
+~/.composer/vendor/bin/xdebug-coverage --help  # Understand AI coverage analysis
+~/.composer/vendor/bin/xdebug-trace --help     # Master execution flow tracing
+~/.composer/vendor/bin/xdebug-profile --help   # Performance optimization guidance
 
-# Example: Catch null bugs automatically  
-./vendor/bin/xdebug-debug --break='script.php:42:$user==null' --exit-on-break -- php script.php
+# Example: Catch null bugs automatically
+~/.composer/vendor/bin/xdebug-debug --break='script.php:42:$user==null' --exit-on-break -- php script.php
 ```
 
 ## Forward Trace™ vs Traditional Debugging
@@ -67,47 +78,47 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
 
 **1. Conditional Breakpoints** - Stop when problems occur:
 ```bash
-./vendor/bin/xdebug-debug --break='script.php:42:$user==null' --exit-on-break -- php script.php
+~/.composer/vendor/bin/xdebug-debug --break='script.php:42:$user==null' --exit-on-break -- php script.php
 ```
 
 **2. Step Recording** - Watch variable evolution:
 ```bash
-./vendor/bin/xdebug-debug --break='script.php:17' --steps=100 --json -- php script.php
+~/.composer/vendor/bin/xdebug-debug --break='script.php:17' --steps=100 --json -- php script.php
 ```
 
 ## Common Usage Patterns
 
 **Catch Null Values** (The #1 PHP Bug):
 ```bash
-./vendor/bin/xdebug-debug --break='User.php:85:$user==null' --exit-on-break -- php app.php
+~/.composer/vendor/bin/xdebug-debug --break='User.php:85:$user==null' --exit-on-break -- php app.php
 ```
 
 **Performance Analysis**:
 ```bash
-./vendor/bin/xdebug-profile --context="API performance" --json -- php api.php
+~/.composer/vendor/bin/xdebug-profile --context="API performance" --json -- php api.php
 ```
 
 **Variable Evolution**:
 ```bash
-./vendor/bin/xdebug-debug --break='loop.php:45' --steps=100 --json -- php app.php
+~/.composer/vendor/bin/xdebug-debug --break='loop.php:45' --steps=100 --json -- php app.php
 ```
 
 **AI Code Quality Verification**:
 ```bash
 # Tests pass ✅ but is the code actually efficient?
-./vendor/bin/xdebug-trace --context="AI generated algorithm efficiency check" ai_code.php
+~/.composer/vendor/bin/xdebug-trace --context="AI generated algorithm efficiency check" ai_code.php
 ```
 
 **Vendor Filtering** (Focus on specific packages):
 ```bash
 # Include only specific vendor packages in trace
-./vendor/bin/xdebug-trace --include-vendor=bear/resource,ray/di script.php
+~/.composer/vendor/bin/xdebug-trace --include-vendor=bear/resource,ray/di script.php
 
-# Use wildcards for package groups  
-./vendor/bin/xdebug-trace --include-vendor=bear/* script.php
+# Use wildcards for package groups
+~/.composer/vendor/bin/xdebug-trace --include-vendor=bear/* script.php
 
 # Include all vendor code
-./vendor/bin/xdebug-trace --include-vendor=*/* script.php
+~/.composer/vendor/bin/xdebug-trace --include-vendor=*/* script.php
 ```
 
 **AI Slash Commands** (Claude Code):
@@ -124,25 +135,25 @@ All tools now feature comprehensive AI-optimized help documentation. **Always ru
 
 - **`xdebug-debug`** 🔍 - Interactive debugging shell with conditional breakpoints and step recording
   ```bash
-  ./vendor/bin/xdebug-debug --help  # 📖 Essential reading: AI debugging workflow
+  ~/.composer/vendor/bin/xdebug-debug --help  # 📖 Essential reading: AI debugging workflow
   # Interactive REPL debugger with commands: s(tep), o(ver), c(ontinue), p <var>, claude, q(uit)
-  ./vendor/bin/xdebug-debug -- php app.php
+  ~/.composer/vendor/bin/xdebug-debug -- php app.php
   ```
 
 - **`xdebug-coverage`** 🎯 - Superior alternative to PHPUnit HTML/XML coverage for AI analysis
   ```bash
-  ./vendor/bin/xdebug-coverage --help  # 📖 Learn why this beats HTML reports
-  ./vendor/bin/xdebug-coverage         # Auto-detects PHPUnit, outputs TestDox + JSON
+  ~/.composer/vendor/bin/xdebug-coverage --help  # 📖 Learn why this beats HTML reports
+  ~/.composer/vendor/bin/xdebug-coverage         # Auto-detects PHPUnit, outputs TestDox + JSON
   ```
 
-- **`xdebug-trace`** 📊 - Ultimate alternative to static code analysis  
+- **`xdebug-trace`** 📊 - Ultimate alternative to static code analysis
   ```bash
-  ./vendor/bin/xdebug-trace --help     # 📖 Runtime reality vs theoretical analysis
+  ~/.composer/vendor/bin/xdebug-trace --help     # 📖 Runtime reality vs theoretical analysis
   ```
 
 - **`xdebug-profile`** ⚡ - Scientific performance optimization with precision metrics
   ```bash
-  ./vendor/bin/xdebug-profile --help   # 📖 AI-driven optimization workflow
+  ~/.composer/vendor/bin/xdebug-profile --help   # 📖 AI-driven optimization workflow
   ```
 
 - **`xdebug-phpunit`** - PHPUnit integration with Xdebug profiling and coverage
@@ -172,21 +183,35 @@ All tools now feature comprehensive AI-optimized help documentation. **Always ru
 ## Installation
 
 ```bash
-# Install
-composer require koriym/xdebug-mcp
+# Install globally
+composer global require koriym/xdebug-mcp
 
-# Enable AI debugging
-echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
-claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"
+# Configure Claude Desktop MCP
+# Edit ~/.claude/claude_desktop_config.json:
+{
+  "mcpServers": {
+    "xdebug": {
+      "command": "php",
+      "args": ["$HOME/.composer/vendor/bin/xdebug-mcp"],
+      "env": {
+        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    }
+  }
+}
+
+# Restart Claude Code to activate MCP integration
 ```
 
 ## Troubleshooting & Diagnostics
 
 ```bash
 # Environment verification
-./vendor/bin/check-env                    # Verify Xdebug installation
+~/.composer/vendor/bin/check-env         # Verify Xdebug installation
 php -dxdebug.mode=debug --version        # Test Xdebug loading
-claude mcp list                          # Verify MCP integration
+
+# MCP connection test
+/mcp                                     # Check MCP server status in Claude Code
 ```
 
 ## Resources

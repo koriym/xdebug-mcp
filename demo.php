@@ -19,3 +19,4 @@ echo "\nFinal result: $sum\n";
 echo "Average: " . ($sum / count($numbers)) . "\n\n";
 
 echo "=== Demo completed successfully ===\n";
+
