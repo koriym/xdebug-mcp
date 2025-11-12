@@ -2,10 +2,9 @@
   "mcpServers": {
     "xdebug": {
       "command": "php",
-      "args": ["/absolute/path/to/xdebug-mcp/bin/xdebug-mcp"],
+      "args": ["$HOME/.composer/vendor/bin/xdebug-mcp"],
       "env": {
-        "PATH": "/usr/local/bin:/usr/bin:/bin",
-        "MCP_DEBUG": "0"
+        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
       }
     }
   }
