@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  php:
+    build: .
+    container_name: xdebug-mcp-test
+    volumes:
+      - ./:/app
+      - /tmp:/tmp  # Share /tmp for trace/profile files
+    environment:
+      XDEBUG_MODE: ${XDEBUG_MODE:-debug}
+      XDEBUG_SESSION: ${XDEBUG_SESSION:-PHPSTORM}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    stdin_open: true
+    tty: true

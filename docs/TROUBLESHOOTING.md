@@ -87,6 +87,27 @@ pkill -f "xdebug"
 pkill -f "9004"
 ```
 
+### 4. Docker Integration
+
+**Issue**: Using xdebug-mcp tools with Docker containers
+
+**Solution**: See the comprehensive [Docker Integration Guide](DOCKER_INTEGRATION.md) for:
+- Docker and container setup
+- Using xdebug-mcp with docker compose
+- FrankenPHP and Symfony examples
+- Troubleshooting Docker-specific issues
+
+**Quick Reference**:
+```bash
+# Test environment
+cd tests/docker
+docker compose run --rm php php /app/test_script.php
+
+# With Xdebug trace mode
+docker compose run --rm -e XDEBUG_MODE=trace php \
+  php -dxdebug.mode=trace -dxdebug.start_with_request=yes /app/script.php
+```
+
 ## 🚀 Forward Trace Issues
 
 ### 1. Conditional Breakpoints Not Triggering

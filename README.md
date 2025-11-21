@@ -216,11 +216,12 @@ php -dzend_extension=xdebug.so -dxdebug.mode=debug --version # Test Xdebug loadi
 
 ## Resources
 
-📋 **[TROUBLESHOOTING.md](https://koriym.github.io/xdebug-mcp/TROUBLESHOOTING)** - Setup and common issues  
-🎯 **[Forward Trace Guide](https://koriym.github.io/xdebug-mcp/debug-guidelines/)** - AI debugging methodology  
-📖 **[MOTIVATION.md](MOTIVATION.md)** - Why we built this  
-🎬 **[Interactive Presentation](https://koriym.github.io/xdebug-mcp/slide/)** - See the paradigm shift  
-📚 **[Xdebug Documentation](https://xdebug.org/docs/)** - Official Xdebug docs  
+**[TROUBLESHOOTING.md](https://koriym.github.io/xdebug-mcp/TROUBLESHOOTING)** - Setup and common issues
+**[DOCKER_INTEGRATION.md](docs/DOCKER_INTEGRATION.md)** - Docker and container integration guide
+**[Forward Trace Guide](https://koriym.github.io/xdebug-mcp/debug-guidelines/)** - AI debugging methodology
+**[MOTIVATION.md](MOTIVATION.md)** - Why we built this
+**[Interactive Presentation](https://koriym.github.io/xdebug-mcp/slide/)** - See the paradigm shift
+**[Xdebug Documentation](https://xdebug.org/docs/)** - Official Xdebug docs  
 
 ---
 
