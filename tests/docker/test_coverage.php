@@ -29,8 +29,9 @@ class Calculator
     public function divide(int $a, int $b): int
     {
         if ($b === 0) {
-            throw new \InvalidArgumentException('Division by zero');
+            throw new InvalidArgumentException('Division by zero');
         }
+
         return intdiv($a, $b);
     }
 
@@ -54,10 +55,10 @@ class Calculator
 $calculator = new Calculator();
 
 echo "Testing Calculator class:\n";
-echo "10 + 5 = " . $calculator->add(10, 5) . "\n";
-echo "10 - 5 = " . $calculator->subtract(10, 5) . "\n";
-echo "10 * 5 = " . $calculator->multiply(10, 5) . "\n";
-echo "10 / 5 = " . $calculator->divide(10, 5) . "\n";
+echo '10 + 5 = ' . $calculator->add(10, 5) . "\n";
+echo '10 - 5 = ' . $calculator->subtract(10, 5) . "\n";
+echo '10 * 5 = ' . $calculator->multiply(10, 5) . "\n";
+echo '10 / 5 = ' . $calculator->divide(10, 5) . "\n";
 
 echo "\nPrime number tests:\n";
 for ($i = 1; $i <= 10; $i++) {

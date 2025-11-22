@@ -16,16 +16,18 @@ class Request
     public function __construct(
         public readonly string $method,
         public readonly string $path,
-        public readonly array $parameters = []
-    ) {}
+        public readonly array $parameters = [],
+    ) {
+    }
 }
 
 class Response
 {
     public function __construct(
         public readonly mixed $content,
-        public readonly int $statusCode = 200
-    ) {}
+        public readonly int $statusCode = 200,
+    ) {
+    }
 
     public function send(): void
     {
@@ -47,13 +49,14 @@ class Router
         ];
     }
 
-    public function match(Request $request): ?callable
+    public function match(Request $request): callable|null
     {
         foreach ($this->routes as $route) {
             if ($route['path'] === $request->path && $route['method'] === $request->method) {
                 return $route['handler'];
             }
         }
+
         return null;
     }
 }
@@ -70,10 +73,11 @@ class UserService
     {
         // Simulate database query delay
         usleep(10000); // 10ms
+
         return $this->users;
     }
 
-    public function findById(int $id): ?array
+    public function findById(int $id): array|null
     {
         usleep(5000); // 5ms
         foreach ($this->users as $user) {
@@ -81,6 +85,7 @@ class UserService
                 return $user;
             }
         }
+
         return null;
     }
 
@@ -93,12 +98,14 @@ class UserService
 class UserController
 {
     public function __construct(
-        private readonly UserService $userService
-    ) {}
+        private readonly UserService $userService,
+    ) {
+    }
 
     public function listUsers(Request $request): Response
     {
         $users = $this->userService->findAll();
+
         return new Response([
             'success' => true,
             'data' => $users,
@@ -108,7 +115,7 @@ class UserController
 
     public function getUser(Request $request): Response
     {
-        $userId = (int)($request->parameters['id'] ?? 0);
+        $userId = (int) ($request->parameters['id'] ?? 0);
 
         if ($userId <= 0) {
             return new Response([
@@ -153,7 +160,7 @@ $requests = [
 ];
 
 foreach ($requests as $i => $request) {
-    echo "=== Request " . ($i + 1) . ": {$request->method} {$request->path} ===\n";
+    echo '=== Request ' . ($i + 1) . ": {$request->method} {$request->path} ===\n";
 
     $handler = $router->match($request);
 

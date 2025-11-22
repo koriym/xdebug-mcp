@@ -3,91 +3,35 @@
 
 declare(strict_types=1);
 
-// Load autoloader and get project root
-$projectRoot = require __DIR__ . '/autoload.php';
+// Load autoloader
+require __DIR__ . '/autoload.php';
 
+use Koriym\XdebugMcp\XdebugRunner;
 use Koriym\XdebugMcp\XdebugTracer;
 
 // Parse command line arguments
 function showHelp(string $scriptName): void {
-    echo "Usage: $scriptName [--json] [--claude] [--context=TEXT] -- php script.php [args...]\n";
+    echo "Usage: $scriptName [--json] [--claude] [--context=TEXT] [--include-vendor=PATTERNS] -- command\n";
     echo "\n";
-    echo "📊 AI-Optimized PHP Execution Flow Tracer\n";
+    echo "AI-Optimized PHP Execution Flow Tracer with Docker Support\n";
     echo "\n";
-    echo "PURPOSE:\n";
-    echo "  The ultimate alternative to static code analysis - understand what your PHP code\n";
-    echo "  ACTUALLY does at runtime. Captures complete execution flow, function calls,\n";
-    echo "  parameters, and timing data for AI analysis without any code modification.\n";
+    echo "EXAMPLES:\n";
+    echo "  # Local PHP execution\n";
+    echo "  $scriptName --context=\"Debug login\" -- php login.php\n";
     echo "\n";
-    echo "KEY BENEFITS FOR AI ANALYSIS:\n";
-    echo "  ✅ Runtime reality: See actual execution paths vs theoretical code flow\n";
-    echo "  ✅ Function call hierarchy: Complete call stack with parameter values\n";
-    echo "  ✅ Performance insights: Identify bottlenecks through execution timing\n";
-    echo "  ✅ Bug detection: Spot infinite loops, unexpected paths, wrong parameters\n";
-    echo "  ✅ Non-invasive: Zero source code modification - trace any PHP script\n";
-    echo "  ✅ Universal compatibility: Works with PHPUnit, frameworks, any PHP code\n";
+    echo "  # Docker execution\n";
+    echo "  $scriptName --context=\"Docker test\" -- docker compose run --rm php php /app/script.php\n";
     echo "\n";
-    echo "CORE OPTIONS:\n";
-    echo "  --json                      Output structured JSON for AI consumption\n";
-    echo "  --claude                    Auto-analyze trace data with Claude AI\n";
-    echo "  --context=TEXT             Add contextual description for AI analysis\n";
-    echo "  --include-vendor=PATTERNS  Include vendor packages in trace analysis\n";
-    echo "  --help, -h                 Show this comprehensive help\n";
-    echo "\n";
-    echo "COMMON AI ANALYSIS WORKFLOWS:\n";
-    echo "\n";
-    echo "  # 1. Bug investigation (most common use case)\n";
-    echo "  $scriptName --context=\"Debugging login failure - user gets 403 error\" -- php login.php\n";
-    echo "\n";
-    echo "  # 2. Performance bottleneck identification\n";
-    echo "  $scriptName --context=\"Performance analysis of data processing loop\" -- php process_data.php\n";
-    echo "\n";
-    echo "  # 3. Understanding complex code behavior\n";
-    echo "  $scriptName --context=\"Learning how authentication middleware works\" -- php auth_test.php\n";
-    echo "\n";
-    echo "  # 4. PHPUnit test execution analysis\n";
-    echo "  $scriptName --context=\"Analyzing why UserTest::testCreate fails\" -- php vendor/bin/phpunit UserTest.php\n";
-    echo "\n";
-    echo "  # 5. Framework integration debugging\n";
-    echo "  $scriptName --include-vendor=\"bear/*\" --context=\"BEAR framework DI issue\" -- php app.php\n";
-    echo "\n";
-    echo "TRACE DATA ANALYSIS CAPABILITIES:\n";
-    echo "  🔍 Function Call Patterns: Identify unexpected calls or missing calls\n";
-    echo "  ⚡ Performance Hotspots: Find functions consuming excessive time\n";
-    echo "  🔄 Recursion Analysis: Detect infinite loops or excessive recursion depth\n";
-    echo "  📊 Parameter Tracking: See actual values passed between functions\n";
-    echo "  🏗️  Architecture Understanding: Visualize how components interact at runtime\n";
-    echo "\n";
-    echo "OUTPUT FORMATS:\n";
-    echo "  Default: Human-readable execution statistics and summary\n";
-    echo "  --json: Structured JSON with trace file path and metadata\n";
-    echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-trace.json\n";
-    echo "  Benefits: AI can analyze exact function calls, parameters, and timing data\n";
-    echo "\n";
-    echo "📋 JSON SCHEMA RESOURCES (Essential for AI):\n";
-    echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xdebug-trace.json\n";
-    echo "  Xdebug Trace Docs: https://xdebug.org/docs/trace\n";
-    echo "  Trace Format Guide: https://xdebug.org/docs/trace#trace_format\n";
-    echo "  AI Specialization: N+1 detection, recursion analysis, database performance monitoring\n";
-    echo "  Reading Strategy: Schema includes total_lines for optimal analysis approach\n";
-    echo "\n";
-    echo "AI WORKFLOW INTEGRATION:\n";
-    echo "  1. Execute trace with contextual description\n";
-    echo "  2. AI analyzes execution flow vs expected behavior\n";
-    echo "  3. AI identifies anomalies: wrong parameters, missing calls, performance issues\n";
-    echo "  4. AI suggests specific fixes with line numbers and function names\n";
-    echo "  5. Validate fixes by re-running trace and comparing results\n";
-    echo "\n";
-    echo "RECOMMENDED AI PROMPT:\n";
-    echo "  'Run xdebug-trace --help first to understand this tool, then trace my PHP issue'\n";
-    echo "\n";
-    echo "VS. STATIC CODE ANALYSIS:\n";
-    echo "  ❌ Static: Guess what code might do based on reading\n";
-    echo "  ✅ This tool: Know exactly what code ACTUALLY does at runtime\n";
+    echo "OPTIONS:\n";
+    echo "  --json                      Output structured JSON\n";
+    echo "  --claude                    Auto-analyze with Claude AI\n";
+    echo "  --context=TEXT             Add contextual description\n";
+    echo "  --include-vendor=PATTERNS  Include vendor packages\n";
+    echo "  --help, -h                 Show this help\n";
     echo "\n";
 }
 
-// Check for help flag (validation is handled by autoload.php)
+// Check for help flag
 if (isset($argv[1]) && ($argv[1] === '--help' || $argv[1] === '-h')) {
     showHelp($argv[0]);
     exit(0);
@@ -97,43 +41,43 @@ if (isset($argv[1]) && ($argv[1] === '--help' || $argv[1] === '-h')) {
 $jsonOutput = in_array('--json', $argv);
 $claudeAnalysis = in_array('--claude', $argv);
 $context = null;
+$includeVendor = null;
 
 // Parse --context= flag
 foreach ($argv as $arg) {
     if (str_starts_with($arg, '--context=')) {
         $context = substr($arg, 10);
-        break;
+    }
+    if (str_starts_with($arg, '--include-vendor=')) {
+        $includeVendor = substr($arg, 17);
     }
 }
 
-// Remove flags and find target file
-$flagsToRemove = ['--json', '--claude', '--'];
-if ($context !== null) {
-    $flagsToRemove[] = '--context=' . $context;
-}
-$args = array_values(array_diff($argv, $flagsToRemove));
-array_shift($args); // remove script name
-
-// Skip 'php' if present
-if (isset($args[0]) && $args[0] === 'php') {
-    array_shift($args);
-}
-
-$targetFile = $args[0] ?? '';
-$phpArgs = array_slice($args, 1);
-
-// Check target file exists
-if (!file_exists($targetFile)) {
-    fwrite(STDERR, "❌ Error: File '$targetFile' not found\n");
-    exit(1);
-}
-
-// Execute trace and generate output
+// Execute trace
 try {
+    $runner = new XdebugRunner($argv);
+    $runner->setMode('trace');
+    $runner->setContext($context);
+    $runner->setIncludeVendor($includeVendor);
+
+    $exitCode = $runner->run();
+
+    if ($exitCode !== 0) {
+        exit($exitCode);
+    }
+
+    // Get the generated trace file
+    $traceFile = $runner->getLatestTraceFile();
+
+    if ($traceFile === null) {
+        fwrite(STDERR, "Error: Trace file not found\n");
+        exit(1);
+    }
+
+    // Parse trace file for statistics
     $tracer = new XdebugTracer();
-    $traceFile = $tracer->executeTrace($targetFile, $phpArgs);
     $stats = $tracer->parseTraceFile($traceFile);
-    
+
     if ($jsonOutput) {
         // JSON output for MCP/AI consumption
         $result = [
@@ -144,37 +88,37 @@ try {
             'database_queries' => $stats['db_operations'],
             'specification' => 'https://xdebug.org/docs/trace'
         ];
-        
+
         if ($context !== null) {
             $result['analysis_context'] = $context;
         }
-        
+
         echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
     } else {
-        // Simple trace metadata for CLI (consistent with profile style)
-        echo "✅ Trace complete: $traceFile\n";
+        // Simple trace metadata for CLI
+        echo "Trace complete: $traceFile\n";
         if ($context !== null) {
-            echo "🎯 Context: $context\n";
+            echo "Context: $context\n";
         }
-        echo "📊 {$stats['total_lines']} lines generated\n";
-        
+        echo "{$stats['total_lines']} lines generated\n";
+
         $uniqueFunctionCount = count($stats['unique_functions']);
-        echo "📚 $uniqueFunctionCount unique functions\n";
-        echo "🔄 {$stats['max_depth']} max call depth\n";
-        
-        // Only show database queries if there are any
+        echo "$uniqueFunctionCount unique functions\n";
+        echo "{$stats['max_depth']} max call depth\n";
+
         if ($stats['db_operations'] > 0) {
-            echo "🗃️ {$stats['db_operations']} database queries\n";
+            echo "{$stats['db_operations']} database queries\n";
         }
-        
-        echo "\n💡 claude \"Analyze $traceFile\"\n";
+
+        echo "\nclaude \"Analyze $traceFile\"\n";
     }
-    
+
     if ($claudeAnalysis) {
         $tracer->analyzeWithClaude($traceFile);
     }
+
 } catch (Exception $e) {
-    fwrite(STDERR, "❌ Error: " . $e->getMessage() . "\n");
+    fwrite(STDERR, "Error: " . $e->getMessage() . "\n");
     exit(1);
 }
 

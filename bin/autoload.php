@@ -53,14 +53,8 @@ return (function (){
             exit(1);
         }
 
-        if (!isset($GLOBALS['argv'][$dashDashPos + 1]) || $GLOBALS['argv'][$dashDashPos + 1] !== 'php') {
-            fwrite(STDERR, "❌ Error: Argument after '--' must be 'php'\n");
-            fwrite(STDERR, "Run '{$scriptName} --help' for usage information.\n");
-            exit(1);
-        }
-
-        if (!isset($GLOBALS['argv'][$dashDashPos + 2])) {
-            fwrite(STDERR, "❌ Error: PHP script file is required\n");
+        if (!isset($GLOBALS['argv'][$dashDashPos + 1])) {
+            fwrite(STDERR, "❌ Error: Command is required after '--'\n");
             fwrite(STDERR, "Run '{$scriptName} --help' for usage information.\n");
             exit(1);
         }
