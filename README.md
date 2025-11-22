@@ -127,6 +127,27 @@ composer global require koriym/xdebug-mcp
 /x-trace script="auth.php" context="Login flow analysis" include_vendor="bear/*"
 ```
 
+## Docker/Container Support
+
+Core debugging tools (trace, profile, debug) support Docker, Podman, and Kubectl:
+
+```bash
+# Forward Trace with Docker (core feature)
+~/.composer/vendor/bin/xdebug-debug --steps=100 --exit-on-break -- \
+  docker compose run --rm php php /app/script.php
+
+# Profile performance in containers
+~/.composer/vendor/bin/xdebug-profile --context="Docker performance" -- \
+  docker compose run --rm php php /app/script.php
+
+# Trace execution flow
+~/.composer/vendor/bin/xdebug-trace --context="Docker trace" -- \
+  docker compose run --rm php php /app/script.php
+```
+
+**Note:** `xdebug-coverage` does not currently support Docker commands. Use native PHP or in-container execution for coverage.
+
+See [Docker Integration Guide](docs/DOCKER_INTEGRATION.md) for detailed examples.
 
 ## Available Tools
 

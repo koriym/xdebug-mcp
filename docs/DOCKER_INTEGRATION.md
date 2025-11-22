@@ -69,19 +69,49 @@ docker compose ps
 
 ### Step 3: Test xdebug-mcp Tools
 
+All core xdebug-mcp tools support Docker execution through unified XdebugRunner:
+
 ```bash
-# Test 1: Trace execution
+# Test 1: Trace execution (execution flow analysis)
 ../../bin/xdebug-trace --context="Docker integration test - trace" -- \
-  docker compose exec -T php php /app/test_script.php
+  docker compose run --rm php php /app/test_script.php
 
-# Test 2: Profile performance
+# Test 2: Profile performance (bottleneck identification)
 ../../bin/xdebug-profile --context="Docker integration test - profile" -- \
-  docker compose exec -T php php /app/test_script.php
+  docker compose run --rm php php /app/test_script.php
 
-# Test 3: Code coverage
-../../bin/xdebug-coverage -- \
-  docker compose exec -T php php /app/test_script.php
+# Test 3: Forward Trace debugging (step-by-step variable tracking)
+../../bin/xdebug-debug --context="Docker debug test" --exit-on-break --steps=100 -- \
+  docker compose run --rm php php /app/test_script.php
+
+# Note: xdebug-coverage has different Docker requirements (see below)
 ```
+
+**Tools with Full Docker Support:**
+- `xdebug-trace` - Execution flow tracing ✅
+- `xdebug-profile` - Performance profiling ✅
+- `xdebug-debug` - Forward Trace step debugging ✅
+
+**Supported Docker Commands:**
+- `docker compose run --rm php php script.php` (recommended)
+- `docker compose exec -T php php script.php` (for running containers)
+- `docker run --rm php:8.4-cli php script.php`
+- `podman run ...` (Podman support)
+- `kubectl exec ...` (Kubernetes support)
+
+**xdebug-coverage Docker Limitations:**
+
+The `xdebug-coverage` tool uses `auto_prepend_file` which requires special Docker configuration. For Docker-based code coverage, we recommend:
+
+1. **Option 1: Run PHPUnit inside container with Xdebug enabled**
+   ```bash
+   docker compose exec -T php php -dxdebug.mode=coverage vendor/bin/phpunit --coverage-text
+   ```
+
+2. **Option 2: Use xdebug-coverage with local PHP** (if source code is mounted)
+   ```bash
+   ../../bin/xdebug-coverage -- php /path/to/local/script.php
+   ```
 
 **Expected Output:**
 
@@ -168,13 +198,27 @@ services:
 ~/.composer/vendor/bin/xdebug-profile \
   --context="Symfony console command performance" \
   --json -- \
-  docker compose exec -T php php bin/console cache:clear
+  docker compose run --rm php php bin/console cache:clear
 
 # Trace API endpoint simulation
 ~/.composer/vendor/bin/xdebug-trace \
   --context="Symfony API request handling" \
   -- \
-  docker compose exec -T php php bin/console app:simulate-request /api/users
+  docker compose run --rm php php bin/console app:simulate-request /api/users
+
+# Forward Trace debugging - catch null bugs automatically
+~/.composer/vendor/bin/xdebug-debug \
+  --context="Debug null user bug" \
+  --break="src/Controller/UserController.php:42:\$user==null" \
+  --exit-on-break -- \
+  docker compose run --rm php php bin/console app:test-user
+
+# Record variable evolution (100 steps)
+~/.composer/vendor/bin/xdebug-debug \
+  --context="Track user session state" \
+  --steps=100 \
+  --json -- \
+  docker compose run --rm php php bin/console app:session-test
 
 # Coverage for PHPUnit tests
 ~/.composer/vendor/bin/xdebug-coverage -- \
