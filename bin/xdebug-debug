@@ -53,7 +53,7 @@ function showHelp(): void
     echo "\n";
     echo "COMMON AI DEBUGGING WORKFLOWS:\n";
     echo "\n";
-    echo "  # 1. Quick bug investigation (most common)\n";
+    echo "  # 1. Quick bug investigation (local PHP)\n";
     echo "  xdebug-debug --context=\"Debug login failure\" --exit-on-break -- php login.php\n";
     echo "\n";
     echo "  # 2. Variable state tracking\n";
@@ -62,7 +62,10 @@ function showHelp(): void
     echo "  # 3. Conditional debugging\n";
     echo "  xdebug-debug --break=\"user.php:15:\$id==null\" --context=\"Debug null ID bug\" -- php user.php\n";
     echo "\n";
-    echo "  # 4. Multi-point analysis\n";
+    echo "  # 4. Docker debugging (Forward Trace with containers)\n";
+    echo "  xdebug-debug --context=\"Docker test\" --exit-on-break -- docker compose run --rm php php /app/script.php\n";
+    echo "\n";
+    echo "  # 5. Multi-point analysis\n";
     echo "  xdebug-debug --break=\"auth.php:20,user.php:45\" --context=\"Debug auth flow\" -- php main.php\n";
     echo "\n";
     echo "OUTPUT FORMATS:\n";
