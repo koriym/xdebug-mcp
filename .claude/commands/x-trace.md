@@ -12,8 +12,10 @@ Execute the specified PHP script with Xdebug tracing enabled and analyze the exe
 Run the following command to trace PHP execution:
 
 ```bash
-./bin/xdebug-trace "$ARGUMENTS"
+./bin/xdebug-trace --context="<brief description of what you're tracing>" "$ARGUMENTS"
 ```
+
+The `--context` option creates self-explanatory debugging data for AI analysis.
 
 After execution, analyze the trace output to identify:
 - Function call hierarchy and execution flow

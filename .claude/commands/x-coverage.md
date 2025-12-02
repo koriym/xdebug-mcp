@@ -12,7 +12,7 @@ Collect code coverage data for the specified PHP script or test suite.
 Run the following command to collect code coverage:
 
 ```bash
-./bin/xdebug-coverage -- $ARGUMENTS
+./bin/xdebug-coverage -- "$ARGUMENTS"
 ```
 
 After execution, analyze the coverage data to identify:
