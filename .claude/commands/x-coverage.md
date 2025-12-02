@@ -32,4 +32,4 @@ The output is in JSON format with the schema:
 - `1` = line executed
 - `-1` = line not executed (executable but not covered)
 
-If no arguments provided, ask the user which PHP script or test to analyze.
+If no arguments are provided, ask the user which PHP script or test to analyze.

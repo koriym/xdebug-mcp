@@ -25,4 +25,4 @@ After execution, analyze the profile data to identify:
 
 Provide specific recommendations for performance improvements based on the profiling results.
 
-If no arguments provided, ask the user which PHP script to profile.
+If no arguments are provided, ask the user which PHP script to profile.
