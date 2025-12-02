@@ -30,4 +30,4 @@ This starts a debugging session where you can:
 ./bin/xdebug-debug --exit-on-break "$ARGUMENTS"
 ```
 
-If no arguments provided, ask the user which PHP script to debug.
+If no arguments are provided, ask the user which PHP script to debug.

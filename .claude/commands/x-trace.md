@@ -23,4 +23,4 @@ After execution, analyze the trace output to identify:
 - Memory usage patterns
 - Execution timing for performance insights
 
-If no arguments provided, ask the user which PHP script to trace.
+If no arguments are provided, ask the user which PHP script to trace.
