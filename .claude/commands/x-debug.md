@@ -12,8 +12,10 @@ Start an interactive debugging session for the specified PHP script.
 Run the following command to start interactive debugging:
 
 ```bash
-./bin/xdebug-debug "$ARGUMENTS"
+./bin/xdebug-debug --context="<brief description of what you're debugging>" "$ARGUMENTS"
 ```
+
+The `--context` option creates self-explanatory debugging data for AI analysis.
 
 This starts a debugging session where you can:
 - Set breakpoints with `xdebug_set_breakpoint`

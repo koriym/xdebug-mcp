@@ -12,8 +12,10 @@ Profile the specified PHP script to identify performance bottlenecks.
 Run the following command to profile PHP execution:
 
 ```bash
-./bin/xdebug-profile "$ARGUMENTS"
+./bin/xdebug-profile --context="<brief description of what you're profiling>" "$ARGUMENTS"
 ```
+
+The `--context` option creates self-explanatory debugging data for AI analysis.
 
 After execution, analyze the profile data to identify:
 - Functions consuming the most execution time
