@@ -102,7 +102,7 @@ function parseBreakpoint(string $breakSpec): ?array
 
         if ($parseOptions && str_starts_with($arg, '--depth=')) {
             $depth = (int)substr($arg, 8);
-            if ($depth <= 0) $depth = 10;
+            if ($depth <= 0 || $depth > 1000) $depth = 10;
             continue;
         }
 
