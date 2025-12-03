@@ -1,0 +1,164 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Koriym\XdebugMcp\DebugServer;
+use Koriym\XdebugMcp\Constants;
+
+/**
+ * Display help information
+ */
+function showHelp(): void
+{
+    echo "Usage: xdebug-backtrace [options] [--] command\n";
+    echo "\n";
+    echo "Get stack trace (backtrace) at breakpoint or first executable line\n";
+    echo "\n";
+    echo "OPTIONS:\n";
+    echo "  --break=SPEC      Breakpoint (file.php:line or file.php:line:condition)\n";
+    echo "  --depth=N         Maximum stack depth to return (default: 10)\n";
+    echo "  --context=TEXT    Context description for AI analysis\n";
+    echo "  --json            Output in JSON format (default)\n";
+    echo "  --help, -h        Show this help\n";
+    echo "\n";
+    echo "EXAMPLES:\n";
+    echo "  xdebug-backtrace -- php script.php                    # Get stack at first line\n";
+    echo "  xdebug-backtrace --break=app.php:50 -- php app.php    # Get stack at breakpoint\n";
+    echo "  xdebug-backtrace --depth=20 -- php main.php           # Deep stack trace\n";
+    echo "\n";
+    echo "USE CASES:\n";
+    echo "  - Understand call hierarchy at specific point\n";
+    echo "  - Debug 'how did we get here?' questions\n";
+    echo "  - Analyze function call depth and recursion\n";
+    echo "\n";
+    exit(0);
+}
+
+/**
+ * Parse breakpoint specification
+ */
+function parseBreakpoint(string $breakSpec): ?array
+{
+    $spec = trim($breakSpec);
+    if (empty($spec)) {
+        return null;
+    }
+
+    if (!preg_match('/^(.*):(\d+)(?::(.*))?$/', $spec, $m)) {
+        throw new RuntimeException("Invalid breakpoint format: $spec\n" .
+            "Use: file.php:line or file.php:line:condition");
+    }
+    $file = $m[1];
+    $line = (int) $m[2];
+    $condition = $m[3] ?? null;
+
+    // Try to resolve file path
+    $resolvedFile = null;
+    if (file_exists($file)) {
+        $resolvedFile = $file;
+    } elseif (!str_starts_with($file, '/') && file_exists(getcwd() . '/' . $file)) {
+        $resolvedFile = getcwd() . '/' . $file;
+    }
+
+    if (!$resolvedFile) {
+        throw new RuntimeException("Breakpoint file not found: $file");
+    }
+
+    return [
+        'file' => $resolvedFile,
+        'line' => $line,
+        'condition' => $condition
+    ];
+}
+
+(function () use ($argv){
+    require_once __DIR__ . '/autoload.php';
+
+    if (count($argv) === 1) {
+        showHelp();
+    }
+
+    // Parse command line arguments
+    $breakpoint = null;
+    $depth = 10;
+    $context = '';
+    $command = [];
+    $parseOptions = true;
+    $jsonOutput = true;
+
+    for ($i = 1; $i < count($argv); $i++) {
+        $arg = $argv[$i];
+
+        if ($parseOptions && $arg === '--') {
+            $parseOptions = false;
+            continue;
+        }
+
+        if ($parseOptions && str_starts_with($arg, '--break=')) {
+            $breakpoint = parseBreakpoint(substr($arg, 8));
+            continue;
+        }
+
+        if ($parseOptions && str_starts_with($arg, '--depth=')) {
+            $depth = (int)substr($arg, 8);
+            if ($depth <= 0) $depth = 10;
+            continue;
+        }
+
+        if ($parseOptions && str_starts_with($arg, '--context=')) {
+            $context = substr($arg, 10);
+            continue;
+        }
+
+        if ($parseOptions && $arg === '--json') {
+            $jsonOutput = true;
+            continue;
+        }
+
+        if ($parseOptions && ($arg === '--help' || $arg === '-h')) {
+            showHelp();
+        }
+
+        if (!$parseOptions || !str_starts_with($arg, '--')) {
+            $command[] = $arg;
+        }
+    }
+
+    if (empty($command)) {
+        showHelp();
+    }
+
+    // Determine target script
+    if ($command[0] === 'php' && isset($command[1])) {
+        $targetScript = $command[1];
+    } elseif (file_exists($command[0])) {
+        $targetScript = $command[0];
+    } else {
+        throw new RuntimeException("Could not determine target script from command: " . implode(' ', $command));
+    }
+
+    if (!file_exists($targetScript)) {
+        throw new RuntimeException("Target script not found: $targetScript");
+    }
+
+    // Build options for DebugServer
+    $breakpoints = [];
+    if ($breakpoint) {
+        $breakpoints[] = $breakpoint;
+    }
+
+    $options = [
+        'breakpoints' => $breakpoints,
+        'command' => $command,
+        'traceOnly' => true,
+        'jsonOutput' => $jsonOutput,
+        'context' => $context,
+        'maxSteps' => 1,  // Only need one step to get backtrace
+        'backtraceMode' => true,
+        'backtraceDepth' => $depth
+    ];
+
+    $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, null, $options, $jsonOutput);
+    $server();
+})();
