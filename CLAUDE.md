@@ -379,7 +379,7 @@ This project prioritizes **execution-time trace analysis** over traditional code
 
 **IMPORTANT: When asked to analyze, debug, or understand any PHP file, ALWAYS use appropriate Xdebug tools automatically unless explicitly told otherwise.**
 
-**CRITICAL: AIは常にMCPツールを優先して使用すること。CLIを直接実行するのではなく、MCPツールを使用してください。**
+**CRITICAL: AI should always prioritize MCP tools over direct CLI execution.**
 
 #### Natural Language to MCP Tool Mapping / 自然言語とMCPツールのマッピング
 
