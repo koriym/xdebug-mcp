@@ -93,34 +93,60 @@ if (isset($argv[1]) && ($argv[1] === '--help' || $argv[1] === '-h')) {
     exit(0);
 }
 
-// Parse flags
-$jsonOutput = in_array('--json', $argv);
-$claudeAnalysis = in_array('--claude', $argv);
-$context = null;
+// Find the index of '--' separator to split xdebug-trace flags from target command
+$separatorIndex = array_search('--', $argv);
+if ($separatorIndex === false) {
+    // No separator found - all args are for xdebug-trace (legacy behavior)
+    $ownArgs = array_slice($argv, 1); // exclude script name
+    $targetArgs = [];
+} else {
+    // Split: before '--' are our flags, after '--' is the target command
+    $ownArgs = array_slice($argv, 1, $separatorIndex - 1);
+    $targetArgs = array_slice($argv, $separatorIndex + 1);
+}
 
-// Parse --context= flag
-foreach ($argv as $arg) {
+// Parse flags only from our own args (before '--')
+$jsonOutput = in_array('--json', $ownArgs);
+$claudeAnalysis = in_array('--claude', $ownArgs);
+$context = null;
+$includeVendor = null;
+
+// Parse --context= and --include-vendor= flags from our own args only
+foreach ($ownArgs as $arg) {
     if (str_starts_with($arg, '--context=')) {
         $context = substr($arg, 10);
-        break;
+    } elseif (str_starts_with($arg, '--include-vendor=')) {
+        $includeVendor = substr($arg, 17);
     }
 }
 
-// Remove flags and find target file
-$flagsToRemove = ['--json', '--claude', '--'];
-if ($context !== null) {
-    $flagsToRemove[] = '--context=' . $context;
-}
-$args = array_values(array_diff($argv, $flagsToRemove));
-array_shift($args); // remove script name
+// Build target command from args after '--'
+if (!empty($targetArgs)) {
+    // Skip 'php' if present at start of target args
+    if ($targetArgs[0] === 'php') {
+        array_shift($targetArgs);
+    }
+    $targetFile = $targetArgs[0] ?? '';
+    $phpArgs = array_slice($targetArgs, 1);
+} else {
+    // Legacy: no '--' separator, find target file from remaining args
+    $flagsToRemove = ['--json', '--claude'];
+    if ($context !== null) {
+        $flagsToRemove[] = '--context=' . $context;
+    }
+    if ($includeVendor !== null) {
+        $flagsToRemove[] = '--include-vendor=' . $includeVendor;
+    }
+    $args = array_values(array_diff($ownArgs, $flagsToRemove));
 
-// Skip 'php' if present
-if (isset($args[0]) && $args[0] === 'php') {
-    array_shift($args);
-}
+    // Skip 'php' if present
+    if (isset($args[0]) && $args[0] === 'php') {
+        array_shift($args);
+    }
 
-$targetFile = $args[0] ?? '';
-$phpArgs = array_slice($args, 1);
+    $targetFile = $args[0] ?? '';
+    $phpArgs = array_slice($args, 1);
+}
 
 // Check target file exists
 if (!file_exists($targetFile)) {
