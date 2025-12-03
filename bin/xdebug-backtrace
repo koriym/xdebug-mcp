@@ -19,8 +19,9 @@ function showHelp(): void
     echo "  --break=SPEC      Breakpoint (file.php:line or file.php:line:condition)\n";
     echo "  --depth=N         Maximum stack depth to return (default: 10)\n";
     echo "  --context=TEXT    Context description for AI analysis\n";
-    echo "  --json            Output in JSON format (default)\n";
     echo "  --help, -h        Show this help\n";
+    echo "\n";
+    echo "OUTPUT: JSON format (optimized for AI consumption)\n";
     echo "\n";
     echo "EXAMPLES:\n";
     echo "  xdebug-backtrace -- php script.php                    # Get stack at first line\n";
@@ -53,15 +54,14 @@ function parseBreakpoint(string $breakSpec): ?array
     $line = (int) $m[2];
     $condition = $m[3] ?? null;
 
-    // Try to resolve file path
-    $resolvedFile = null;
-    if (file_exists($file)) {
-        $resolvedFile = $file;
-    } elseif (!str_starts_with($file, '/') && file_exists(getcwd() . '/' . $file)) {
-        $resolvedFile = getcwd() . '/' . $file;
+    // Try to resolve file path (cross-platform)
+    $resolvedFile = realpath($file);
+    if ($resolvedFile === false) {
+        // Try relative to current working directory
+        $resolvedFile = realpath(getcwd() . DIRECTORY_SEPARATOR . $file);
     }
 
-    if (!$resolvedFile) {
+    if ($resolvedFile === false) {
         throw new RuntimeException("Breakpoint file not found: $file");
     }
 
@@ -108,11 +108,6 @@ function parseBreakpoint(string $breakSpec): ?array
 
         if ($parseOptions && str_starts_with($arg, '--context=')) {
             $context = substr($arg, 10);
-            continue;
-        }
-
-        if ($parseOptions && $arg === '--json') {
-            $jsonOutput = true;
             continue;
         }
 

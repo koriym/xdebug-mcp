@@ -1115,8 +1115,8 @@ final class McpServer
                 $cmd .= ' --context=' . escapeshellarg($context);
             }
 
-            if (! empty($depth)) {
-                $cmd .= ' --depth=' . escapeshellarg((string) $depth);
+            if ($depth !== null && $depth !== '') {
+                $cmd .= ' --depth=' . escapeshellarg((string) (int) $depth);
             }
 
             // Build command - user must specify PHP binary explicitly
