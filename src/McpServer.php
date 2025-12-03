@@ -164,6 +164,35 @@ final class McpServer
                     'required' => ['script'],
                 ],
             ],
+            'x-backtrace' => [
+                'name' => 'x-backtrace',
+                'description' => 'Get stack trace (backtrace) at breakpoint | ex) ./x-backtrace --break="app.php:50" "php app.php"',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'script' => [
+                            'type' => 'string',
+                            'description' => 'PHP script to get backtrace from (e.g., "tests/fixtures/debug_test.php")',
+                        ],
+                        'breakpoint' => [
+                            'type' => 'string',
+                            'description' => 'Breakpoint location (e.g., "file.php:15")',
+                            'default' => '',
+                        ],
+                        'depth' => [
+                            'type' => 'integer',
+                            'description' => 'Maximum stack depth to return',
+                            'default' => 10,
+                        ],
+                        'context' => [
+                            'type' => 'string',
+                            'description' => 'Context description for backtrace analysis',
+                            'default' => '',
+                        ],
+                    ],
+                    'required' => ['script'],
+                ],
+            ],
         ];
     }
 
@@ -456,6 +485,32 @@ final class McpServer
                             ],
                         ],
                     ],
+                    [
+                        'name' => 'x-backtrace',
+                        'description' => 'Get stack trace (backtrace) at breakpoint | ex) /x-backtrace --script="app.php" --break="app.php:50"',
+                        'arguments' => [
+                            [
+                                'name' => 'script',
+                                'description' => 'PHP script to get backtrace from (e.g., "tests/fixtures/debug_test.php")',
+                                'required' => true,
+                            ],
+                            [
+                                'name' => 'breakpoint',
+                                'description' => 'Breakpoint location (e.g., "file.php:15")',
+                                'required' => false,
+                            ],
+                            [
+                                'name' => 'depth',
+                                'description' => 'Maximum stack depth to return (default: 10)',
+                                'required' => false,
+                            ],
+                            [
+                                'name' => 'context',
+                                'description' => 'Context description for backtrace analysis',
+                                'required' => false,
+                            ],
+                        ],
+                    ],
                 ],
             ],
         ];
@@ -501,6 +556,9 @@ final class McpServer
 
             case 'x-coverage':
                 return $this->executeXCoverage($id, $args);
+
+            case 'x-backtrace':
+                return $this->executeXBacktrace($id, $args);
 
             default:
                 return [
@@ -577,6 +635,25 @@ final class McpServer
 
                 if (isset($args[2])) {
                     $args['format'] = $args[2];
+                }
+
+                break;
+
+            case 'x-backtrace':
+                if (isset($args[0])) {
+                    $args['script'] = $args[0];
+                }
+
+                if (isset($args[1])) {
+                    $args['breakpoint'] = $args[1];
+                }
+
+                if (isset($args[2])) {
+                    $args['depth'] = $args[2];
+                }
+
+                if (isset($args[3])) {
+                    $args['context'] = $args[3];
                 }
 
                 break;
@@ -692,6 +769,11 @@ final class McpServer
 
             case 'x-coverage':
                 $result = $this->executeXCoverage(null, $arguments);
+
+                return $result['result']['messages'][0]['content']['text'] ?? 'No result';
+
+            case 'x-backtrace':
+                $result = $this->executeXBacktrace(null, $arguments);
 
                 return $result['result']['messages'][0]['content']['text'] ?? 'No result';
 
@@ -1005,6 +1087,91 @@ final class McpServer
                 'error' => [
                     'code' => -32000,
                     'message' => 'x-coverage execution failed: ' . $e->getMessage(),
+                ],
+            ];
+            // @codeCoverageIgnoreEnd
+        }
+    }
+
+    private function executeXBacktrace(mixed $id, array $args): array
+    {
+        try {
+            $originalScript = $args['script'] ?? '';
+            $script = $this->processScriptArgument($originalScript);
+            $this->validatePhpBinaryScript($script);
+            $context = $args['context'] ?? '';
+            $breakpoint = $args['breakpoint'] ?? '';
+            $depth = $args['depth'] ?? 10;
+
+            // Build command
+            $cmd = $this->binDir . '/xdebug-backtrace --json';
+
+            // Add breakpoint if specified
+            if (! empty($breakpoint)) {
+                $cmd .= ' --break=' . escapeshellarg($breakpoint);
+            }
+
+            if (! empty($context)) {
+                $cmd .= ' --context=' . escapeshellarg($context);
+            }
+
+            if (! empty($depth)) {
+                $cmd .= ' --depth=' . escapeshellarg((string) $depth);
+            }
+
+            // Build command - user must specify PHP binary explicitly
+            $cmd .= ' -- ' . $script;
+
+            // Execute command
+            $output = [];
+            $returnCode = 0;
+            exec($cmd . ' 2>&1', $output, $returnCode);
+
+            // Handle common error cases
+            $outputText = implode("\n", $output);
+            if ($returnCode !== 0 && str_contains($outputText, 'No such file')) {
+                throw new FileNotFoundException('Script file not found: ' . $script);
+            }
+
+            if ($returnCode !== 0 && str_contains($outputText, 'Permission denied')) {
+                throw new InvalidArgumentException('Permission denied accessing: ' . $script);
+            }
+
+            $result = [
+                'command' => $cmd,
+                'exit_code' => $returnCode,
+                'output' => $outputText,
+                'context' => $context,
+                'script' => $script,
+                'breakpoint' => $breakpoint,
+                'depth' => $depth,
+                'timestamp' => date('Y-m-d H:i:s'),
+            ];
+
+            return [
+                'jsonrpc' => '2.0',
+                'id' => $id,
+                'result' => [
+                    'messages' => [
+                        [
+                            'role' => 'assistant',
+                            'content' => [
+                                'type' => 'text',
+                                'text' => 'Stack trace (backtrace) ' . ($returnCode === 0 ? 'retrieved' : 'failed') . ":\n\n**Script**: {$originalScript}\n**Context**: {$context}\n**Breakpoint**: {$breakpoint}\n**Depth**: {$depth}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Stack Trace**:\n```\n" . $outputText . "\n```",
+                            ],
+                        ],
+                    ],
+                    'debug_data' => $result,
+                ],
+            ];
+        } catch (Throwable $e) {
+            // @codeCoverageIgnoreStart - Exception handling path requires backtrace failures which are environment-dependent
+            return [
+                'jsonrpc' => '2.0',
+                'id' => $id,
+                'error' => [
+                    'code' => -32000,
+                    'message' => 'x-backtrace execution failed: ' . $e->getMessage(),
                 ],
             ];
             // @codeCoverageIgnoreEnd
