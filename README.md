@@ -123,8 +123,10 @@ composer global require koriym/xdebug-mcp
 
 **AI Slash Commands** (Claude Code):
 ```bash
-/x-debug "script.php" "script.php:42:$error!=null" "" "Debug error handling"
-/x-trace script="auth.php" context="Login flow analysis" include_vendor="bear/*"
+/x-trace php script.php         # Execution tracing
+/x-profile php api.php          # Performance profiling
+/x-coverage vendor/bin/phpunit  # Code coverage
+/x-debug php script.php         # Interactive debugging
 ```
 
 
