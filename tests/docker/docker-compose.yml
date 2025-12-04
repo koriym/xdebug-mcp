@@ -1,0 +1,24 @@
+# Docker Compose configuration for xdebug-mcp integration testing
+#
+# Usage:
+#   cd tests/docker
+#   docker compose build
+#   docker compose run --rm php php /app/test_script.php
+
+services:
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Mount /tmp for trace and profile file output
+      - /tmp:/tmp
+      # Mount test scripts
+      - .:/app:ro
+    environment:
+      # Allow Xdebug mode to be set dynamically
+      - XDEBUG_MODE=${XDEBUG_MODE:-off}
+      - XDEBUG_TRIGGER=${XDEBUG_TRIGGER:-}
+    # Allow connection back to host for IDE debugging
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
