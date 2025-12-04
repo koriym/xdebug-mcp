@@ -1115,7 +1115,7 @@ final class McpServer
                 $cmd .= ' --context=' . escapeshellarg($context);
             }
 
-            if ($depth !== null && $depth !== '') {
+            if ($depth !== null && $depth !== '' && (int) $depth > 0 && (int) $depth <= 1000) {
                 $cmd .= ' --depth=' . escapeshellarg((string) (int) $depth);
             }
 
