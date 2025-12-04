@@ -66,7 +66,7 @@ if ($options['help'] || empty($traceFiles)) {
     echo <<<HELP
 Xdebug Trace Analyzer - AI Material Builder
 
-Usage: xdebug-analyze [OPTIONS] <trace-file> [trace-file2]
+Usage: xanalyze [OPTIONS] <trace-file> [trace-file2]
 
 Convert large Xdebug trace files into AI-optimized structured analysis.
 
@@ -81,19 +81,19 @@ Options:
 
 Examples:
   # Basic analysis with context
-  xdebug-analyze /tmp/trace.xt --context="Login failure investigation"
+  xanalyze /tmp/trace.xt --context="Login failure investigation"
   
   # Executive summary
-  xdebug-analyze /tmp/trace.xt --summary
+  xanalyze /tmp/trace.xt --summary
   
   # Compare two executions  
-  xdebug-analyze before.xt after.xt --compare
+  xanalyze before.xt after.xt --compare
   
   # Extract performance bottlenecks
-  xdebug-analyze /tmp/trace.xt --bottlenecks=10
+  xanalyze /tmp/trace.xt --bottlenecks=10
   
   # Search specific functions
-  xdebug-analyze /tmp/trace.xt --search="UserController"
+  xanalyze /tmp/trace.xt --search="UserController"
 
 Output: AI-optimized JSON with emoji-prefixed categorization for enhanced readability.
 

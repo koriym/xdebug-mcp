@@ -19,7 +19,7 @@ class InvalidBreakpointFormatException extends \RuntimeException
  */
 function showHelp(): void
 {
-    echo "Usage: xdebug-debug [options] [--] command\n";
+    echo "Usage: xstep [options] [--] command\n";
     echo "\n";
     echo "🔍 AI-Optimized Interactive PHP Step Debugger\n";
     echo "\n";
@@ -54,16 +54,16 @@ function showHelp(): void
     echo "COMMON AI DEBUGGING WORKFLOWS:\n";
     echo "\n";
     echo "  # 1. Quick bug investigation (most common)\n";
-    echo "  xdebug-debug --context=\"Debug login failure\" --exit-on-break -- php login.php\n";
+    echo "  xstep --context=\"Debug login failure\" --exit-on-break -- php login.php\n";
     echo "\n";
     echo "  # 2. Variable state tracking\n";
-    echo "  xdebug-debug --break=app.php:50 --steps=20 --context=\"Track \$user evolution\" -- php app.php\n";
+    echo "  xstep --break=app.php:50 --steps=20 --context=\"Track \$user evolution\" -- php app.php\n";
     echo "\n";
     echo "  # 3. Conditional debugging\n";
-    echo "  xdebug-debug --break=\"user.php:15:\$id==null\" --context=\"Debug null ID bug\" -- php user.php\n";
+    echo "  xstep --break=\"user.php:15:\$id==null\" --context=\"Debug null ID bug\" -- php user.php\n";
     echo "\n";
     echo "  # 4. Multi-point analysis\n";
-    echo "  xdebug-debug --break=\"auth.php:20,user.php:45\" --context=\"Debug auth flow\" -- php main.php\n";
+    echo "  xstep --break=\"auth.php:20,user.php:45\" --context=\"Debug auth flow\" -- php main.php\n";
     echo "\n";
     echo "OUTPUT FORMATS:\n";
     echo "  Interactive: Real-time debugging session with step control\n";
@@ -71,7 +71,7 @@ function showHelp(): void
     echo "  Benefits: AI can analyze exact variable values at breakpoints without guesswork\n";
     echo "\n";
     echo "📋 JSON SCHEMA RESOURCES (Essential for AI):\n";
-    echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json\n";
+    echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xstep.json\n";
     echo "  Xdebug Trace Docs: https://xdebug.org/docs/trace\n";
     echo "  Debug Guidelines: https://koriym.github.io/xdebug-mcp/debug_guideline_for_ai.md\n";
     echo "  Forward Trace™ Guide: Complete methodology for AI-powered PHP debugging\n";
@@ -85,7 +85,7 @@ function showHelp(): void
     echo "  5. No source code cleanup needed (no debug statements added)\n";
     echo "\n";
     echo "RECOMMENDED AI PROMPT:\n";
-    echo "  'Run xdebug-debug --help first, then help me debug this PHP issue using breakpoints'\n";
+    echo "  'Run xstep --help first, then help me debug this PHP issue using breakpoints'\n";
     echo "\n";
     echo "VS. TRADITIONAL DEBUGGING:\n";
     echo "  ❌ Traditional: Add var_dump(), run, analyze, remove debug code\n";
