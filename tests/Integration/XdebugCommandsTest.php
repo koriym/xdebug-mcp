@@ -128,6 +128,20 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
         $this->assertStringContainsString('xdebug-debug', $output);
     }
 
+    public function testXdebugBacktraceCommandExists(): void
+    {
+        $this->assertTrue(file_exists(__DIR__ . '/../../bin/xdebug-backtrace'));
+        $this->assertTrue(is_executable(__DIR__ . '/../../bin/xdebug-backtrace'));
+    }
+
+    public function testXdebugBacktraceHelp(): void
+    {
+        $output = shell_exec('cd ' . dirname(__DIR__, 2) . ' && ./bin/xdebug-backtrace --help 2>&1');
+        $this->assertNotNull($output);
+        $this->assertStringContainsString('Usage:', $output);
+        $this->assertStringContainsString('xdebug-backtrace', $output);
+    }
+
     public function testAllCommandsAreExecutable(): void
     {
         $commands = [
@@ -136,6 +150,7 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
             'xdebug-profile',
             'xdebug-coverage',
             'xdebug-debug',
+            'xdebug-backtrace',
         ];
 
         foreach ($commands as $command) {
