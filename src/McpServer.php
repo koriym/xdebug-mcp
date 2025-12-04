@@ -791,7 +791,7 @@ final class McpServer
             $context = $args['context'] ?? '';
 
             // Build command - user must specify PHP binary explicitly
-            $cmd = $this->binDir . '/xdebug-trace --json -- ' . $script;
+            $cmd = $this->binDir . '/xtrace --json -- ' . $script;
 
             // Execute command
             $output = [];
@@ -879,7 +879,7 @@ final class McpServer
             $includeVendor = $args['include_vendor'] ?? '';
 
             // Build command
-            $cmd = $this->binDir . '/xdebug-debug --exit-on-break';
+            $cmd = $this->binDir . '/xstep --exit-on-break';
 
             // Add breakpoints if specified
             if (! empty($breakpoints)) {
@@ -970,7 +970,7 @@ final class McpServer
             $context = $args['context'] ?? '';
 
             // Build command - user must specify PHP binary explicitly
-            $cmd = $this->binDir . '/xdebug-profile --json -- ' . $script;
+            $cmd = $this->binDir . '/xprofile --json -- ' . $script;
 
             // Execute command
             $output = [];
@@ -1036,7 +1036,7 @@ final class McpServer
             $format = $args['format'] ?? 'json';
 
             // Build command - user must specify PHP binary explicitly
-            $cmd = $this->binDir . '/xdebug-coverage -- ' . $script;
+            $cmd = $this->binDir . '/xcoverage -- ' . $script;
 
             // Execute command
             $output = [];

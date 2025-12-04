@@ -100,19 +100,22 @@ For direct command-line usage without AI:
 
 ```bash
 # Trace execution
-xdebug-trace -- php script.php
+xtrace -- php script.php
 
 # Profile performance
-xdebug-profile -- php api.php
+xprofile -- php api.php
 
 # Debug with conditional breakpoint
-xdebug-debug --break='script.php:42:$user==null' --exit-on-break -- php script.php
+xstep --break='script.php:42:$user==null' --exit-on-break -- php script.php
 
 # Code coverage
-xdebug-coverage -- vendor/bin/phpunit
+xcoverage -- vendor/bin/phpunit
 
 # Stack trace at breakpoint
-xdebug-backtrace --break='app.php:50' -- php app.php
+xback --break='app.php:50' -- php app.php
+
+# Analyze trace files
+xanalyze trace.xt --summary
 ```
 
 Run `--help` on any tool for detailed options.
@@ -122,7 +125,7 @@ Run `--help` on any tool for detailed options.
 For hands-on debugging without AI, use the interactive debugger:
 
 ```bash
-xdebug-debug -- php script.php
+xstep -- php script.php
 ```
 
 **Commands:**
@@ -143,10 +146,10 @@ xdebug-debug -- php script.php
 All tools work with Docker, Podman, and Kubectl:
 
 ```bash
-xdebug-debug --break="/app/script.php:42" --exit-on-break -- \
+xstep --break="/app/script.php:42" --exit-on-break -- \
   docker compose run --rm php php /app/script.php
 
-xdebug-trace -- docker compose run --rm php php /app/script.php
+xtrace -- docker compose run --rm php php /app/script.php
 ```
 
 The tools automatically detect container runtime and configure Xdebug networking.

@@ -422,7 +422,7 @@ class McpServerTest extends TestCase
         $this->assertArrayHasKey('command', $debugData);
         $this->assertArrayHasKey('exit_code', $debugData);
         $this->assertArrayHasKey('context', $debugData);
-        $this->assertStringContainsString('xdebug-debug', $debugData['command']);
+        $this->assertStringContainsString('xstep', $debugData['command']);
         $this->assertEquals('Test x-debug prompt', $debugData['context']);
         $this->assertEquals(0, $debugData['exit_code']);
     }
