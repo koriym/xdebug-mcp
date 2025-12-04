@@ -59,11 +59,11 @@ class McpServerIntegrationTest extends TestCase
         // Verify analysis tools are present
         $toolNames = array_column($toolsResponse['result']['tools'], 'name');
         $expectedTools = [
-            'x-trace',
-            'x-profile',
-            'x-debug',
-            'x-coverage',
-            'x-backtrace',
+            'xtrace',
+            'xprofile',
+            'xstep',
+            'xcoverage',
+            'xback',
         ];
 
         foreach ($expectedTools as $toolName) {
