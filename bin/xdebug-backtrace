@@ -16,12 +16,12 @@ function showHelp(): void
     echo "Get stack trace (backtrace) at breakpoint or first executable line\n";
     echo "\n";
     echo "OPTIONS:\n";
-    echo "  --break=SPEC      Breakpoint (file.php:line or file.php:line:condition)\n";
+    echo "  --break=SPEC      Breakpoint (file.php:line)\n";
     echo "  --depth=N         Maximum stack depth to return (default: 10)\n";
     echo "  --context=TEXT    Context description for AI analysis\n";
     echo "  --help, -h        Show this help\n";
     echo "\n";
-    echo "OUTPUT: JSON format (optimized for AI consumption)\n";
+    echo "OUTPUT: Structured JSON (schema: xdebug-backtrace.json)\n";
     echo "\n";
     echo "EXAMPLES:\n";
     echo "  xdebug-backtrace -- php script.php                    # Get stack at first line\n";
@@ -32,6 +32,8 @@ function showHelp(): void
     echo "  - Understand call hierarchy at specific point\n";
     echo "  - Debug 'how did we get here?' questions\n";
     echo "  - Analyze function call depth and recursion\n";
+    echo "\n";
+    echo "SCHEMA: https://koriym.github.io/xdebug-mcp/schemas/xdebug-backtrace.json\n";
     echo "\n";
     exit(0);
 }
@@ -46,13 +48,12 @@ function parseBreakpoint(string $breakSpec): ?array
         return null;
     }
 
-    if (!preg_match('/^(.*):(\d+)(?::(.*))?$/', $spec, $m)) {
+    if (!preg_match('/^(.*):(\d+)$/', $spec, $m)) {
         throw new RuntimeException("Invalid breakpoint format: $spec\n" .
-            "Use: file.php:line or file.php:line:condition");
+            "Use: file.php:line");
     }
     $file = $m[1];
     $line = (int) $m[2];
-    $condition = $m[3] ?? null;
 
     // Try to resolve file path (cross-platform)
     $resolvedFile = realpath($file);
@@ -67,9 +68,26 @@ function parseBreakpoint(string $breakSpec): ?array
 
     return [
         'file' => $resolvedFile,
-        'line' => $line,
-        'condition' => $condition
+        'line' => $line
     ];
+}
+
+/**
+ * Output structured backtrace JSON
+ */
+function outputBacktraceJson(string $script, ?string $breakpointStr, string $context, int $depth, array $stack): void
+{
+    $result = [
+        '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xdebug-backtrace.json',
+        'script' => $script,
+        'breakpoint' => $breakpointStr,
+        'context' => $context,
+        'depth' => $depth,
+        'stack' => array_slice($stack, 0, $depth),
+        'timestamp' => date('c'),
+    ];
+
+    echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
 }
 
 (function () use ($argv){
@@ -81,11 +99,11 @@ function parseBreakpoint(string $breakSpec): ?array
 
     // Parse command line arguments
     $breakpoint = null;
+    $breakpointStr = null;
     $depth = 10;
     $context = '';
     $command = [];
     $parseOptions = true;
-    $jsonOutput = true;
 
     for ($i = 1; $i < count($argv); $i++) {
         $arg = $argv[$i];
@@ -96,7 +114,8 @@ function parseBreakpoint(string $breakSpec): ?array
         }
 
         if ($parseOptions && str_starts_with($arg, '--break=')) {
-            $breakpoint = parseBreakpoint(substr($arg, 8));
+            $breakpointStr = substr($arg, 8);
+            $breakpoint = parseBreakpoint($breakpointStr);
             continue;
         }
 
@@ -137,7 +156,7 @@ function parseBreakpoint(string $breakSpec): ?array
         throw new RuntimeException("Target script not found: $targetScript");
     }
 
-    // Build options for DebugServer
+    // Use DebugServer to get backtrace at breakpoint
     $breakpoints = [];
     if ($breakpoint) {
         $breakpoints[] = $breakpoint;
@@ -147,13 +166,52 @@ function parseBreakpoint(string $breakSpec): ?array
         'breakpoints' => $breakpoints,
         'command' => $command,
         'traceOnly' => true,
-        'jsonOutput' => $jsonOutput,
+        'jsonOutput' => true,
         'context' => $context,
-        'maxSteps' => 1,  // Only need one step to get backtrace
+        'maxSteps' => 1,
         'backtraceMode' => true,
         'backtraceDepth' => $depth
     ];
 
-    $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, null, $options, $jsonOutput);
+    // Capture DebugServer output
+    ob_start();
+    $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, null, $options, true);
     $server();
+    $output = ob_get_clean();
+
+    // Parse DebugServer output and reformat to backtrace schema
+    $debugData = json_decode($output, true);
+
+    $stack = [];
+    if (isset($debugData['breaks'][0]['stack'])) {
+        // If DebugServer provides stack info
+        foreach ($debugData['breaks'][0]['stack'] as $level => $frameStr) {
+            if (preg_match('/^(.+) at (.+):(\d+)$/', $frameStr, $m)) {
+                $stack[] = [
+                    'level' => $level,
+                    'function' => $m[1],
+                    'file' => $m[2],
+                    'line' => (int)$m[3],
+                ];
+            }
+        }
+    } elseif (isset($debugData['breaks'][0]['location'])) {
+        // Fallback: use location from breaks
+        $loc = $debugData['breaks'][0]['location'];
+        $stack[] = [
+            'level' => 0,
+            'function' => '{main}',
+            'file' => $loc['file'] ?? $targetScript,
+            'line' => $loc['line'] ?? 1,
+        ];
+    }
+
+    // Output in backtrace schema format
+    outputBacktraceJson(
+        $targetScript,
+        $breakpointStr,
+        $context,
+        $depth,
+        $stack
+    );
 })();
