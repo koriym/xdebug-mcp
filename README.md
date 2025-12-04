@@ -236,6 +236,14 @@ php -dzend_extension=xdebug.so -dxdebug.mode=debug --version # Test Xdebug loadi
 All xdebug-mcp tools work seamlessly with Docker, Podman, and Kubectl:
 
 ```bash
+# Breakpoint debugging in Docker container
+./bin/xdebug-debug --break="/app/script.php:42" --exit-on-break -- \
+  docker compose run --rm php php /app/script.php
+
+# Conditional breakpoint (catch null bugs)
+./bin/xdebug-debug --break="/app/script.php:42:\$user==null" --exit-on-break -- \
+  docker compose run --rm php php /app/script.php
+
 # Trace execution in Docker container
 ./bin/xdebug-trace --context="Docker debug" -- \
   docker compose run --rm php php /app/script.php
@@ -247,11 +255,14 @@ All xdebug-mcp tools work seamlessly with Docker, Podman, and Kubectl:
 ./bin/xdebug-coverage -- podman run --rm php:8.4 php /app/tests.php
 ```
 
-The `XdebugRunner` class automatically:
-- Detects container commands (docker, podman, kubectl)
-- Locates the PHP command within the Docker command
-- Injects Xdebug arguments at the correct position
-- Maintains backward compatibility with local execution
+**Note**: Breakpoint paths like `/app/script.php` refer to paths inside the container, not on the host.
+
+The tools automatically:
+- Detect container commands (docker, podman, kubectl)
+- Skip local file validation for container paths
+- Inject Xdebug arguments at the correct position
+- Listen on `0.0.0.0` for container connections
+- Maintain backward compatibility with local execution
 
 See [tests/docker/README.md](tests/docker/README.md) for detailed setup instructions.
 
