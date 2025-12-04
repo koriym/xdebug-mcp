@@ -40,8 +40,10 @@ function showHelp(): void
 
 /**
  * Parse breakpoint specification
+ *
+ * @param bool $isDockerCommand If true, skip local file validation (files are in container)
  */
-function parseBreakpoint(string $breakSpec): ?array
+function parseBreakpoint(string $breakSpec, bool $isDockerCommand = false): ?array
 {
     $spec = trim($breakSpec);
     if (empty($spec)) {
@@ -54,6 +56,14 @@ function parseBreakpoint(string $breakSpec): ?array
     }
     $file = $m[1];
     $line = (int) $m[2];
+
+    // For Docker commands, skip local file validation - the path is inside the container
+    if ($isDockerCommand) {
+        return [
+            'file' => $file,
+            'line' => $line
+        ];
+    }
 
     // Try to resolve file path (cross-platform)
     $resolvedFile = realpath($file);
@@ -115,7 +125,7 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
 
         if ($parseOptions && str_starts_with($arg, '--break=')) {
             $breakpointStr = substr($arg, 8);
-            $breakpoint = parseBreakpoint($breakpointStr);
+            // Defer parsing until we know if it's a Docker command
             continue;
         }
 
@@ -143,17 +153,42 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
         showHelp();
     }
 
+    // Detect Docker/Podman/Kubectl commands
+    $containerCommands = ['docker', 'podman', 'kubectl'];
+    $isDockerCommand = in_array($command[0] ?? '', $containerCommands, true);
+
+    // Parse breakpoint now that we know if it's a Docker command
+    if ($breakpointStr !== null) {
+        $breakpoint = parseBreakpoint($breakpointStr, $isDockerCommand);
+    }
+
     // Determine target script
-    if ($command[0] === 'php' && isset($command[1])) {
+    if ($isDockerCommand) {
+        // Docker command: find the script as the last argument after 'php'
+        $phpIndex = false;
+        foreach ($command as $i => $part) {
+            if ($part === 'php' || preg_match('/^php\d+\.\d+$/', $part)) {
+                $phpIndex = $i;
+            }
+        }
+        if ($phpIndex !== false && isset($command[$phpIndex + 1])) {
+            $targetScript = $command[$phpIndex + 1];
+            // For Docker, use a placeholder file for DebugServer validation
+            if (!file_exists($targetScript)) {
+                $targetScript = __DIR__ . '/../tests/fixtures/simple.php';
+            }
+        } else {
+            throw new RuntimeException("Could not find PHP script in Docker command: " . implode(' ', $command));
+        }
+    } elseif ($command[0] === 'php' && isset($command[1])) {
         $targetScript = $command[1];
+        if (!file_exists($targetScript)) {
+            throw new RuntimeException("Target script not found: $targetScript");
+        }
     } elseif (file_exists($command[0])) {
         $targetScript = $command[0];
     } else {
         throw new RuntimeException("Could not determine target script from command: " . implode(' ', $command));
-    }
-
-    if (!file_exists($targetScript)) {
-        throw new RuntimeException("Target script not found: $targetScript");
     }
 
     // Use DebugServer to get backtrace at breakpoint
