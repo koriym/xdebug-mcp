@@ -22,15 +22,15 @@ docker compose run --rm php php /app/test_script.php
 
 ```bash
 # Test trace functionality
-./bin/xdebug-trace --context="Docker trace test" -- \
+./bin/xtrace --context="Docker trace test" -- \
   docker compose -f tests/docker/docker-compose.yml run --rm php php /app/test_script.php
 
 # Test profile functionality
-./bin/xdebug-profile --context="Docker profile test" -- \
+./bin/xprofile --context="Docker profile test" -- \
   docker compose -f tests/docker/docker-compose.yml run --rm php php /app/test_performance.php
 
 # Test coverage functionality
-./bin/xdebug-coverage -- \
+./bin/xcoverage -- \
   docker compose -f tests/docker/docker-compose.yml run --rm php php /app/test_coverage.php
 ```
 
@@ -41,7 +41,7 @@ docker compose run --rm php php /app/test_script.php
 docker compose -f tests/docker/docker-compose.yml up -d
 
 # Run trace
-./bin/xdebug-trace -- \
+./bin/xtrace -- \
   docker compose -f tests/docker/docker-compose.yml exec -T php php /app/test_script.php
 
 # Stop container
@@ -99,7 +99,7 @@ user: "${UID}:${GID}"
 
 ```
 Host Machine
-├── xdebug-mcp tools (bin/xdebug-*)
+├── xdebug-mcp tools (bin/x*)
 ├── XdebugRunner class (src/XdebugRunner.php)
 │   └── Detects Docker and injects Xdebug args
 └── /tmp (shared volume)

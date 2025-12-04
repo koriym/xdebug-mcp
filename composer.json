@@ -30,11 +30,13 @@
     },
     "bin": [
         "bin/xdebug-mcp",
-        "bin/xdebug-server",
-        "bin/xdebug-trace",
-        "bin/xdebug-profile",
-        "bin/xdebug-coverage",
-        "bin/xdebug-debug",
+        "bin/xstep",
+        "bin/xtrace",
+        "bin/xprofile",
+        "bin/xcoverage",
+        "bin/xback",
+        "bin/xanalyze",
+        "bin/check-env",
         "bin/test-json"
     ],
 
@@ -46,7 +48,7 @@
     },
     "scripts": {
         "test": "phpunit",
-        "coverage": "./bin/xdebug-coverage -- ./vendor/bin/phpunit --coverage-text --coverage-html=build/coverage",
+        "coverage": "./bin/xcoverage -- ./vendor/bin/phpunit --coverage-text --coverage-html=build/coverage",
         "phpdbg": "phpdbg -qrr ./vendor/bin/phpunit --coverage-text --coverage-html ./build/coverage --coverage-clover=build/coverage.xml",
         "pcov": "php -dextension=pcov.so -d pcov.enabled=1 ./vendor/bin/phpunit --coverage-text --coverage-html=build/coverage --coverage-clover=build/coverage.xml",
         "cs": "phpcs",

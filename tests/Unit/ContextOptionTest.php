@@ -28,7 +28,7 @@ class ContextOptionTest extends TestCase
     {
         $context = 'Test context for profile';
         $command = sprintf(
-            '%s/bin/xdebug-profile --json --context="%s" -- php %s 2>/dev/null',
+            '%s/bin/xprofile --json --context="%s" -- php %s 2>/dev/null',
             $this->projectRoot,
             $context,
             $this->testScript,
@@ -46,7 +46,7 @@ class ContextOptionTest extends TestCase
     {
         $context = 'Test context for trace';
         $command = sprintf(
-            '%s/bin/xdebug-trace --json --context="%s" -- php %s 2>/dev/null',
+            '%s/bin/xtrace --json --context="%s" -- php %s 2>/dev/null',
             $this->projectRoot,
             $context,
             $this->testScript,
@@ -64,7 +64,7 @@ class ContextOptionTest extends TestCase
     {
         $context = 'Test context for debug';
         $command = sprintf(
-            '%s/bin/xdebug-debug --exit-on-break --context="%s" -- php %s 2>/dev/null',
+            '%s/bin/xstep --exit-on-break --context="%s" -- php %s 2>/dev/null',
             $this->projectRoot,
             $context,
             $this->testScript,

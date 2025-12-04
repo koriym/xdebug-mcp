@@ -52,9 +52,9 @@ php tests/fake/FakeProfilingDemo.php    # Demo profiling and coverage features
 ### Coverage Analysis
 ```bash
 # Ultra-simple test coverage collection for any PHP script
-./bin/xdebug-coverage -- php script.php              # Collect coverage for any PHP script
-./bin/xdebug-coverage -- vendor/bin/phpunit           # Collect coverage for PHPUnit tests
-./bin/xdebug-coverage -- my-test-runner.php           # Works with any PHP-based test runner
+./bin/xcoverage -- php script.php              # Collect coverage for any PHP script
+./bin/xcoverage -- vendor/bin/phpunit           # Collect coverage for PHPUnit tests
+./bin/xcoverage -- my-test-runner.php           # Works with any PHP-based test runner
 
 # Output: JSON format with ultra-simple schema
 # {
@@ -248,7 +248,7 @@ The Xdebug trace functionality enables AI assistants to analyze detailed executi
 **Quick Trace Testing**
 ```bash
 # Run comprehensive trace tests
-./bin/xdebug-trace
+./bin/xtrace
 
 # Individual trace testing methods
 php -dzend_extension=xdebug -dxdebug.mode=trace bin/simple-trace-test.php
@@ -397,11 +397,11 @@ This project prioritizes **execution-time trace analysis** over traditional code
 - **Step Debugging (ステップ実行)**: Interactive debugging with breakpoints → Use `x-debug`
 
 #### Available Xdebug Tools:
-- `./bin/xdebug-debug` - Interactive step debugging with breakpoints
-- `./bin/xdebug-profile` - Performance profiling
-- `./bin/xdebug-coverage` - Code coverage analysis  
-- `./bin/xdebug-trace` - Execution tracing
-- `./bin/xdebug-analyze` - Analysis tool
+- `./bin/xstep` - Interactive step debugging with breakpoints
+- `./bin/xprofile` - Performance profiling
+- `./bin/xcoverage` - Code coverage analysis  
+- `./bin/xtrace` - Execution tracing
+- `./bin/xanalyze` - Analysis tool
 - `./bin/xdebug-mcp` - MCP server entry point
 
 #### MCP Slash Commands for Claude Code:
@@ -416,31 +416,31 @@ These slash commands provide direct access to Xdebug functionality within Claude
 
 **For Performance Analysis:**
 - User: "Analyze performance", "Find bottlenecks", "Profile this code"
-- AI automatically runs: `./bin/xdebug-profile path/to/file.php`
+- AI automatically runs: `./bin/xprofile path/to/file.php`
 
 **For Code Coverage:**
 - User: "Check test coverage", "Which lines are tested", "Coverage analysis"
-- AI automatically runs: `./bin/xdebug-coverage path/to/file.php`
+- AI automatically runs: `./bin/xcoverage path/to/file.php`
 
 **For Interactive Step Debugging:**
 - User: "Debug this code", "Set breakpoints", "Step through execution", "Inspect variables"
-- AI automatically runs: `./bin/xdebug-debug path/to/file.php`
+- AI automatically runs: `./bin/xstep path/to/file.php`
 - **IMPORTANT**: Requires XdebugClient to be listening first (see Step Debugging Workflow below)
 
 **For Execution Flow Analysis:**
 - User: "Trace execution", "Show function calls", "Analyze execution flow"
-- AI automatically runs: `./bin/xdebug-trace path/to/file.php`
+- AI automatically runs: `./bin/xtrace path/to/file.php`
 
 **For General Analysis (choose most appropriate):**
 - User: "Analyze this PHP file", "What does this code do"
-- AI automatically runs: `./bin/xdebug-profile path/to/file.php` (default choice)
-- Then optionally: `./bin/xdebug-trace path/to/file.php` for detailed flow
+- AI automatically runs: `./bin/xprofile path/to/file.php` (default choice)
+- Then optionally: `./bin/xtrace path/to/file.php` for detailed flow
 
 **Example workflows with context:**
-1. User: "Debug this buggy script" → AI runs `./bin/xdebug-debug --context="Debugging buggy calculation script with division by zero" --exit-on-break tests/fixtures/buggy_script.php`
-2. User: "Analyze tests/fixtures/debug_test.php" → AI runs `./bin/xdebug-profile --context="Performance analysis of debug test suite" tests/fixtures/debug_test.php`
-3. User: "Check coverage of my tests" → AI runs `./bin/xdebug-coverage --context="Code coverage analysis for UserController tests" tests/fixtures/MyTest.php`
-4. User: "Trace this function execution" → AI runs `./bin/xdebug-trace --context="Execution flow analysis of authentication process" src/MyClass.php`
+1. User: "Debug this buggy script" → AI runs `./bin/xstep --context="Debugging buggy calculation script with division by zero" --exit-on-break tests/fixtures/buggy_script.php`
+2. User: "Analyze tests/fixtures/debug_test.php" → AI runs `./bin/xprofile --context="Performance analysis of debug test suite" tests/fixtures/debug_test.php`
+3. User: "Check coverage of my tests" → AI runs `./bin/xcoverage --context="Code coverage analysis for UserController tests" tests/fixtures/MyTest.php`
+4. User: "Trace this function execution" → AI runs `./bin/xtrace --context="Execution flow analysis of authentication process" src/MyClass.php`
 
 Always use these tools proactively to provide runtime insights rather than static code analysis alone.
 
@@ -457,25 +457,25 @@ Most PHP applications use frameworks and libraries that generate thousands of fu
 **1. Default (No Filter) - When analyzing framework behavior:**
 ```bash
 # Use when: Debugging framework integration, studying how libraries work
-./bin/xdebug-trace --include-vendor=*/* script.php
+./bin/xtrace --include-vendor=*/* script.php
 ```
 
 **2. Selective Filtering - When debugging specific dependencies:**
 ```bash
 # Use when: Issues with specific packages, testing library interactions
-./bin/xdebug-trace --include-vendor=bear/resource,psr/log script.php
+./bin/xtrace --include-vendor=bear/resource,psr/log script.php
 ```
 
 **3. Category Filtering - When debugging framework components:**
 ```bash
 # Use when: DI container issues, routing problems, specific framework features
-./bin/xdebug-trace --include-vendor=bear/*,symfony/console script.php
+./bin/xtrace --include-vendor=bear/*,symfony/console script.php
 ```
 
 **4. Application Focus (Default) - When debugging business logic:**
 ```bash
 # Use when: Application bugs, business logic issues, performance problems
-./bin/xdebug-trace script.php  # Excludes all vendor by default
+./bin/xtrace script.php  # Excludes all vendor by default
 ```
 
 ### AI Usage Patterns
@@ -506,10 +506,10 @@ The `--context` flag makes debugging data completely self-explanatory, eliminati
 **Required for all Forward Trace debugging:**
 ```bash
 # ✅ GOOD: Self-explanatory debugging data
-./bin/xdebug-debug --context="Testing user authentication with valid credentials" --exit-on-break -- php UserTest.php
+./bin/xstep --context="Testing user authentication with valid credentials" --exit-on-break -- php UserTest.php
 
 # ❌ BAD: Requires external knowledge to understand
-./bin/xdebug-debug --exit-on-break -- php UserTest.php
+./bin/xstep --exit-on-break -- php UserTest.php
 ```
 
 ### 💡 Context Examples by Scenario
@@ -553,11 +553,11 @@ The `--context` flag makes debugging data completely self-explanatory, eliminati
 
 ## 🚨 CRITICAL: AI Interactive Debugging Workflow
 
-**For interactive step debugging with `xdebug-debug`, follow this EXACT sequence:**
+**For interactive step debugging with `xstep`, follow this EXACT sequence:**
 
 ### Step 1: Start Debug Session (Background)
 ```bash
-./bin/xdebug-debug target_script.php &
+./bin/xstep target_script.php &
 ```
 **Result**: Xdebug session established, waiting for MCP commands on port 9004
 
@@ -577,7 +577,7 @@ xdebug_disconnect    # Ends both MCP session and background process
 ```
 
 **KEY UNDERSTANDING**: 
-- `xdebug-debug` creates a READY session, not a connection request
+- `xstep` creates a READY session, not a connection request
 - MCP tools control the EXISTING session
 - No `xdebug_connect` required - session already established
 - Background process (&) handles both shell input AND MCP commands
@@ -598,7 +598,7 @@ xdebug_disconnect    # Ends both MCP session and background process
 
 ```bash
 # Basic trace command for any PHP file
-./bin/xdebug-trace target_file.php
+./bin/xtrace target_file.php
 ```
 
 **Alternative trace methods:**
@@ -620,7 +620,7 @@ php -dzend_extension=xdebug -dxdebug.mode=trace \
 **1. Undefined Variable Errors**
 ```bash
 # Trace execution to track variable lifecycle
-./bin/xdebug-trace problematic_file.php
+./bin/xtrace problematic_file.php
 # Analyze trace file to see where variable should be initialized
 # Output location: /tmp/xdebug_trace_*.xt
 ```
@@ -628,21 +628,21 @@ php -dzend_extension=xdebug -dxdebug.mode=trace \
 **2. Unexpected Values**
 ```bash
 # Instead of adding var_dump, use trace execution
-./bin/xdebug-trace script_with_wrong_values.php
+./bin/xtrace script_with_wrong_values.php
 # Trace shows actual parameter values passed to each function
 ```
 
 **3. Execution Flow Issues**
 ```bash
 # Track function call order and parameters
-./bin/xdebug-trace complex_workflow.php
+./bin/xtrace complex_workflow.php
 # Trace reveals actual execution path vs expected path
 ```
 
 **4. Performance Problems**
 ```bash
 # Identify bottlenecks through execution time analysis
-./bin/xdebug-trace slow_script.php
+./bin/xtrace slow_script.php
 # Trace shows time spent in each function call
 ```
 
@@ -678,7 +678,7 @@ print_r($_POST); // Add this line
 ```
 "Let's trace the execution to see the variable states:
 ```bash
-./bin/xdebug-trace user_auth.php
+./bin/xtrace user_auth.php
 ```
 This will show us the actual $user variable value at each step without modifying the code. 
 The trace file will reveal:
@@ -730,7 +730,7 @@ Follow these principles for all PHP debugging tasks to ensure consistent, profes
 
 ### Critical Connection Requirements
 
-**IMPORTANT**: Interactive step debugging with `./bin/xdebug-debug` requires proper connection timing and setup.
+**IMPORTANT**: Interactive step debugging with `./bin/xstep` requires proper connection timing and setup.
 
 ### Step Debugging Connection Protocol
 
@@ -748,7 +748,7 @@ Follow these principles for all PHP debugging tasks to ensure consistent, profes
 
 3. **Execute target script with Xdebug**
    ```bash
-   ./bin/xdebug-debug target_script.php
+   ./bin/xstep target_script.php
    ```
 
 ### Connection Architecture
@@ -763,7 +763,7 @@ Follow these principles for all PHP debugging tasks to ensure consistent, profes
 
 **❌ Wrong Order:**
 ```bash
-./bin/xdebug-debug script.php    # Script runs and exits
+./bin/xstep script.php    # Script runs and exits
 php test_new_xdebug_debug.php &  # Too late - no connection
 ```
 
@@ -771,7 +771,7 @@ php test_new_xdebug_debug.php &  # Too late - no connection
 ```bash
 php test_new_xdebug_debug.php &  # XdebugClient listening
 lsof -i :9004                    # Verify LISTEN state  
-./bin/xdebug-debug script.php    # Script connects to waiting client
+./bin/xstep script.php    # Script connects to waiting client
 ```
 
 ### Verification Steps
