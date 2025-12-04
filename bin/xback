@@ -11,7 +11,7 @@ use Koriym\XdebugMcp\Constants;
  */
 function showHelp(): void
 {
-    echo "Usage: xdebug-backtrace [options] [--] command\n";
+    echo "Usage: xback [options] [--] command\n";
     echo "\n";
     echo "Get stack trace (backtrace) at breakpoint or first executable line\n";
     echo "\n";
@@ -21,19 +21,19 @@ function showHelp(): void
     echo "  --context=TEXT    Context description for AI analysis\n";
     echo "  --help, -h        Show this help\n";
     echo "\n";
-    echo "OUTPUT: Structured JSON (schema: xdebug-backtrace.json)\n";
+    echo "OUTPUT: Structured JSON (schema: xback.json)\n";
     echo "\n";
     echo "EXAMPLES:\n";
-    echo "  xdebug-backtrace -- php script.php                    # Get stack at first line\n";
-    echo "  xdebug-backtrace --break=app.php:50 -- php app.php    # Get stack at breakpoint\n";
-    echo "  xdebug-backtrace --depth=20 -- php main.php           # Deep stack trace\n";
+    echo "  xback -- php script.php                    # Get stack at first line\n";
+    echo "  xback --break=app.php:50 -- php app.php    # Get stack at breakpoint\n";
+    echo "  xback --depth=20 -- php main.php           # Deep stack trace\n";
     echo "\n";
     echo "USE CASES:\n";
     echo "  - Understand call hierarchy at specific point\n";
     echo "  - Debug 'how did we get here?' questions\n";
     echo "  - Analyze function call depth and recursion\n";
     echo "\n";
-    echo "SCHEMA: https://koriym.github.io/xdebug-mcp/schemas/xdebug-backtrace.json\n";
+    echo "SCHEMA: https://koriym.github.io/xdebug-mcp/schemas/xback.json\n";
     echo "\n";
     exit(0);
 }
@@ -88,7 +88,7 @@ function parseBreakpoint(string $breakSpec, bool $isDockerCommand = false): ?arr
 function outputBacktraceJson(string $script, ?string $breakpointStr, string $context, int $depth, array $stack): void
 {
     $result = [
-        '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xdebug-backtrace.json',
+        '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xback.json',
         'script' => $script,
         'breakpoint' => $breakpointStr,
         'context' => $context,
