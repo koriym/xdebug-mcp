@@ -262,6 +262,10 @@ The tools automatically:
 - Skip local file validation for container paths
 - Inject Xdebug arguments at the correct position
 - Listen on `0.0.0.0` for container connections
+- Use runtime-specific host aliases for `xdebug.client_host`:
+  - Docker: `host.docker.internal`
+  - Podman: `host.containers.internal`
+  - Kubectl: `host.docker.internal` (requires manual network configuration)
 - Maintain backward compatibility with local execution
 
 See [tests/docker/README.md](tests/docker/README.md) for detailed setup instructions.
