@@ -53,13 +53,17 @@ return (function (){
             exit(1);
         }
 
-        if (!isset($GLOBALS['argv'][$dashDashPos + 1]) || $GLOBALS['argv'][$dashDashPos + 1] !== 'php') {
-            fwrite(STDERR, "❌ Error: Argument after '--' must be 'php'\n");
+        // Allow 'php', 'docker', 'podman', 'kubectl' as valid commands after '--'
+        $validCommands = ['php', 'docker', 'podman', 'kubectl'];
+        $firstArg = $GLOBALS['argv'][$dashDashPos + 1] ?? '';
+        if (!in_array($firstArg, $validCommands, true)) {
+            fwrite(STDERR, "❌ Error: Argument after '--' must be 'php' or a container command (docker, podman, kubectl)\n");
             fwrite(STDERR, "Run '{$scriptName} --help' for usage information.\n");
             exit(1);
         }
 
-        if (!isset($GLOBALS['argv'][$dashDashPos + 2])) {
+        // For local PHP, require script file. For containers, skip this check.
+        if ($firstArg === 'php' && !isset($GLOBALS['argv'][$dashDashPos + 2])) {
             fwrite(STDERR, "❌ Error: PHP script file is required\n");
             fwrite(STDERR, "Run '{$scriptName} --help' for usage information.\n");
             exit(1);

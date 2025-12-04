@@ -35,7 +35,6 @@ use const STDERR;
  * @example Local execution
  *   $runner = new XdebugRunner(['script', '--', 'php', 'test.php']);
  *   $runner->setMode('trace')->run();
- *
  * @example Docker execution
  *   $runner = new XdebugRunner(['script', '--', 'docker', 'compose', 'run', '--rm', 'php', 'php', '/app/test.php']);
  *   $runner->setMode('profile')->run();
@@ -49,15 +48,13 @@ class XdebugRunner
 
     /** @var string[] */
     private array $xdebugOptions = [];
-
     private string|null $context = null;
-
     private string|null $includeVendor = null;
-
     private string $outputDir = '/tmp';
 
     /**
      * @param string[] $argv Command line arguments including '--' separator
+     *
      * @throws RuntimeException If '--' separator is missing or no command provided
      */
     public function __construct(array $argv)
@@ -101,9 +98,7 @@ class XdebugRunner
         return $this->includeVendor;
     }
 
-    /**
-     * @param string[] $options Additional Xdebug options
-     */
+    /** @param string[] $options Additional Xdebug options */
     public function setXdebugOptions(array $options): self
     {
         $this->xdebugOptions = $options;
@@ -215,6 +210,7 @@ class XdebugRunner
 
     /**
      * @param string[] $argv
+     *
      * @throws RuntimeException
      */
     private function parseArguments(array $argv): void
@@ -233,6 +229,7 @@ class XdebugRunner
 
     /**
      * @param string[] $parts
+     *
      * @throws RuntimeException
      */
     private function validateLocalFile(array $parts): void
@@ -251,9 +248,7 @@ class XdebugRunner
         }
     }
 
-    /**
-     * @param string[] $parts
-     */
+    /** @param string[] $parts */
     private function buildLocalCommand(array $parts): string
     {
         $workingParts = $parts;
@@ -270,6 +265,7 @@ class XdebugRunner
 
     /**
      * @param string[] $parts
+     *
      * @throws RuntimeException
      */
     private function buildDockerCommand(array $parts): string
@@ -278,7 +274,7 @@ class XdebugRunner
 
         if ($phpIndex === false) {
             throw new RuntimeException(
-                'PHP command not found in Docker command. Expected format: docker ... php script.php'
+                'PHP command not found in Docker command. Expected format: docker ... php script.php',
             );
         }
 
@@ -296,6 +292,7 @@ class XdebugRunner
      * Find the position of PHP command within Docker command
      *
      * @param string[] $parts
+     *
      * @return int|false Position of PHP command or false if not found
      */
     public function findPhpCommandIndex(array $parts): int|false
@@ -313,9 +310,7 @@ class XdebugRunner
         return $lastPhpIndex;
     }
 
-    /**
-     * @return string[]
-     */
+    /** @return string[] */
     private function generateXdebugArguments(): array
     {
         $args = [

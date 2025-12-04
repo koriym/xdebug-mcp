@@ -21,35 +21,38 @@ function validateInput(mixed $input): array
 
     if ($input === null) {
         $errors[] = 'Input is null';
+
         return $errors;
     }
 
-    if (!is_array($input)) {
+    if (! is_array($input)) {
         $errors[] = 'Input must be an array';
+
         return $errors;
     }
 
     if (empty($input)) {
         $errors[] = 'Input array is empty';
+
         return $errors;
     }
 
     // Check required fields
     $requiredFields = ['name', 'email', 'age'];
     foreach ($requiredFields as $field) {
-        if (!isset($input[$field])) {
+        if (! isset($input[$field])) {
             $errors[] = "Missing required field: $field";
         }
     }
 
     // Validate email format
-    if (isset($input['email']) && !filter_var($input['email'], FILTER_VALIDATE_EMAIL)) {
+    if (isset($input['email']) && ! filter_var($input['email'], FILTER_VALIDATE_EMAIL)) {
         $errors[] = 'Invalid email format';
     }
 
     // Validate age
     if (isset($input['age'])) {
-        if (!is_int($input['age'])) {
+        if (! is_int($input['age'])) {
             $errors[] = 'Age must be an integer';
         } elseif ($input['age'] < 0) {
             $errors[] = 'Age cannot be negative';
@@ -104,7 +107,7 @@ function processData(array $data): array
 
     foreach ($data as $index => $item) {
         try {
-            if (!is_numeric($item)) {
+            if (! is_numeric($item)) {
                 throw new InvalidArgumentException("Item at index $index is not numeric");
             }
 
@@ -163,14 +166,14 @@ $discountTests = [
 
 foreach ($discountTests as [$amount, $type, $holiday]) {
     $discount = calculateDiscount($amount, $type, $holiday);
-    echo "   \$$amount, $type, holiday=" . ($holiday ? 'yes' : 'no') . " => " . ($discount * 100) . "% off\n";
+    echo "   \$$amount, $type, holiday=" . ($holiday ? 'yes' : 'no') . ' => ' . ($discount * 100) . "% off\n";
 }
 
 // Test processData
 echo "\n3. Testing processData:\n";
 $dataToProcess = [1, 4, 9, 'invalid', -1, 16, 25];
 $processed = processData($dataToProcess);
-$successCount = count(array_filter($processed, fn($r) => !isset($r['error'])));
-echo "   Processed " . count($processed) . " items, $successCount successful\n";
+$successCount = count(array_filter($processed, static fn ($r) => ! isset($r['error'])));
+echo '   Processed ' . count($processed) . " items, $successCount successful\n";
 
 echo "\n=== Coverage Test Complete ===\n";
