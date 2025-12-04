@@ -169,8 +169,6 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
         'jsonOutput' => true,
         'context' => $context,
         'maxSteps' => 1,
-        'backtraceMode' => true,
-        'backtraceDepth' => $depth
     ];
 
     // Capture DebugServer output

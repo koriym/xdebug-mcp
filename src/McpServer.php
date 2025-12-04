@@ -1104,7 +1104,7 @@ final class McpServer
             $depth = $args['depth'] ?? 10;
 
             // Build command
-            $cmd = $this->binDir . '/xdebug-backtrace --json';
+            $cmd = $this->binDir . '/xdebug-backtrace';
 
             // Add breakpoint if specified
             if (! empty($breakpoint)) {
