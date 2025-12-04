@@ -11,6 +11,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+use function strpos;
+
 #[CoversClass(XdebugRunner::class)]
 final class XdebugRunnerTest extends TestCase
 {
@@ -45,8 +47,15 @@ final class XdebugRunnerTest extends TestCase
     public function detectsDockerCommand(): void
     {
         $runner = new XdebugRunner([
-            'script', '--',
-            'docker', 'compose', 'run', '--rm', 'php', 'php', '/app/test.php',
+            'script',
+            '--',
+            'docker',
+            'compose',
+            'run',
+            '--rm',
+            'php',
+            'php',
+            '/app/test.php',
         ]);
 
         $this->assertTrue($runner->isDockerCommand($runner->getCommandParts()));
@@ -56,8 +65,14 @@ final class XdebugRunnerTest extends TestCase
     public function detectsPodmanCommand(): void
     {
         $runner = new XdebugRunner([
-            'script', '--',
-            'podman', 'run', '--rm', 'php:8.4', 'php', '/app/test.php',
+            'script',
+            '--',
+            'podman',
+            'run',
+            '--rm',
+            'php:8.4',
+            'php',
+            '/app/test.php',
         ]);
 
         $this->assertTrue($runner->isDockerCommand($runner->getCommandParts()));
@@ -67,8 +82,15 @@ final class XdebugRunnerTest extends TestCase
     public function detectsKubectlCommand(): void
     {
         $runner = new XdebugRunner([
-            'script', '--',
-            'kubectl', 'exec', '-it', 'pod-name', '--', 'php', '/app/test.php',
+            'script',
+            '--',
+            'kubectl',
+            'exec',
+            '-it',
+            'pod-name',
+            '--',
+            'php',
+            '/app/test.php',
         ]);
 
         $this->assertTrue($runner->isDockerCommand($runner->getCommandParts()));
@@ -78,8 +100,15 @@ final class XdebugRunnerTest extends TestCase
     public function findPhpCommandIndexInDockerCompose(): void
     {
         $runner = new XdebugRunner([
-            'script', '--',
-            'docker', 'compose', 'run', '--rm', 'php', 'php', '/app/test.php',
+            'script',
+            '--',
+            'docker',
+            'compose',
+            'run',
+            '--rm',
+            'php',
+            'php',
+            '/app/test.php',
         ]);
 
         $parts = $runner->getCommandParts();
@@ -92,8 +121,14 @@ final class XdebugRunnerTest extends TestCase
     public function findPhpCommandIndexWithVersionedPhp(): void
     {
         $runner = new XdebugRunner([
-            'script', '--',
-            'docker', 'run', '--rm', 'myimage', 'php8.4', '/app/test.php',
+            'script',
+            '--',
+            'docker',
+            'run',
+            '--rm',
+            'myimage',
+            'php8.4',
+            '/app/test.php',
         ]);
 
         $parts = $runner->getCommandParts();
@@ -107,8 +142,14 @@ final class XdebugRunnerTest extends TestCase
         // Important: when 'php' appears multiple times (service name + command),
         // we want the LAST occurrence
         $runner = new XdebugRunner([
-            'script', '--',
-            'docker', 'compose', 'exec', 'php', 'php', '/app/test.php',
+            'script',
+            '--',
+            'docker',
+            'compose',
+            'exec',
+            'php',
+            'php',
+            '/app/test.php',
         ]);
 
         $parts = $runner->getCommandParts();
@@ -121,8 +162,14 @@ final class XdebugRunnerTest extends TestCase
     public function findPhpCommandIndexReturnsFalseWhenNotFound(): void
     {
         $runner = new XdebugRunner([
-            'script', '--',
-            'docker', 'run', '--rm', 'myimage', 'python', '/app/test.py',
+            'script',
+            '--',
+            'docker',
+            'run',
+            '--rm',
+            'myimage',
+            'python',
+            '/app/test.py',
         ]);
 
         $parts = $runner->getCommandParts();
@@ -196,8 +243,15 @@ final class XdebugRunnerTest extends TestCase
     public function buildsDockerCommandWithXdebugArgsInjected(): void
     {
         $runner = new XdebugRunner([
-            'script', '--',
-            'docker', 'compose', 'run', '--rm', 'php', 'php', '/app/test.php',
+            'script',
+            '--',
+            'docker',
+            'compose',
+            'run',
+            '--rm',
+            'php',
+            'php',
+            '/app/test.php',
         ]);
         $runner->setMode('trace');
 
@@ -219,8 +273,14 @@ final class XdebugRunnerTest extends TestCase
     public function throwsExceptionWhenPhpNotFoundInDockerCommand(): void
     {
         $runner = new XdebugRunner([
-            'script', '--',
-            'docker', 'run', '--rm', 'python:3.11', 'python', '/app/test.py',
+            'script',
+            '--',
+            'docker',
+            'run',
+            '--rm',
+            'python:3.11',
+            'python',
+            '/app/test.py',
         ]);
 
         $this->expectException(RuntimeException::class);
@@ -253,9 +313,7 @@ final class XdebugRunnerTest extends TestCase
         $this->assertSame($expected, $runner->isDockerCommand($runner->getCommandParts()));
     }
 
-    /**
-     * @return array<string, array{array<string>, bool}>
-     */
+    /** @return array<string, array{array<string>, bool}> */
     public static function containerCommandProvider(): array
     {
         return [

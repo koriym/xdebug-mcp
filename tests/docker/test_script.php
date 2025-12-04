@@ -81,12 +81,12 @@ echo "   factorial(5) = $factResult\n\n";
 echo "3. Testing Array Processing:\n";
 $numbers = [1, 2, 3, 4, 5];
 $processed = processArray($numbers);
-echo "   Processed " . count($processed) . " items\n\n";
+echo '   Processed ' . count($processed) . " items\n\n";
 
 echo "4. Testing User Processing:\n";
 $user = ['id' => 1, 'name' => 'Test User', 'email' => 'test@example.com'];
 $processedUser = processUser($user);
-echo "   User processed: " . ($processedUser['processed'] ? 'yes' : 'no') . "\n\n";
+echo '   User processed: ' . ($processedUser['processed'] ? 'yes' : 'no') . "\n\n";
 
 echo "=== Test Complete ===\n";
-echo "Memory used: " . number_format(memory_get_peak_usage(true) / 1024) . " KB\n";
+echo 'Memory used: ' . number_format(memory_get_peak_usage(true) / 1024) . " KB\n";

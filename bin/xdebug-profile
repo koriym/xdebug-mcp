@@ -6,88 +6,49 @@ declare(strict_types=1);
 // Load autoloader and get project root
 $projectRoot = require __DIR__ . '/autoload.php';
 
-use Koriym\XdebugMcp\XdebugFinder;
+use Koriym\XdebugMcp\XdebugRunner;
 
 function showHelp(string $scriptName): void
 {
-    echo "Usage: $scriptName [--json] [--claude] [--context=TEXT] -- php script.php [args...]\n";
+    echo "Usage: $scriptName [--json] [--claude] [--context=TEXT] [--include-vendor=PATTERNS] -- command\n";
     echo "\n";
-    echo "⚡ AI-Optimized PHP Performance Profiler\n";
+    echo "⚡ AI-Optimized PHP Performance Profiler with Docker Support\n";
     echo "\n";
     echo "PURPOSE:\n";
     echo "  Scientific approach to PHP performance optimization. Identify actual bottlenecks\n";
-    echo "  with precision data rather than guesswork. Provides comprehensive metrics about\n";
-    echo "  function call costs, memory usage, and execution timing for AI-driven optimization.\n";
+    echo "  with precision data rather than guesswork.\n";
     echo "\n";
-    echo "KEY BENEFITS FOR AI PERFORMANCE ANALYSIS:\n";
+    echo "KEY BENEFITS:\n";
     echo "  ✅ Precision bottleneck identification: Know exactly which functions are slow\n";
     echo "  ✅ Memory usage analysis: Identify memory-hungry operations and leaks\n";
     echo "  ✅ Function call cost breakdown: See time spent in each function call\n";
-    echo "  ✅ Comparative analysis: Before/after optimization measurements\n";
-    echo "  ✅ Production-safe: Non-invasive profiling without code modification\n";
-    echo "  ✅ Comprehensive metrics: CPU time, memory, function calls, I/O operations\n";
+    echo "  ✅ Docker support: Works with Docker, Podman, and Kubectl containers\n";
     echo "\n";
     echo "CORE OPTIONS:\n";
-    echo "  --json                      AI-optimized JSON output (suppresses script output for clean parsing)\n";
+    echo "  --json                      AI-optimized JSON output\n";
     echo "  --claude                    Auto-analyze profile data with Claude AI\n";
     echo "  --context=TEXT             Add contextual description for AI analysis\n";
     echo "  --include-vendor=PATTERNS  Include vendor packages in performance analysis\n";
-    echo "  --help, -h                 Show this comprehensive help\n";
+    echo "  --help, -h                 Show this help\n";
     echo "\n";
-    echo "COMMON AI PERFORMANCE WORKFLOWS:\n";
+    echo "EXAMPLES:\n";
     echo "\n";
-    echo "  # 1. General performance analysis (most common)\n";
-    echo "  $scriptName --context=\"Optimize data processing performance\" -- php process_data.php\n";
+    echo "  # Local PHP execution\n";
+    echo "  $scriptName --context=\"Optimize data processing\" -- php process_data.php\n";
     echo "\n";
-    echo "  # 2. Database query optimization\n";
-    echo "  $scriptName --context=\"Database query performance analysis\" -- php user_search.php\n";
+    echo "  # Docker execution\n";
+    echo "  $scriptName --context=\"Docker test\" -- docker compose run --rm php php /app/script.php\n";
     echo "\n";
-    echo "  # 3. API endpoint optimization\n";
-    echo "  $scriptName --context=\"REST API response time optimization\" -- php api_endpoint.php\n";
+    echo "  # Docker exec (running container)\n";
+    echo "  $scriptName -- docker compose exec -T php php /app/script.php\n";
     echo "\n";
-    echo "  # 4. Framework performance analysis\n";
-    echo "  $scriptName --include-vendor=\"bear/*\" --context=\"BEAR framework bootstrap performance\" -- php app.php\n";
-    echo "\n";
-    echo "  # 5. Test suite performance optimization\n";
-    echo "  $scriptName --context=\"PHPUnit test suite performance\" -- php vendor/bin/phpunit\n";
-    echo "\n";
-    echo "  # 6. JSON output for tooling (clean parsing with jq)\n";
+    echo "  # JSON output for tooling\n";
     echo "  $scriptName --json -- php script.php | jq '.\"🎯 bottleneck_functions\"'\n";
     echo "\n";
-    echo "PERFORMANCE ANALYSIS CAPABILITIES:\n";
-    echo "  🚀 Function Timing: Identify slowest functions with microsecond precision\n";
-    echo "  💾 Memory Analysis: Track memory usage patterns and identify leaks\n";
-    echo "  🔄 Call Frequency: Find functions called excessively (N+1 problems)\n";
-    echo "  📊 I/O Operations: Identify file system and network bottlenecks\n";
-    echo "  🎯 Hot Path Analysis: Focus optimization efforts on critical code paths\n";
-    echo "\n";
-    echo "OUTPUT FORMATS:\n";
-    echo "  Default: Human-readable with proper time/memory units and KCachegrind suggestions\n";
-    echo "  --json: Pure JSON output (script stdout/stderr suppressed for clean parsing with jq)\n";
-    echo "          AI-optimized with emoji keys and comprehensive performance metrics\n";
+    echo "OUTPUT:\n";
+    echo "  Default: Human-readable with KCachegrind suggestions\n";
+    echo "  --json: AI-optimized JSON with emoji keys and metrics\n";
     echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json\n";
-    echo "  Benefits: AI can rank bottlenecks, suggest optimizations, compare before/after\n";
-    echo "\n";
-    echo "📋 JSON SCHEMA RESOURCES (Essential for AI):\n";
-    echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json\n";
-    echo "  Xdebug Profiling Docs: https://xdebug.org/docs/profiler\n";
-    echo "  Cachegrind Format: https://valgrind.org/docs/manual/cg-manual.html\n";
-    echo "  KCachegrind Tool: https://kcachegrind.github.io/ - Visual profile analysis\n";
-    echo "  Emoji Keys: Schema uses 📁📊💾📏📈 prefixes for AI-friendly navigation\n";
-    echo "\n";
-    echo "AI WORKFLOW INTEGRATION:\n";
-    echo "  1. Profile current performance with contextual description\n";
-    echo "  2. AI analyzes metrics and identifies top bottlenecks\n";
-    echo "  3. AI suggests specific optimization strategies with code examples\n";
-    echo "  4. Apply optimizations and re-profile to measure improvements\n";
-    echo "  5. AI validates performance gains and suggests further optimizations\n";
-    echo "\n";
-    echo "RECOMMENDED AI PROMPT:\n";
-    echo "  'Run xdebug-profile --help first to understand this tool, then help me optimize my PHP performance'\n";
-    echo "\n";
-    echo "VS. MANUAL PROFILING:\n";
-    echo "  ❌ Manual: Add timing code, guess bottlenecks, remove debug code\n";
-    echo "  ✅ This tool: Get precise metrics instantly, AI-driven optimization recommendations\n";
     echo "\n";
 }
 
@@ -97,87 +58,58 @@ if (isset($argv[1]) && ($argv[1] === '--help' || $argv[1] === '-h')) {
     exit(0);
 }
 
-// Parse flags
-$jsonOutput = in_array('--json', $argv);
-$claudeAnalysis = in_array('--claude', $argv);
-$context = null;
+// Find '--' separator position
+$separatorIndex = array_search('--', $argv);
+if ($separatorIndex === false) {
+    fwrite(STDERR, "❌ Error: Missing '--' separator\n");
+    fwrite(STDERR, "Usage: xdebug-profile [options] -- command\n");
+    exit(1);
+}
 
-// Parse --context= flag
-foreach ($argv as $arg) {
+// Parse flags (before '--')
+$ownArgs = array_slice($argv, 1, $separatorIndex - 1);
+$jsonOutput = in_array('--json', $ownArgs);
+$claudeAnalysis = in_array('--claude', $ownArgs);
+$context = null;
+$includeVendor = null;
+
+foreach ($ownArgs as $arg) {
     if (str_starts_with($arg, '--context=')) {
         $context = substr($arg, 10);
-        break;
+    } elseif (str_starts_with($arg, '--include-vendor=')) {
+        $includeVendor = substr($arg, 17);
     }
-}
-
-// Remove flags and find target file
-$flagsToRemove = ['--json', '--claude', '--'];
-if ($context !== null) {
-    $flagsToRemove[] = '--context=' . $context;
-}
-$args = array_values(array_diff($argv, $flagsToRemove));
-array_shift($args); // remove script name
-
-// Skip 'php' if present
-if (isset($args[0]) && $args[0] === 'php') {
-    array_shift($args);
-}
-
-$targetFile = $args[0] ?? '';
-$phpArgs = array_slice($args, 1);
-
-// Check target file exists
-if (!file_exists($targetFile)) {
-    fwrite(STDERR, "❌ Error: File '$targetFile' not found\n");
-    exit(1);
 }
 
 // Get Xdebug output directory
 $xdebugOutputDir = ini_get('xdebug.output_dir') ?: '/tmp';
 
-echo "📊 Profiling: $targetFile\n";
-
-// Build command with Xdebug profiling enabled
-$prependFilter = __DIR__ . '/../prepend_filter.php';
-
-// Get appropriate Xdebug flag (empty if already loaded)
-$xdebugFlag = XdebugFinder::getXdebugFlag();
-
-$xdebugOptions = [
-    '-dxdebug.mode=profile',
-    '-dxdebug.start_with_request=yes',
-    "-dxdebug.output_dir={$xdebugOutputDir}",
-    '-dxdebug.profiler_output_name=cachegrind.out.%%p',
-    '-dxdebug.use_compression=0',  // Disable compression for easier parsing
-];
-
-// Add Xdebug extension flag if needed
-if ($xdebugFlag !== '') {
-    array_unshift($xdebugOptions, trim($xdebugFlag));
+if (!$jsonOutput) {
+    echo "📊 Profiling...\n";
 }
 
-// No XDEBUG_FILTER_PROFILING - skip prepend_filter
-
-// Combine all arguments
-$allArgs = array_merge($xdebugOptions, [$targetFile], $phpArgs);
-$cmd = 'php ' . implode(' ', array_map('escapeshellarg', $allArgs));
-
-// Execute command
-$exitCode = 0;
-if ($jsonOutput) {
-    // JSON mode: suppress script output for clean JSON parsing
-    // Cross-platform null device (Windows: NUL, Unix: /dev/null)
-    $nullDevice = (PHP_OS_FAMILY === 'Windows') ? 'NUL' : '/dev/null';
-    $cmd .= " > {$nullDevice} 2>&1";
-    exec($cmd, $output, $exitCode);
-} else {
-    // Human-readable mode: show script output
-    passthru($cmd, $exitCode);
-}
-
-// Generate profile analysis
+// Execute profile using XdebugRunner
 try {
-    $result = generateEnhancedProfileData($xdebugOutputDir, $jsonOutput, $context);
+    $runner = new XdebugRunner($argv);
+    $runner->setMode('profile');
+    $runner->setContext($context);
+    $runner->setIncludeVendor($includeVendor);
+
+    $exitCode = $runner->run();
+
+    if ($exitCode !== 0) {
+        exit($exitCode);
+    }
+
+    // Get the generated profile file
+    $profileFile = $runner->getLatestProfileFile();
+
+    if ($profileFile === null) {
+        fwrite(STDERR, "❌ Error: Profile file not found in /tmp\n");
+        exit(1);
+    }
+
+    $result = generateEnhancedProfileData($profileFile, $jsonOutput, $context);
 
     if ($jsonOutput) {
         // AI-optimized JSON output with emoji keys and units
@@ -206,20 +138,8 @@ try {
     exit(1);
 }
 
-function generateEnhancedProfileData(string $xdebugOutputDir, bool $jsonOutput = false, ?string $context = null): array
+function generateEnhancedProfileData(string $profileFile, bool $jsonOutput = false, ?string $context = null): array
 {
-    // Find the created profile file
-    $profileFiles = glob("{$xdebugOutputDir}/cachegrind.out.*");
-    if (empty($profileFiles)) {
-        throw new \RuntimeException('Profile file not created. Check Xdebug installation.');
-    }
-
-    // Get the most recent profile file
-    usort($profileFiles, function($a, $b) {
-        return filemtime($b) - filemtime($a);
-    });
-    $profileFile = $profileFiles[0];
-
     if (!file_exists($profileFile) || !is_readable($profileFile)) {
         throw new \RuntimeException("Profile file not found or not readable: $profileFile");
     }

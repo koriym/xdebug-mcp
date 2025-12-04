@@ -119,7 +119,7 @@ echo "1. Finding primes up to 500:\n";
 $t1 = microtime(true);
 $primes = findPrimes(500);
 $t1End = microtime(true);
-echo "   Found " . count($primes) . " primes in " . number_format(($t1End - $t1) * 1000, 2) . "ms\n\n";
+echo '   Found ' . count($primes) . ' primes in ' . number_format(($t1End - $t1) * 1000, 2) . "ms\n\n";
 
 echo "2. Bubble sorting 500 elements:\n";
 $t2 = microtime(true);
@@ -127,13 +127,13 @@ $unsorted = range(1, 500);
 shuffle($unsorted);
 $sorted = bubbleSort($unsorted);
 $t2End = microtime(true);
-echo "   Sorted in " . number_format(($t2End - $t2) * 1000, 2) . "ms\n\n";
+echo '   Sorted in ' . number_format(($t2End - $t2) * 1000, 2) . "ms\n\n";
 
 echo "3. Processing 1000 strings:\n";
 $t3 = microtime(true);
 $strings = processStrings(1000);
 $t3End = microtime(true);
-echo "   Processed in " . number_format(($t3End - $t3) * 1000, 2) . "ms\n\n";
+echo '   Processed in ' . number_format(($t3End - $t3) * 1000, 2) . "ms\n\n";
 
 echo "4. Building and summing tree (depth=8):\n";
 $t4 = microtime(true);
@@ -146,6 +146,6 @@ $endTime = microtime(true);
 $endMem = memory_get_usage(true);
 
 echo "=== Performance Summary ===\n";
-echo "Total time: " . number_format(($endTime - $startTime) * 1000, 2) . "ms\n";
-echo "Memory used: " . number_format(($endMem - $startMem) / 1024) . " KB\n";
-echo "Peak memory: " . number_format(memory_get_peak_usage(true) / 1024) . " KB\n";
+echo 'Total time: ' . number_format(($endTime - $startTime) * 1000, 2) . "ms\n";
+echo 'Memory used: ' . number_format(($endMem - $startMem) / 1024) . " KB\n";
+echo 'Peak memory: ' . number_format(memory_get_peak_usage(true) / 1024) . " KB\n";
