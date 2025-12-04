@@ -117,6 +117,27 @@ xdebug-backtrace --break='app.php:50' -- php app.php
 
 Run `--help` on any tool for detailed options.
 
+## Interactive REPL
+
+For hands-on debugging without AI, use the interactive debugger:
+
+```bash
+xdebug-debug -- php script.php
+```
+
+**Commands:**
+
+| Command | Description |
+|---------|-------------|
+| `s` | Step into function |
+| `o` | Step over line |
+| `out` | Step out of function |
+| `c` | Continue execution |
+| `p <var>` | Print variable (e.g., `p $user`) |
+| `bt` | Show backtrace |
+| `l` | List source code |
+| `q` | Quit debugger |
+
 ## Docker Support
 
 All tools work with Docker, Podman, and Kubectl:
