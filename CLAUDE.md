@@ -379,6 +379,23 @@ This project prioritizes **execution-time trace analysis** over traditional code
 
 **IMPORTANT: When asked to analyze, debug, or understand any PHP file, ALWAYS use appropriate Xdebug tools automatically unless explicitly told otherwise.**
 
+**CRITICAL: AI should always prioritize MCP tools over direct CLI execution.**
+
+#### Natural Language to MCP Tool Mapping / 自然言語とMCPツールのマッピング
+
+| User Request / ユーザーリクエスト | MCP Tool | Description / 説明 |
+|----------------------------------|----------|-------------------|
+| Forward trace, execution flow, trace execution<br>フォワードトレース、実行フロー、トレース実行 | `x-trace` | Record execution flow without stopping<br>実行の流れを記録（停止しない） |
+| Step execution, step debugging, breakpoints, inspect variables<br>ステップ実行、ステップデバッグ、ブレークポイント、変数検査 | `x-debug` | Stop at breakpoints and inspect<br>ブレークポイントで停止して検査 |
+| Profile, performance analysis, find bottlenecks<br>プロファイル、パフォーマンス分析、ボトルネック検出 | `x-profile` | Execution time and memory analysis<br>実行時間・メモリ分析 |
+| Coverage, test coverage, code coverage<br>カバレッジ、テストカバレッジ、コードカバレッジ | `x-coverage` | Code coverage analysis<br>コードカバレッジ分析 |
+| Backtrace, stack trace, call stack<br>バックトレース、スタックトレース、コールスタック | `x-backtrace` | Get stack trace at current position<br>現在位置のスタックトレースを取得 |
+
+**Note on "Trace" ambiguity / 「トレース」の曖昧さについて:**
+- **Forward Trace (フォワードトレース)**: Records execution flow from start to end → Use `x-trace`
+- **Backtrace (バックトレース)**: Shows call stack at a specific point → Use `x-backtrace`
+- **Step Debugging (ステップ実行)**: Interactive debugging with breakpoints → Use `x-debug`
+
 #### Available Xdebug Tools:
 - `./bin/xdebug-debug` - Interactive step debugging with breakpoints
 - `./bin/xdebug-profile` - Performance profiling

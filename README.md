@@ -59,6 +59,7 @@ composer global require koriym/xdebug-mcp
 ~/.composer/vendor/bin/xdebug-coverage --help  # Understand AI coverage analysis
 ~/.composer/vendor/bin/xdebug-trace --help     # Master execution flow tracing
 ~/.composer/vendor/bin/xdebug-profile --help   # Performance optimization guidance
+~/.composer/vendor/bin/xdebug-backtrace --help # Get stack trace at breakpoint
 
 # Example: Catch null bugs automatically
 ~/.composer/vendor/bin/xdebug-debug --break='script.php:42:$user==null' --exit-on-break -- php script.php
@@ -125,6 +126,7 @@ composer global require koriym/xdebug-mcp
 ```bash
 /x-debug "script.php" "script.php:42:$error!=null" "" "Debug error handling"
 /x-trace script="auth.php" context="Login flow analysis" include_vendor="bear/*"
+/x-backtrace script="app.php" breakpoint="app.php:50" context="Check call hierarchy"
 ```
 
 
@@ -156,6 +158,12 @@ All tools now feature comprehensive AI-optimized help documentation. **Always ru
   ~/.composer/vendor/bin/xdebug-profile --help   # 📖 AI-driven optimization workflow
   ```
 
+- **`xdebug-backtrace`** 📋 - Get stack trace (backtrace) at breakpoint
+  ```bash
+  ~/.composer/vendor/bin/xdebug-backtrace --help  # 📖 Understand call hierarchy
+  ~/.composer/vendor/bin/xdebug-backtrace --break='app.php:50' -- php app.php
+  ```
+
 - **`xdebug-phpunit`** - PHPUnit integration with Xdebug profiling and coverage
 
 ### 🎯 AI-First Design Philosophy
@@ -176,7 +184,7 @@ All tools now feature comprehensive AI-optimized help documentation. **Always ru
 
 ### AI Integration Features
 - **42+ MCP Tools**: Performance profiling, code coverage, execution tracing, memory diagnostics, error tracking
-- **Slash Commands**: `/x-debug`, `/x-profile`, `/x-trace`, `/x-coverage` for Claude Code
+- **Slash Commands**: `/x-debug`, `/x-profile`, `/x-trace`, `/x-coverage`, `/x-backtrace` for Claude Code
 - **Schema-Validated Output**: JSON that any AI can understand and analyze
 - **Dynamic Vendor Filtering**: AI can specify which vendor packages to include/exclude during analysis
 
