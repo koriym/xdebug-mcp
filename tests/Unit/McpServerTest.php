@@ -59,7 +59,7 @@ class McpServerTest extends TestCase
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('tools', $response['result']);
-        $this->assertCount(4, $response['result']['tools']);
+        $this->assertCount(5, $response['result']['tools']);
 
         $toolNames = array_column($response['result']['tools'], 'name');
         // Test that execution tools are present
@@ -67,6 +67,7 @@ class McpServerTest extends TestCase
         $this->assertContains('x-profile', $toolNames);
         $this->assertContains('x-debug', $toolNames);
         $this->assertContains('x-coverage', $toolNames);
+        $this->assertContains('x-backtrace', $toolNames);
 
         // Test that interactive debugging tools are removed
         $this->assertNotContains('xdebug_connect', $toolNames);
@@ -185,13 +186,14 @@ class McpServerTest extends TestCase
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('prompts', $response['result']);
-        $this->assertCount(4, $response['result']['prompts']);
+        $this->assertCount(5, $response['result']['prompts']);
 
         $promptNames = array_column($response['result']['prompts'], 'name');
         $this->assertContains('x-trace', $promptNames);
         $this->assertContains('x-debug', $promptNames);
         $this->assertContains('x-profile', $promptNames);
         $this->assertContains('x-coverage', $promptNames);
+        $this->assertContains('x-backtrace', $promptNames);
     }
 
     public function testNotificationsInitialized(): void
