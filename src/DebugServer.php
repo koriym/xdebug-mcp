@@ -31,7 +31,9 @@ use function Amp\Socket\listen;
 use function array_filter;
 use function array_map;
 use function array_merge;
+use function array_reverse;
 use function array_slice;
+use function array_splice;
 use function array_unique;
 use function base64_decode;
 use function base64_encode;
@@ -113,6 +115,7 @@ final class DebugServer
     private bool $httpMode = false;
     private bool $shouldExit = false;
     private array $breaks = []; // For Step Recording data collection
+    private bool $isDockerCommand = false;
 
     public function __construct(
         private string $targetScript,
@@ -124,6 +127,10 @@ final class DebugServer
         if (! file_exists($targetScript)) {
             throw new InvalidArgumentException("Script not found: {$targetScript}");
         }
+
+        // Detect Docker/Podman/Kubectl command early for listener configuration
+        $command = $options['command'] ?? [];
+        $this->isDockerCommand = ContainerHelper::isContainerCommand($command);
 
         // Check for existing sessions (warning only)
         $this->checkExistingSessions();
@@ -168,8 +175,11 @@ final class DebugServer
     private function startXdebugListener(): void
     {
         try {
-            $this->server = listen("127.0.0.1:{$this->debugPort}");
-            $this->log("📡 Listener ready on port {$this->debugPort}");
+            // Use 0.0.0.0 for Docker to allow connections from containers
+            // Use 127.0.0.1 for local commands for security
+            $listenAddress = $this->isDockerCommand ? '0.0.0.0' : '127.0.0.1';
+            $this->server = listen("{$listenAddress}:{$this->debugPort}");
+            $this->log("📡 Listener ready on {$listenAddress}:{$this->debugPort}");
             $this->log('⏳ Waiting for Xdebug connection...');
 
             // Notify listener ready (Opus pattern)
@@ -232,11 +242,62 @@ final class DebugServer
             // Check if custom command is provided
             if (isset($this->options['command']) && ! empty($this->options['command'])) {
                 $command = $this->options['command'];
-                // Insert Xdebug parameters into the php command
-                if ($command[0] === 'php') {
+
+                // Check if this is a Docker/Podman/Kubectl command
+                $isDockerCommand = ContainerHelper::isContainerCommand($command);
+
+                if ($isDockerCommand) {
+                    // Docker command: Find PHP position and inject Xdebug arguments
+                    $phpIndex = ContainerHelper::findPhpCommandIndex($command);
+                    if ($phpIndex === false) {
+                        throw new RuntimeException('PHP command not found in Docker command. Expected format: docker ... php script.php');
+                    }
+
                     $scriptName = basename($this->targetScript, '.php');
                     $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
-                    // @todo Remove trace mode in 1.0 release
+
+                    // Build Xdebug arguments - use runtime-specific client host
+                    $clientHost = ContainerHelper::getContainerClientHost($command);
+                    $xdebugArgs = [
+                        '-dxdebug.mode=debug,trace',
+                        '-dxdebug.start_with_request=yes',
+                        '-dxdebug.client_host=' . $clientHost,
+                        '-dxdebug.client_port=' . $this->debugPort,
+                        '-dxdebug.output_dir=/tmp',
+                        '-dxdebug.trace_output_name=trace-%s',
+                        '-dxdebug.trace_format=1',
+                        '-dxdebug.use_compression=0',
+                        '-dxdebug.log=/tmp/xdebug.log',
+                        '-dxdebug.log_level=7',
+                        '-dxdebug.connect_timeout_ms=5000',
+                        '-dmemory_limit=1G',
+                        '-derror_reporting=E_ERROR',
+                        '-dlog_errors=1',
+                        '-derror_log=/tmp/php.log',
+                    ];
+
+                    // Insert Xdebug arguments after PHP command
+                    foreach (array_reverse($xdebugArgs) as $arg) {
+                        array_splice($command, $phpIndex + 1, 0, [$arg]);
+                    }
+
+                    // Insert environment variables after 'run' or 'exec' for Docker
+                    // XDEBUG_MODE=debug is required because environment variable has higher priority than -d flags
+                    $envInsertIndex = ContainerHelper::findDockerEnvInsertIndex($command);
+                    if ($envInsertIndex !== false) {
+                        // Insert in reverse order since each splice shifts indices
+                        array_splice($command, $envInsertIndex, 0, ['-e', 'XDEBUG_SESSION=xdebug-mcp']);
+                        array_splice($command, $envInsertIndex, 0, ['-e', 'XDEBUG_MODE=debug']);
+                    } else {
+                        $this->log('⚠️  Warning: Could not find insertion point for environment variables. Xdebug may not connect properly.');
+                    }
+
+                    $cmd = implode(' ', $command);
+                    $this->traceFile = $traceFile;
+                } elseif ($command[0] === 'php') {
+                    // Local PHP command
+                    $scriptName = basename($this->targetScript, '.php');
+                    $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
                     $prependFilter = __DIR__ . '/../prepend_filter.php';
 
                     // Get appropriate Xdebug flag (empty if already loaded)
@@ -255,7 +316,7 @@ final class DebugServer
                         '-dxdebug.log=/tmp/xdebug.log ' .
                         '-dxdebug.log_level=7 ' .
                         '-dxdebug.connect_timeout_ms=5000 ' .
-                        '-dmemory_limit=1G ' . // Increase memory limit for debugging
+                        '-dmemory_limit=1G ' .
                         '-derror_reporting=E_ERROR ' .
                         '-dlog_errors=1 ' .
                         '-derror_log=/tmp/php.log ' .
@@ -268,7 +329,7 @@ final class DebugServer
                     );
                     $this->traceFile = $traceFile;
                 } else {
-                    throw new RuntimeException("Custom command must start with 'php'");
+                    throw new RuntimeException("Custom command must start with 'php' or be a Docker/Podman/Kubectl command");
                 }
             } else {
                 // Default: simple script execution

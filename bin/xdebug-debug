@@ -97,8 +97,11 @@ function showHelp(): void
 /**
  * Parse breakpoint specifications
  * Format: file.php:line[:condition][,file2.php:line2,...]
+ *
+ * @param string $breakSpec Breakpoint specification string
+ * @param bool $isDockerCommand If true, skip local file validation (files are in container)
  */
-function parseBreakpoints(string $breakSpec): array
+function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): array
 {
     $breakpoints = [];
     $specs = explode(',', $breakSpec);
@@ -120,6 +123,19 @@ function parseBreakpoints(string $breakSpec): array
         $file = $m[1];
         $line = (int) $m[2];
         $condition = $m[3] ?? null;
+
+        // For Docker commands, skip local file validation - the path is inside the container
+        if ($isDockerCommand) {
+            if ($line <= 0) {
+                throw new InvalidLineException("Invalid line number: $line in $file");
+            }
+            $breakpoints[] = [
+                'file' => $file,
+                'line' => $line,
+                'condition' => $condition
+            ];
+            continue;
+        }
 
         // Try to resolve file path - check both as-is and relative to current directory
         $resolvedFile = null;
@@ -186,6 +202,7 @@ function parseBreakpoints(string $breakSpec): array
     $breakpointFile = null;
     $breakpointLine = null;
     $breakpoints = [];
+    $breakSpec = null;
     $command = [];
     $parseOptions = true;
     $traceOnly = false;
@@ -203,7 +220,7 @@ function parseBreakpoints(string $breakSpec): array
 
         if ($parseOptions && str_starts_with($arg, '--break=')) {
             $breakSpec = substr($arg, 8);
-            $breakpoints = parseBreakpoints($breakSpec);
+            // Defer parsing until we know if it's a Docker command
             continue;
         }
 
@@ -260,6 +277,14 @@ function parseBreakpoints(string $breakSpec): array
         showHelp();
     }
 
+    // Detect Docker/Podman/Kubectl commands
+    $isDockerCommand = \Koriym\XdebugMcp\ContainerHelper::isContainerCommand($command);
+
+    // Parse breakpoints now that we know if it's a Docker command
+    if ($breakSpec !== null) {
+        $breakpoints = parseBreakpoints($breakSpec, $isDockerCommand);
+    }
+
     // Handle legacy format: script.php [breakpoint_file] [break_line]
     if (count($command) >= 1 && !str_contains($command[0], ' ') && file_exists($command[0])) {
         $targetScript = $command[0];
@@ -268,6 +293,25 @@ function parseBreakpoints(string $breakSpec): array
         }
         if (!isset($breakpointLine) && isset($command[2])) {
             $breakpointLine = (int)$command[2];
+        }
+    } elseif ($isDockerCommand) {
+        // Docker command: find the script as the last argument after 'php'
+        $phpIndex = \Koriym\XdebugMcp\ContainerHelper::findPhpCommandIndex($command);
+        if ($phpIndex !== false) {
+            // Skip PHP options to find the actual script
+            $scriptIndex = \Koriym\XdebugMcp\ContainerHelper::findScriptIndex($command, $phpIndex);
+            if ($scriptIndex !== false) {
+                // Use the script path from Docker command (may be container path like /app/script.php)
+                $targetScript = $command[$scriptIndex];
+                // For Docker, the script is inside the container - use placeholder for validation
+                if (!file_exists($targetScript)) {
+                    $targetScript = __DIR__ . '/../tests/fixtures/simple.php';
+                }
+            } else {
+                throw new RuntimeException("Could not find PHP script in Docker command: " . implode(' ', $command));
+            }
+        } else {
+            throw new RuntimeException("Could not find PHP command in Docker command: " . implode(' ', $command));
         }
     } else {
         // New format: complex command after --
@@ -278,8 +322,8 @@ function parseBreakpoints(string $breakSpec): array
         }
     }
 
-    // Validate target script
-    if (!file_exists($targetScript)) {
+    // Validate target script (skip for Docker where script is in container)
+    if (!$isDockerCommand && !file_exists($targetScript)) {
         throw new RuntimeException("Target script not found: $targetScript");
     }
 
