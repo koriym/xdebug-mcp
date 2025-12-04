@@ -205,7 +205,7 @@ var_dump($result);    // Repeat... and cleanup...</code></pre>
                 <div class="fragment">
                     <h3>Forward Trace Approach</h3>
                     <pre><code class="bash"># Conditional breakpoint: Stop when problem occurs
-./vendor/bin/xdebug-debug --break='checkout.php:89:$total&lt;0' --steps=50 --exit-on-break -- php checkout.php
+./vendor/bin/xstep --break='checkout.php:89:$total&lt;0' --steps=50 --exit-on-break -- php checkout.php
 
 # AI analyzes and reports:
 "Found it: $50 discount applied to $30 cart = -$20 total
@@ -228,7 +228,7 @@ echo $result;
 ?&gt;' > test.php
 
 # 3. Let AI analyze execution
-./vendor/bin/xdebug-trace --context="Find why \$result becomes null" -- php test.php
+./vendor/bin/xtrace --context="Find why \$result becomes null" -- php test.php
 
 # 4. Enable full AI integration
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
@@ -283,7 +283,7 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                         <h3 style="color: #51cf66;">ForwardTrace</h3>
                         <p style="font-size: 0.8em; color: #51cf66; margin-bottom: 15px;">🎥 Video Shooting<br>(Complete Recording)</p>
                         <pre><code class="bash" style="font-size: 0.6em;"># Single command records entire movie
-./vendor/bin/xdebug-debug --break='script.php:10:$user==null' --steps=300 --exit-on-break -- php script.php
+./vendor/bin/xstep --break='script.php:10:$user==null' --steps=300 --exit-on-break -- php script.php
 
 # AI sees the complete 🎥 movie:
 # Step 1: $id = getUserId() → returns 42
@@ -483,7 +483,7 @@ if ($userId === 0) {
                 <div class="fragment">
                     <h4>Conditional Tracing (Smart):</h4>
                     <pre><code class="bash code-small"># Wait silently until condition met, then start tracing
-./vendor/bin/xdebug-debug --break='User.php:85:$userId==0' --steps=100 --exit-on-break -- php app.php
+./vendor/bin/xstep --break='User.php:85:$userId==0' --steps=100 --exit-on-break -- php app.php
 
 # Get complete execution history: how did we get $userId=0?
 # AI analyzes complete execution trace leading to condition</code></pre>
@@ -500,7 +500,7 @@ if ($userId === 0) {
                 <h2>Another Example: "Crash Only When Array is Empty"</h2>
                 <div class="fragment">
                     <pre><code class="bash"># Catch condition-specific problems with certainty
-./vendor/bin/xdebug-debug --break='DataProcessor.php:42:empty($items)' --steps=200 --exit-on-break -- php batch.php
+./vendor/bin/xstep --break='DataProcessor.php:42:empty($items)' --steps=200 --exit-on-break -- php batch.php
 
 # AI analysis to identify root cause
 # Analyzes the complete path to empty array condition</code></pre>
@@ -516,10 +516,10 @@ if ($userId === 0) {
 
             <!-- Performance Profiling -->
             <section>
-                <h2>xdebug-profile: See Performance 🔍</h2>
+                <h2>xprofile: See Performance 🔍</h2>
                 <div class="fragment">
                     <pre><code class="bash"># Microsecond-precision performance profiling
-./vendor/bin/xdebug-profile --context="API performance analysis" -- php slow_api.php
+./vendor/bin/xprofile --context="API performance analysis" -- php slow_api.php
 
 # AI analyzes bottlenecks and provides optimization suggestions
 # Result: Complete performance profile with bottleneck identification</code></pre>
@@ -534,10 +534,10 @@ if ($userId === 0) {
 
             <!-- Forward Trace Debugging -->
             <section>
-                <h2>xdebug-debug: ForwardTrace with Conditional Breakpoints 🕵️</h2>
+                <h2>xstep: ForwardTrace with Conditional Breakpoints 🕵️</h2>
                 <div class="fragment">
                     <pre><code class="bash"># AI-optimized debugging with complete context
-./vendor/bin/xdebug-debug --break='User.php:42:$user==null' --steps=150 --exit-on-break -- php app.php
+./vendor/bin/xstep --break='User.php:42:$user==null' --steps=150 --exit-on-break -- php app.php
 
 # AI gets complete execution history leading to condition
 # Provides comprehensive analysis of path to null user</code></pre>
@@ -576,11 +576,11 @@ if ($userId === 0) {
 
             <!-- Coverage Intelligence -->
             <section>
-                <h2>xdebug-coverage: Raw Xdebug Coverage - Any PHP Script 📊</h2>
+                <h2>xcoverage: Raw Xdebug Coverage - Any PHP Script 📊</h2>
                 <div class="fragment">
                     <pre><code class="bash"># Works with any PHP script, not just PHPUnit
-./vendor/bin/xdebug-coverage -- php ./vendor/bin/phpunit  # PHPUnit
-./vendor/bin/xdebug-coverage -- php my-script.php         # Any script
+./vendor/bin/xcoverage -- php ./vendor/bin/phpunit  # PHPUnit
+./vendor/bin/xcoverage -- php my-script.php         # Any script
 
 # Native Xdebug format - fast AI understanding</code></pre>
                 </div>
@@ -598,7 +598,7 @@ if ($userId === 0) {
                 <h2>🌳 NEW: Branch Coverage + GraphViz Visualization</h2>
                 <div class="fragment">
                     <pre><code class="bash"># New feature: Visual branch/path coverage analysis
-./bin/xdebug-coverage --branch-coverage -- php app.php
+./bin/xcoverage --branch-coverage -- php app.php
 
 # Single execution, multiple AI-ready outputs:
 # ✅ Detailed branch coverage JSON

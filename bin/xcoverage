@@ -44,12 +44,12 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
     echo "OUTPUT FORMAT:\n";
     echo "  📊 Standard: PHPUnit TestDox results + JSON line coverage data\n";
     echo "  🌳 Branch Mode: PHPUnit TestDox + JSON branch coverage + GraphViz dot file\n";
-    echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json\n";
+    echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json\n";
     echo "  Benefits: AI can distinguish test output from coverage data automatically\n";
     echo "\n";
     echo "📋 JSON SCHEMA RESOURCES (Essential for AI):\n";
-    echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json\n";
-    echo "  Branch Coverage Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-branch-coverage.json\n";
+    echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json\n";
+    echo "  Branch Coverage Schema: https://koriym.github.io/xdebug-mcp/schemas/xcoverage-branch.json\n";
     echo "  Xdebug Coverage Docs: https://xdebug.org/docs/code_coverage\n";
     echo "  Function Reference: https://xdebug.org/docs/code_coverage#xdebug_get_code_coverage\n";
     echo "  Branch Coverage: https://xdebug.org/docs/code_coverage#XDEBUG_CC_BRANCH_CHECK\n";
@@ -153,7 +153,7 @@ register_shutdown_function(function() use ($tempDir, $branchCoverage) {
         $outputPath = pathinfo($dotFilePath, PATHINFO_DIRNAME) . "/" . pathinfo($dotFilePath, PATHINFO_FILENAME) . ".png";
         
         $result = [
-            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xdebug-branch-coverage.json", 
+            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xcoverage-branch.json", 
             "coverage_type" => "branch",
             "coverage" => $filtered,
             "graphviz_dot" => $dotContent,
@@ -232,7 +232,7 @@ register_shutdown_function(function() use ($tempDir, $branchCoverage) {
         $outputPath = pathinfo($dotFilePath, PATHINFO_DIRNAME) . "/" . pathinfo($dotFilePath, PATHINFO_FILENAME) . ".png";
         
         $result = [
-            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json", 
+            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json", 
             "coverage_type" => "line",
             "coverage" => $filtered,
             "graphviz_dot" => $dotContent,

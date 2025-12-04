@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json",
+  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xprofile.json",
   "title": "Xdebug Profile Result",
   "description": "AI-optimized profiling data for PHP performance analysis. Designed for AI-first consumption with strategic metadata for bottleneck identification.",
   "type": "object",
@@ -16,7 +16,7 @@
       "description": "Total lines in profile file with unit. Use this to decide optimal analysis strategy for AI."
     },
     "💾 file_size_bytes": {
-      "type": "string", 
+      "type": "string",
       "pattern": "^\\d+ bytes$",
       "description": "Profile file size in bytes with unit for processing strategy decisions"
     },
@@ -88,7 +88,7 @@
     "🔗 schema": {
       "type": "string",
       "format": "uri",
-      "const": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json",
+      "const": "https://koriym.github.io/xdebug-mcp/schemas/xprofile.json",
       "description": "This schema URL"
     },
     "🎯 analysis_context": {
@@ -99,7 +99,7 @@
   },
   "required": ["📁 profile_file", "📊 total_lines", "💾 file_size_bytes", "📏 file_size_formatted", "📈 functions_count", "👤 user_functions", "⚙️ internal_functions", "📞 total_calls", "🎯 bottleneck_functions", "💡 optimization_suggestions", "📋 specification", "🔗 schema"],
   "additionalProperties": false,
-  
+
   "links": [
     {
       "rel": "specification",
@@ -115,7 +115,7 @@
     },
     {
       "rel": "self",
-      "href": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json",
+      "href": "https://koriym.github.io/xdebug-mcp/schemas/xprofile.json",
       "title": "JSON Schema for Xdebug Profile Results",
       "description": "This schema definition with AI strategies and usage guidelines"
     },
@@ -134,13 +134,13 @@
     },
     {
       "rel": "tool",
-      "href": "mcp://xdebug_start_profiling",
-      "title": "MCP Tool: Start Profiling",
+      "href": "mcp://xprofile",
+      "title": "MCP Tool: Profile",
       "description": "MCP tool to generate profile data programmatically"
     },
     {
       "rel": "command",
-      "href": "file:///bin/xdebug-profile",
+      "href": "file:///bin/xprofile",
       "title": "Command Line Tool",
       "description": "CLI command to generate profile data with this schema"
     },
@@ -151,14 +151,14 @@
       "description": "Intelligent analysis strategies based on profile file characteristics"
     },
     {
-      "rel": "section", 
+      "rel": "section",
       "href": "#x-profile-format",
       "title": "Profile Format Guide",
       "description": "Detailed explanation of Cachegrind profile file structure"
     },
     {
       "rel": "section",
-      "href": "#x-performance-capabilities", 
+      "href": "#x-performance-capabilities",
       "title": "Performance Analysis Capabilities",
       "description": "Complete list of performance analysis and optimization capabilities"
     },
@@ -169,7 +169,7 @@
       "description": "How to use this schema with MCP tools and workflow"
     }
   ],
-  
+
   "x-ai-strategies": {
     "analysis_strategy": {
       "small_profiles": {
@@ -188,7 +188,7 @@
         "rationale": "Focus on highest-impact optimizations rather than exhaustive analysis"
       }
     },
-    
+
     "search_patterns": {
       "bottleneck_functions": {
         "description": "Find functions consuming the most execution time",
@@ -219,14 +219,14 @@
         ]
       }
     },
-    
+
     "optimization_workflow": {
       "step1": {
         "name": "Hotspot Identification",
         "action": "Parse profile to find functions with highest execution time/cost"
       },
       "step2": {
-        "name": "Call Analysis", 
+        "name": "Call Analysis",
         "action": "Analyze call frequency and relationships to understand bottlenecks"
       },
       "step3": {
@@ -239,7 +239,7 @@
       }
     }
   },
-  
+
   "x-profile-format": {
     "description": "Cachegrind profile format understanding for AI analysis",
     "format_type": "Cachegrind format - Function-based profiling data",
@@ -257,10 +257,10 @@
       "summary": "summary: TotalCost"
     }
   },
-  
+
   "x-performance-capabilities": {
     "execution_time": "Identify functions consuming the most CPU time",
-    "memory_analysis": "Track memory allocation and access patterns", 
+    "memory_analysis": "Track memory allocation and access patterns",
     "call_frequency": "Find frequently called functions that could benefit from optimization",
     "bottleneck_detection": "Pinpoint specific performance bottlenecks in code execution",
     "optimization_ranking": "Prioritize optimization targets by impact potential",
@@ -268,9 +268,9 @@
     "io_bottlenecks": "Identify file/database operations causing performance issues",
     "algorithm_efficiency": "Analyze algorithmic complexity through execution patterns"
   },
-  
+
   "x-mcp-integration": {
-    "tool_name": "xdebug_start_profiling",
+    "tool_name": "xprofile",
     "usage": "Call via MCP to generate profile data, then analyze returned profile_file",
     "workflow": "1. Generate profile via MCP, 2. Analyze returned file based on size/complexity, 3. Use optimization strategies for performance improvements"
   }

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug-v1.json",
+  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xstep.json",
   "title": "Xdebug Debug Result",
   "description": "Comprehensive debugging result combining breakpoint state ('crime scene photo') and execution trace ('surveillance footage') for AI-powered PHP debugging. Follows the principle: 'Error message is the crime photo. Trace is the crime footage.' - providing both the current state at breakpoints and the complete execution history in Xdebug .xt format.",
   "type": "object",
@@ -14,7 +14,7 @@
       "minItems": 1
     },
     "trace": {
-      "$ref": "xdebug-trace.json"
+      "$ref": "xtrace.json"
     },
     "analysis_context": {
       "type": "string",
@@ -78,7 +78,7 @@
     },
     {
       "rel": "self",
-      "href": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json",
+      "href": "https://koriym.github.io/xdebug-mcp/schemas/xstep.json",
       "title": "JSON Schema for Xdebug Debug Results"
     },
     {

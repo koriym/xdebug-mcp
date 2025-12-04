@@ -48,7 +48,7 @@ function showHelp(string $scriptName): void
     echo "OUTPUT:\n";
     echo "  Default: Human-readable with KCachegrind suggestions\n";
     echo "  --json: AI-optimized JSON with emoji keys and metrics\n";
-    echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json\n";
+    echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xprofile.json\n";
     echo "\n";
 }
 
@@ -187,7 +187,7 @@ function generateEnhancedProfileData(string $profileFile, bool $jsonOutput = fal
             
             // Schema and specification
             '📋 specification' => 'https://kcachegrind.github.io/html/CallgrindFormat.html',
-            '🔗 schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json'
+            '🔗 schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xprofile.json'
         ];
         
         if ($context !== null) {

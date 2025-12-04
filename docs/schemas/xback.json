@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-backtrace.json",
+  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xback.json",
   "title": "Xdebug Backtrace Result",
   "description": "AI-optimized stack trace data for PHP debugging. Shows call hierarchy at a specific breakpoint or execution point.",
   "type": "object",
   "properties": {
     "$schema": {
       "type": "string",
-      "const": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-backtrace.json",
+      "const": "https://koriym.github.io/xdebug-mcp/schemas/xback.json",
       "description": "JSON Schema reference for this backtrace result"
     },
     "script": {
@@ -77,7 +77,7 @@
   "links": [
     {
       "rel": "self",
-      "href": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-backtrace.json",
+      "href": "https://koriym.github.io/xdebug-mcp/schemas/xback.json",
       "title": "JSON Schema for Xdebug Backtrace Results"
     },
     {
@@ -87,7 +87,7 @@
     },
     {
       "rel": "command",
-      "href": "file:///bin/xdebug-backtrace",
+      "href": "file:///bin/xback",
       "title": "Command Line Tool"
     }
   ],

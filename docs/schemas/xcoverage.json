@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json",
+  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json",
   "title": "Xdebug Coverage Result",
   "description": "Raw Xdebug code coverage data output from xdebug_get_code_coverage(). See https://xdebug.org/docs/code_coverage for complete coverage documentation and interpretation guidelines.",
   "type": "object",
@@ -48,7 +48,7 @@
     },
     {
       "rel": "self",
-      "href": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json",
+      "href": "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json",
       "title": "JSON Schema for Xdebug Coverage Results",
       "description": "This schema definition for validating Xdebug coverage output"
     },
@@ -60,13 +60,13 @@
     },
     {
       "rel": "tool",
-      "href": "mcp://xdebug_start_coverage",
-      "title": "MCP Tool: Start Coverage",
+      "href": "mcp://xcoverage",
+      "title": "MCP Tool: Coverage",
       "description": "MCP tool to generate coverage data programmatically"
     },
     {
       "rel": "command",
-      "href": "file://bin/xdebug-coverage",
+      "href": "file://bin/xcoverage",
       "title": "CLI Coverage Tool",
       "description": "Command line tool that generates this coverage data format"
     }
@@ -74,7 +74,7 @@
 
   "examples": [
     {
-      "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-coverage.json",
+      "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json",
       "coverage": {
         "/path/to/src/Class.php": {
           "1": -2,
