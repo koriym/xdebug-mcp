@@ -19,9 +19,7 @@ use function fwrite;
 use function getenv;
 use function glob;
 use function implode;
-use function in_array;
 use function passthru;
-use function preg_match;
 use function usort;
 
 use const STDERR;
@@ -193,9 +191,7 @@ class XdebugRunner
      */
     public function isDockerCommand(array $parts): bool
     {
-        $containerCommands = ['docker', 'podman', 'kubectl'];
-
-        return isset($parts[0]) && in_array($parts[0], $containerCommands, true);
+        return ContainerHelper::isContainerCommand($parts);
     }
 
     /**
@@ -297,17 +293,7 @@ class XdebugRunner
      */
     public function findPhpCommandIndex(array $parts): int|false
     {
-        // Search for 'php' or 'php8.x' pattern
-        // Look for the LAST occurrence to avoid matching container names like 'php' service
-        $lastPhpIndex = false;
-
-        foreach ($parts as $index => $part) {
-            if ($part === 'php' || preg_match('/^php\d+\.\d+$/', $part)) {
-                $lastPhpIndex = $index;
-            }
-        }
-
-        return $lastPhpIndex;
+        return ContainerHelper::findPhpCommandIndex($parts);
     }
 
     /** @return string[] */

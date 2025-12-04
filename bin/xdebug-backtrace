@@ -154,8 +154,7 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
     }
 
     // Detect Docker/Podman/Kubectl commands
-    $containerCommands = ['docker', 'podman', 'kubectl'];
-    $isDockerCommand = in_array($command[0] ?? '', $containerCommands, true);
+    $isDockerCommand = \Koriym\XdebugMcp\ContainerHelper::isContainerCommand($command);
 
     // Parse breakpoint now that we know if it's a Docker command
     if ($breakpointStr !== null) {
@@ -165,20 +164,21 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
     // Determine target script
     if ($isDockerCommand) {
         // Docker command: find the script as the last argument after 'php'
-        $phpIndex = false;
-        foreach ($command as $i => $part) {
-            if ($part === 'php' || preg_match('/^php\d+\.\d+$/', $part)) {
-                $phpIndex = $i;
-            }
-        }
-        if ($phpIndex !== false && isset($command[$phpIndex + 1])) {
-            $targetScript = $command[$phpIndex + 1];
-            // For Docker, use a placeholder file for DebugServer validation
-            if (!file_exists($targetScript)) {
-                $targetScript = __DIR__ . '/../tests/fixtures/simple.php';
+        $phpIndex = \Koriym\XdebugMcp\ContainerHelper::findPhpCommandIndex($command);
+        if ($phpIndex !== false) {
+            // Skip PHP options to find the actual script
+            $scriptIndex = \Koriym\XdebugMcp\ContainerHelper::findScriptIndex($command, $phpIndex);
+            if ($scriptIndex !== false) {
+                $targetScript = $command[$scriptIndex];
+                // For Docker, the script is inside the container - use placeholder for validation
+                if (!file_exists($targetScript)) {
+                    $targetScript = __DIR__ . '/../tests/fixtures/simple.php';
+                }
+            } else {
+                throw new RuntimeException("Could not find PHP script in Docker command: " . implode(' ', $command));
             }
         } else {
-            throw new RuntimeException("Could not find PHP script in Docker command: " . implode(' ', $command));
+            throw new RuntimeException("Could not find PHP command in Docker command: " . implode(' ', $command));
         }
     } elseif ($command[0] === 'php' && isset($command[1])) {
         $targetScript = $command[1];
