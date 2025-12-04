@@ -395,4 +395,16 @@ final class XdebugRunnerTest extends TestCase
         $this->assertStringContainsString('php', $command);
         $this->assertStringContainsString(__FILE__, $command);
     }
+
+    #[Test]
+    public function appliesCustomXdebugOptions(): void
+    {
+        $runner = new XdebugRunner(['script', '--', __FILE__]);
+        $runner->setXdebugOptions(['-dmemory_limit=512M', '-dmax_execution_time=300']);
+
+        $command = $runner->buildCommand();
+
+        $this->assertStringContainsString('-dmemory_limit=512M', $command);
+        $this->assertStringContainsString('-dmax_execution_time=300', $command);
+    }
 }

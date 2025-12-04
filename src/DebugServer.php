@@ -55,7 +55,6 @@ use function fwrite;
 use function getenv;
 use function glob;
 use function implode;
-use function in_array;
 use function is_array;
 use function is_int;
 use function is_string;
@@ -131,8 +130,7 @@ final class DebugServer
 
         // Detect Docker/Podman/Kubectl command early for listener configuration
         $command = $options['command'] ?? [];
-        $containerCommands = ['docker', 'podman', 'kubectl'];
-        $this->isDockerCommand = isset($command[0]) && in_array($command[0], $containerCommands, true);
+        $this->isDockerCommand = ContainerHelper::isContainerCommand($command);
 
         // Check for existing sessions (warning only)
         $this->checkExistingSessions();
@@ -246,12 +244,11 @@ final class DebugServer
                 $command = $this->options['command'];
 
                 // Check if this is a Docker/Podman/Kubectl command
-                $containerCommands = ['docker', 'podman', 'kubectl'];
-                $isDockerCommand = isset($command[0]) && in_array($command[0], $containerCommands, true);
+                $isDockerCommand = ContainerHelper::isContainerCommand($command);
 
                 if ($isDockerCommand) {
                     // Docker command: Find PHP position and inject Xdebug arguments
-                    $phpIndex = $this->findPhpCommandIndex($command);
+                    $phpIndex = ContainerHelper::findPhpCommandIndex($command);
                     if ($phpIndex === false) {
                         throw new RuntimeException('PHP command not found in Docker command. Expected format: docker ... php script.php');
                     }
@@ -259,11 +256,12 @@ final class DebugServer
                     $scriptName = basename($this->targetScript, '.php');
                     $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
 
-                    // Build Xdebug arguments - use host.docker.internal for Docker
+                    // Build Xdebug arguments - use runtime-specific client host
+                    $clientHost = ContainerHelper::getContainerClientHost($command);
                     $xdebugArgs = [
                         '-dxdebug.mode=debug,trace',
                         '-dxdebug.start_with_request=yes',
-                        '-dxdebug.client_host=host.docker.internal',
+                        '-dxdebug.client_host=' . $clientHost,
                         '-dxdebug.client_port=' . $this->debugPort,
                         '-dxdebug.output_dir=/tmp',
                         '-dxdebug.trace_output_name=trace-%s',
@@ -285,11 +283,13 @@ final class DebugServer
 
                     // Insert environment variables after 'run' or 'exec' for Docker
                     // XDEBUG_MODE=debug is required because environment variable has higher priority than -d flags
-                    $envInsertIndex = $this->findDockerEnvInsertIndex($command);
+                    $envInsertIndex = ContainerHelper::findDockerEnvInsertIndex($command);
                     if ($envInsertIndex !== false) {
                         // Insert in reverse order since each splice shifts indices
                         array_splice($command, $envInsertIndex, 0, ['-e', 'XDEBUG_SESSION=xdebug-mcp']);
                         array_splice($command, $envInsertIndex, 0, ['-e', 'XDEBUG_MODE=debug']);
+                    } else {
+                        $this->log('⚠️  Warning: Could not find insertion point for environment variables. Xdebug may not connect properly.');
                     }
 
                     $cmd = implode(' ', $command);
@@ -408,47 +408,6 @@ final class DebugServer
 
             throw $e;
         }
-    }
-
-    /**
-     * Find the position of 'php' command within Docker command
-     * Look for the LAST occurrence to avoid matching container names
-     *
-     * @param string[] $parts Command parts
-     *
-     * @return int|false Position of PHP command or false if not found
-     */
-    private function findPhpCommandIndex(array $parts): int|false
-    {
-        $lastPhpIndex = false;
-
-        foreach ($parts as $index => $part) {
-            if ($part === 'php' || preg_match('/^php\d+\.\d+$/', $part)) {
-                $lastPhpIndex = $index;
-            }
-        }
-
-        return $lastPhpIndex;
-    }
-
-    /**
-     * Find the position to insert environment variable for Docker commands
-     * Returns the index after 'run' or 'exec' subcommand
-     *
-     * @param string[] $parts Command parts
-     *
-     * @return int|false Position to insert -e flag or false if not applicable
-     */
-    private function findDockerEnvInsertIndex(array $parts): int|false
-    {
-        foreach ($parts as $index => $part) {
-            // For docker/podman/docker compose: insert after 'run' or 'exec'
-            if ($part === 'run' || $part === 'exec') {
-                return $index + 1;
-            }
-        }
-
-        return false;
     }
 
     /**
