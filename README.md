@@ -183,8 +183,7 @@ All tools now feature comprehensive AI-optimized help documentation. **Always ru
 - ✅ **Cognitive Load Reduction**: Mixed output streams AI can parse efficiently
 
 ### AI Integration Features
-- **42+ MCP Tools**: Performance profiling, code coverage, execution tracing, memory diagnostics, error tracking
-- **Slash Commands**: `/x-debug`, `/x-profile`, `/x-trace`, `/x-coverage`, `/x-backtrace` for Claude Code
+- **MCP Tools**: `x-trace`, `x-profile`, `x-debug`, `x-coverage`, `x-backtrace` (invoke as `/x-*` in Claude Code)
 - **Schema-Validated Output**: JSON that any AI can understand and analyze
 - **Dynamic Vendor Filtering**: AI can specify which vendor packages to include/exclude during analysis
 
