@@ -116,6 +116,7 @@ final class DebugServer
     private bool $httpMode = false;
     private bool $shouldExit = false;
     private array $breaks = []; // For Step Recording data collection
+    private bool $isDockerCommand = false;
 
     public function __construct(
         private string $targetScript,
@@ -127,6 +128,11 @@ final class DebugServer
         if (! file_exists($targetScript)) {
             throw new InvalidArgumentException("Script not found: {$targetScript}");
         }
+
+        // Detect Docker/Podman/Kubectl command early for listener configuration
+        $command = $options['command'] ?? [];
+        $containerCommands = ['docker', 'podman', 'kubectl'];
+        $this->isDockerCommand = isset($command[0]) && in_array($command[0], $containerCommands, true);
 
         // Check for existing sessions (warning only)
         $this->checkExistingSessions();
@@ -171,8 +177,11 @@ final class DebugServer
     private function startXdebugListener(): void
     {
         try {
-            $this->server = listen("127.0.0.1:{$this->debugPort}");
-            $this->log("📡 Listener ready on port {$this->debugPort}");
+            // Use 0.0.0.0 for Docker to allow connections from containers
+            // Use 127.0.0.1 for local commands for security
+            $listenAddress = $this->isDockerCommand ? '0.0.0.0' : '127.0.0.1';
+            $this->server = listen("{$listenAddress}:{$this->debugPort}");
+            $this->log("📡 Listener ready on {$listenAddress}:{$this->debugPort}");
             $this->log('⏳ Waiting for Xdebug connection...');
 
             // Notify listener ready (Opus pattern)
@@ -273,8 +282,16 @@ final class DebugServer
                         array_splice($command, $phpIndex + 1, 0, [$arg]);
                     }
 
-                    // Build command with XDEBUG_SESSION environment variable
-                    $cmd = 'XDEBUG_SESSION=xdebug-mcp ' . implode(' ', $command);
+                    // Insert environment variables after 'run' or 'exec' for Docker
+                    // XDEBUG_MODE=debug is required because environment variable has higher priority than -d flags
+                    $envInsertIndex = $this->findDockerEnvInsertIndex($command);
+                    if ($envInsertIndex !== false) {
+                        // Insert in reverse order since each splice shifts indices
+                        array_splice($command, $envInsertIndex, 0, ['-e', 'XDEBUG_SESSION=xdebug-mcp']);
+                        array_splice($command, $envInsertIndex, 0, ['-e', 'XDEBUG_MODE=debug']);
+                    }
+
+                    $cmd = implode(' ', $command);
                     $this->traceFile = $traceFile;
                 } elseif ($command[0] === 'php') {
                     // Local PHP command
@@ -411,6 +428,26 @@ final class DebugServer
         }
 
         return $lastPhpIndex;
+    }
+
+    /**
+     * Find the position to insert environment variable for Docker commands
+     * Returns the index after 'run' or 'exec' subcommand
+     *
+     * @param string[] $parts Command parts
+     *
+     * @return int|false Position to insert -e flag or false if not applicable
+     */
+    private function findDockerEnvInsertIndex(array $parts): int|false
+    {
+        foreach ($parts as $index => $part) {
+            // For docker/podman/docker compose: insert after 'run' or 'exec'
+            if ($part === 'run' || $part === 'exec') {
+                return $index + 1;
+            }
+        }
+
+        return false;
     }
 
     /**

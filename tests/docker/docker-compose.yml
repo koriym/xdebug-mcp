@@ -16,8 +16,9 @@ services:
       # Mount test scripts
       - .:/app:ro
     environment:
-      # Allow Xdebug mode to be set dynamically
-      - XDEBUG_MODE=${XDEBUG_MODE:-off}
+      # Allow Xdebug mode to be set dynamically via environment variable
+      # Default to 'develop' to allow -dxdebug.mode=debug to override
+      - XDEBUG_MODE=${XDEBUG_MODE:-develop}
       - XDEBUG_TRIGGER=${XDEBUG_TRIGGER:-}
     # Allow connection back to host for IDE debugging
     extra_hosts:
