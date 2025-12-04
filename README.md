@@ -224,11 +224,36 @@ php -dzend_extension=xdebug.so -dxdebug.mode=debug --version # Test Xdebug loadi
 
 ## Resources
 
-📋 **[TROUBLESHOOTING.md](https://koriym.github.io/xdebug-mcp/TROUBLESHOOTING)** - Setup and common issues  
-🎯 **[Forward Trace Guide](https://koriym.github.io/xdebug-mcp/debug-guidelines/)** - AI debugging methodology  
-📖 **[MOTIVATION.md](MOTIVATION.md)** - Why we built this  
-🎬 **[Interactive Presentation](https://koriym.github.io/xdebug-mcp/slide/)** - See the paradigm shift  
-📚 **[Xdebug Documentation](https://xdebug.org/docs/)** - Official Xdebug docs  
+📋 **[TROUBLESHOOTING.md](https://koriym.github.io/xdebug-mcp/TROUBLESHOOTING)** - Setup and common issues
+🎯 **[Forward Trace Guide](https://koriym.github.io/xdebug-mcp/debug-guidelines/)** - AI debugging methodology
+📖 **[MOTIVATION.md](MOTIVATION.md)** - Why we built this
+🐳 **[Docker Integration](tests/docker/README.md)** - Container debugging guide
+🎬 **[Interactive Presentation](https://koriym.github.io/xdebug-mcp/slide/)** - See the paradigm shift
+📚 **[Xdebug Documentation](https://xdebug.org/docs/)** - Official Xdebug docs
+
+## Docker Integration
+
+All xdebug-mcp tools work seamlessly with Docker, Podman, and Kubectl:
+
+```bash
+# Trace execution in Docker container
+./bin/xdebug-trace --context="Docker debug" -- \
+  docker compose run --rm php php /app/script.php
+
+# Profile performance in container
+./bin/xdebug-profile -- docker compose exec -T php php /app/api.php
+
+# Coverage analysis with Podman
+./bin/xdebug-coverage -- podman run --rm php:8.4 php /app/tests.php
+```
+
+The `XdebugRunner` class automatically:
+- Detects container commands (docker, podman, kubectl)
+- Locates the PHP command within the Docker command
+- Injects Xdebug arguments at the correct position
+- Maintains backward compatibility with local execution
+
+See [tests/docker/README.md](tests/docker/README.md) for detailed setup instructions.
 
 ---
 
