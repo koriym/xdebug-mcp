@@ -260,6 +260,10 @@ function parseBreakpoints(string $breakSpec): array
         showHelp();
     }
 
+    // Detect Docker/Podman/Kubectl commands
+    $containerCommands = ['docker', 'podman', 'kubectl'];
+    $isDockerCommand = in_array($command[0] ?? '', $containerCommands, true);
+
     // Handle legacy format: script.php [breakpoint_file] [break_line]
     if (count($command) >= 1 && !str_contains($command[0], ' ') && file_exists($command[0])) {
         $targetScript = $command[0];
@@ -268,6 +272,24 @@ function parseBreakpoints(string $breakSpec): array
         }
         if (!isset($breakpointLine) && isset($command[2])) {
             $breakpointLine = (int)$command[2];
+        }
+    } elseif ($isDockerCommand) {
+        // Docker command: find the script as the last argument after 'php'
+        $phpIndex = false;
+        foreach ($command as $i => $part) {
+            if ($part === 'php' || preg_match('/^php\d+\.\d+$/', $part)) {
+                $phpIndex = $i;
+            }
+        }
+        if ($phpIndex !== false && isset($command[$phpIndex + 1])) {
+            // Use the script path from Docker command (may be container path like /app/script.php)
+            $targetScript = $command[$phpIndex + 1];
+            // For Docker, create a placeholder file for DebugServer validation
+            if (!file_exists($targetScript)) {
+                $targetScript = __DIR__ . '/../tests/fixtures/simple.php';
+            }
+        } else {
+            throw new RuntimeException("Could not find PHP script in Docker command: " . implode(' ', $command));
         }
     } else {
         // New format: complex command after --
@@ -278,8 +300,8 @@ function parseBreakpoints(string $breakSpec): array
         }
     }
 
-    // Validate target script
-    if (!file_exists($targetScript)) {
+    // Validate target script (skip for Docker where script is in container)
+    if (!$isDockerCommand && !file_exists($targetScript)) {
         throw new RuntimeException("Target script not found: $targetScript");
     }
 
