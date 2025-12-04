@@ -265,6 +265,7 @@ final class DebugServer
                         '-dxdebug.start_with_request=yes',
                         '-dxdebug.client_host=host.docker.internal',
                         '-dxdebug.client_port=' . $this->debugPort,
+                        '-dxdebug.output_dir=/tmp',
                         '-dxdebug.trace_output_name=trace-%s',
                         '-dxdebug.trace_format=1',
                         '-dxdebug.use_compression=0',
