@@ -28,11 +28,11 @@ Universal PHP Xdebug MCP (Model Context Protocol) Server that enables AI assista
 - Automatic tool detection and usage by AI assistants
 
 ### CLI Tools
-- `xdebug-debug`: Interactive debugging with conditional breakpoints
-- `xdebug-trace`: Complete execution flow tracing  
-- `xdebug-profile`: Performance profiling with AI analysis
-- `xdebug-coverage`: Code coverage with multiple report formats
-- `xdebug-phpunit`: PHPUnit integration with profiling/coverage
+- `xstep`: Interactive debugging with conditional breakpoints
+- `xtrace`: Complete execution flow tracing
+- `xprofile`: Performance profiling with AI analysis
+- `xcoverage`: Code coverage with multiple report formats
+- `xback`: Stack trace at specific breakpoints
 - `xdebug-mcp`: MCP server entry point for AI integration
 
 ## Architecture
@@ -87,19 +87,19 @@ echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
 ### Conditional Debugging (Forward Trace™)
 ```bash
 # Catch null user bugs automatically
-./bin/xdebug-debug --break='User.php:42:$user==null' --exit-on-break -- php app.php
+./bin/xstep --break='User.php:42:$user==null' --exit-on-break -- php app.php
 
 # Record 100 steps of variable evolution  
-./bin/xdebug-debug --break='loop.php:15' --steps=100 --json -- php script.php
+./bin/xstep --break='loop.php:15' --steps=100 --json -- php script.php
 ```
 
 ### Performance Analysis
 ```bash
 # Profile with AI analysis
-./bin/xdebug-profile --context="API performance investigation" -- php api.php
+./bin/xprofile --context="API performance investigation" -- php api.php
 
 # Generate schema-compliant JSON
-./bin/xdebug-profile --json -- php slow-endpoint.php
+./bin/xprofile --json -- php slow-endpoint.php
 ```
 
 ### AI Integration (Claude Code)

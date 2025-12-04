@@ -6,7 +6,7 @@
     <title>Xdebug MCP Server - PHP Debugging Schemas & Documentation</title>
 
     <!-- JSON Schema Profile -->
-    <link rel="profile" href="schemas/xdebug-debug.json" type="application/schema+json" title="Xdebug Debug Schema Profile" />
+    <link rel="profile" href="schemas/xstep.json" type="application/schema+json" title="Xdebug Debug Schema Profile" />
     <!-- Semantic Portal CSS -->
     <link rel="stylesheet" href="css/semantic-portal.css" />
 </head>
@@ -21,7 +21,7 @@
             <p class="schema-description" style="margin: 10px 0; font-size: 14px;">
                 <strong>Forward Trace™:</strong> Captures execution from start until problems occur, eliminating need for var_dump() and code modifications.
             </p>
-            <a href="schemas/xdebug-debug.json" class="schema-reference">schemas/xdebug-debug.json</a>
+            <a href="schemas/xstep.json" class="schema-reference">schemas/xstep.json</a>
         </article>
 
         <article class="json-schema-resource">
@@ -30,7 +30,7 @@
             <p class="schema-description" style="margin: 10px 0; font-size: 14px;">
                 <strong>AI-optimized:</strong> Includes total_lines, unique_functions, max_call_depth, and database_queries for intelligent analysis strategies.
             </p>
-            <a href="schemas/xdebug-trace.json" class="schema-reference">schemas/xdebug-trace.json</a>
+            <a href="schemas/xtrace.json" class="schema-reference">schemas/xtrace.json</a>
         </article>
 
         <article class="json-schema-resource">
@@ -39,7 +39,7 @@
             <p class="schema-description" style="margin: 10px 0; font-size: 14px;">
                 <strong>Performance analysis:</strong> Bottleneck detection, execution timing, memory usage, and AI-generated optimization suggestions.
             </p>
-            <a href="schemas/xdebug-profile.json" class="schema-reference">schemas/xdebug-profile.json</a>
+            <a href="schemas/xprofile.json" class="schema-reference">schemas/xprofile.json</a>
         </article>
     </div>
 
@@ -114,24 +114,24 @@
         <h2 style="color: #2c3e50; margin-bottom: 20px;">CLI Tools</h2>
         <div class="tool-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
             <div class="tool-item">
-                <strong>xdebug-debug</strong>
+                <strong>xstep</strong>
                 <p>Interactive debugging with conditional breakpoints and step recording</p>
             </div>
             <div class="tool-item">
-                <strong>xdebug-trace</strong>
+                <strong>xtrace</strong>
                 <p>Complete execution tracing with comprehensive statistics</p>
             </div>
             <div class="tool-item">
-                <strong>xdebug-profile</strong>
+                <strong>xprofile</strong>
                 <p>Performance profiling with bottleneck detection</p>
             </div>
             <div class="tool-item">
-                <strong>xdebug-coverage</strong>
+                <strong>xcoverage</strong>
                 <p>Code coverage analysis with multiple report formats</p>
             </div>
             <div class="tool-item">
-                <strong>xdebug-phpunit</strong>
-                <p>PHPUnit integration with Xdebug profiling and coverage</p>
+                <strong>xback</strong>
+                <p>Stack trace at specific breakpoints for debugging flow</p>
             </div>
             <div class="tool-item">
                 <strong>xdebug-mcp</strong>

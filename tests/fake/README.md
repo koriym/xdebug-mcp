@@ -11,7 +11,7 @@ These scripts showcase how Forward Trace debugging captures variable state evolu
 ### 1. **loop-counter.php** - Loop Progression Pattern
 ```php
 // Tests: Counter incrementation, array iteration, result accumulation
-./bin/xdebug-debug --context="Testing loop counter progression" --break=tests/fake-script/loop-counter.php:8,13,17,24,29 --exit-on-break -- php tests/fake-script/loop-counter.php
+./bin/xstep --context="Testing loop counter progression" --break=tests/fake-script/loop-counter.php:8,13,17,24,29 --exit-on-break -- php tests/fake-script/loop-counter.php
 ```
 **Demonstrates:**
 - Variable progression through loop iterations
@@ -21,7 +21,7 @@ These scripts showcase how Forward Trace debugging captures variable state evolu
 ### 2. **array-manipulation.php** - Array Filtering Pattern
 ```php
 // Tests: User filtering, statistical accumulation, conditional processing
-./bin/xdebug-debug --context="Array manipulation with user filtering" --break=tests/fake-script/array-manipulation.php:8,14,18,21,23,29,33 --exit-on-break -- php tests/fake-script/array-manipulation.php
+./bin/xstep --context="Array manipulation with user filtering" --break=tests/fake-script/array-manipulation.php:8,14,18,21,23,29,33 --exit-on-break -- php tests/fake-script/array-manipulation.php
 ```
 **Demonstrates:**
 - Dynamic array building based on conditions
@@ -31,7 +31,7 @@ These scripts showcase how Forward Trace debugging captures variable state evolu
 ### 3. **object-state.php** - Object State Evolution
 ```php
 // Tests: Method chaining, object property changes, state tracking
-./bin/xdebug-debug --context="Object state tracking with method chaining" --break=tests/fake-script/object-state.php:12,19,23,32,34,38,40,42 --exit-on-break -- php tests/fake-script/object-state.php
+./bin/xstep --context="Object state tracking with method chaining" --break=tests/fake-script/object-state.php:12,19,23,32,34,38,40,42 --exit-on-break -- php tests/fake-script/object-state.php
 ```
 **Demonstrates:**
 - Object property evolution through method calls
@@ -41,7 +41,7 @@ These scripts showcase how Forward Trace debugging captures variable state evolu
 ### 4. **conditional-logic.php** - Flag-Based Logic Pattern
 ```php
 // Tests: Boolean flag evolution, conditional branching, running totals
-./bin/xdebug-debug --context="Conditional logic with flag tracking" --break=tests/fake-script/conditional-logic.php:8,18,21,24,27,32,37 --exit-on-break -- php tests/fake-script/conditional-logic.php
+./bin/xstep --context="Conditional logic with flag tracking" --break=tests/fake-script/conditional-logic.php:8,18,21,24,27,32,37 --exit-on-break -- php tests/fake-script/conditional-logic.php
 ```
 **Demonstrates:**
 - Boolean flag state changes
@@ -51,7 +51,7 @@ These scripts showcase how Forward Trace debugging captures variable state evolu
 ### 5. **nested-loops.php** - Complex Iteration Pattern
 ```php
 // Tests: Matrix processing, nested accumulation, pattern detection
-./bin/xdebug-debug --context="Nested loops matrix processing" --break=tests/fake-script/nested-loops.php:8,17,21,22,25,32,34,39,41 --exit-on-break -- php tests/fake-script/nested-loops.php
+./bin/xstep --context="Nested loops matrix processing" --break=tests/fake-script/nested-loops.php:8,17,21,22,25,32,34,39,41 --exit-on-break -- php tests/fake-script/nested-loops.php
 ```
 **Demonstrates:**
 - Multi-dimensional array processing
@@ -61,7 +61,7 @@ These scripts showcase how Forward Trace debugging captures variable state evolu
 ### 6. **error-simulation.php** - Error Handling Pattern
 ```php
 // Tests: Error collection, null/empty handling, edge cases
-./bin/xdebug-debug --context="Error handling simulation" --break=tests/fake-script/error-simulation.php:12,15,18,21,25,30,31,36 --exit-on-break -- php tests/fake-script/error-simulation.php
+./bin/xstep --context="Error handling simulation" --break=tests/fake-script/error-simulation.php:12,15,18,21,25,30,31,36 --exit-on-break -- php tests/fake-script/error-simulation.php
 ```
 **Demonstrates:**
 - Error state accumulation
@@ -72,7 +72,7 @@ These scripts showcase how Forward Trace debugging captures variable state evolu
 
 ### Individual Test
 ```bash
-./bin/xdebug-debug --context="Your description here" --break=file.php:line1,line2 --exit-on-break -- php tests/fake-script/pattern.php > output.json
+./bin/xstep --context="Your description here" --break=file.php:line1,line2 --exit-on-break -- php tests/fake-script/pattern.php > output.json
 ```
 
 ### All Tests (JSON Output)
@@ -82,16 +82,16 @@ php tests/fake-script/run.php > all_tests.json
 
 ### Schema Validation
 ```bash
-php bin/validate_schema.php docs/schemas/xdebug-debug.json output.json
+php bin/validate_schema.php docs/schemas/xstep.json output.json
 ```
 
 ## 📊 Expected Output
 
-Each test generates JSON conforming to the `xdebug-debug.json` schema:
+Each test generates JSON conforming to the `xstep.json` schema:
 
 ```json
 {
-    "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json",
+    "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xstep.json",
     "context": "Your description here", 
     "breaks": [
         {

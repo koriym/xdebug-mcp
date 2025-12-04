@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-trace.json",
+  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xtrace.json",
   "title": "Xdebug Trace Result",
   "description": "AI-optimized trace data for PHP debugging and execution flow analysis. Specialized for N+1 problem detection, recursion analysis, and database performance monitoring.",
   "type": "object",
@@ -73,7 +73,7 @@
     },
     {
       "rel": "self",
-      "href": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-trace.json",
+      "href": "https://koriym.github.io/xdebug-mcp/schemas/xtrace.json",
       "title": "JSON Schema for Xdebug Trace Results",
       "description": "This schema definition with AI strategies and usage guidelines"
     },
@@ -92,13 +92,13 @@
     },
     {
       "rel": "tool",
-      "href": "mcp://xdebug_start_trace",
-      "title": "MCP Tool: Start Trace",
+      "href": "mcp://xtrace",
+      "title": "MCP Tool: Trace",
       "description": "MCP tool to generate trace data programmatically"
     },
     {
       "rel": "command",
-      "href": "file:///bin/xdebug-trace",
+      "href": "file:///bin/xtrace",
       "title": "Command Line Tool",
       "description": "CLI command to generate trace data with this schema"
     },
@@ -240,7 +240,7 @@
   },
 
   "x-mcp-integration": {
-    "tool_name": "xdebug_start_trace",
+    "tool_name": "xtrace",
     "usage": "Call via MCP to generate trace data, then analyze returned trace_file",
     "workflow": "1. Generate trace via MCP, 2. Analyze returned file path, 3. Use reading strategy based on total_lines"
   }

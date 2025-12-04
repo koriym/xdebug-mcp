@@ -55,7 +55,7 @@ function showHelp(string $scriptName): void {
     echo "OUTPUT FORMATS:\n";
     echo "  Default: Human-readable execution statistics and summary\n";
     echo "  --json: Structured JSON with trace file path and metadata\n";
-    echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xdebug-trace.json\n";
+    echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xtrace.json\n";
     echo "\n";
 }
 

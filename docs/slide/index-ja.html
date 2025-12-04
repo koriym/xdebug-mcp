@@ -205,7 +205,7 @@ var_dump($result);    // 繰り返し...削除もします...</code></pre>
                 <div class="fragment">
                     <h3>フォワードトレースアプローチ</h3>
                     <pre><code class="bash"># 条件ブレークポイント: 問題発生時に停止
-./vendor/bin/xdebug-debug --break='checkout.php:89:$total&lt;0' --steps=50 --exit-on-break -- php checkout.php
+./vendor/bin/xstep --break='checkout.php:89:$total&lt;0' --steps=50 --exit-on-break -- php checkout.php
 
 # AIが分析して報告:
 "発見: $50割引が$30のカートに適用され = -$20の合計
@@ -228,7 +228,7 @@ echo $result;
 ?&gt;' > test.php
 
 # 3. AIに実行を分析させる
-./vendor/bin/xdebug-trace --context="\$resultがnullになる理由を発見" -- php test.php
+./vendor/bin/xtrace --context="\$resultがnullになる理由を発見" -- php test.php
 
 # 4. 完全なAI統合を有効化
 claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
@@ -283,7 +283,7 @@ claude mcp add xdebug php "$(pwd)/vendor/bin/xdebug-mcp"</code></pre>
                         <h3 style="color: #51cf66;">フォワードトレース</h3>
                         <p style="font-size: 0.8em; color: #51cf66; margin-bottom: 15px;">🎥 動画撮影<br>（完全記録）</p>
                         <pre><code class="bash" style="font-size: 0.6em;"># 単一コマンドで全体を記録
-./vendor/bin/xdebug-debug --break='script.php:10:$user==null' --steps=300 --exit-on-break -- php script.php
+./vendor/bin/xstep --break='script.php:10:$user==null' --steps=300 --exit-on-break -- php script.php
 
 # AIが完全な🎥映像を見る:
 # ステップ1: $id = getUserId() → 42を返す
@@ -483,7 +483,7 @@ if ($userId === 0) {
                 <div class="fragment">
                     <h4>条件トレース（スマート）:</h4>
                     <pre><code class="bash code-small"># 条件満たされるまで静かに待機、その後トレース開始
-./vendor/bin/xdebug-debug --break='User.php:85:$userId==0' --steps=100 --exit-on-break -- php app.php
+./vendor/bin/xstep --break='User.php:85:$userId==0' --steps=100 --exit-on-break -- php app.php
 
 # 完全実行履歴取得: どうやって$userId=0になったのか？
 # AIが条件に至る完全実行トレースを分析</code></pre>
@@ -500,7 +500,7 @@ if ($userId === 0) {
                 <h2>別の例: 「配列が空の時のみクラッシュ」</h2>
                 <div class="fragment">
                     <pre><code class="bash"># 条件固有の問題を確実に捕獲
-./vendor/bin/xdebug-debug --break='DataProcessor.php:42:empty($items)' --steps=200 --exit-on-break -- php batch.php
+./vendor/bin/xstep --break='DataProcessor.php:42:empty($items)' --steps=200 --exit-on-break -- php batch.php
 
 # AI分析で根本原因特定
 # 空配列条件への完全パス分析</code></pre>
@@ -516,10 +516,10 @@ if ($userId === 0) {
 
             <!-- Performance Profiling -->
             <section>
-                <h2>xdebug-profile: パフォーマンスを見よう 🔍</h2>
+                <h2>xprofile: パフォーマンスを見よう 🔍</h2>
                 <div class="fragment">
                     <pre><code class="bash"># マイクロ秒精度パフォーマンスプロファイリング
-./vendor/bin/xdebug-profile --context="API性能解析" -- php slow_api.php
+./vendor/bin/xprofile --context="API性能解析" -- php slow_api.php
 
 # AIがボトルネック分析と最適化提案を提供
 # 結果: ボトルネック特定付き完全性能プロファイル</code></pre>
@@ -534,10 +534,10 @@ if ($userId === 0) {
 
             <!-- Forward Trace Debugging -->
             <section>
-                <h2>xdebug-debug: 条件ブレークポイント付きフォワードトレース 🕵️</h2>
+                <h2>xstep: 条件ブレークポイント付きフォワードトレース 🕵️</h2>
                 <div class="fragment">
                     <pre><code class="bash"># 完全コンテキスト付きAI最適化デバッグ
-./vendor/bin/xdebug-debug --break='User.php:42:$user==null' --steps=150 --exit-on-break -- php app.php
+./vendor/bin/xstep --break='User.php:42:$user==null' --steps=150 --exit-on-break -- php app.php
 
 # AIが条件に至る完全実行履歴を取得
 # null userへのパス包括分析を提供</code></pre>
@@ -576,11 +576,11 @@ if ($userId === 0) {
 
             <!-- Coverage Intelligence -->
             <section>
-                <h2>xdebug-coverage: 生Xdebugカバレッジ - 任意のPHPスクリプト 📊</h2>
+                <h2>xcoverage: 生Xdebugカバレッジ - 任意のPHPスクリプト 📊</h2>
                 <div class="fragment">
                     <pre><code class="bash"># PHPUnitだけでなく任意のPHPスクリプトで動作
-./vendor/bin/xdebug-coverage -- php ./vendor/bin/phpunit  # PHPUnit
-./vendor/bin/xdebug-coverage -- php my-script.php         # 任意のスクリプト
+./vendor/bin/xcoverage -- php ./vendor/bin/phpunit  # PHPUnit
+./vendor/bin/xcoverage -- php my-script.php         # 任意のスクリプト
 
 # ネイティブXdebugフォーマット - AI理解が高速</code></pre>
                 </div>
@@ -598,7 +598,7 @@ if ($userId === 0) {
                 <h2>🌳 NEW: ブランチカバレッジ + GraphViz可視化</h2>
                 <div class="fragment">
                     <pre><code class="bash"># 新機能: ブランチ/パスカバレッジの視覚化
-./bin/xdebug-coverage --branch-coverage -- php app.php
+./bin/xcoverage --branch-coverage -- php app.php
 
 # 一度の実行で同時生成:
 # ✅ 詳細ブランチカバレッジJSON

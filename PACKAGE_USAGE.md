@@ -60,7 +60,7 @@ Each tool's help includes:
 
 ```json
 {
-    "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json",
+    "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xstep.json",
     "breaks": [
         {
             "step": 1,
