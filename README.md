@@ -2,49 +2,62 @@
 
 <img width="256" alt="xdebug-mcp" src="docs/images/logo.jpeg" />
 
-> **Error message is the crime photo. Trace is the crime footage.**  
-> Don't just see the crime. Watch how it happened.
+**Debug PHP with Natural Language — No var_dump(), No Guesswork**
 
-**Enable AI to Debug PHP Autonomously, Beyond Human IDE Capabilities**
+An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that enables AI assistants to debug PHP using Xdebug's runtime analysis.
 
-[![Debugging](https://img.shields.io/badge/AI_Native-YES-green)](https://github.com/koriym/xdebug-mcp)
-[![Runtime](https://img.shields.io/badge/Runtime_Data-YES-green)](https://github.com/koriym/xdebug-mcp)
+[![AI Native](https://img.shields.io/badge/AI_Native-YES-green)](https://github.com/koriym/xdebug-mcp)
+[![Runtime Data](https://img.shields.io/badge/Runtime_Data-YES-green)](https://github.com/koriym/xdebug-mcp)
 [![var_dump](https://img.shields.io/badge/var__dump()-NO-red)](https://github.com/koriym/xdebug-mcp)
-[![Guesswork](https://img.shields.io/badge/Guesswork-NO-red)](https://github.com/koriym/xdebug-mcp)
 
 ---
 
-## The Problem: From var_dump() to xdebug_start_trace()
+## Natural Language Debugging
 
-When you ask AI to debug PHP today, it adds `var_dump()` to your code—the same technique from 30 years ago.
+Just tell your AI assistant what you want:
 
-Why? Because **AI is debugging blind**, only able to read static code and guess what happens at runtime.
+**English:**
+```
+"Debug script.php and find why $user is null at line 42"
+"Profile api.php and find the performance bottleneck"
+"Trace the authentication flow in login.php"
+"Check test coverage for UserService"
+```
 
-## The Solution: Forward Trace™
+**日本語:**
+```
+"script.phpをデバッグして、42行目で$userがnullになる原因を調べて"
+"api.phpのパフォーマンスボトルネックを見つけて"
+"login.phpの認証フローをトレースして"
+"UserServiceのテストカバレッジを確認して"
+```
 
-**Transform AI debugging from `var_dump()` to `xdebug_start_trace()`** — a paradigm shift from static guesswork to runtime intelligence.
+The AI automatically selects the appropriate tool, executes it, and analyzes the results.
 
-This MCP server enables AI to debug PHP with superhuman capabilities:
+## Requirements
 
-- **Watch execution unfold live**: Record runtime behavior from any point forward as it happens
-- **Track variable evolution**: Watch every variable change step-by-step
-- **Set intelligent traps**: Conditional breakpoints that capture exact problem moments
-- **Verify AI code quality**: Beyond tests passing - see if code is actually efficient
-- **Share debug sessions**: Schema-validated JSON that any AI can analyze
-- **Debug without touching code**: Zero var_dumps, zero pollution
+- PHP 8.0+
+- [Xdebug 3.x](https://xdebug.org/docs/install) extension (installed, but **not** enabled by default)
+- MCP-compatible AI assistant (Claude Code, etc.)
+
+> **💡 Performance Tip:** Keep Xdebug disabled in php.ini for daily use. This tool loads Xdebug on-demand only when needed.
 
 ## Quick Start
 
 ```bash
-# Install globally
+# 1. Install
 composer global require koriym/xdebug-mcp
 
-# Configure Claude Desktop MCP (~/.claude/claude_desktop_config.json)
+# 2. Verify Xdebug is available (even if disabled in php.ini)
+~/.composer/vendor/bin/check-env
+
+# 3. Configure your AI assistant's MCP settings
+#    For Claude Code, edit: ~/.claude.json
 {
   "mcpServers": {
     "xdebug": {
       "command": "php",
-      "args": ["$HOME/.composer/vendor/bin/xdebug-mcp"],
+      "args": ["~/.composer/vendor/bin/xdebug-mcp"],
       "env": {
         "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
       }
@@ -52,188 +65,101 @@ composer global require koriym/xdebug-mcp
   }
 }
 
-# Restart Claude Code to connect MCP server
-
-# 🎯 Start with AI-optimized help (recommended first step)
-~/.composer/vendor/bin/xdebug-debug --help     # Learn optimal AI debugging workflow
-~/.composer/vendor/bin/xdebug-coverage --help  # Understand AI coverage analysis
-~/.composer/vendor/bin/xdebug-trace --help     # Master execution flow tracing
-~/.composer/vendor/bin/xdebug-profile --help   # Performance optimization guidance
-~/.composer/vendor/bin/xdebug-backtrace --help # Get stack trace at breakpoint
-
-# Example: Catch null bugs automatically
-~/.composer/vendor/bin/xdebug-debug --break='script.php:42:$user==null' --exit-on-break -- php script.php
+# 4. Restart your AI assistant
 ```
 
-## Forward Trace™ vs Traditional Debugging
+Now ask your AI to debug PHP code.
 
-| Traditional Debugging | Forward Trace |
-|----------------------|----------------|
-| Post-crash investigation | Live execution monitoring |
-| Add var_dump(), test, remove | Zero code modification |
-| Manual stepping through IDE | Automatic variable evolution recording |
-| One developer, one session | Schema-validated JSON for any AI |
-| Hours of investigation | Seconds of AI analysis |
+## How It Works
 
-### Two Powerful Modes
-
-**1. Conditional Breakpoints** - Stop when problems occur:
-```bash
-~/.composer/vendor/bin/xdebug-debug --break='script.php:42:$user==null' --exit-on-break -- php script.php
+```mermaid
+flowchart LR
+    A[You] -->|"Debug login.php"| B[AI Assistant]
+    B -->|MCP| C[xdebug-mcp]
+    C -->|Runtime Analysis| D[Xdebug]
+    D -->|JSON| C
+    C -->|Results| B
+    B -->|Explanation| A
 ```
 
-**2. Step Recording** - Watch variable evolution:
-```bash
-~/.composer/vendor/bin/xdebug-debug --break='script.php:17' --steps=100 --json -- php script.php
-```
+**No var_dump(). No code modification. No guesswork.**
 
-## Common Usage Patterns
+## MCP Tools
 
-**Catch Null Values** (The #1 PHP Bug):
-```bash
-~/.composer/vendor/bin/xdebug-debug --break='User.php:85:$user==null' --exit-on-break -- php app.php
-```
+| Tool | Purpose | Example Prompt |
+|------|---------|----------------|
+| `x-debug` | Breakpoint debugging, variable inspection | "Stop at line 42 and show me the variables" |
+| `x-trace` | Execution flow analysis | "Trace how the request flows through the app" |
+| `x-profile` | Performance profiling | "Find what's making this endpoint slow" |
+| `x-coverage` | Code coverage analysis | "Which lines aren't covered by tests?" |
+| `x-backtrace` | Call stack at breakpoint | "Show me how we got to this error" |
 
-**Performance Analysis**:
-```bash
-~/.composer/vendor/bin/xdebug-profile --context="API performance" --json -- php api.php
-```
+## CLI Usage
 
-**Variable Evolution**:
-```bash
-~/.composer/vendor/bin/xdebug-debug --break='loop.php:45' --steps=100 --json -- php app.php
-```
-
-**AI Code Quality Verification**:
-```bash
-# Tests pass ✅ but is the code actually efficient?
-~/.composer/vendor/bin/xdebug-trace --context="AI generated algorithm efficiency check" ai_code.php
-```
-
-**Vendor Filtering** (Focus on specific packages):
-```bash
-# Include only specific vendor packages in trace
-~/.composer/vendor/bin/xdebug-trace --include-vendor=bear/resource,ray/di script.php
-
-# Use wildcards for package groups
-~/.composer/vendor/bin/xdebug-trace --include-vendor=bear/* script.php
-
-# Include all vendor code
-~/.composer/vendor/bin/xdebug-trace --include-vendor=*/* script.php
-```
-
-**AI Slash Commands** (Claude Code):
-```bash
-/x-debug "script.php" "script.php:42:$error!=null" "" "Debug error handling"
-/x-trace script="auth.php" context="Login flow analysis" include_vendor="bear/*"
-/x-backtrace script="app.php" breakpoint="app.php:50" context="Check call hierarchy"
-```
-
-
-## Available Tools
-
-### 🤖 AI-Optimized CLI Tools
-All tools now feature comprehensive AI-optimized help documentation. **Always run `--help` first** to understand optimal usage patterns:
-
-- **`xdebug-debug`** 🔍 - Interactive debugging shell with conditional breakpoints and step recording
-  ```bash
-  ~/.composer/vendor/bin/xdebug-debug --help  # 📖 Essential reading: AI debugging workflow
-  # Interactive REPL debugger with commands: s(tep), o(ver), c(ontinue), p <var>, claude, q(uit)
-  ~/.composer/vendor/bin/xdebug-debug -- php app.php
-  ```
-
-- **`xdebug-coverage`** 🎯 - Superior alternative to PHPUnit HTML/XML coverage for AI analysis
-  ```bash
-  ~/.composer/vendor/bin/xdebug-coverage --help  # 📖 Learn why this beats HTML reports
-  ~/.composer/vendor/bin/xdebug-coverage         # Auto-detects PHPUnit, outputs TestDox + JSON
-  ```
-
-- **`xdebug-trace`** 📊 - Ultimate alternative to static code analysis
-  ```bash
-  ~/.composer/vendor/bin/xdebug-trace --help     # 📖 Runtime reality vs theoretical analysis
-  ```
-
-- **`xdebug-profile`** ⚡ - Scientific performance optimization with precision metrics
-  ```bash
-  ~/.composer/vendor/bin/xdebug-profile --help   # 📖 AI-driven optimization workflow
-  ```
-
-- **`xdebug-backtrace`** 📋 - Get stack trace (backtrace) at breakpoint
-  ```bash
-  ~/.composer/vendor/bin/xdebug-backtrace --help  # 📖 Understand call hierarchy
-  ~/.composer/vendor/bin/xdebug-backtrace --break='app.php:50' -- php app.php
-  ```
-
-- **`xdebug-phpunit`** - PHPUnit integration with Xdebug profiling and coverage
-
-### 🎯 AI-First Design Philosophy
-
-**Start Here**: Every tool includes comprehensive AI-optimized help documentation designed to teach optimal usage patterns:
+For direct command-line usage without AI:
 
 ```bash
-# Recommended AI prompt for any PHP debugging task:
-"Run [tool] --help first to understand this tool, then help me debug this issue"
+# Trace execution
+xdebug-trace -- php script.php
+
+# Profile performance
+xdebug-profile -- php api.php
+
+# Debug with conditional breakpoint
+xdebug-debug --break='script.php:42:$user==null' --exit-on-break -- php script.php
+
+# Code coverage
+xdebug-coverage -- vendor/bin/phpunit
+
+# Stack trace at breakpoint
+xdebug-backtrace --break='app.php:50' -- php app.php
 ```
 
-**What makes this AI-optimized?**
-- ✅ **Value Proposition Clear**: Why this beats traditional debugging methods
-- ✅ **Workflow Integration**: Step-by-step AI collaboration processes  
-- ✅ **Practical Examples**: Real-world usage patterns with context
-- ✅ **Output Optimization**: JSON formats designed for AI consumption
-- ✅ **Cognitive Load Reduction**: Mixed output streams AI can parse efficiently
+Run `--help` on any tool for detailed options.
 
-### AI Integration Features
-- **42+ MCP Tools**: Performance profiling, code coverage, execution tracing, memory diagnostics, error tracking
-- **Slash Commands**: `/x-debug`, `/x-profile`, `/x-trace`, `/x-coverage`, `/x-backtrace` for Claude Code
-- **Schema-Validated Output**: JSON that any AI can understand and analyze
-- **Dynamic Vendor Filtering**: AI can specify which vendor packages to include/exclude during analysis
+## Interactive REPL
 
-## Installation
+For hands-on debugging without AI, use the interactive debugger:
 
 ```bash
-# Install globally
-composer global require koriym/xdebug-mcp
-
-# Configure Claude Desktop MCP
-# Edit ~/.claude/claude_desktop_config.json:
-{
-  "mcpServers": {
-    "xdebug": {
-      "command": "php",
-      "args": ["$HOME/.composer/vendor/bin/xdebug-mcp"],
-      "env": {
-        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
-      }
-    }
-  }
-}
-
-# Restart Claude Code to activate MCP integration
+xdebug-debug -- php script.php
 ```
 
-## Troubleshooting & Diagnostics
+**Commands:**
+
+| Command | Description |
+|---------|-------------|
+| `s` | Step into function |
+| `o` | Step over line |
+| `out` | Step out of function |
+| `c` | Continue execution |
+| `p <var>` | Print variable (e.g., `p $user`) |
+| `bt` | Show backtrace |
+| `l` | List source code |
+| `q` | Quit debugger |
+
+## Docker Support
+
+All tools work with Docker, Podman, and Kubectl:
 
 ```bash
-# Environment verification
-composer check-env # Verify Xdebug installation
-php -dzend_extension=xdebug.so -dxdebug.mode=debug --version # Test Xdebug loading
+xdebug-debug --break="/app/script.php:42" --exit-on-break -- \
+  docker compose run --rm php php /app/script.php
 
-# MCP connection test
-/mcp                                     # Check MCP server status in Claude Code
+xdebug-trace -- docker compose run --rm php php /app/script.php
 ```
+
+The tools automatically detect container runtime and configure Xdebug networking.
+
+See [tests/docker/README.md](tests/docker/README.md) for details.
 
 ## Resources
 
-📋 **[TROUBLESHOOTING.md](https://koriym.github.io/xdebug-mcp/TROUBLESHOOTING)** - Setup and common issues  
-🎯 **[Forward Trace Guide](https://koriym.github.io/xdebug-mcp/debug-guidelines/)** - AI debugging methodology  
-📖 **[MOTIVATION.md](MOTIVATION.md)** - Why we built this  
-🎬 **[Interactive Presentation](https://koriym.github.io/xdebug-mcp/slide/)** - See the paradigm shift  
-📚 **[Xdebug Documentation](https://xdebug.org/docs/)** - Official Xdebug docs  
+- [Troubleshooting](https://koriym.github.io/xdebug-mcp/TROUBLESHOOTING) - Setup issues
+- [Forward Trace Guide](https://koriym.github.io/xdebug-mcp/debug-guidelines/) - AI debugging methodology
+- [Motivation](MOTIVATION.md) - Why we built this
+- [Xdebug Docs](https://xdebug.org/docs/) - Official documentation
 
 ---
 
-**Stop debugging blind. Give AI the power of Forward Trace.**
-
-*Transform your PHP debugging from guesswork to intelligence.*
-
-*Debug once, analyze anywhere - with schema-validated JSON that any AI can understand.*
+**Stop debugging blind. Just ask your AI.**
