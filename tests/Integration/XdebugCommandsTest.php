@@ -182,6 +182,6 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
         $this->assertEquals(1, $response['id']);
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('tools', $response['result']);
-        $this->assertCount(4, $response['result']['tools'], 'Should have 4 execution tools after removing internal analysis tools');
+        $this->assertCount(5, $response['result']['tools'], 'Should have 5 execution tools');
     }
 }
