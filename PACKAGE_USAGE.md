@@ -11,10 +11,10 @@ composer require koriym/xdebug-mcp
 **Before using any tool, read the AI-optimized help documentation:**
 
 ```bash
-./vendor/bin/xdebug-debug --help     # 🔍 Interactive debugging workflow
-./vendor/bin/xdebug-coverage --help  # 🎯 Coverage analysis (beats HTML/XML)
-./vendor/bin/xdebug-trace --help     # 📊 Execution flow tracing
-./vendor/bin/xdebug-profile --help   # ⚡ Performance optimization
+./vendor/bin/xstep --help      # 🔍 Interactive debugging workflow
+./vendor/bin/xcoverage --help  # 🎯 Coverage analysis (beats HTML/XML)
+./vendor/bin/xtrace --help     # 📊 Execution flow tracing
+./vendor/bin/xprofile --help   # ⚡ Performance optimization
 ```
 
 **Recommended AI Prompt:**
@@ -34,21 +34,21 @@ Each tool's help includes:
 
 ```bash
 # Multiple breakpoints with context
-./vendor/bin/xdebug-debug \
+./vendor/bin/xstep \
   --break="src/OrderProcessor.php:25,src/TaxCalculator.php:15" \
   --context="Order processing debug session" \
   --exit-on-break \
   -- php process_order.php
 
 # Conditional breakpoint
-./vendor/bin/xdebug-debug \
+./vendor/bin/xstep \
   --break="src/User.php:42:\$user_id>1000" \
   --context="Debug high-value user processing" \
   --exit-on-break \
   -- php user_handler.php
 
 # Step recording (capture variable evolution)
-./vendor/bin/xdebug-debug \
+./vendor/bin/xstep \
   --break="src/Calculator.php:20" \
   --steps=50 \
   --context="Track calculation steps" \
@@ -101,16 +101,16 @@ Each tool's help includes:
 
 ```bash
 # Interactive debugging with context
-/x-debug --script="php app.php" --context="Login flow debugging" --breakpoints="User.php:42"
+/xstep --script="php app.php" --context="Login flow debugging" --breakpoints="User.php:42"
 
 # Performance analysis
-/x-profile --script="php slow_endpoint.php" --context="API performance analysis"
+/xprofile --script="php slow_endpoint.php" --context="API performance analysis"
 
 # Execution tracing
-/x-trace --script="php workflow.php" --context="Business logic flow analysis"
+/xtrace --script="php workflow.php" --context="Business logic flow analysis"
 
 # Code coverage
-/x-coverage --script="php vendor/bin/phpunit UserTest.php" --context="Test coverage analysis"
+/xcoverage --script="php vendor/bin/phpunit UserTest.php" --context="Test coverage analysis"
 ```
 
 ### MCP Tool Parameters
@@ -139,16 +139,16 @@ xdebug-mcp uses `XDEBUG_SESSION=xdebug-mcp` to isolate sessions from IDEs:
 
 ```bash
 # Default: Exclude all vendor code (focus on application logic)
-./vendor/bin/xdebug-debug --exit-on-break -- php app.php
+./vendor/bin/xstep --exit-on-break -- php app.php
 
 # Include specific packages
-./vendor/bin/xdebug-debug \
+./vendor/bin/xstep \
   --include-vendor="doctrine/orm,symfony/console" \
   --exit-on-break \
   -- php app.php
 
 # Include all vendor code
-./vendor/bin/xdebug-debug \
+./vendor/bin/xstep \
   --include-vendor="*/*" \
   --exit-on-break \
   -- php app.php
@@ -160,13 +160,13 @@ Always use `--context` for self-explanatory debugging data:
 
 ```bash
 # ✅ Good: Self-explanatory
-./vendor/bin/xdebug-debug \
+./vendor/bin/xstep \
   --context="Testing user authentication with expired tokens" \
   --exit-on-break \
   -- php AuthTest.php
 
 # ❌ Bad: Requires external knowledge
-./vendor/bin/xdebug-debug --exit-on-break -- php AuthTest.php
+./vendor/bin/xstep --exit-on-break -- php AuthTest.php
 ```
 
 ## Integration with Testing Frameworks
@@ -175,14 +175,14 @@ Always use `--context` for self-explanatory debugging data:
 
 ```bash
 # Debug specific test with breakpoints
-./vendor/bin/xdebug-debug \
+./vendor/bin/xstep \
   --break="UserTest.php:25,User.php:42" \
   --context="Debug user authentication test failure" \
   --exit-on-break \
   -- php vendor/bin/phpunit tests/UserTest.php::testLogin
 
 # Coverage analysis for tests  
-./vendor/bin/xdebug-coverage \
+./vendor/bin/xcoverage \
   --context="User module test coverage analysis" \
   -- php vendor/bin/phpunit tests/Unit/UserTest.php
 ```
@@ -191,7 +191,7 @@ Always use `--context` for self-explanatory debugging data:
 
 ```bash
 # Works with any PHP-based test runner
-./vendor/bin/xdebug-debug \
+./vendor/bin/xstep \
   --break="TestRunner.php:15" \
   --context="Custom test runner debugging" \
   --exit-on-break \
@@ -223,7 +223,7 @@ php -m | grep xdebug
 
 ### 1. Use Context for All Sessions
 ```bash
-./vendor/bin/xdebug-debug \
+./vendor/bin/xstep \
   --context="Debugging checkout process with invalid coupon codes" \
   --exit-on-break \
   -- php checkout.php
@@ -242,7 +242,7 @@ php -m | grep xdebug
 
 ### 4. Step Recording for Complex Issues
 ```bash
-./vendor/bin/xdebug-debug \
+./vendor/bin/xstep \
   --break="ComplexAlgorithm.php:15" \
   --steps=200 \
   --context="Algorithm variable evolution tracking" \

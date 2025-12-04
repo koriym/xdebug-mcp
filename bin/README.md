@@ -4,59 +4,59 @@ This directory contains executable tools for PHP debugging, profiling, and analy
 
 ## Core Debugging Tools
 
-### `./xdebug-debug`
+### `./xstep`
 Interactive step debugging with conditional breakpoints and Forward Trace™ capabilities.
 ```bash
 # Interactive debugging session
-./xdebug-debug script.php
+./xstep script.php
 
 # Conditional breakpoints (Forward Trace)
-./xdebug-debug --break='User.php:42:$id==null' --exit-on-break -- php script.php
+./xstep --break='User.php:42:$id==null' --exit-on-break -- php script.php
 
 # Step recording with JSON output
-./xdebug-debug --break='loop.php:15' --steps=100 --json -- php script.php
+./xstep --break='loop.php:15' --steps=100 --json -- php script.php
 
 # Multiple conditions (first match triggers)
-./xdebug-debug --break='Auth.php:20:empty($token),User.php:85:$id==0' --exit-on-break -- php app.php
+./xstep --break='Auth.php:20:empty($token),User.php:85:$id==0' --exit-on-break -- php app.php
 ```
 
-### `./xdebug-profile`
+### `./xprofile`
 Performance profiling with microsecond precision and AI analysis integration.
 ```bash
 # Basic profiling
-./xdebug-profile script.php
+./xprofile script.php
 
 # With context for AI analysis
-./xdebug-profile --context="API endpoint performance" -- php api.php
+./xprofile --context="API endpoint performance" -- php api.php
 
 # JSON output for MCP integration
-./xdebug-profile --json -- php slow-script.php
+./xprofile --json -- php slow-script.php
 ```
 
-### `./xdebug-trace`
+### `./xtrace`
 Execution flow tracing with complete function call analysis.
 ```bash
 # Basic execution tracing
-./xdebug-trace script.php
+./xtrace script.php
 
 # With context documentation
-./xdebug-trace --context="Authentication flow analysis" -- php login.php
+./xtrace --context="Authentication flow analysis" -- php login.php
 
 # JSON output for AI processing
-./xdebug-trace --json -- php complex-workflow.php
+./xtrace --json -- php complex-workflow.php
 ```
 
-### `./xdebug-coverage`
+### `./xcoverage`
 Code coverage analysis with multiple output formats.
 ```bash
 # Basic coverage analysis
-./xdebug-coverage tests/MyTest.php
+./xcoverage tests/MyTest.php
 
 # With context
-./xdebug-coverage --context="Unit test coverage verification" -- php vendor/bin/phpunit tests/
+./xcoverage --context="Unit test coverage verification" -- php vendor/bin/phpunit tests/
 
 # Multiple formats: HTML, XML, JSON, text
-./xdebug-coverage --format=html --format=json -- php tests/suite.php
+./xcoverage --format=html --format=json -- php tests/suite.php
 ```
 
 ### `./xdebug-phpunit`
@@ -122,10 +122,10 @@ Legacy debugging server utility (development purposes).
 ## Tool Categories
 
 **Forward Trace Tools (AI-Optimized):**
-- `xdebug-debug` - Conditional breakpoints with step recording
-- `xdebug-trace` - Complete execution flow analysis
-- `xdebug-profile` - Performance bottleneck identification
-- `xdebug-coverage` - Test coverage verification
+- `xstep` - Conditional breakpoints with step recording
+- `xtrace` - Complete execution flow analysis
+- `xprofile` - Performance bottleneck identification
+- `xcoverage` - Test coverage verification
 
 **Integration Tools:**
 - `xdebug-mcp` - AI assistant protocol handler
@@ -141,25 +141,25 @@ Legacy debugging server utility (development purposes).
 ### Bug Investigation
 ```bash
 # Catch specific problem conditions
-./xdebug-debug --break='ErrorHandler.php:45:$error_code>400' --exit-on-break -- php api.php
+./xstep --break='ErrorHandler.php:45:$error_code>400' --exit-on-break -- php api.php
 ```
 
-### Performance Analysis  
+### Performance Analysis
 ```bash
 # Profile slow endpoints
-./xdebug-profile --context="Payment processing bottleneck analysis" -- php checkout.php
+./xprofile --context="Payment processing bottleneck analysis" -- php checkout.php
 ```
 
 ### Test Coverage Verification
 ```bash
 # Analyze test effectiveness
-./xdebug-coverage --context="AuthController test coverage" -- php vendor/bin/phpunit tests/AuthTest.php
+./xcoverage --context="AuthController test coverage" -- php vendor/bin/phpunit tests/AuthTest.php
 ```
 
 ### Complex Flow Understanding
 ```bash
 # Trace execution paths
-./xdebug-trace --context="Multi-step form submission workflow" -- php form-handler.php
+./xtrace --context="Multi-step form submission workflow" -- php form-handler.php
 ```
 
 All tools support `--help` option for detailed usage information.
