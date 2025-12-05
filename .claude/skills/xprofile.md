@@ -4,7 +4,7 @@ description: Profile PHP performance to identify bottlenecks. Use when asked abo
 
 # PHP Performance Profiler
 
-Execute `./bin/xprofile` to identify performance bottlenecks with precision data.
+Execute `./bin/xprofile` to identify performance bottlenecks with precise data.
 
 ## Usage
 
