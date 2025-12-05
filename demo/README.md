@@ -18,20 +18,27 @@ composer install
 
 ## 1. Debugging with xstep / xstep でデバッグ
 
-Debug buggy code with interactive step debugging.
+Debug buggy code with step debugging. **Returns JSON for AI analysis.**
 
-バグのあるコードをインタラクティブにステップデバッグします。
+バグのあるコードをステップデバッグします。**AI分析用にJSON形式で出力されます。**
 
 ```bash
-# Run debugging session / デバッグセッションを実行
+# JSON output mode (recommended for AI) / JSON出力モード（AI向け推奨）
+./bin/xstep --exit-on-break demo/sample_buggy.php
+
+# With breakpoint and context / ブレークポイントとコンテキスト付き
+./bin/xstep --exit-on-break --break=demo/sample_buggy.php:20 \
+  --context="Debug sum calculation bug" demo/sample_buggy.php
+
+# Interactive mode (for manual debugging) / インタラクティブモード（手動デバッグ用）
 ./bin/xstep demo/sample_buggy.php
-
-# With breakpoint at specific line / 特定の行にブレークポイントを設定
-./bin/xstep --break=demo/sample_buggy.php:20 demo/sample_buggy.php
-
-# Auto-exit mode (for AI analysis) / 自動終了モード（AI分析用）
-./bin/xstep --exit-on-break --context="Debug sum calculation bug" demo/sample_buggy.php
 ```
+
+**Output Format / 出力形式:**
+- `--exit-on-break`: JSON output with execution trace and variable states
+- Without option: Interactive terminal session
+- `--exit-on-break`: 実行トレースと変数状態を含むJSON出力
+- オプションなし: インタラクティブなターミナルセッション
 
 **What to look for / 確認ポイント:**
 - Line 20: `$a - $b` should be `$a + $b`
@@ -131,12 +138,13 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | ./bin/xdebug-mcp
 
 ## Quick Command Reference / コマンド早見表
 
-| Tool | Use Case | 用途 |
-|------|----------|------|
-| `xstep` | Interactive debugging, breakpoints | インタラクティブデバッグ |
-| `xtrace` | Execution flow analysis | 実行フロー分析 |
-| `xprofile` | Performance bottleneck detection | パフォーマンス分析 |
-| `xcoverage` | Test coverage analysis | テストカバレッジ分析 |
+| Tool | Output | Use Case | 用途 |
+|------|--------|----------|------|
+| `xstep --exit-on-break` | JSON | Step debugging for AI | AI用ステップデバッグ |
+| `xstep` | Interactive | Manual step debugging | 手動ステップデバッグ |
+| `xtrace` | JSON | Execution flow analysis | 実行フロー分析 |
+| `xprofile` | JSON | Performance analysis | パフォーマンス分析 |
+| `xcoverage` | JSON | Code coverage analysis | カバレッジ分析 |
 
 ---
 
