@@ -70,6 +70,8 @@ composer global require koriym/xdebug-mcp
 
 Now ask your AI to debug PHP code.
 
+**New to xdebug-mcp?** Try the [demo/](demo/) folder with sample buggy code, performance issues, and coverage examples.
+
 ## How It Works
 
 ```mermaid
