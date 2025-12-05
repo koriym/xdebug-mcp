@@ -29,14 +29,14 @@ Debug buggy code with step debugging. **Returns JSON for AI analysis.**
 **CLI:**
 ```bash
 # JSON output mode (recommended for AI) / JSON出力モード（AI向け推奨）
-./bin/xstep --exit-on-break demo/sample_buggy.php
+./bin/xstep --exit-on-break -- php demo/sample_buggy.php
 
 # With breakpoint and context / ブレークポイントとコンテキスト付き
 ./bin/xstep --exit-on-break --break=demo/sample_buggy.php:20 \
-  --context="Debug sum calculation bug" demo/sample_buggy.php
+  --context="Debug sum calculation bug" -- php demo/sample_buggy.php
 
 # Interactive mode (for manual debugging) / インタラクティブモード（手動デバッグ用）
-./bin/xstep demo/sample_buggy.php
+./bin/xstep -- php demo/sample_buggy.php
 ```
 
 **Output Format / 出力形式:**
@@ -64,10 +64,10 @@ Trace the execution flow without stopping.
 **CLI:**
 ```bash
 # Basic trace / 基本的なトレース
-./bin/xtrace demo/sample_buggy.php
+./bin/xtrace -- php demo/sample_buggy.php
 
 # With context for AI / AI用のコンテキスト付き
-./bin/xtrace --context="Trace buggy calculation flow" demo/sample_buggy.php
+./bin/xtrace --context="Trace buggy calculation flow" -- php demo/sample_buggy.php
 ```
 
 **Output / 出力:**
@@ -90,7 +90,7 @@ Find performance bottlenecks in slow code.
 **CLI:**
 ```bash
 # Profile the slow script / 遅いスクリプトをプロファイル
-./bin/xprofile demo/sample_slow.php
+./bin/xprofile -- php demo/sample_slow.php
 ```
 
 **What to look for / 確認ポイント:**
