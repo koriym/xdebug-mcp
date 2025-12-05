@@ -28,8 +28,8 @@ Debug buggy code with step debugging.
 > 「demo/buggy.php をデバッグしてバグを見つけて」
 
 **What to look for:**
-- Line 20: `$a - $b` should be `$a + $b`
-- Line 28: Loop misses last element
+- Line 22: `$a - $b` should be `$a + $b`
+- Line 30: Loop misses last element
 
 ---
 
