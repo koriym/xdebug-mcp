@@ -68,9 +68,9 @@ final class McpServer
     private function initializeTools(): void
     {
         $this->tools = [
-            'x-trace' => [
-                'name' => 'x-trace',
-                'description' => 'Trace PHP execution flow | ex) ./x-trace "php test.php" "Debug login flow" | PHPUnit: ./x-trace "php vendor/bin/phpunit --filter testMethod TestClass.php" "Testing user auth"',
+            'xtrace' => [
+                'name' => 'xtrace',
+                'description' => 'Trace PHP execution flow | ex) ./xtrace "php test.php" "Debug login flow" | PHPUnit: ./xtrace "php vendor/bin/phpunit --filter testMethod TestClass.php" "Testing user auth"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -87,9 +87,9 @@ final class McpServer
                     'required' => ['script'],
                 ],
             ],
-            'x-profile' => [
-                'name' => 'x-profile',
-                'description' => 'Profile performance bottlenecks | ex) ./x-profile "php slow-app.php" "API performance"',
+            'xprofile' => [
+                'name' => 'xprofile',
+                'description' => 'Profile performance bottlenecks | ex) ./xprofile "php slow-app.php" "API performance"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -106,9 +106,9 @@ final class McpServer
                     'required' => ['script'],
                 ],
             ],
-            'x-debug' => [
-                'name' => 'x-debug',
-                'description' => 'Step debugging with breakpoints | ex) /x-debug --script="php test.php" --break="test.php:15:$user==null" --steps=100 --context="debug context"',
+            'xstep' => [
+                'name' => 'xstep',
+                'description' => 'Step debugging with breakpoints | ex) /xstep --script="php test.php" --break="test.php:15:$user==null" --steps=100 --context="debug context"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -140,9 +140,9 @@ final class McpServer
                     'required' => ['script'],
                 ],
             ],
-            'x-coverage' => [
-                'name' => 'x-coverage',
-                'description' => 'Analyze test coverage | ex) ./x-coverage "php vendor/bin/phpunit UserTest.php"',
+            'xcoverage' => [
+                'name' => 'xcoverage',
+                'description' => 'Analyze test coverage | ex) ./xcoverage "php vendor/bin/phpunit UserTest.php"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -164,9 +164,9 @@ final class McpServer
                     'required' => ['script'],
                 ],
             ],
-            'x-backtrace' => [
-                'name' => 'x-backtrace',
-                'description' => 'Get stack trace (backtrace) at breakpoint | ex) ./x-backtrace --break="app.php:50" "php app.php"',
+            'xback' => [
+                'name' => 'xback',
+                'description' => 'Get stack trace (backtrace) at breakpoint | ex) ./xback --break="app.php:50" "php app.php"',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -387,8 +387,8 @@ final class McpServer
             'result' => [
                 'prompts' => [
                     [
-                        'name' => 'x-trace',
-                        'description' => 'Trace PHP execution flow | ex) /x-trace --script=test.php --context="Debug login flow" | PHPUnit: /x-trace --script="vendor/bin/phpunit --filter testMethod TestClass.php" --context="Testing user auth"',
+                        'name' => 'xtrace',
+                        'description' => 'Trace PHP execution flow | ex) /xtrace --script=test.php --context="Debug login flow" | PHPUnit: /xtrace --script="vendor/bin/phpunit --filter testMethod TestClass.php" --context="Testing user auth"',
                         'arguments' => [
                             [
                                 'name' => 'script',
@@ -408,8 +408,8 @@ final class McpServer
                         ],
                     ],
                     [
-                        'name' => 'x-debug',
-                        'description' => 'Step debugging with breakpoints | ex) /x-debug --script="php test.php" --break="test.php:15:$user==null" --steps=100 --context="debug context"',
+                        'name' => 'xstep',
+                        'description' => 'Step debugging with breakpoints | ex) /xstep --script="php test.php" --break="test.php:15:$user==null" --steps=100 --context="debug context"',
                         'arguments' => [
                             [
                                 'name' => 'script',
@@ -439,8 +439,8 @@ final class McpServer
                         ],
                     ],
                     [
-                        'name' => 'x-profile',
-                        'description' => 'Profile performance bottlenecks | ex) /x-profile --script=slow-app.php --context="API performance"',
+                        'name' => 'xprofile',
+                        'description' => 'Profile performance bottlenecks | ex) /xprofile --script=slow-app.php --context="API performance"',
                         'arguments' => [
                             [
                                 'name' => 'script',
@@ -460,8 +460,8 @@ final class McpServer
                         ],
                     ],
                     [
-                        'name' => 'x-coverage',
-                        'description' => 'Analyze test coverage | ex) /x-coverage --script="vendor/bin/phpunit UserTest.php"',
+                        'name' => 'xcoverage',
+                        'description' => 'Analyze test coverage | ex) /xcoverage --script="vendor/bin/phpunit UserTest.php"',
                         'arguments' => [
                             [
                                 'name' => 'script',
@@ -486,8 +486,8 @@ final class McpServer
                         ],
                     ],
                     [
-                        'name' => 'x-backtrace',
-                        'description' => 'Get stack trace (backtrace) at breakpoint | ex) /x-backtrace --script="app.php" --break="app.php:50"',
+                        'name' => 'xback',
+                        'description' => 'Get stack trace (backtrace) at breakpoint | ex) /xback --script="app.php" --break="app.php:50"',
                         'arguments' => [
                             [
                                 'name' => 'script',
@@ -545,19 +545,19 @@ final class McpServer
         $args = $this->normalizePositionalArgs($args, $promptName);
 
         switch ($promptName) {
-            case 'x-trace':
+            case 'xtrace':
                 return $this->executeXTrace($id, $args);
 
-            case 'x-debug':
+            case 'xstep':
                 return $this->executeXDebug($id, $args);
 
-            case 'x-profile':
+            case 'xprofile':
                 return $this->executeXProfile($id, $args);
 
-            case 'x-coverage':
+            case 'xcoverage':
                 return $this->executeXCoverage($id, $args);
 
-            case 'x-backtrace':
+            case 'xback':
                 return $this->executeXBacktrace($id, $args);
 
             default:
@@ -583,7 +583,7 @@ final class McpServer
         }
 
         switch ($promptName) {
-            case 'x-trace':
+            case 'xtrace':
                 if (isset($args[0])) {
                     $args['script'] = $args[0];
                 }
@@ -594,7 +594,7 @@ final class McpServer
 
                 break;
 
-            case 'x-debug':
+            case 'xstep':
                 if (isset($args[0])) {
                     $args['script'] = $args[0];
                 }
@@ -613,7 +613,7 @@ final class McpServer
 
                 break;
 
-            case 'x-profile':
+            case 'xprofile':
                 if (isset($args[0])) {
                     $args['script'] = $args[0];
                 }
@@ -624,7 +624,7 @@ final class McpServer
 
                 break;
 
-            case 'x-coverage':
+            case 'xcoverage':
                 if (isset($args[0])) {
                     $args['script'] = $args[0];
                 }
@@ -639,7 +639,7 @@ final class McpServer
 
                 break;
 
-            case 'x-backtrace':
+            case 'xback':
                 if (isset($args[0])) {
                     $args['script'] = $args[0];
                 }
@@ -752,27 +752,27 @@ final class McpServer
     private function executeToolCall(string $toolName, array $arguments): string
     {
         switch ($toolName) {
-            case 'x-trace':
+            case 'xtrace':
                 $result = $this->executeXTrace(null, $arguments);
 
                 return $result['result']['messages'][0]['content']['text'] ?? 'No result';
 
-            case 'x-profile':
+            case 'xprofile':
                 $result = $this->executeXProfile(null, $arguments);
 
                 return $result['result']['messages'][0]['content']['text'] ?? 'No result';
 
-            case 'x-debug':
+            case 'xstep':
                 $result = $this->executeXDebug(null, $arguments);
 
                 return $result['result']['messages'][0]['content']['text'] ?? 'No result';
 
-            case 'x-coverage':
+            case 'xcoverage':
                 $result = $this->executeXCoverage(null, $arguments);
 
                 return $result['result']['messages'][0]['content']['text'] ?? 'No result';
 
-            case 'x-backtrace':
+            case 'xback':
                 $result = $this->executeXBacktrace(null, $arguments);
 
                 return $result['result']['messages'][0]['content']['text'] ?? 'No result';
@@ -840,7 +840,7 @@ final class McpServer
                 'id' => $id,
                 'error' => [
                     'code' => -32000,
-                    'message' => 'x-trace execution failed: ' . $e->getMessage(),
+                    'message' => 'xtrace execution failed: ' . $e->getMessage(),
                 ],
             ];
             // @codeCoverageIgnoreEnd
@@ -954,7 +954,7 @@ final class McpServer
                 'id' => $id,
                 'error' => [
                     'code' => -32000,
-                    'message' => 'x-debug execution failed: ' . $e->getMessage(),
+                    'message' => 'xstep execution failed: ' . $e->getMessage(),
                 ],
             ];
             // @codeCoverageIgnoreEnd
@@ -1019,7 +1019,7 @@ final class McpServer
                 'id' => $id,
                 'error' => [
                     'code' => -32000,
-                    'message' => 'x-profile execution failed: ' . $e->getMessage(),
+                    'message' => 'xprofile execution failed: ' . $e->getMessage(),
                 ],
             ];
             // @codeCoverageIgnoreEnd
@@ -1086,7 +1086,7 @@ final class McpServer
                 'id' => $id,
                 'error' => [
                     'code' => -32000,
-                    'message' => 'x-coverage execution failed: ' . $e->getMessage(),
+                    'message' => 'xcoverage execution failed: ' . $e->getMessage(),
                 ],
             ];
             // @codeCoverageIgnoreEnd
@@ -1104,7 +1104,7 @@ final class McpServer
             $depth = $args['depth'] ?? 10;
 
             // Build command
-            $cmd = $this->binDir . '/xdebug-backtrace';
+            $cmd = $this->binDir . '/xback';
 
             // Add breakpoint if specified
             if (! empty($breakpoint)) {
@@ -1171,7 +1171,7 @@ final class McpServer
                 'id' => $id,
                 'error' => [
                     'code' => -32000,
-                    'message' => 'x-backtrace execution failed: ' . $e->getMessage(),
+                    'message' => 'xback execution failed: ' . $e->getMessage(),
                 ],
             ];
             // @codeCoverageIgnoreEnd

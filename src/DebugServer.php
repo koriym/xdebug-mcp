@@ -2148,7 +2148,7 @@ final class DebugServer
     private function outputStepRecordingResults(): void
     {
         $result = [
-            '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json',
+            '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xstep.json',
             'breaks' => $this->breaks,
         ];
 
@@ -2939,7 +2939,7 @@ final class DebugServer
     private function outputMultipleBreakResults(array $breaks): void
     {
         $debugState = [
-            '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json',
+            '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xstep.json',
             'breaks' => $breaks,
             'trace' => $this->getTraceInfo(),
         ];

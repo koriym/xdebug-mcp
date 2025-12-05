@@ -23,7 +23,7 @@ print_r($cart);
 die("HERE"); // Risk: accidentally commit debug code
 
 // ✅ NEW WAY: One command, complete analysis
-./bin/xdebug-debug --break='Auth.php:42:$user==null' --exit-on-break -- php app.php
+./bin/xstep --break='Auth.php:42:$user==null' --exit-on-break -- php app.php
 // Result: Complete execution trace when $user is null, no code changes
 ```
 
@@ -32,10 +32,10 @@ die("HERE"); // Risk: accidentally commit debug code
 ### 1. Variable Inspection (Replaces var_dump)
 ```bash
 # Instead of adding var_dump($variable) to your code
-./bin/xdebug-debug --break='file.php:line' --steps=1 --context="Checking variable state" -- php script.php
+./bin/xstep --break='file.php:line' --steps=1 --context="Checking variable state" -- php script.php
 
 # Example: Check what's in $user at line 42
-./bin/xdebug-debug --break='Auth.php:42' --steps=1 --context="User object inspection" -- php login.php
+./bin/xstep --break='Auth.php:42' --steps=1 --context="User object inspection" -- php login.php
 ```
 
 **Benefits**:
@@ -47,7 +47,7 @@ die("HERE"); // Risk: accidentally commit debug code
 ### 2. Loop Debugging (Replaces multiple var_dumps)
 ```bash
 # Instead of: foreach($items as $item) { var_dump($item); }
-./bin/xdebug-debug --break='DataProcessor.php:45' --steps=100 --context="Processing loop analysis" -- php import.php
+./bin/xstep --break='DataProcessor.php:45' --steps=100 --context="Processing loop analysis" -- php import.php
 
 # Watch variables evolve through 100 iterations
 # Memory usage, performance, variable states all captured
@@ -56,7 +56,7 @@ die("HERE"); // Risk: accidentally commit debug code
 ### 3. Intermittent Bug Hunting
 ```bash
 # For bugs that "sometimes happen"
-./bin/xdebug-debug --break='Payment.php:*:$total<0' --exit-on-break --context="Negative total bug hunt" -- php checkout.php
+./bin/xstep --break='Payment.php:*:$total<0' --exit-on-break --context="Negative total bug hunt" -- php checkout.php
 
 # Runs normally until the bug occurs, then captures complete trace
 # No more "I can't reproduce it" situations
@@ -65,7 +65,7 @@ die("HERE"); // Risk: accidentally commit debug code
 ### 4. Performance Investigation
 ```bash
 # Find bottlenecks in your code
-./bin/xdebug-profile --context="API endpoint performance analysis" -- php api.php
+./bin/xprofile --context="API endpoint performance analysis" -- php api.php
 
 # AI analyzes results:
 # "fetchUser() called 847 times (72% execution time). Add caching at line 42."
@@ -76,37 +76,37 @@ die("HERE"); // Risk: accidentally commit debug code
 ### Authentication & User Management
 ```bash
 # Null user debugging
-./bin/xdebug-debug --break='Auth.php:*:$user==null' --exit-on-break --context="Authentication failure analysis" -- php login.php
+./bin/xstep --break='Auth.php:*:$user==null' --exit-on-break --context="Authentication failure analysis" -- php login.php
 
 # Permission issues
-./bin/xdebug-debug --break='Security.php:15:!$hasPermission' --exit-on-break --context="Permission denied investigation" -- php dashboard.php
+./bin/xstep --break='Security.php:15:!$hasPermission' --exit-on-break --context="Permission denied investigation" -- php dashboard.php
 
 # Session problems
-./bin/xdebug-debug --break='Session.php:*:empty($_SESSION)' --exit-on-break --context="Session management debug" -- php app.php
+./bin/xstep --break='Session.php:*:empty($_SESSION)' --exit-on-break --context="Session management debug" -- php app.php
 ```
 
 ### Database & API Issues
 ```bash
 # Failed queries
-./bin/xdebug-debug --break='DB.php:*:$result===false' --exit-on-break --context="Database query failure" -- php data.php
+./bin/xstep --break='DB.php:*:$result===false' --exit-on-break --context="Database query failure" -- php data.php
 
 # Slow queries (>500ms)
-./bin/xdebug-debug --break='DB.php:*:$queryTime>0.5' --exit-on-break --context="Slow query identification" -- php reports.php
+./bin/xstep --break='DB.php:*:$queryTime>0.5' --exit-on-break --context="Slow query identification" -- php reports.php
 
 # API errors
-./bin/xdebug-debug --break='ApiClient.php:*:$response["error"]' --exit-on-break --context="API integration issues" -- php sync.php
+./bin/xstep --break='ApiClient.php:*:$response["error"]' --exit-on-break --context="API integration issues" -- php sync.php
 ```
 
 ### Data Processing & Validation
 ```bash
 # Invalid data detection
-./bin/xdebug-debug --break='Validator.php:*:count($errors)>0' --exit-on-break --context="Validation error analysis" -- php form.php
+./bin/xstep --break='Validator.php:*:count($errors)>0' --exit-on-break --context="Validation error analysis" -- php form.php
 
 # Memory leaks in loops
-./bin/xdebug-debug --break='Import.php:150' --steps=200 --context="Memory usage during data import" -- php import.php
+./bin/xstep --break='Import.php:150' --steps=200 --context="Memory usage during data import" -- php import.php
 
 # Array manipulation issues
-./bin/xdebug-debug --break='Transform.php:*:empty($result)' --exit-on-break --context="Data transformation problems" -- php process.php
+./bin/xstep --break='Transform.php:*:empty($result)' --exit-on-break --context="Data transformation problems" -- php process.php
 ```
 
 ## 🤝 Working with AI Analysis
@@ -120,7 +120,7 @@ die("HERE"); // Risk: accidentally commit debug code
 ### Example Collaboration
 ```bash
 # 1. Human sets up capture
-./bin/xdebug-debug --break='Cart.php:89:$total<0' --exit-on-break --context="Negative cart total investigation" -- php checkout.php
+./bin/xstep --break='Cart.php:89:$total<0' --exit-on-break --context="Negative cart total investigation" -- php checkout.php
 
 # 2. Forward Trace captures the problem moment
 # Output: Complete execution trace + JSON data
@@ -165,7 +165,7 @@ Target specific problem conditions, not normal flow:
 ### 3. Team Debug Session Sharing
 ```bash
 # Generate portable debug session
-./bin/xdebug-debug --break='bug.php:42' --steps=100 --json --context="Customer #12345 checkout failure" > debug-session.json
+./bin/xstep --break='bug.php:42' --steps=100 --json --context="Customer #12345 checkout failure" > debug-session.json
 
 # Share with team
 git add debug-session.json
@@ -186,7 +186,7 @@ claude --file debug-session.json "Analyze this debug session"
     {
       "label": "Debug Current File",
       "type": "shell",
-      "command": "./bin/xdebug-debug",
+      "command": "./bin/xstep",
       "args": [
         "--break=${file}:${lineNumber}",
         "--steps=10",
@@ -204,8 +204,8 @@ claude --file debug-session.json "Analyze this debug session"
 ### Command Line Aliases
 ```bash
 # Add to ~/.bashrc or ~/.zshrc
-alias xd-var='./bin/xdebug-debug --break'
-alias xd-profile='./bin/xdebug-profile --context'
+alias xd-var='./bin/xstep --break'
+alias xd-profile='./bin/xprofile --context'
 alias xd-trace='./bin/xdebug-trace --context'
 
 # Usage examples
@@ -258,7 +258,7 @@ ls -la /tmp/xdebug_trace*
 ### 3. Breakpoints Not Hitting
 ```bash
 # Verify file path is correct (use absolute paths)
-./bin/xdebug-debug --break='/full/path/to/file.php:42' -- php script.php
+./bin/xstep --break='/full/path/to/file.php:42' -- php script.php
 
 # Check if line number exists
 wc -l file.php  # Should be > your line number
@@ -274,7 +274,7 @@ php script.php                                     # Normal execution
 php -dzend_extension=xdebug.so script.php         # With Xdebug
 
 # Use specific conditions to limit scope
-./bin/xdebug-debug --break='file.php:line:$specific_condition' --exit-on-break
+./bin/xstep --break='file.php:line:$specific_condition' --exit-on-break
 ```
 
 ## 📊 Understanding Output
@@ -282,7 +282,7 @@ php -dzend_extension=xdebug.so script.php         # With Xdebug
 ### JSON Output Structure
 ```json
 {
-  "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xdebug-debug.json",
+  "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xstep.json",
   "context": "User authentication analysis",
   "breaks": [
     {

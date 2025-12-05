@@ -110,7 +110,7 @@ wc -l src/User.php  # Check total lines
 head -n 50 src/User.php | tail -n 10  # Check around line 42
 
 # Test with simple breakpoint first
-./bin/xdebug-debug --break="src/User.php:42" -- php script.php
+./bin/xstep --break="src/User.php:42" -- php script.php
 ```
 
 ### 2. Step Recording Not Working
@@ -120,16 +120,16 @@ head -n 50 src/User.php | tail -n 10  # Check around line 42
 **Check Command Format**:
 ```bash
 # ✅ Correct format
-./bin/xdebug-debug --break="loop.php:15" --steps=100 --json -- php script.php
+./bin/xstep --break="loop.php:15" --steps=100 --json -- php script.php
 
 # ❌ Wrong format
-./bin/xdebug-debug --break="loop.php:15" --steps 100  # Missing equals sign
+./bin/xstep --break="loop.php:15" --steps 100  # Missing equals sign
 ```
 
 **Verify Output**:
 ```bash
 # Check if JSON contains "breaks" array with step data
-./bin/xdebug-debug --break="test.php:1" --steps=5 --json -- php -r "echo 'test';" | jq '.breaks'
+./bin/xstep --break="test.php:1" --steps=5 --json -- php -r "echo 'test';" | jq '.breaks'
 ```
 
 ### 3. Context Memory Problems
@@ -202,10 +202,10 @@ MCP_DEBUG=1 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | php bin/xdeb
 **Optimizations**:
 ```bash
 # Use specific conditions to limit scope
-./bin/xdebug-debug --break='file.php:42:$specific_condition' --exit-on-break
+./bin/xstep --break='file.php:42:$specific_condition' --exit-on-break
 
 # Limit step recording
-./bin/xdebug-debug --break='file.php:42' --steps=50  # Instead of 1000+
+./bin/xstep --break='file.php:42' --steps=50  # Instead of 1000+
 
 # Clean old trace files
 rm /tmp/trace.*.xt /tmp/cachegrind.out.*
@@ -218,26 +218,26 @@ rm /tmp/trace.*.xt /tmp/cachegrind.out.*
 **Common Problem - Script Output Mixing with JSON**:
 ```bash
 # ❌ Before v0.x.x: Script output breaks jq parsing
-./bin/xdebug-profile --json -- php script.php | jq '.'
+./bin/xprofile --json -- php script.php | jq '.'
 # parse error: Invalid numeric literal at line 1, column 8
 
 # ✅ Now: Clean JSON output (script stdout/stderr automatically suppressed)
-./bin/xdebug-profile --json -- php script.php | jq '.["🎯 bottleneck_functions"]'
+./bin/xprofile --json -- php script.php | jq '.["🎯 bottleneck_functions"]'
 ```
 
 **Format Solutions**:
 ```bash
 # Ensure JSON output for AI processing
-./bin/xdebug-profile --json -- php script.php
+./bin/xprofile --json -- php script.php
 
 # Pipe to jq for filtering
-./bin/xdebug-profile --json -- php script.php | jq '.["⏱️ execution_time_ms"]'
+./bin/xprofile --json -- php script.php | jq '.["⏱️ execution_time_ms"]'
 
 # Verify schema compliance
 ./bin/validate-profile-json profile-output.json
 
 # Check output structure
-./bin/xdebug-debug --json --break="test.php:1" --steps=1 -- php -r "echo 'test';" | jq '.'
+./bin/xstep --json --break="test.php:1" --steps=1 -- php -r "echo 'test';" | jq '.'
 ```
 
 ### 3. File Path Issues
