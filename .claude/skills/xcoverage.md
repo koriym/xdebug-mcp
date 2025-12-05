@@ -4,7 +4,7 @@ description: Analyze PHP code coverage to identify untested code. Use when asked
 
 # PHP Code Coverage Analyzer
 
-Execute `./bin/xcoverage` to collect code coverage data for any PHP script or PHPUnit tests.
+Execute `./bin/xcoverage` to collect code coverage data for PHP scripts or PHPUnit test suites.
 
 ## Usage
 
