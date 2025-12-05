@@ -16,9 +16,9 @@ This folder contains documentation, guides, and presentation materials for the P
 
 ### Technical Specifications
 - **`schemas/`** - JSON schema definitions for tool outputs
-  - `xdebug-debug.json` - Debug session output schema
-  - `xdebug-profile.json` - Performance profiling schema
-  - `xdebug-trace.json` - Execution trace schema
+  - `xstep.json` - Debug session output schema
+  - `xprofile.json` - Performance profiling schema
+  - `xtrace.json` - Execution trace schema
   - `alps.json` - ALPS API documentation
 
 ### Presentation Materials

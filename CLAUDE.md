@@ -385,16 +385,16 @@ This project prioritizes **execution-time trace analysis** over traditional code
 
 | User Request / ユーザーリクエスト | MCP Tool | Description / 説明 |
 |----------------------------------|----------|-------------------|
-| Forward trace, execution flow, trace execution<br>フォワードトレース、実行フロー、トレース実行 | `x-trace` | Record execution flow without stopping<br>実行の流れを記録（停止しない） |
-| Step execution, step debugging, breakpoints, inspect variables<br>ステップ実行、ステップデバッグ、ブレークポイント、変数検査 | `x-debug` | Stop at breakpoints and inspect<br>ブレークポイントで停止して検査 |
-| Profile, performance analysis, find bottlenecks<br>プロファイル、パフォーマンス分析、ボトルネック検出 | `x-profile` | Execution time and memory analysis<br>実行時間・メモリ分析 |
-| Coverage, test coverage, code coverage<br>カバレッジ、テストカバレッジ、コードカバレッジ | `x-coverage` | Code coverage analysis<br>コードカバレッジ分析 |
-| Backtrace, stack trace, call stack<br>バックトレース、スタックトレース、コールスタック | `x-backtrace` | Get stack trace at current position<br>現在位置のスタックトレースを取得 |
+| Forward trace, execution flow, trace execution<br>フォワードトレース、実行フロー、トレース実行 | `xtrace` | Record execution flow without stopping<br>実行の流れを記録（停止しない） |
+| Step execution, step debugging, breakpoints, inspect variables<br>ステップ実行、ステップデバッグ、ブレークポイント、変数検査 | `xstep` | Stop at breakpoints and inspect<br>ブレークポイントで停止して検査 |
+| Profile, performance analysis, find bottlenecks<br>プロファイル、パフォーマンス分析、ボトルネック検出 | `xprofile` | Execution time and memory analysis<br>実行時間・メモリ分析 |
+| Coverage, test coverage, code coverage<br>カバレッジ、テストカバレッジ、コードカバレッジ | `xcoverage` | Code coverage analysis<br>コードカバレッジ分析 |
+| Backtrace, stack trace, call stack<br>バックトレース、スタックトレース、コールスタック | `xback` | Get stack trace at current position<br>現在位置のスタックトレースを取得 |
 
 **Note on "Trace" ambiguity / 「トレース」の曖昧さについて:**
-- **Forward Trace (フォワードトレース)**: Records execution flow from start to end → Use `x-trace`
-- **Backtrace (バックトレース)**: Shows call stack at a specific point → Use `x-backtrace`
-- **Step Debugging (ステップ実行)**: Interactive debugging with breakpoints → Use `x-debug`
+- **Forward Trace (フォワードトレース)**: Records execution flow from start to end → Use `xtrace`
+- **Backtrace (バックトレース)**: Shows call stack at a specific point → Use `xback`
+- **Step Debugging (ステップ実行)**: Interactive debugging with breakpoints → Use `xstep`
 
 #### Available Xdebug Tools:
 - `./bin/xstep` - Interactive step debugging with breakpoints
@@ -405,10 +405,10 @@ This project prioritizes **execution-time trace analysis** over traditional code
 - `./bin/xdebug-mcp` - MCP server entry point
 
 #### MCP Slash Commands for Claude Code:
-- `/x-debug` - Interactive debugging with breakpoints
-- `/x-profile` - Performance profiling and analysis
-- `/x-trace` - Execution flow tracing
-- `/x-coverage` - Code coverage analysis
+- `/xstep` - Interactive debugging with breakpoints
+- `/xprofile` - Performance profiling and analysis
+- `/xtrace` - Execution flow tracing
+- `/xcoverage` - Code coverage analysis
 
 These slash commands provide direct access to Xdebug functionality within Claude Code, making PHP debugging more efficient and accessible.
 

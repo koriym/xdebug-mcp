@@ -88,11 +88,11 @@ flowchart LR
 
 | Tool | Purpose | Example Prompt |
 |------|---------|----------------|
-| `x-debug` | Breakpoint debugging, variable inspection | "Stop at line 42 and show me the variables" |
-| `x-trace` | Execution flow analysis | "Trace how the request flows through the app" |
-| `x-profile` | Performance profiling | "Find what's making this endpoint slow" |
-| `x-coverage` | Code coverage analysis | "Which lines aren't covered by tests?" |
-| `x-backtrace` | Call stack at breakpoint | "Show me how we got to this error" |
+| `xstep` | Breakpoint debugging, variable inspection | "Stop at line 42 and show me the variables" |
+| `xtrace` | Execution flow analysis | "Trace how the request flows through the app" |
+| `xprofile` | Performance profiling | "Find what's making this endpoint slow" |
+| `xcoverage` | Code coverage analysis | "Which lines aren't covered by tests?" |
+| `xback` | Call stack at breakpoint | "Show me how we got to this error" |
 
 ## CLI Usage
 

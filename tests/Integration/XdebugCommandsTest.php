@@ -54,24 +54,24 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
         $this->assertTrue(is_executable(__DIR__ . '/../../bin/xdebug-mcp'));
     }
 
-    public function testXdebugTraceCommandExists(): void
+    public function testXtraceCommandExists(): void
     {
-        $this->assertTrue(file_exists(__DIR__ . '/../../bin/xdebug-trace'));
-        $this->assertTrue(is_executable(__DIR__ . '/../../bin/xdebug-trace'));
+        $this->assertTrue(file_exists(__DIR__ . '/../../bin/xtrace'));
+        $this->assertTrue(is_executable(__DIR__ . '/../../bin/xtrace'));
     }
 
-    public function testXdebugTraceHelp(): void
+    public function testXtraceHelp(): void
     {
-        $output = shell_exec('cd ' . dirname(__DIR__, 2) . ' && ./bin/xdebug-trace --help 2>&1');
+        $output = shell_exec('cd ' . dirname(__DIR__, 2) . ' && ./bin/xtrace --help 2>&1');
         $this->assertNotNull($output);
         $this->assertStringContainsString('Usage:', $output);
-        $this->assertStringContainsString('xdebug-trace', $output);
+        $this->assertStringContainsString('xtrace', $output);
     }
 
-    public function testXdebugTraceExecution(): void
+    public function testXtraceExecution(): void
     {
         $command = sprintf(
-            'cd %s && ./bin/xdebug-trace -- php %s 2>&1',
+            'cd %s && ./bin/xtrace -- php %s 2>&1',
             dirname(__DIR__, 2),
             $this->testScript,
         );
@@ -81,24 +81,24 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
         $this->assertStringContainsString('Computing factorial', $output);
     }
 
-    public function testXdebugProfileCommandExists(): void
+    public function testXprofileCommandExists(): void
     {
-        $this->assertTrue(file_exists(__DIR__ . '/../../bin/xdebug-profile'));
-        $this->assertTrue(is_executable(__DIR__ . '/../../bin/xdebug-profile'));
+        $this->assertTrue(file_exists(__DIR__ . '/../../bin/xprofile'));
+        $this->assertTrue(is_executable(__DIR__ . '/../../bin/xprofile'));
     }
 
-    public function testXdebugProfileHelp(): void
+    public function testXprofileHelp(): void
     {
-        $output = shell_exec('cd ' . dirname(__DIR__, 2) . ' && ./bin/xdebug-profile --help 2>&1');
+        $output = shell_exec('cd ' . dirname(__DIR__, 2) . ' && ./bin/xprofile --help 2>&1');
         $this->assertNotNull($output);
         $this->assertStringContainsString('Usage:', $output);
-        $this->assertStringContainsString('xdebug-profile', $output);
+        $this->assertStringContainsString('xprofile', $output);
     }
 
-    public function testXdebugProfileExecution(): void
+    public function testXprofileExecution(): void
     {
         $command = sprintf(
-            'cd %s && ./bin/xdebug-profile -- php %s 2>&1',
+            'cd %s && ./bin/xprofile -- php %s 2>&1',
             dirname(__DIR__, 2),
             $this->testScript,
         );
@@ -108,49 +108,49 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
         $this->assertStringContainsString('Computing factorial', $output);
     }
 
-    public function testXdebugCoverageCommandExists(): void
+    public function testXcoverageCommandExists(): void
     {
-        $this->assertTrue(file_exists(__DIR__ . '/../../bin/xdebug-coverage'));
-        $this->assertTrue(is_executable(__DIR__ . '/../../bin/xdebug-coverage'));
+        $this->assertTrue(file_exists(__DIR__ . '/../../bin/xcoverage'));
+        $this->assertTrue(is_executable(__DIR__ . '/../../bin/xcoverage'));
     }
 
-    public function testXdebugDebugCommandExists(): void
+    public function testXstepCommandExists(): void
     {
-        $this->assertTrue(file_exists(__DIR__ . '/../../bin/xdebug-debug'));
-        $this->assertTrue(is_executable(__DIR__ . '/../../bin/xdebug-debug'));
+        $this->assertTrue(file_exists(__DIR__ . '/../../bin/xstep'));
+        $this->assertTrue(is_executable(__DIR__ . '/../../bin/xstep'));
     }
 
-    public function testXdebugDebugHelp(): void
+    public function testXstepHelp(): void
     {
-        $output = shell_exec('cd ' . dirname(__DIR__, 2) . ' && ./bin/xdebug-debug --help 2>&1');
+        $output = shell_exec('cd ' . dirname(__DIR__, 2) . ' && ./bin/xstep --help 2>&1');
         $this->assertNotNull($output);
         $this->assertStringContainsString('Usage:', $output);
-        $this->assertStringContainsString('xdebug-debug', $output);
+        $this->assertStringContainsString('xstep', $output);
     }
 
-    public function testXdebugBacktraceCommandExists(): void
+    public function testXbackCommandExists(): void
     {
-        $this->assertTrue(file_exists(__DIR__ . '/../../bin/xdebug-backtrace'));
-        $this->assertTrue(is_executable(__DIR__ . '/../../bin/xdebug-backtrace'));
+        $this->assertTrue(file_exists(__DIR__ . '/../../bin/xback'));
+        $this->assertTrue(is_executable(__DIR__ . '/../../bin/xback'));
     }
 
-    public function testXdebugBacktraceHelp(): void
+    public function testXbackHelp(): void
     {
-        $output = shell_exec('cd ' . dirname(__DIR__, 2) . ' && ./bin/xdebug-backtrace --help 2>&1');
+        $output = shell_exec('cd ' . dirname(__DIR__, 2) . ' && ./bin/xback --help 2>&1');
         $this->assertNotNull($output);
         $this->assertStringContainsString('Usage:', $output);
-        $this->assertStringContainsString('xdebug-backtrace', $output);
+        $this->assertStringContainsString('xback', $output);
     }
 
     public function testAllCommandsAreExecutable(): void
     {
         $commands = [
             'xdebug-mcp',
-            'xdebug-trace',
-            'xdebug-profile',
-            'xdebug-coverage',
-            'xdebug-debug',
-            'xdebug-backtrace',
+            'xtrace',
+            'xprofile',
+            'xcoverage',
+            'xstep',
+            'xback',
         ];
 
         foreach ($commands as $command) {

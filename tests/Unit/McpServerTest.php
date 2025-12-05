@@ -63,11 +63,11 @@ class McpServerTest extends TestCase
 
         $toolNames = array_column($response['result']['tools'], 'name');
         // Test that execution tools are present
-        $this->assertContains('x-trace', $toolNames);
-        $this->assertContains('x-profile', $toolNames);
-        $this->assertContains('x-debug', $toolNames);
-        $this->assertContains('x-coverage', $toolNames);
-        $this->assertContains('x-backtrace', $toolNames);
+        $this->assertContains('xtrace', $toolNames);
+        $this->assertContains('xprofile', $toolNames);
+        $this->assertContains('xstep', $toolNames);
+        $this->assertContains('xcoverage', $toolNames);
+        $this->assertContains('xback', $toolNames);
 
         // Test that interactive debugging tools are removed
         $this->assertNotContains('xdebug_connect', $toolNames);
@@ -189,11 +189,11 @@ class McpServerTest extends TestCase
         $this->assertCount(5, $response['result']['prompts']);
 
         $promptNames = array_column($response['result']['prompts'], 'name');
-        $this->assertContains('x-trace', $promptNames);
-        $this->assertContains('x-debug', $promptNames);
-        $this->assertContains('x-profile', $promptNames);
-        $this->assertContains('x-coverage', $promptNames);
-        $this->assertContains('x-backtrace', $promptNames);
+        $this->assertContains('xtrace', $promptNames);
+        $this->assertContains('xstep', $promptNames);
+        $this->assertContains('xprofile', $promptNames);
+        $this->assertContains('xcoverage', $promptNames);
+        $this->assertContains('xback', $promptNames);
     }
 
     public function testNotificationsInitialized(): void
@@ -241,15 +241,15 @@ class McpServerTest extends TestCase
 
     public function testNormalizePositionalArgs(): void
     {
-        // Test x-trace normalization
+        // Test xtrace normalization
         $args = ['script.php', 'test context'];
-        $normalized = $this->invokePrivateMethod($this->server, 'normalizePositionalArgs', [$args, 'x-trace']);
+        $normalized = $this->invokePrivateMethod($this->server, 'normalizePositionalArgs', [$args, 'xtrace']);
         $this->assertEquals('script.php', $normalized['script']);
         $this->assertEquals('test context', $normalized['context']);
 
-        // Test x-debug normalization
+        // Test xstep normalization
         $args = ['script.php', 'file.php:10', '50', 'debug context'];
-        $normalized = $this->invokePrivateMethod($this->server, 'normalizePositionalArgs', [$args, 'x-debug']);
+        $normalized = $this->invokePrivateMethod($this->server, 'normalizePositionalArgs', [$args, 'xstep']);
         $this->assertEquals('script.php', $normalized['script']);
         $this->assertEquals('file.php:10', $normalized['breakpoints']);
         $this->assertEquals('50', $normalized['steps']);
@@ -306,7 +306,7 @@ class McpServerTest extends TestCase
         // Test executeToolCall method directly - it should handle exceptions and return formatted result
         // The method catches exceptions and handles them, so let's test it returns proper error content
         try {
-            $result = $this->invokePrivateMethod($this->server, 'executeToolCall', ['x-trace', ['script' => '']]);
+            $result = $this->invokePrivateMethod($this->server, 'executeToolCall', ['xtrace', ['script' => '']]);
             // executeToolCall should return a string result, not throw exception
             $this->assertIsString($result);
             $this->assertStringContainsString('No result', $result); // Default fallback when execution fails
@@ -339,16 +339,16 @@ class McpServerTest extends TestCase
 
     public function testToolsCallXDebug(): void
     {
-        // Test tools/call request with x-debug to hit executeToolCall case
+        // Test tools/call request with xstep to hit executeToolCall case
         $request = [
             'jsonrpc' => '2.0',
             'id' => 100,
             'method' => 'tools/call',
             'params' => [
-                'name' => 'x-debug',
+                'name' => 'xstep',
                 'arguments' => [
                     'script' => 'php tests/fake/loop-counter.php',
-                    'context' => 'Tools call x-debug test',
+                    'context' => 'Tools call xstep test',
                 ],
             ],
         ];
@@ -370,10 +370,10 @@ class McpServerTest extends TestCase
             'id' => 200,
             'method' => 'prompts/get',
             'params' => [
-                'name' => 'x-trace',
+                'name' => 'xtrace',
                 'arguments' => [
                     'script' => 'php tests/fake/loop-counter.php',
-                    'context' => 'Test x-trace prompt',
+                    'context' => 'Test xtrace prompt',
                 ],
             ],
         ];
@@ -394,10 +394,10 @@ class McpServerTest extends TestCase
             'id' => 201,
             'method' => 'prompts/get',
             'params' => [
-                'name' => 'x-debug',
+                'name' => 'xstep',
                 'arguments' => [
                     'script' => 'php tests/fake/loop-counter.php',
-                    'context' => 'Test x-debug prompt',
+                    'context' => 'Test xstep prompt',
                     'breakpoints' => 'tests/fake/loop-counter.php:10',
                 ],
             ],
@@ -414,7 +414,7 @@ class McpServerTest extends TestCase
         // Verify the response contains Forward Trace debugging output
         $message = $response['result']['messages'][0]['content']['text'];
         $this->assertStringContainsString('Forward Trace debugging completed', $message);
-        $this->assertStringContainsString('Context**: Test x-debug prompt', $message);
+        $this->assertStringContainsString('Context**: Test xstep prompt', $message);
         $this->assertStringContainsString('tests/fake/loop-counter.php', $message);
 
         // Verify debug_data structure
@@ -423,7 +423,7 @@ class McpServerTest extends TestCase
         $this->assertArrayHasKey('exit_code', $debugData);
         $this->assertArrayHasKey('context', $debugData);
         $this->assertStringContainsString('xstep', $debugData['command']);
-        $this->assertEquals('Test x-debug prompt', $debugData['context']);
+        $this->assertEquals('Test xstep prompt', $debugData['context']);
         $this->assertEquals(0, $debugData['exit_code']);
     }
 
@@ -434,10 +434,10 @@ class McpServerTest extends TestCase
             'id' => 202,
             'method' => 'prompts/get',
             'params' => [
-                'name' => 'x-profile',
+                'name' => 'xprofile',
                 'arguments' => [
                     'script' => 'php tests/fake/loop-counter.php',
-                    'context' => 'Test x-profile prompt',
+                    'context' => 'Test xprofile prompt',
                 ],
             ],
         ];
