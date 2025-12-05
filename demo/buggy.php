@@ -12,8 +12,8 @@ declare(strict_types=1);
  * 2. Off-by-one error in array processing
  *
  * Usage:
- *   ./bin/xstep --exit-on-break -- php demo/sample_buggy.php
- *   ./bin/xtrace -- php demo/sample_buggy.php
+ *   ./bin/xstep --exit-on-break -- php demo/buggy.php
+ *   ./bin/xtrace -- php demo/buggy.php
  */
 
 function calculateSum(int $a, int $b): int

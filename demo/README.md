@@ -1,127 +1,98 @@
-# Demo - Quick Start Guide / クイックスタートガイド
+# Demo - Quick Start Guide
 
 Try the Xdebug MCP tools with these sample scripts.
 
-このサンプルスクリプトで Xdebug MCP ツールを試してみましょう。
-
-## Prerequisites / 前提条件
+## Prerequisites
 
 ```bash
-# Install dependencies / 依存関係のインストール
 composer install
-
-# Verify Xdebug is installed / Xdebugがインストールされているか確認
 ./bin/check-env
 ```
 
 ---
 
-## 1. Debugging with xstep / xstep でデバッグ
+## 1. Debugging with xstep
 
 Debug buggy code with step debugging. **Returns JSON for AI analysis.**
 
-バグのあるコードをステップデバッグします。**AI分析用にJSON形式で出力されます。**
-
-**Ask AI / AIに依頼:**
-> "demo/sample_buggy.php をステップ実行してバグを見つけて"
-> "Debug demo/sample_buggy.php and find the bug"
+**Ask AI:**
+> "Debug demo/buggy.php and find the bug"
 
 **CLI:**
 ```bash
-# JSON output mode (recommended for AI) / JSON出力モード（AI向け推奨）
-./bin/xstep --exit-on-break -- php demo/sample_buggy.php
+./bin/xstep --exit-on-break -- php demo/buggy.php
 
-# With breakpoint and context / ブレークポイントとコンテキスト付き
-./bin/xstep --exit-on-break --break=demo/sample_buggy.php:20 \
-  --context="Debug sum calculation bug" -- php demo/sample_buggy.php
-
-# Interactive mode (for manual debugging) / インタラクティブモード（手動デバッグ用）
-./bin/xstep -- php demo/sample_buggy.php
+# With breakpoint and context
+./bin/xstep --exit-on-break --break=demo/buggy.php:20 \
+  --context="Debug sum calculation bug" -- php demo/buggy.php
 ```
 
-**Output Format / 出力形式:**
+**Output Format:**
 - `--exit-on-break`: JSON output with execution trace and variable states
 - Without option: Interactive terminal session
-- `--exit-on-break`: 実行トレースと変数状態を含むJSON出力
-- オプションなし: インタラクティブなターミナルセッション
 
-**What to look for / 確認ポイント:**
+**What to look for:**
 - Line 20: `$a - $b` should be `$a + $b`
 - Line 28: Loop misses last element
 
 ---
 
-## 2. Execution Tracing with xtrace / xtrace で実行トレース
+## 2. Execution Tracing with xtrace
 
 Trace the execution flow without stopping.
 
-実行フローを停止せずにトレースします。
-
-**Ask AI / AIに依頼:**
-> "demo/sample_buggy.php の実行フローをトレースして"
-> "Trace execution flow of demo/sample_buggy.php"
+**Ask AI:**
+> "Trace execution flow of demo/buggy.php"
 
 **CLI:**
 ```bash
-# Basic trace / 基本的なトレース
-./bin/xtrace -- php demo/sample_buggy.php
+./bin/xtrace -- php demo/buggy.php
 
-# With context for AI / AI用のコンテキスト付き
-./bin/xtrace --context="Trace buggy calculation flow" -- php demo/sample_buggy.php
+./bin/xtrace --context="Trace buggy calculation flow" -- php demo/buggy.php
 ```
 
-**Output / 出力:**
+**Output:**
 - Function call hierarchy
 - Parameter values at each call
-- 関数呼び出しの階層と各呼び出し時のパラメータ値
 
 ---
 
-## 3. Performance Profiling with xprofile / xprofile でパフォーマンス分析
+## 3. Performance Profiling with xprofile
 
 Find performance bottlenecks in slow code.
 
-遅いコードのパフォーマンスボトルネックを見つけます。
-
-**Ask AI / AIに依頼:**
-> "demo/sample_slow.php のパフォーマンスを分析して"
-> "Profile demo/sample_slow.php and find bottlenecks"
+**Ask AI:**
+> "Profile demo/slow.php and find bottlenecks"
 
 **CLI:**
 ```bash
-# Profile the slow script / 遅いスクリプトをプロファイル
-./bin/xprofile -- php demo/sample_slow.php
+./bin/xprofile -- php demo/slow.php
 ```
 
-**What to look for / 確認ポイント:**
-- `inefficientSort()`: O(n³) complexity with unnecessary inner loop
+**What to look for:**
+- `inefficientSort()`: O(n^3) complexity with unnecessary inner loop
 - `slowStringProcess()`: Redundant string operations
 - `fibonacci()`: Exponential recursive calls
 
 ---
 
-## 4. Code Coverage with xcoverage / xcoverage でコードカバレッジ
+## 4. Code Coverage with xcoverage
 
 Analyze which lines of code are executed.
 
-どの行が実行されたかを分析します。
-
-**Ask AI / AIに依頼:**
-> "demo/sample_coverage.php のカバレッジを分析して"
-> "Analyze code coverage of demo/sample_coverage.php"
+**Ask AI:**
+> "Analyze code coverage of demo/coverage.php"
 
 **CLI:**
 ```bash
-# Collect coverage data / カバレッジデータを収集
-./bin/xcoverage -- php demo/sample_coverage.php
+./bin/xcoverage -- php demo/coverage.php
 ```
 
-**What to look for / 確認ポイント:**
-- Lines with `1`: Executed (green)
-- Lines with `-1`: Not executed (red)
-- 実行された行（緑）と実行されなかった行（赤）
+**What to look for:**
+- Lines with `1`: Executed
+- Lines with `-1`: Not executed
 
-**Uncovered branches in this demo / このデモで未実行のブランチ:**
+**Uncovered branches in this demo:**
 - Age < 0 (invalid)
 - Age >= 65 (senior)
 - Empty email
@@ -130,50 +101,42 @@ Analyze which lines of code are executed.
 
 ---
 
-## 5. Using MCP Server / MCP サーバーの使用
+## 5. Using MCP Server
 
 For integration with AI assistants (Claude, etc.):
 
-AI アシスタント（Claude 等）との統合用：
-
 ```bash
-# Start MCP server / MCP サーバーを起動
 ./bin/xdebug-mcp
 
-# Test with JSON-RPC / JSON-RPC でテスト
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | ./bin/xdebug-mcp
 ```
 
 ---
 
-## Sample Files / サンプルファイル
+## Files
 
-| File | Purpose | 目的 |
-|------|---------|------|
-| `sample_buggy.php` | Debug demo with intentional bugs | バグを含むデバッグデモ |
-| `sample_slow.php` | Performance profiling demo | パフォーマンスプロファイリングデモ |
-| `sample_coverage.php` | Code coverage demo | コードカバレッジデモ |
-
----
-
-## Quick Command Reference / コマンド早見表
-
-| Tool | Output | Use Case | 用途 |
-|------|--------|----------|------|
-| `xstep --exit-on-break` | JSON | Step debugging for AI | AI用ステップデバッグ |
-| `xstep` | Interactive | Manual step debugging | 手動ステップデバッグ |
-| `xtrace` | JSON | Execution flow analysis | 実行フロー分析 |
-| `xprofile` | JSON | Performance analysis | パフォーマンス分析 |
-| `xcoverage` | JSON | Code coverage analysis | カバレッジ分析 |
+| File | Purpose |
+|------|---------|
+| `buggy.php` | Debug demo with intentional bugs |
+| `slow.php` | Performance profiling demo |
+| `coverage.php` | Code coverage demo |
 
 ---
 
-## Next Steps / 次のステップ
+## Quick Command Reference
+
+| Tool | Output | Use Case |
+|------|--------|----------|
+| `xstep --exit-on-break` | JSON | Step debugging for AI |
+| `xstep` | Interactive | Manual step debugging |
+| `xtrace` | JSON | Execution flow analysis |
+| `xprofile` | JSON | Performance analysis |
+| `xcoverage` | JSON | Code coverage analysis |
+
+---
+
+## Next Steps
 
 1. Try these demos on your own PHP files
 2. Read the main [README.md](../README.md) for full documentation
 3. Configure Claude Desktop with the MCP server
-
-1. 自分の PHP ファイルでこれらのデモを試す
-2. メインの [README.md](../README.md) で詳細なドキュメントを読む
-3. MCP サーバーで Claude Desktop を設定する
