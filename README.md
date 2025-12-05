@@ -122,6 +122,23 @@ xanalyze trace.xt --summary
 
 Run `--help` on any tool for detailed options.
 
+## Claude Code Skills
+
+For [Claude Code](https://claude.ai/code) users, pre-configured skills are available in `.claude/skills/`:
+
+| Skill | Purpose |
+|-------|---------|
+| `xtrace` | Execution flow analysis, general debugging |
+| `xprofile` | Performance profiling, bottleneck detection |
+| `xcoverage` | Test coverage analysis |
+| `xstep` | Breakpoint debugging, variable inspection |
+
+Copy to your project:
+
+```bash
+cp -r vendor/koriym/xdebug-mcp/.claude/skills/ .claude/skills/
+```
+
 ## Interactive REPL
 
 For hands-on debugging without AI, use the interactive debugger:
