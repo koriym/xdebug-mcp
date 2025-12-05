@@ -12,7 +12,7 @@ declare(strict_types=1);
  * 2. Inefficient string processing with repeated operations
  *
  * Usage:
- *   ./bin/xprofile demo/sample_slow.php
+ *   ./bin/xprofile -- php demo/sample_slow.php
  */
 
 /**
