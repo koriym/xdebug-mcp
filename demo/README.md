@@ -22,6 +22,11 @@ Debug buggy code with step debugging. **Returns JSON for AI analysis.**
 
 バグのあるコードをステップデバッグします。**AI分析用にJSON形式で出力されます。**
 
+**Ask AI / AIに依頼:**
+> "demo/sample_buggy.php をステップ実行してバグを見つけて"
+> "Debug demo/sample_buggy.php and find the bug"
+
+**CLI:**
 ```bash
 # JSON output mode (recommended for AI) / JSON出力モード（AI向け推奨）
 ./bin/xstep --exit-on-break demo/sample_buggy.php
@@ -52,6 +57,11 @@ Trace the execution flow without stopping.
 
 実行フローを停止せずにトレースします。
 
+**Ask AI / AIに依頼:**
+> "demo/sample_buggy.php の実行フローをトレースして"
+> "Trace execution flow of demo/sample_buggy.php"
+
+**CLI:**
 ```bash
 # Basic trace / 基本的なトレース
 ./bin/xtrace demo/sample_buggy.php
@@ -73,6 +83,11 @@ Find performance bottlenecks in slow code.
 
 遅いコードのパフォーマンスボトルネックを見つけます。
 
+**Ask AI / AIに依頼:**
+> "demo/sample_slow.php のパフォーマンスを分析して"
+> "Profile demo/sample_slow.php and find bottlenecks"
+
+**CLI:**
 ```bash
 # Profile the slow script / 遅いスクリプトをプロファイル
 ./bin/xprofile demo/sample_slow.php
@@ -91,6 +106,11 @@ Analyze which lines of code are executed.
 
 どの行が実行されたかを分析します。
 
+**Ask AI / AIに依頼:**
+> "demo/sample_coverage.php のカバレッジを分析して"
+> "Analyze code coverage of demo/sample_coverage.php"
+
+**CLI:**
 ```bash
 # Collect coverage data / カバレッジデータを収集
 ./bin/xcoverage -- php demo/sample_coverage.php
