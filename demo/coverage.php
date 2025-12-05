@@ -9,7 +9,7 @@ declare(strict_types=1);
  * Some branches are intentionally NOT executed to show uncovered lines.
  *
  * Usage:
- *   ./bin/xcoverage -- php demo/sample_coverage.php
+ *   ./bin/xcoverage -- php demo/coverage.php
  */
 
 class UserValidator
