@@ -207,7 +207,7 @@ final class DebugServer
             $this->log('📨 Reading initial Xdebug packet...');
             try {
                 $initData = $this->readDbgpFrame($socket);
-                $this->log('📨 Session initialized: ' . substr($initData ?? 'NO DATA', 0, 100) . '...');
+                $this->log('📨 Session initialized: ' . substr($initData, 0, 100) . '...');
             } catch (Throwable $e) {
                 $this->log('⚠️ Init packet read warning: ' . $e->getMessage());
                 // Continue anyway
