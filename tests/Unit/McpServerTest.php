@@ -146,13 +146,11 @@ class McpServerTest extends TestCase
         // Debug logging should be enabled
         $reflection = new ReflectionClass($debugServer);
         $debugMode = $reflection->getProperty('debugMode');
-        $debugMode->setAccessible(true);
         $this->assertTrue($debugMode->getValue($debugServer));
 
         // Test debug mode disabled
         putenv('MCP_DEBUG=0');
         $normalServer = new McpServer();
-        $debugMode->setAccessible(true);
         $this->assertFalse($debugMode->getValue($normalServer));
 
         // Restore environment
@@ -455,7 +453,6 @@ class McpServerTest extends TestCase
     {
         $reflection = new ReflectionClass($object);
         $method = $reflection->getMethod($methodName);
-        $method->setAccessible(true);
 
         return $method->invokeArgs($object, $parameters);
     }

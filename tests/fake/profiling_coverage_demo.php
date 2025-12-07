@@ -149,7 +149,6 @@ foreach ($demoSteps as $step) {
 
     // ReflectionMethodを使って、プライベートメソッドにアクセス
     $method = new ReflectionMethod($server, 'handleRequest');
-    $method->setAccessible(true);
 
     try {
         $response = $method->invoke($server, $step['request']);
