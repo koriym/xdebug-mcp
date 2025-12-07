@@ -59,13 +59,13 @@ class CLIParamsNormalizer
 
         // Process options until we hit --
         while ($i < count($tokens) && $tokens[$i] !== '--') {
-            if (! str_starts_with($tokens[$i], '--')) {
+            if (! str_starts_with((string) $tokens[$i], '--')) {
                 throw new InvalidArgumentException(
                     '不正：位置引数は -- 後のみ許可。例：--key:str=value -- args',
                 );
             }
 
-            $option = substr($tokens[$i], 2); // Remove --
+            $option = substr((string) $tokens[$i], 2); // Remove --
             $this->parseOption($option, $params);
             $i++;
         }
@@ -74,7 +74,7 @@ class CLIParamsNormalizer
         if ($i < count($tokens) && $tokens[$i] === '--') {
             $i++; // Skip --
             $args = array_slice($tokens, $i);
-            if (! empty($args)) {
+            if ($args !== []) {
                 $params['args'] = $args;
             }
         }
@@ -124,7 +124,7 @@ class CLIParamsNormalizer
             $tokens[] = $current;
         }
 
-        return array_values(array_filter($tokens, static fn ($t) => $t !== '')); // Remove only empty strings, preserve "0"
+        return array_values(array_filter($tokens, static fn ($t): bool => $t !== '')); // Remove only empty strings, preserve "0"
     }
 
     /**
@@ -157,7 +157,7 @@ class CLIParamsNormalizer
             $key = $keyPart;
         }
 
-        if (empty($key)) {
+        if ($key === '') {
             // @codeCoverageIgnoreStart
             throw new InvalidArgumentException('不正：キー名が空です。'); // Empty key scenario is difficult to create through normal parsing flow
 
