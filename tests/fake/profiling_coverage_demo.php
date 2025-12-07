@@ -16,8 +16,8 @@ $demoSteps = [
             'jsonrpc' => '2.0',
             'id' => 1,
             'method' => 'initialize',
-            'params' => []
-        ]
+            'params' => [],
+        ],
     ],
     [
         'name' => 'プロファイリング開始',
@@ -27,9 +27,9 @@ $demoSteps = [
             'method' => 'tools/call',
             'params' => [
                 'name' => 'xdebug_start_profiling',
-                'arguments' => ['output_file' => '/tmp/demo_profile.out']
-            ]
-        ]
+                'arguments' => ['output_file' => '/tmp/demo_profile.out'],
+            ],
+        ],
     ],
     [
         'name' => 'プロファイル情報取得',
@@ -39,9 +39,9 @@ $demoSteps = [
             'method' => 'tools/call',
             'params' => [
                 'name' => 'xdebug_get_profile_info',
-                'arguments' => []
-            ]
-        ]
+                'arguments' => [],
+            ],
+        ],
     ],
     [
         'name' => 'プロファイリング停止',
@@ -51,9 +51,9 @@ $demoSteps = [
             'method' => 'tools/call',
             'params' => [
                 'name' => 'xdebug_stop_profiling',
-                'arguments' => []
-            ]
-        ]
+                'arguments' => [],
+            ],
+        ],
     ],
     [
         'name' => 'プロファイル解析',
@@ -65,10 +65,10 @@ $demoSteps = [
                 'name' => 'xdebug_analyze_profile',
                 'arguments' => [
                     'profile_file' => '/tmp/demo_profile.out',
-                    'top_functions' => 5
-                ]
-            ]
-        ]
+                    'top_functions' => 5,
+                ],
+            ],
+        ],
     ],
     [
         'name' => 'コードカバレッジ開始',
@@ -80,10 +80,10 @@ $demoSteps = [
                 'name' => 'xdebug_start_coverage',
                 'arguments' => [
                     'include_patterns' => ['src/*.php', 'tests/*.php'],
-                    'track_unused' => true
-                ]
-            ]
-        ]
+                    'track_unused' => true,
+                ],
+            ],
+        ],
     ],
     [
         'name' => 'カバレッジデータ取得',
@@ -93,9 +93,9 @@ $demoSteps = [
             'method' => 'tools/call',
             'params' => [
                 'name' => 'xdebug_get_coverage',
-                'arguments' => ['format' => 'summary']
-            ]
-        ]
+                'arguments' => ['format' => 'summary'],
+            ],
+        ],
     ],
     [
         'name' => 'カバレッジサマリー',
@@ -105,9 +105,9 @@ $demoSteps = [
             'method' => 'tools/call',
             'params' => [
                 'name' => 'xdebug_coverage_summary',
-                'arguments' => []
-            ]
-        ]
+                'arguments' => [],
+            ],
+        ],
     ],
     [
         'name' => 'HTMLカバレッジレポート生成',
@@ -120,13 +120,13 @@ $demoSteps = [
                 'arguments' => [
                     'coverage_data' => [
                         '/app/src/User.php' => [1 => 1, 2 => 1, 3 => 0, 4 => 1, 5 => -1],
-                        '/app/src/Product.php' => [1 => 1, 2 => 1, 3 => 1, 4 => 0, 5 => 0]
+                        '/app/src/Product.php' => [1 => 1, 2 => 1, 3 => 1, 4 => 0, 5 => 0],
                     ],
                     'format' => 'html',
-                    'output_file' => '/tmp/coverage_report.html'
-                ]
-            ]
-        ]
+                    'output_file' => '/tmp/coverage_report.html',
+                ],
+            ],
+        ],
     ],
     [
         'name' => 'コードカバレッジ停止',
@@ -136,10 +136,10 @@ $demoSteps = [
             'method' => 'tools/call',
             'params' => [
                 'name' => 'xdebug_stop_coverage',
-                'arguments' => []
-            ]
-        ]
-    ]
+                'arguments' => [],
+            ],
+        ],
+    ],
 ];
 
 // 各ステップを実行
@@ -150,10 +150,10 @@ foreach ($demoSteps as $step) {
     // ReflectionMethodを使って、プライベートメソッドにアクセス
     $method = new ReflectionMethod($server, 'handleRequest');
     $method->setAccessible(true);
-    
+
     try {
         $response = $method->invoke($server, $step['request']);
-        
+
         if (isset($response['result']['content'][0]['text'])) {
             $result = $response['result']['content'][0]['text'];
             // 長すぎる出力は省略
@@ -167,11 +167,11 @@ foreach ($demoSteps as $step) {
         } else {
             echo "❌ エラー: " . ($response['error']['message'] ?? 'Unknown error') . "\n";
         }
-        
+
     } catch (Exception $e) {
         echo "❌ 例外: " . $e->getMessage() . "\n";
     }
-    
+
     echo "\n";
 }
 

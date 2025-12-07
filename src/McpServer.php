@@ -276,7 +276,7 @@ final class McpServer
         return json_last_error() === JSON_ERROR_NONE;
     }
 
-    private function handleRequest(array $request): array|null
+    private function handleRequest(array $request): ?array
     {
         $method = $request['method'] ?? '';
         $params = $request['params'] ?? [];

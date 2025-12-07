@@ -37,7 +37,6 @@ use function shell_exec;
 use function sprintf;
 use function str_contains;
 use function str_starts_with;
-use function strpos;
 use function substr;
 use function substr_count;
 use function trim;
@@ -242,7 +241,7 @@ class XdebugProfiler
         }
 
         // Find bottleneck functions (top 5 by cost)
-        uasort($functions, static fn ($a, $b): int => $b['cost'] <=> $a['cost']);
+        uasort($functions, static fn($a, $b): int => $b['cost'] <=> $a['cost']);
         $topFunctions = array_slice($functions, 0, 5, true);
         $totalCost = array_sum(array_column($functions, 'cost'));
 

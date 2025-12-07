@@ -124,7 +124,7 @@ class CLIParamsNormalizer
             $tokens[] = $current;
         }
 
-        return array_values(array_filter($tokens, static fn ($t): bool => $t !== '')); // Remove only empty strings, preserve "0"
+        return array_values(array_filter($tokens, static fn($t): bool => $t !== '')); // Remove only empty strings, preserve "0"
     }
 
     /**
@@ -193,7 +193,7 @@ class CLIParamsNormalizer
             'float' => $this->convertFloat($value, $key),
             'bool' => $this->convertBool($value, $key),
             'json' => $this->convertJson($value, $key),
-            default => throw new InvalidArgumentException("未対応の型: {$type}")
+            default => throw new InvalidArgumentException("未対応の型: {$type}"),
         };
     }
 

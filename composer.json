@@ -17,7 +17,8 @@
         "doctrine/coding-standard": "^13.0",
         "justinrainbow/json-schema": "^6.4",
         "phpstan/phpstan": "^2.1",
-        "rector/rector": "^2.2"
+        "rector/rector": "^2.2",
+        "laravel/pint": "^1.26"
     },
     "autoload": {
         "psr-4": {

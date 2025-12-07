@@ -173,7 +173,7 @@ foreach ($discountTests as [$amount, $type, $holiday]) {
 echo "\n3. Testing processData:\n";
 $dataToProcess = [1, 4, 9, 'invalid', -1, 16, 25];
 $processed = processData($dataToProcess);
-$successCount = count(array_filter($processed, static fn ($r) => ! isset($r['error'])));
+$successCount = count(array_filter($processed, static fn($r) => ! isset($r['error'])));
 echo '   Processed ' . count($processed) . " items, $successCount successful\n";
 
 echo "\n=== Coverage Test Complete ===\n";
