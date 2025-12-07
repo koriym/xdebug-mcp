@@ -268,10 +268,10 @@ class XdebugProfiler
         }
 
         $validator = new Validator();
-        $schema = json_decode(file_get_contents($schemaPath));
+        $schema = json_decode(file_get_contents($schemaPath), false, 512, JSON_THROW_ON_ERROR);
 
         // Convert to object for validation
-        $jsonData = json_decode(json_encode($data));
+        $jsonData = json_decode(json_encode($data, JSON_THROW_ON_ERROR), false, 512, JSON_THROW_ON_ERROR);
 
         $validator->validate($jsonData, $schema, Constraint::CHECK_MODE_NORMAL);
 
@@ -312,7 +312,7 @@ class XdebugProfiler
             // Always validate against schema (performance cost is negligible)
             $this->validateJsonOutput($schemaCompliantOutput);
 
-            echo json_encode($schemaCompliantOutput, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            echo json_encode($schemaCompliantOutput, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         } else {
             echo "✅ Profile complete: {$stats['profile_file']}\n";
             echo "📊 Size: {$stats['file_size_formatted']}\n";
