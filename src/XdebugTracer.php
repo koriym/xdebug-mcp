@@ -316,10 +316,11 @@ class XdebugTracer
         $stats = $this->parseTraceFile($traceFile);
 
         // Handle both compressed and uncompressed trace files
+        $filterNonEmpty = static fn(string $line): bool => trim($line) !== '';
         if (str_ends_with($traceFile, '.gz')) {
-            $content = array_filter(explode("\n", gzdecode(file_get_contents($traceFile))), trim(...));
+            $content = array_filter(explode("\n", gzdecode(file_get_contents($traceFile))), $filterNonEmpty);
         } else {
-            $content = array_filter(explode("\n", file_get_contents($traceFile)), trim(...));
+            $content = array_filter(explode("\n", file_get_contents($traceFile)), $filterNonEmpty);
         }
 
         return [
