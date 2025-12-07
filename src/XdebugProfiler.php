@@ -6,7 +6,6 @@ namespace Koriym\XdebugMcp;
 
 use JsonSchema\Constraints\Constraint;
 use JsonSchema\Validator;
-use Koriym\XdebugMcp\DTO;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use RuntimeException;
 

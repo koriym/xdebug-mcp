@@ -249,7 +249,7 @@ class CLIParamsNormalizer
     {
         try {
             $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
+        } catch (\JsonException) {
             throw new InvalidArgumentException(
                 "不正：--{$key}:json の値は有効なJSONではありません。入力: '{$value}'",
             );

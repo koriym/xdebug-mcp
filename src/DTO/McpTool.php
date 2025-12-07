@@ -18,8 +18,7 @@ final class McpTool implements JsonSerializable
         public readonly string $name,
         public readonly string $description,
         public readonly array $inputSchema,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{name: string, description: string, inputSchema: array{type: string, properties: array<string, array{type: string, description: string, default?: string|int}>, required: list<string>}}

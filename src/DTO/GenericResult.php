@@ -17,8 +17,7 @@ final class GenericResult implements JsonRpcResultInterface
      */
     public function __construct(
         private readonly array $data,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null>>>>>

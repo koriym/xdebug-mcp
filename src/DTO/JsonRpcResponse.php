@@ -16,8 +16,7 @@ final class JsonRpcResponse implements JsonSerializable
         public readonly ?JsonRpcResultInterface $result = null,
         public readonly ?JsonRpcError $error = null,
         public readonly string $jsonrpc = '2.0',
-    ) {
-    }
+    ) {}
 
     public static function success(string|int|null $id, JsonRpcResultInterface $result): self
     {
@@ -39,11 +38,11 @@ final class JsonRpcResponse implements JsonSerializable
             'id' => $this->id,
         ];
 
-        if ($this->result !== null) {
+        if ($this->result instanceof \Koriym\XdebugMcp\DTO\JsonRpcResultInterface) {
             $response['result'] = $this->result->jsonSerialize();
         }
 
-        if ($this->error !== null) {
+        if ($this->error instanceof \Koriym\XdebugMcp\DTO\JsonRpcError) {
             $response['error'] = $this->error->jsonSerialize();
         }
 

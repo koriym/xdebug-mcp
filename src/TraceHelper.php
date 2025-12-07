@@ -40,7 +40,7 @@ final class TraceHelper
             && str_contains((string) ini_get('xdebug.mode'), 'trace');
 
         self::$tracePattern = (string) getenv('XDEBUG_TRACE_TESTS');
-        self::$outputDir = (string) (ini_get('xdebug.output_dir') ?: '/tmp');
+        self::$outputDir = ini_get('xdebug.output_dir') ?: '/tmp';
         self::$initialised = true;
     }
 

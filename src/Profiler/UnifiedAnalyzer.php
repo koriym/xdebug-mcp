@@ -37,15 +37,12 @@ class UnifiedAnalyzer
     /** @var list<string> */
     private array $traceFiles;
 
-    private AnalyzerOptions $options;
-
     /**
      * @param list<string> $traceFiles
      */
-    public function __construct(array $traceFiles, AnalyzerOptions $options)
+    public function __construct(array $traceFiles, private readonly AnalyzerOptions $options)
     {
         $this->traceFiles = $this->normalizeTraceFiles($traceFiles);
-        $this->options = $options;
     }
 
     /**
@@ -105,10 +102,12 @@ class UnifiedAnalyzer
 
         $parts = [];
         foreach (explode('/', $path) as $part) {
-            if ($part === '' || $part === '.') {
+            if ($part === '') {
                 continue;
             }
-
+            if ($part === '.') {
+                continue;
+            }
             if ($part === '..') {
                 array_pop($parts);
             } else {

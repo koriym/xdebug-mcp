@@ -657,7 +657,7 @@ final class DebugServer
      */
     private function sendCommand(string $command, array $params = []): string
     {
-        if (! $this->isConnected() || $this->xdebugSocket === null) {
+        if (! $this->isConnected() || !$this->xdebugSocket instanceof \Amp\Socket\Socket) {
             throw new RuntimeException('No active Xdebug connection');
         }
 
@@ -741,10 +741,12 @@ final class DebugServer
 
         $parts = [];
         foreach (explode('/', $path) as $part) {
-            if ($part === '' || $part === '.') {
+            if ($part === '') {
                 continue;
             }
-
+            if ($part === '.') {
+                continue;
+            }
             if ($part === '..') {
                 array_pop($parts);
             } else {
@@ -881,7 +883,7 @@ final class DebugServer
     private function stepInto(): string
     {
         $response = $this->sendCommand('step_into');
-        if ($response) {
+        if ($response !== '' && $response !== '0') {
             $this->log('✅ Step into completed');
         }
         return $response;
@@ -1224,7 +1226,7 @@ final class DebugServer
             {
                 // Get variable name from query parameter or request body
                 $query = $request->getUri()->getQuery();
-                parse_str((string) $query, $params);
+                parse_str($query, $params);
                 $rawVar = $params['var'] ?? '';
                 $variable = is_string($rawVar) ? $rawVar : '';
 
@@ -2472,7 +2474,7 @@ final class DebugServer
      */
     private function getJsonEncodeOutput(string $varName): ?string
     {
-        if ($this->xdebugSocket === null) {
+        if (!$this->xdebugSocket instanceof \Amp\Socket\Socket) {
             return null;
         }
 
