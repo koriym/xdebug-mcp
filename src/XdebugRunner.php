@@ -46,8 +46,8 @@ class XdebugRunner
 
     /** @var string[] */
     private array $xdebugOptions = [];
-    private string|null $context = null;
-    private string|null $includeVendor = null;
+    private ?string $context = null;
+    private ?string $includeVendor = null;
     private string $outputDir = '/tmp';
 
     /**
@@ -72,26 +72,26 @@ class XdebugRunner
         return $this->mode;
     }
 
-    public function setContext(string|null $context): self
+    public function setContext(?string $context): self
     {
         $this->context = $context;
 
         return $this;
     }
 
-    public function getContext(): string|null
+    public function getContext(): ?string
     {
         return $this->context;
     }
 
-    public function setIncludeVendor(string|null $includeVendor): self
+    public function setIncludeVendor(?string $includeVendor): self
     {
         $this->includeVendor = $includeVendor;
 
         return $this;
     }
 
-    public function getIncludeVendor(): string|null
+    public function getIncludeVendor(): ?string
     {
         return $this->includeVendor;
     }
@@ -153,7 +153,7 @@ class XdebugRunner
     /**
      * Get the most recently generated trace file
      */
-    public function getLatestTraceFile(): string|null
+    public function getLatestTraceFile(): ?string
     {
         $traceFiles = glob($this->outputDir . '/trace.*.xt');
         if ($traceFiles === [] || $traceFiles === false) {
@@ -168,7 +168,7 @@ class XdebugRunner
     /**
      * Get the most recently generated profile file
      */
-    public function getLatestProfileFile(): string|null
+    public function getLatestProfileFile(): ?string
     {
         $profileFiles = glob($this->outputDir . '/cachegrind.out.*');
         if ($profileFiles === [] || $profileFiles === false) {

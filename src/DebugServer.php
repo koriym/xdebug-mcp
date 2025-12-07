@@ -103,14 +103,14 @@ final class DebugServer
     private const DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
     private const MAX_STEPS = 200;  // Default maximum steps for step recording
 
-    private DeferredFuture|null $listenerReady = null;
-    private DeferredFuture|null $xdebugConnected = null;
-    private ResourceSocket|null $xdebugSocket = null;
-    private ServerSocket|null $server = null;
-    private Process|null $process = null;
+    private ?DeferredFuture $listenerReady = null;
+    private ?DeferredFuture $xdebugConnected = null;
+    private ?ResourceSocket $xdebugSocket = null;
+    private ?ServerSocket $server = null;
+    private ?Process $process = null;
     private int $transactionId = 1;
-    private string|null $traceFile = null;
-    private SocketHttpServer|null $httpServer = null;
+    private ?string $traceFile = null;
+    private ?SocketHttpServer $httpServer = null;
     private bool $httpMode = false;
     private bool $shouldExit = false;
     private array $breaks = []; // For Step Recording data collection
@@ -119,7 +119,7 @@ final class DebugServer
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
-        private readonly int|null $initialBreakpointLine = null,
+        private readonly ?int $initialBreakpointLine = null,
         private array $options = [],
         private readonly bool $jsonMode = false,
     ) {
@@ -152,9 +152,9 @@ final class DebugServer
 
         // 3 parallel tasks (Opus pattern)
         $tasks = [
-            'listener' => async(fn () => $this->startXdebugListener()),
-            'executor' => async(fn () => $this->executeTargetScript()),
-            'handler' => async(fn () => $this->handleDebugSession()),
+            'listener' => async(fn() => $this->startXdebugListener()),
+            'executor' => async(fn() => $this->executeTargetScript()),
+            'handler' => async(fn() => $this->handleDebugSession()),
         ];
 
         try {
@@ -304,23 +304,23 @@ final class DebugServer
                     $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
 
                     $cmd = sprintf(
-                        'XDEBUG_SESSION=xdebug-mcp php %s' .
-                        '-dxdebug.mode=debug,trace ' .
-                        '-dxdebug.start_with_request=yes ' .
-                        '-dxdebug.client_host=127.0.0.1 ' .
-                        '-dxdebug.client_port=%d ' .
-                        '-dxdebug.trace_output_name=trace-%%s ' .
-                        '-dxdebug.trace_format=1 ' .
-                        '-dxdebug.use_compression=0 ' .
-                        '-dxdebug.log=/tmp/xdebug.log ' .
-                        '-dxdebug.log_level=7 ' .
-                        '-dxdebug.connect_timeout_ms=5000 ' .
-                        '-dmemory_limit=1G ' .
-                        '-derror_reporting=E_ERROR ' .
-                        '-dlog_errors=1 ' .
-                        '-derror_log=/tmp/php.log ' .
-                        '-dauto_prepend_file=%s ' .
-                        '%s',
+                        'XDEBUG_SESSION=xdebug-mcp php %s'
+                        . '-dxdebug.mode=debug,trace '
+                        . '-dxdebug.start_with_request=yes '
+                        . '-dxdebug.client_host=127.0.0.1 '
+                        . '-dxdebug.client_port=%d '
+                        . '-dxdebug.trace_output_name=trace-%%s '
+                        . '-dxdebug.trace_format=1 '
+                        . '-dxdebug.use_compression=0 '
+                        . '-dxdebug.log=/tmp/xdebug.log '
+                        . '-dxdebug.log_level=7 '
+                        . '-dxdebug.connect_timeout_ms=5000 '
+                        . '-dmemory_limit=1G '
+                        . '-derror_reporting=E_ERROR '
+                        . '-dlog_errors=1 '
+                        . '-derror_log=/tmp/php.log '
+                        . '-dauto_prepend_file=%s '
+                        . '%s',
                         $xdebugPart,
                         $this->debugPort,
                         escapeshellarg($prependFilter),
@@ -341,19 +341,19 @@ final class DebugServer
                 $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
 
                 $cmd = sprintf(
-                    'XDEBUG_SESSION=xdebug-mcp php %s' .
-                    '-dxdebug.mode=debug,trace ' .
-                    '-dxdebug.start_with_request=yes ' .
-                    '-dxdebug.client_host=127.0.0.1 ' .
-                    '-dxdebug.client_port=%d ' .
-                    '-dxdebug.trace_output_name=trace-%%s ' .
-                    '-dxdebug.trace_format=1 ' .
-                    '-dxdebug.use_compression=0 ' .
-                    '-dxdebug.log=/tmp/xdebug.log ' .
-                    '-dxdebug.log_level=7 ' .
-                    '-dxdebug.connect_timeout_ms=5000 ' .
-                    '-dauto_prepend_file=%s ' .
-                    '%s',
+                    'XDEBUG_SESSION=xdebug-mcp php %s'
+                    . '-dxdebug.mode=debug,trace '
+                    . '-dxdebug.start_with_request=yes '
+                    . '-dxdebug.client_host=127.0.0.1 '
+                    . '-dxdebug.client_port=%d '
+                    . '-dxdebug.trace_output_name=trace-%%s '
+                    . '-dxdebug.trace_format=1 '
+                    . '-dxdebug.use_compression=0 '
+                    . '-dxdebug.log=/tmp/xdebug.log '
+                    . '-dxdebug.log_level=7 '
+                    . '-dxdebug.connect_timeout_ms=5000 '
+                    . '-dauto_prepend_file=%s '
+                    . '%s',
                     $xdebugPart,
                     $this->debugPort,
                     escapeshellarg($prependFilter),
@@ -791,7 +791,7 @@ final class DebugServer
     /**
      * Set breakpoint
      */
-    private function setBreakpoint(string $filename, int $line, string|null $condition = null): string
+    private function setBreakpoint(string $filename, int $line, ?string $condition = null): string
     {
         $fileUri = $this->toFileUri($filename);
         $params = [
@@ -961,7 +961,7 @@ final class DebugServer
     /**
      * Finalize trace when breakpoint is hit
      */
-    private function finalizeTraceOnBreak(): string|null
+    private function finalizeTraceOnBreak(): ?string
     {
         // いま開いているトレースを閉じて、ファイル名を返す
         $code = base64_encode('return function_exists("xdebug_stop_trace") ? xdebug_stop_trace() : null;');
@@ -986,7 +986,7 @@ final class DebugServer
     /**
      * Enable HTTP API mode instead of interactive console
      */
-    public function enableHttpMode(int|null $httpPort = null): void
+    public function enableHttpMode(?int $httpPort = null): void
     {
         $this->httpMode = true;
         $port = $httpPort ?: $this->debugPort + 100; // Default: debug port + 100
@@ -1113,9 +1113,7 @@ final class DebugServer
     private function createHttpRequestHandler(): RequestHandler
     {
         return new class ($this) implements RequestHandler {
-            public function __construct(private readonly DebugServer $debugServer)
-            {
-            }
+            public function __construct(private readonly DebugServer $debugServer) {}
 
             public function handleRequest(Request $request): Response
             {
@@ -1157,7 +1155,7 @@ final class DebugServer
                                 '/debug/quit',
                                 '/debug/status',
                             ],
-                        ]
+                        ],
                     };
 
                     return new Response(
@@ -1298,7 +1296,7 @@ final class DebugServer
     /**
      * Read user input from stdin (blocking)
      */
-    private function readUserInputWithTimeout(): string|null
+    private function readUserInputWithTimeout(): ?string
     {
         // Use blocking read from STDIN - let the user interact normally
         $handle = fopen('php://stdin', 'r');
@@ -1481,9 +1479,9 @@ final class DebugServer
 
             // Check if this is a connection error (broken pipe, connection closed, etc.)
             if (
-                str_contains($e->getMessage(), 'Broken pipe') ||
-                str_contains($e->getMessage(), 'Connection closed') ||
-                str_contains($e->getMessage(), 'Failed to write to stream')
+                str_contains($e->getMessage(), 'Broken pipe')
+                || str_contains($e->getMessage(), 'Connection closed')
+                || str_contains($e->getMessage(), 'Failed to write to stream')
             ) {
                 $this->log('🔚 Debug session ended due to connection issues');
 
@@ -1540,9 +1538,9 @@ final class DebugServer
 
             // Check if this is a connection error
             if (
-                str_contains($e->getMessage(), 'Broken pipe') ||
-                str_contains($e->getMessage(), 'Connection closed') ||
-                str_contains($e->getMessage(), 'Failed to write to stream')
+                str_contains($e->getMessage(), 'Broken pipe')
+                || str_contains($e->getMessage(), 'Connection closed')
+                || str_contains($e->getMessage(), 'Failed to write to stream')
             ) {
                 $this->log('🔚 Debug session ended due to connection issues');
 
@@ -1599,9 +1597,9 @@ final class DebugServer
 
             // Check if this is a connection error
             if (
-                str_contains($e->getMessage(), 'Broken pipe') ||
-                str_contains($e->getMessage(), 'Connection closed') ||
-                str_contains($e->getMessage(), 'Failed to write to stream')
+                str_contains($e->getMessage(), 'Broken pipe')
+                || str_contains($e->getMessage(), 'Connection closed')
+                || str_contains($e->getMessage(), 'Failed to write to stream')
             ) {
                 $this->log('🔚 Debug session ended due to connection issues');
 
@@ -1930,7 +1928,7 @@ final class DebugServer
     /**
      * Parse XML response safely without error suppression
      */
-    private function parseXmlResponse(string $xmlString): SimpleXMLElement|null
+    private function parseXmlResponse(string $xmlString): ?SimpleXMLElement
     {
         if ($xmlString === '') {
             return null;
@@ -1973,8 +1971,8 @@ final class DebugServer
         }
 
         // Check for DBGp response indicating completion (removed reason="ok")
-        return str_contains($response, 'status="stopping"') ||
-            str_contains($response, 'status="stopped"');
+        return str_contains($response, 'status="stopping"')
+            || str_contains($response, 'status="stopped"');
     }
 
     /**
@@ -2176,7 +2174,7 @@ final class DebugServer
 
             if ($allTraceFiles !== []) {
                 // Sort by modification time (newest first)
-                usort($allTraceFiles, static fn ($a, $b): int => filemtime($b) - filemtime($a));
+                usort($allTraceFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
                 $latestTraceFile = $allTraceFiles[0];
 
                 // Use XdebugTracer for comprehensive trace statistics
@@ -2391,7 +2389,7 @@ final class DebugServer
     /**
      * Extract child details from XML property node
      */
-    private function extractChildDetails(SimpleXMLElement $prop, string $type): string|null
+    private function extractChildDetails(SimpleXMLElement $prop, string $type): ?string
     {
         try {
             // Check if property has child elements
@@ -2460,7 +2458,7 @@ final class DebugServer
     /**
      * Get json_encode output for a variable using Xdebug eval
      */
-    private function getJsonEncodeOutput(string $varName): string|null
+    private function getJsonEncodeOutput(string $varName): ?string
     {
         try {
             // Use eval to execute json_encode($var, JSON_UNESCAPED_UNICODE)
@@ -2664,7 +2662,7 @@ final class DebugServer
     /**
      * Capture current debug state for a breakpoint
      */
-    private function captureCurrentDebugState(int $breakNumber): array|null
+    private function captureCurrentDebugState(int $breakNumber): ?array
     {
         try {
             $stackXml = $this->getStack();

@@ -25,7 +25,7 @@ class PhpunitConfigManager
     /**
      * Find the PHPUnit configuration file
      */
-    public function findConfigFile(): string|null
+    public function findConfigFile(): ?string
     {
         $candidates = [
             $this->projectRoot . '/phpunit.xml',
@@ -46,7 +46,7 @@ class PhpunitConfigManager
     /**
      * Get the effective configuration content as string
      */
-    public function getEffectiveConfig(string|null $sourceConfig = null): string
+    public function getEffectiveConfig(?string $sourceConfig = null): string
     {
         if ($sourceConfig && file_exists($sourceConfig)) {
             $content = file_get_contents($sourceConfig);

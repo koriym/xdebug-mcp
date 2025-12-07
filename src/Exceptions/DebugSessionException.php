@@ -9,6 +9,4 @@ use RuntimeException;
 /**
  * Exception thrown for errors related to debug sessions
  */
-class DebugSessionException extends RuntimeException
-{
-}
+class DebugSessionException extends RuntimeException {}
