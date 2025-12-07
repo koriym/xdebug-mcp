@@ -13,8 +13,8 @@ use Amp\Http\Server\RequestHandler;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
 use Amp\Process\Process;
-use Amp\Socket\ResourceSocket;
 use Amp\Socket\ServerSocket;
+use Amp\Socket\Socket;
 use Amp\Socket\SocketException;
 use Amp\TimeoutCancellation;
 use Koriym\XdebugMcp\Exceptions\DebugSessionException;
@@ -105,7 +105,7 @@ final class DebugServer
 
     private ?DeferredFuture $listenerReady = null;
     private ?DeferredFuture $xdebugConnected = null;
-    private ?ResourceSocket $xdebugSocket = null;
+    private ?Socket $xdebugSocket = null;
     private ?ServerSocket $server = null;
     private ?Process $process = null;
     private int $transactionId = 1;
@@ -721,7 +721,7 @@ final class DebugServer
      */
     public function isConnected(): bool
     {
-        return $this->xdebugSocket instanceof \Amp\Socket\ResourceSocket
+        return $this->xdebugSocket instanceof Socket
             && ! $this->xdebugSocket->isClosed()
             && $this->xdebugSocket->isWritable();
     }
@@ -1978,7 +1978,7 @@ final class DebugServer
     /**
      * Read DBGp frame - Fixed version with proper argument order
      */
-    private function readDbgpFrame(ResourceSocket $socket): string
+    private function readDbgpFrame(Socket $socket): string
     {
         $timeoutValue = $this->options['readTimeout'] ?? self::DEFAULT_STEP_TIMEOUT;
         // If timeout is 0, don't use timeout cancellation (wait indefinitely)
