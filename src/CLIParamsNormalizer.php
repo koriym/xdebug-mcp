@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp;
 
+use Koriym\XdebugMcp\DTO\CliParams;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 
-use function array_filter;
 use function array_slice;
-use function array_values;
 use function count;
 use function ctype_digit;
 use function explode;
@@ -16,9 +15,8 @@ use function implode;
 use function in_array;
 use function is_array;
 use function is_numeric;
+use function is_string;
 use function json_decode;
-use function json_last_error;
-use function json_last_error_msg;
 use function ltrim;
 use function str_contains;
 use function str_replace;
@@ -27,34 +25,55 @@ use function strlen;
 use function strtolower;
 use function substr;
 
-use const JSON_ERROR_NONE;
+use const JSON_THROW_ON_ERROR;
 
 /**
  * CLI arguments to MCP params normalizer
  *
  * Converts CLI-style arguments to structured MCP parameters following strict rules:
  * - Long options only: --key=value
- * - Type annotations: --key:type=value (str/int/float/bool/json)
- * - Position args after --: stored in "args" array
+ * - Type annotations: --key:type=value (str/int/float/bool)
+ * - Position args after --: stored in positionalArgs
  * - No short options, no space-separated values, no ambiguity
  */
 class CLIParamsNormalizer
 {
     private const ALLOWED_TYPES = ['str', 'int', 'float', 'bool', 'json'];
 
+    /** @var array<string, string> */
+    private array $stringParams = [];
+
+    /** @var array<string, int> */
+    private array $intParams = [];
+
+    /** @var array<string, float> */
+    private array $floatParams = [];
+
+    /** @var array<string, bool> */
+    private array $boolParams = [];
+
+    /** @var array<string, list<string>> */
+    private array $jsonParams = [];
+
+    /** @var list<string> */
+    private array $positionalArgs = [];
+
     /**
-     * Normalize CLI string to MCP params
-     *
-     * @param string $cliString CLI arguments string
-     *
-     * @return array Normalized MCP params
+     * Normalize CLI string to CliParams DTO
      *
      * @throws InvalidArgumentException On invalid format.
      */
-    public function normalize(string $cliString): array
+    public function normalize(string $cliString): CliParams
     {
+        // Reset state
+        $this->stringParams = [];
+        $this->intParams = [];
+        $this->floatParams = [];
+        $this->boolParams = [];
+        $this->jsonParams = [];
+        $this->positionalArgs = [];
+
         $tokens = $this->tokenize($cliString);
-        $params = [];
         $i = 0;
 
         // Process options until we hit --
@@ -66,24 +85,30 @@ class CLIParamsNormalizer
             }
 
             $option = substr($tokens[$i], 2); // Remove --
-            $this->parseOption($option, $params);
+            $this->parseOption($option);
             $i++;
         }
 
         // Process positional args after --
         if ($i < count($tokens) && $tokens[$i] === '--') {
             $i++; // Skip --
-            $args = array_slice($tokens, $i);
-            if (! empty($args)) {
-                $params['args'] = $args;
-            }
+            $this->positionalArgs = array_slice($tokens, $i);
         }
 
-        return $params;
+        return new CliParams(
+            stringParams: $this->stringParams,
+            intParams: $this->intParams,
+            floatParams: $this->floatParams,
+            boolParams: $this->boolParams,
+            jsonParams: $this->jsonParams,
+            positionalArgs: $this->positionalArgs,
+        );
     }
 
     /**
      * Tokenize CLI string respecting quotes
+     *
+     * @return list<string>
      */
     private function tokenize(string $cliString): array
     {
@@ -124,13 +149,13 @@ class CLIParamsNormalizer
             $tokens[] = $current;
         }
 
-        return array_values(array_filter($tokens, static fn ($t) => $t !== '')); // Remove only empty strings, preserve "0"
+        return $tokens;
     }
 
     /**
      * Parse single option: --key:type=value or --key=value
      */
-    private function parseOption(string $option, array &$params): void
+    private function parseOption(string $option): void
     {
         // Check for = separator
         if (! str_contains($option, '=')) {
@@ -157,7 +182,7 @@ class CLIParamsNormalizer
             $key = $keyPart;
         }
 
-        if (empty($key)) {
+        if ($key === '') {
             // @codeCoverageIgnoreStart
             throw new InvalidArgumentException('不正：キー名が空です。'); // Empty key scenario is difficult to create through normal parsing flow
 
@@ -167,33 +192,13 @@ class CLIParamsNormalizer
         // Convert hyphens to underscores for consistency with PHP array keys
         $key = str_replace('-', '_', $key);
 
-        // Convert value based on type
-        $convertedValue = $this->convertValue($value, $type, $key);
-
-        // Handle array values (repeated keys)
-        if (isset($params[$key])) {
-            if (! is_array($params[$key])) {
-                $params[$key] = [$params[$key]]; // Convert to array
-            }
-
-            $params[$key][] = $convertedValue;
-        } else {
-            $params[$key] = $convertedValue;
-        }
-    }
-
-    /**
-     * Convert string value to specified type
-     */
-    private function convertValue(string $value, string $type, string $key): mixed
-    {
-        return match ($type) {
-            'str' => $value,
-            'int' => $this->convertInt($value, $key),
-            'float' => $this->convertFloat($value, $key),
-            'bool' => $this->convertBool($value, $key),
-            'json' => $this->convertJson($value, $key),
-            default => throw new InvalidArgumentException("未対応の型: {$type}")
+        // Store value in appropriate typed array
+        match ($type) {
+            'str' => $this->stringParams[$key] = $value,
+            'int' => $this->intParams[$key] = $this->convertInt($value, $key),
+            'float' => $this->floatParams[$key] = $this->convertFloat($value, $key),
+            'bool' => $this->boolParams[$key] = $this->convertBool($value, $key),
+            'json' => $this->jsonParams[$key] = $this->convertJson($value, $key),
         };
     }
 
@@ -235,16 +240,39 @@ class CLIParamsNormalizer
         );
     }
 
-    private function convertJson(string $value, string $key): mixed
+    /**
+     * Convert JSON string to list of strings
+     *
+     * @return list<string>
+     */
+    private function convertJson(string $value, string $key): array
     {
-        $decoded = json_decode($value, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
+        try {
+            $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
             throw new InvalidArgumentException(
-                "不正：--{$key}:json の値は有効なJSONではありません。エラー: " . json_last_error_msg(),
+                "不正：--{$key}:json の値は有効なJSONではありません。入力: '{$value}'",
             );
         }
 
-        return $decoded;
+        if (! is_array($decoded)) {
+            throw new InvalidArgumentException(
+                "不正：--{$key}:json の値は配列である必要があります。入力: '{$value}'",
+            );
+        }
+
+        // Ensure all values are strings
+        $result = [];
+        foreach ($decoded as $item) {
+            if (! is_string($item)) {
+                throw new InvalidArgumentException(
+                    "不正：--{$key}:json の配列要素は文字列である必要があります。",
+                );
+            }
+
+            $result[] = $item;
+        }
+
+        return $result;
     }
 }

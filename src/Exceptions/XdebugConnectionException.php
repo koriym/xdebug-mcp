@@ -9,6 +9,4 @@ use RuntimeException;
 /**
  * Exception thrown when Xdebug connection fails or is not available
  */
-class XdebugConnectionException extends RuntimeException
-{
-}
+class XdebugConnectionException extends RuntimeException {}

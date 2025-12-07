@@ -23,7 +23,6 @@ class QuoteProcessingTest extends TestCase
     public function testProcessScriptArgumentWithCompleteQuotes(): void
     {
         $method = $this->reflection->getMethod('processScriptArgument');
-        $method->setAccessible(true);
 
         $result = $method->invoke($this->mcpServer, '"php demo.php"');
         $this->assertEquals('php demo.php', $result);
@@ -32,7 +31,6 @@ class QuoteProcessingTest extends TestCase
     public function testProcessScriptArgumentWithIncompleteLeadingQuote(): void
     {
         $method = $this->reflection->getMethod('processScriptArgument');
-        $method->setAccessible(true);
 
         $result = $method->invoke($this->mcpServer, '"php demo.php');
         $this->assertEquals('php demo.php', $result);
@@ -41,7 +39,6 @@ class QuoteProcessingTest extends TestCase
     public function testProcessScriptArgumentWithTrailingQuote(): void
     {
         $method = $this->reflection->getMethod('processScriptArgument');
-        $method->setAccessible(true);
 
         $result = $method->invoke($this->mcpServer, 'demo.php"');
         $this->assertEquals('demo.php', $result);
@@ -50,7 +47,6 @@ class QuoteProcessingTest extends TestCase
     public function testProcessScriptArgumentWithoutQuotes(): void
     {
         $method = $this->reflection->getMethod('processScriptArgument');
-        $method->setAccessible(true);
 
         $result = $method->invoke($this->mcpServer, 'php demo.php');
         $this->assertEquals('php demo.php', $result);
@@ -68,7 +64,6 @@ class QuoteProcessingTest extends TestCase
 
         // This should reconstruct to "php demo.php" and clear breakpoints
         $method = $this->reflection->getMethod('executeXDebug');
-        $method->setAccessible(true);
 
         try {
             $result = $method->invoke($this->mcpServer, 1, $args);

@@ -30,7 +30,7 @@ class McpTestRunner
         'passed' => 0,
         'failed' => 0,
         'skipped' => 0,
-        'failed_tools' => []
+        'failed_tools' => [],
     ];
 
     private string $xdebugMcp;
@@ -48,7 +48,7 @@ class McpTestRunner
         // Load XdebugFinder for intelligent Xdebug detection
         require_once __DIR__ . '/../../src/XdebugFinder.php';
         $xdebugFlag = \Koriym\XdebugMcp\XdebugFinder::getXdebugFlag();
-        
+
         if ($this->sessionMode) {
             $this->xdebugMcp = 'php' . $xdebugFlag . ' -dxdebug.mode=debug,profile,coverage,trace bin/xdebug-mcp';
         } else {
@@ -63,15 +63,15 @@ class McpTestRunner
     {
         $request = ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'];
         $cmd = sprintf('echo %s | %s 2>/dev/null', escapeshellarg(json_encode($request)), $this->xdebugMcp);
-        
+
         $outputLines = [];
         $exitCode = null;
         exec($cmd, $outputLines, $exitCode);
-        
+
         if ($exitCode !== 0 || empty($outputLines)) {
             return [];
         }
-        
+
         // Find the first valid JSON line
         foreach ($outputLines as $line) {
             $trimmed = trim($line);
@@ -80,7 +80,7 @@ class McpTestRunner
                 return $decoded['result']['tools'] ?? [];
             }
         }
-        
+
         return [];
     }
 
@@ -90,47 +90,47 @@ class McpTestRunner
     public function validateToolListConsistency(): void
     {
         $serverTools = $this->listAvailableToolsFromServer();
-        
+
         if (empty($serverTools)) {
             echo self::YELLOW . "⚠️ Could not discover tools from server (continuing with static list)\n" . self::RESET;
             return;
         }
-        
+
         $serverToolNames = array_column($serverTools, 'name');
         $expectedCount = self::TOTAL_WORKING_TOOLS;
         $actualCount = count($serverToolNames);
-        
+
         if ($actualCount !== $expectedCount) {
             echo self::YELLOW . "⚠️ Tool count mismatch: Expected {$expectedCount}, found {$actualCount} from server\n" . self::RESET;
         }
-        
+
         // Get static tool names from test methods
         $staticTools = $this->getStaticToolList();
         $missingFromServer = array_diff($staticTools, $serverToolNames);
         $extraInServer = array_diff($serverToolNames, $staticTools);
-        
+
         if (!empty($missingFromServer)) {
             echo self::YELLOW . "⚠️ Tools missing from server: " . implode(', ', $missingFromServer) . "\n" . self::RESET;
         }
-        
+
         if (!empty($extraInServer)) {
             echo self::YELLOW . "⚠️ Extra tools in server: " . implode(', ', $extraInServer) . "\n" . self::RESET;
         }
-        
+
         if (empty($missingFromServer) && empty($extraInServer) && $actualCount === $expectedCount) {
             echo self::GREEN . "✅ Tool list consistency validated\n" . self::RESET;
         }
     }
-    
+
     /**
      * Get static tool list from test methods for comparison
      */
-    private function getStaticToolList(): array 
+    private function getStaticToolList(): array
     {
         return [
             // Profiling Tools
             'xdebug_start_profiling', 'xdebug_stop_profiling', 'xdebug_get_profile_info', 'xdebug_analyze_profile',
-            // Coverage Tools  
+            // Coverage Tools
             'xdebug_start_coverage', 'xdebug_stop_coverage', 'xdebug_get_coverage', 'xdebug_analyze_coverage', 'xdebug_coverage_summary',
             // Statistics Tools
             'xdebug_get_memory_usage', 'xdebug_get_peak_memory_usage', 'xdebug_get_stack_depth', 'xdebug_get_time_index', 'xdebug_get_function_stack', 'xdebug_info',
@@ -139,7 +139,7 @@ class McpTestRunner
             // Tracing Tools
             'xdebug_start_trace', 'xdebug_stop_trace', 'xdebug_get_tracefile_name', 'xdebug_start_function_monitor', 'xdebug_stop_function_monitor',
             // Configuration Tools
-            'xdebug_call_info', 'xdebug_print_function_stack'
+            'xdebug_call_info', 'xdebug_print_function_stack',
         ];
     }
 
@@ -151,7 +151,7 @@ class McpTestRunner
             \Koriym\XdebugMcp\XdebugFinder::showInstallationGuidance(false);
             return false;
         }
-        
+
         if (extension_loaded('xdebug')) {
             echo self::YELLOW . "💡 Xdebug is loaded in php.ini - tests will run but may be slower\n" . self::RESET;
             echo self::YELLOW . "   For optimal performance, consider using: ;zend_extension=xdebug in php.ini\n" . self::RESET;
@@ -168,35 +168,35 @@ class McpTestRunner
         }
 
         echo "Testing session connectivity...\n";
-        
+
         $testRequest = json_encode([
             'jsonrpc' => '2.0',
             'id' => 'session-test',
             'method' => 'tools/call',
             'params' => [
                 'name' => 'xdebug_connect',
-                'arguments' => ['host' => '127.0.0.1', 'port' => 9004]
-            ]
+                'arguments' => ['host' => '127.0.0.1', 'port' => 9004],
+            ],
         ]);
-        
+
         $command = sprintf('echo %s | timeout 5s %s 2>/dev/null || echo "timeout"', escapeshellarg($testRequest), $this->xdebugMcp);
         $output = shell_exec($command);
-        
+
         // Trim output and check for timeout first
         $output = trim($output ?? '');
-        
+
         if (str_contains($output, 'timeout')) {
             echo self::RED . "❌ Debug session not available (timeout)\n" . self::RESET;
             echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
             return false;
         }
-        
+
         if (empty($output)) {
             echo self::RED . "❌ Debug session not available (no output)\n" . self::RESET;
             echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
             return false;
         }
-        
+
         // Extract JSON line from output
         $lines = explode("\n", $output);
         $jsonLine = '';
@@ -206,13 +206,13 @@ class McpTestRunner
                 break;
             }
         }
-        
+
         if (empty($jsonLine)) {
             echo self::RED . "❌ Debug session not available (no valid JSON response)\n" . self::RESET;
             echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
             return false;
         }
-        
+
         // Attempt to decode JSON and validate response
         $response = json_decode($jsonLine, true);
         if ($response === null || !is_array($response)) {
@@ -220,21 +220,21 @@ class McpTestRunner
             echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
             return false;
         }
-        
+
         // Check for error in response
         if (array_key_exists('error', $response)) {
             echo self::RED . "❌ Debug session not available (error: {$response['error']['message']})\n" . self::RESET;
             echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
             return false;
         }
-        
+
         // Check for result field indicating success (null result is valid in JSON-RPC)
         if (!array_key_exists('result', $response)) {
             echo self::RED . "❌ Debug session not available (no result field)\n" . self::RESET;
             echo self::YELLOW . "Please ensure Terminal 2 is running the debug session\n" . self::RESET;
             return false;
         }
-        
+
         // All checks passed - session is available
         $this->sessionAvailable = true;
         echo self::GREEN . "✅ Debug session connected successfully\n" . self::RESET;
@@ -248,9 +248,9 @@ class McpTestRunner
             $this->results['skipped']++;
             return 'skipped';
         }
-        
+
         echo sprintf("  %-35s ... ", $toolName);
-        
+
         // Validate inputs
         if (empty($toolName)) {
             echo self::RED . "FAIL (invalid tool name)\n" . self::RESET;
@@ -267,8 +267,8 @@ class McpTestRunner
                 'method' => 'tools/call',
                 'params' => [
                     'name' => $toolName,
-                    'arguments' => $arguments
-                ]
+                    'arguments' => $arguments,
+                ],
             ], JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
             echo self::RED . "FAIL (JSON encoding error: " . $e->getMessage() . ")\n" . self::RESET;
@@ -276,10 +276,10 @@ class McpTestRunner
             $this->results['failed_tools'][] = $toolName;
             return 'failed';
         }
-        
+
         $timeoutCmd = $requiresSession ? 'timeout 10s ' : '';
         $command = sprintf('echo %s | %s%s 2>/dev/null', escapeshellarg($request), $timeoutCmd, $this->xdebugMcp);
-        
+
         try {
             $output = shell_exec($command);
         } catch (Exception $e) {
@@ -288,14 +288,14 @@ class McpTestRunner
             $this->results['failed_tools'][] = $toolName;
             return 'failed';
         }
-        
+
         if ($output === null || ($requiresSession && str_contains($command, 'timeout') && empty(trim($output)))) {
             echo self::RED . "FAIL (timeout/no output)\n" . self::RESET;
             $this->results['failed']++;
             $this->results['failed_tools'][] = $toolName;
             return 'failed';
         }
-        
+
         $lines = explode("\n", trim($output));
         $jsonLine = '';
         foreach ($lines as $line) {
@@ -304,14 +304,14 @@ class McpTestRunner
                 break;
             }
         }
-        
+
         if (empty($jsonLine)) {
             echo self::RED . "FAIL (no JSON)\n" . self::RESET;
             $this->results['failed']++;
             $this->results['failed_tools'][] = $toolName;
             return 'failed';
         }
-        
+
         $response = json_decode($jsonLine, true);
         if (isset($response['error'])) {
             $message = $response['error']['message'];
@@ -343,7 +343,7 @@ class McpTestRunner
         $this->testMcpTool('xdebug_start_profiling', []);
         $this->testMcpTool('xdebug_stop_profiling', []);
         $this->testMcpTool('xdebug_get_profile_info', []);
-        
+
         // Create sample profile file for testing
         $profileFile = tempnam(sys_get_temp_dir(), 'test_profile_');
         if ($profileFile === false) {
@@ -361,7 +361,7 @@ class McpTestRunner
         $this->testMcpTool('xdebug_start_coverage', ['track_unused' => true]);
         $this->testMcpTool('xdebug_stop_coverage', []);
         $this->testMcpTool('xdebug_get_coverage', ['format' => 'raw']);
-        
+
         // Test with sample coverage data
         $sampleCoverage = ['/tmp/test.php' => [1 => 1, 2 => 1, 3 => 0, 4 => 1]];
         $this->testMcpTool('xdebug_analyze_coverage', ['coverage_data' => $sampleCoverage, 'format' => 'text']);
