@@ -320,7 +320,7 @@ final class McpServer
 
         // Ensure we support the requested version
         $supportedVersions = ['2024-11-05', '2025-03-26', '2025-06-18'];
-        if (! in_array($clientVersion, $supportedVersions)) {
+        if (! in_array($clientVersion, $supportedVersions, true)) {
             $clientVersion = '2025-06-18';
         }
 

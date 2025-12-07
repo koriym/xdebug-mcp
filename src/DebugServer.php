@@ -2281,7 +2281,7 @@ final class DebugServer
         $prompt = "Analyze PHP debugging session for {$targetScript}:\n\n";
 
         // Add trace file analysis
-        if (! empty($context['trace_file']) && file_exists($context['trace_file'])) {
+        if (isset($context['trace_file']) && $context['trace_file'] !== '' && file_exists($context['trace_file'])) {
             $prompt .= "## Trace Analysis\n";
             $prompt .= "Please analyze the execution trace: {$context['trace_file']}\n\n";
 
@@ -2294,7 +2294,7 @@ final class DebugServer
         }
 
         // Add current variables if available
-        if (! empty($context['current_variables'])) {
+        if (isset($context['current_variables']) && $context['current_variables'] !== []) {
             $prompt .= "## Current Variables\n";
             foreach ($context['current_variables'] as $var => $value) {
                 $prompt .= "- \${$var} = {$value}\n";
@@ -2304,7 +2304,7 @@ final class DebugServer
         }
 
         // Add breakpoint context
-        if (! empty($context['breakpoint_line'])) {
+        if (isset($context['breakpoint_line']) && $context['breakpoint_line'] !== '') {
             $prompt .= "## Breakpoint Context\n";
             $prompt .= "Stopped at line {$context['breakpoint_line']} in {$targetScript}\n\n";
         }
@@ -2729,7 +2729,7 @@ final class DebugServer
         ];
 
         // Add context if provided
-        if (! empty($this->options['context'])) {
+        if (isset($this->options['context']) && $this->options['context'] !== '') {
             $debugState['context'] = $this->options['context'];
         }
 
@@ -2746,7 +2746,7 @@ final class DebugServer
                 $loc = $break['location'];
                 $this->log("📍 Step {$break['step']}: {$loc['file']}:{$loc['line']}");
 
-                if (! empty($break['variables'])) {
+                if (isset($break['variables']) && $break['variables'] !== []) {
                     $this->log('📊 Variables:');
                     foreach ($break['variables'] as $name => $value) {
                         $displayValue = is_string($value) ? $value : json_encode($value);
@@ -2776,7 +2776,7 @@ final class DebugServer
                 $xml->registerXPathNamespace('xdebug', 'https://xdebug.org/dbgp/xdebug');
                 $messages = $xml->xpath('//xdebug:message');
 
-                if (! empty($messages)) {
+                if ($messages !== []) {
                     $message = $messages[0];
                     $filename = (string) $message['filename'];
                     $lineno = (string) $message['lineno'];
