@@ -46,8 +46,8 @@ class XdebugRunner
 
     /** @var string[] */
     private array $xdebugOptions = [];
-    private string|null $context = null;
-    private string|null $includeVendor = null;
+    private ?string $context = null;
+    private ?string $includeVendor = null;
     private string $outputDir = '/tmp';
 
     /**
@@ -72,26 +72,26 @@ class XdebugRunner
         return $this->mode;
     }
 
-    public function setContext(string|null $context): self
+    public function setContext(?string $context): self
     {
         $this->context = $context;
 
         return $this;
     }
 
-    public function getContext(): string|null
+    public function getContext(): ?string
     {
         return $this->context;
     }
 
-    public function setIncludeVendor(string|null $includeVendor): self
+    public function setIncludeVendor(?string $includeVendor): self
     {
         $this->includeVendor = $includeVendor;
 
         return $this;
     }
 
-    public function getIncludeVendor(): string|null
+    public function getIncludeVendor(): ?string
     {
         return $this->includeVendor;
     }
@@ -153,16 +153,14 @@ class XdebugRunner
     /**
      * Get the most recently generated trace file
      */
-    public function getLatestTraceFile(): string|null
+    public function getLatestTraceFile(): ?string
     {
         $traceFiles = glob($this->outputDir . '/trace.*.xt');
-        if (empty($traceFiles)) {
+        if ($traceFiles === [] || $traceFiles === false) {
             return null;
         }
 
-        usort($traceFiles, static function ($a, $b) {
-            return filemtime($b) - filemtime($a);
-        });
+        usort($traceFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
 
         return $traceFiles[0];
     }
@@ -170,16 +168,14 @@ class XdebugRunner
     /**
      * Get the most recently generated profile file
      */
-    public function getLatestProfileFile(): string|null
+    public function getLatestProfileFile(): ?string
     {
         $profileFiles = glob($this->outputDir . '/cachegrind.out.*');
-        if (empty($profileFiles)) {
+        if ($profileFiles === [] || $profileFiles === false) {
             return null;
         }
 
-        usort($profileFiles, static function ($a, $b) {
-            return filemtime($b) - filemtime($a);
-        });
+        usort($profileFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
 
         return $profileFiles[0];
     }
@@ -218,7 +214,7 @@ class XdebugRunner
 
         $this->commandParts = array_slice($argv, (int) $separatorIndex + 1);
 
-        if (empty($this->commandParts)) {
+        if ($this->commandParts === []) {
             throw new RuntimeException('Command is required after --');
         }
     }
@@ -256,7 +252,7 @@ class XdebugRunner
 
         $xdebugArgs = $this->generateXdebugArguments();
 
-        return 'php ' . implode(' ', $xdebugArgs) . ' ' . implode(' ', array_map('escapeshellarg', $workingParts));
+        return 'php ' . implode(' ', $xdebugArgs) . ' ' . implode(' ', array_map(escapeshellarg(...), $workingParts));
     }
 
     /**

@@ -41,7 +41,7 @@ final class ContainerHelper
 
         foreach ($parts as $index => $part) {
             if ($part === 'php' || preg_match('/^php\d+\.\d+$/', $part)) {
-                $lastPhpIndex = $index;
+                $lastPhpIndex = (int) $index;
             }
         }
 
