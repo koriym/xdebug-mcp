@@ -581,7 +581,7 @@ final class DebugServer
 
                 // Output JSON results immediately when step limit is reached
                 if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
-                    $this->breaks = array_merge($this->breaks, $steps);
+                    array_push($this->breaks, ...$steps);
                     $this->outputStepRecordingResults();
                 }
 
@@ -610,7 +610,7 @@ final class DebugServer
 
                 // Output JSON results immediately when execution completes
                 if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
-                    $this->breaks = array_merge($this->breaks, $steps);
+                    array_push($this->breaks, ...$steps);
                     $this->outputStepRecordingResults();
                 }
 
@@ -1326,7 +1326,7 @@ final class DebugServer
         foreach ($patterns as $pattern) {
             $files = glob($pattern);
             if ($files) {
-                $allTraceFiles = array_merge($allTraceFiles, $files);
+                array_push($allTraceFiles, ...$files);
             }
         }
 
@@ -2552,7 +2552,7 @@ final class DebugServer
         foreach ($patterns as $pattern) {
             $files = glob($pattern);
             if ($files) {
-                $allTraceFiles = array_merge($allTraceFiles, $files);
+                array_push($allTraceFiles, ...$files);
             }
         }
 
