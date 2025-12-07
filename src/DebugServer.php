@@ -103,8 +103,12 @@ final class DebugServer
     private const DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
     private const MAX_STEPS = 200;  // Default maximum steps for step recording
 
+    /** @var DeferredFuture<bool>|null */
     private ?DeferredFuture $listenerReady = null;
+
+    /** @var DeferredFuture<bool>|null */
     private ?DeferredFuture $xdebugConnected = null;
+
     private ?Socket $xdebugSocket = null;
     private ?ServerSocket $server = null;
     private ?Process $process = null;
@@ -113,9 +117,15 @@ final class DebugServer
     private ?SocketHttpServer $httpServer = null;
     private bool $httpMode = false;
     private bool $shouldExit = false;
-    private array $breaks = []; // For Step Recording data collection
+
+    /** @var list<array{step: int, location: array{file: string, line: int}, variables: array<string, string>, recording_type: string}> */
+    private array $breaks = [];
+
     private bool $isDockerCommand = false;
 
+    /**
+     * @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float} $options
+     */
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
@@ -214,7 +224,7 @@ final class DebugServer
             }
 
             // Notify connection established
-            $this->xdebugConnected->complete($socket);
+            $this->xdebugConnected->complete(true);
         } catch (Throwable $e) {
             if ($this->listenerReady && ! $this->listenerReady->isComplete()) {
                 $this->listenerReady->error($e);
@@ -468,6 +478,8 @@ final class DebugServer
     /**
      * Perform step-by-step tracing with variable inspection for Step Recording
      * Records variable state at each step for AI analysis
+     *
+     * @return list<array{step: int, location: array{file: string, line: int}, variables: array<string, string>, recording_type: string}>
      */
     private function performStepTrace(): array
     {
@@ -611,7 +623,8 @@ final class DebugServer
      */
     private function processStepRecordingBreakpoints(): void
     {
-        $this->log("🎬 exit-on-break mode with Step Recording ({$this->options['maxSteps']} steps)");
+        $maxSteps = $this->options['maxSteps'] ?? self::MAX_STEPS;
+        $this->log("🎬 exit-on-break mode with Step Recording ({$maxSteps} steps)");
 
         try {
             // Start execution and wait for first breakpoint
@@ -639,6 +652,8 @@ final class DebugServer
 
     /**
      * Send a DBGp command and wait for the response
+     *
+     * @param array<string, string|int> $params
      */
     private function sendCommand(string $command, array $params = []): string
     {
@@ -812,17 +827,11 @@ final class DebugServer
      */
     private function setupConditionalBreakpoints(): void
     {
-        if (! isset($this->options['breakpoints']) || ! is_array($this->options['breakpoints'])) {
+        if (! isset($this->options['breakpoints'])) {
             return;
         }
 
         foreach ($this->options['breakpoints'] as $breakpoint) {
-            if (! isset($breakpoint['file'])) {
-                continue;
-            }
-            if (! isset($breakpoint['line'])) {
-                continue;
-            }
             $file = $breakpoint['file'];
             $line = (int) $breakpoint['line'];
             $condition = $breakpoint['condition'] ?? null;
@@ -1157,6 +1166,7 @@ final class DebugServer
                 }
             }
 
+            /** @return array{command: string, success: bool, location: string, should_exit: bool} */
             private function handleDebugStep(): array
             {
                 $success = $this->debugServer->handleStepCommand();
@@ -1169,6 +1179,7 @@ final class DebugServer
                 ];
             }
 
+            /** @return array{command: string, success: bool, location: string, should_exit: bool} */
             private function handleDebugOver(): array
             {
                 $success = $this->debugServer->handleStepOverCommand();
@@ -1181,6 +1192,7 @@ final class DebugServer
                 ];
             }
 
+            /** @return array{command: string, success: bool, location: string, should_exit: bool} */
             private function handleDebugOut(): array
             {
                 $success = $this->debugServer->handleStepOutCommand();
@@ -1193,6 +1205,7 @@ final class DebugServer
                 ];
             }
 
+            /** @return array{command: string, success: bool, location: string, should_exit: bool} */
             private function handleDebugContinue(): array
             {
                 $success = $this->debugServer->handleContinueCommand();
@@ -1205,12 +1218,14 @@ final class DebugServer
                 ];
             }
 
+            /** @return array{command: string, variable: string, result: array<string, string>|string|null} */
             private function handleDebugVariables(Request $request): array
             {
                 // Get variable name from query parameter or request body
                 $query = $request->getUri()->getQuery();
                 parse_str((string) $query, $params);
-                $variable = $params['var'] ?? '';
+                $rawVar = $params['var'] ?? '';
+                $variable = is_string($rawVar) ? $rawVar : '';
 
                 if ($variable !== '') {
                     // Get specific variable value using existing methods
@@ -1228,6 +1243,7 @@ final class DebugServer
                 ];
             }
 
+            /** @return array{command: string, result: list<string>} */
             private function handleDebugBacktrace(): array
             {
                 return [
@@ -1236,6 +1252,7 @@ final class DebugServer
                 ];
             }
 
+            /** @return array{command: string, success: bool, message: string} */
             private function handleDebugQuit(): array
             {
                 $this->debugServer->setShouldExit(true);
@@ -1247,6 +1264,7 @@ final class DebugServer
                 ];
             }
 
+            /** @return array{status: string, connected: bool, location: string, available_commands: list<string>} */
             private function handleDebugStatus(): array
             {
                 return [
@@ -1317,7 +1335,8 @@ final class DebugServer
             // For exit-on-break mode: simple message with filename and size for AI analysis
             if ($this->options['traceOnly'] ?? false) {
                 if (file_exists($latestTrace)) {
-                    $lines = count(file($latestTrace, FILE_IGNORE_NEW_LINES));
+                    $fileLines = file($latestTrace, FILE_IGNORE_NEW_LINES);
+                    $lines = $fileLines !== false ? count($fileLines) : 0;
                     $size = filesize($latestTrace);
                     $sizeKB = round($size / 1024, 1);
                     if ($this->options['jsonOutput'] ?? false) {
@@ -1349,7 +1368,8 @@ final class DebugServer
                 // For interactive mode: show detailed info
                 $this->log("📈 Trace file available: {$latestTrace}");
                 if (file_exists($latestTrace)) {
-                    $lines = count(file($latestTrace, FILE_IGNORE_NEW_LINES));
+                    $fileLines = file($latestTrace, FILE_IGNORE_NEW_LINES);
+                    $lines = $fileLines !== false ? count($fileLines) : 0;
                     $size = filesize($latestTrace);
                     $this->log("📊 Trace contains {$lines} lines ({$size} bytes)");
                 }
@@ -1822,6 +1842,8 @@ final class DebugServer
 
     /**
      * Display variables array with title (for step recording)
+     *
+     * @param array<string, string> $variables
      */
     private function displayVariableArray(array $variables, string $title): void
     {
@@ -2217,6 +2239,8 @@ final class DebugServer
 
     /**
      * Get current debug context for Claude analysis
+     *
+     * @return array{target_script: string, debug_port: int, trace_file: string|null, breakpoint_line: int|null, current_variables?: array<string, string>, current_stack?: list<string>}
      */
     private function getCurrentDebugContext(): array
     {
@@ -2252,20 +2276,24 @@ final class DebugServer
 
     /**
      * Build Claude analysis prompt with context
+     *
+     * @param array<string, string|int|null|array<array-key, string>> $context
      */
     private function buildClaudeAnalysisPrompt(array $context, string $userArgs): string
     {
-        $targetScript = basename((string) $context['target_script']);
+        $targetScriptValue = $context['target_script'] ?? '';
+        $targetScript = is_string($targetScriptValue) ? basename($targetScriptValue) : '';
 
         $prompt = "Analyze PHP debugging session for {$targetScript}:\n\n";
 
         // Add trace file analysis
-        if (isset($context['trace_file']) && $context['trace_file'] !== '' && file_exists($context['trace_file'])) {
+        $traceFile = $context['trace_file'] ?? '';
+        if (is_string($traceFile) && $traceFile !== '' && file_exists($traceFile)) {
             $prompt .= "## Trace Analysis\n";
-            $prompt .= "Please analyze the execution trace: {$context['trace_file']}\n\n";
+            $prompt .= "Please analyze the execution trace: {$traceFile}\n\n";
 
             // Include last 20 lines of trace for context
-            $traceLines = file($context['trace_file']);
+            $traceLines = file($traceFile);
             if ($traceLines !== false && $traceLines !== []) {
                 $lastLines = array_slice($traceLines, -20);
                 $prompt .= "Recent trace data:\n```\n" . implode('', $lastLines) . "```\n\n";
@@ -2273,9 +2301,10 @@ final class DebugServer
         }
 
         // Add current variables if available
-        if (isset($context['current_variables']) && $context['current_variables'] !== []) {
+        $currentVariables = $context['current_variables'] ?? [];
+        if (is_array($currentVariables) && $currentVariables !== []) {
             $prompt .= "## Current Variables\n";
-            foreach ($context['current_variables'] as $var => $value) {
+            foreach ($currentVariables as $var => $value) {
                 $prompt .= "- \${$var} = {$value}\n";
             }
 
@@ -2283,9 +2312,10 @@ final class DebugServer
         }
 
         // Add breakpoint context
-        if (isset($context['breakpoint_line']) && $context['breakpoint_line'] !== '') {
+        $breakpointLineValue = $context['breakpoint_line'] ?? '';
+        if (is_scalar($breakpointLineValue) && $breakpointLineValue !== '' && $breakpointLineValue !== 0) {
             $prompt .= "## Breakpoint Context\n";
-            $prompt .= "Stopped at line {$context['breakpoint_line']} in {$targetScript}\n\n";
+            $prompt .= "Stopped at line {$breakpointLineValue} in {$targetScript}\n\n";
         }
 
         // Add user-specific analysis request
@@ -2306,6 +2336,8 @@ final class DebugServer
 
     /**
      * Get current variables from debugger session
+     *
+     * @return array<string, string>
      */
     public function getCurrentVariables(): array
     {
@@ -2488,6 +2520,8 @@ final class DebugServer
 
     /**
      * Get current stack trace
+     *
+     * @return list<string>
      */
     private function getStackTrace(): array
     {
@@ -2517,6 +2551,8 @@ final class DebugServer
 
     /**
      * Get trace file information with content
+     *
+     * @return array{file: string, content: list<string>}
      */
     private function getTraceInfo(): array
     {
@@ -2640,6 +2676,8 @@ final class DebugServer
 
     /**
      * Capture current debug state for a breakpoint
+     *
+     * @return array{step: int, location: array{file: string, line: int}, variables: array<string, string>}|null
      */
     private function captureCurrentDebugState(int $breakNumber): ?array
     {
@@ -2667,6 +2705,8 @@ final class DebugServer
 
     /**
      * Parse stack XML response to extract current location
+     *
+     * @return array{file: string, line: int}
      */
     private function parseStackLocation(string $stackXml): array
     {
@@ -2698,6 +2738,8 @@ final class DebugServer
 
     /**
      * Output results for multiple breakpoints
+     *
+     * @param list<array{step: int, location: array{file: string, line: int}, variables: array<string, string>}> $breaks
      */
     private function outputMultipleBreakResults(array $breaks): void
     {
@@ -2725,18 +2767,17 @@ final class DebugServer
                 $loc = $break['location'];
                 $this->log("📍 Step {$break['step']}: {$loc['file']}:{$loc['line']}");
 
-                if (isset($break['variables']) && $break['variables'] !== []) {
+                if ($break['variables'] !== []) {
                     $this->log('📊 Variables:');
                     foreach ($break['variables'] as $name => $value) {
-                        $displayValue = is_string($value) ? $value : json_encode($value, JSON_THROW_ON_ERROR);
-                        $this->log("  {$name} = {$displayValue}");
+                        $this->log("  {$name} = {$value}");
                     }
                 }
 
                 $this->log('');
             }
 
-            if (isset($debugState['trace']['file'])) {
+            if ($debugState['trace']['file'] !== '') {
                 $this->log("📈 Trace file: {$debugState['trace']['file']}");
                 $this->log('📊 Trace lines: ' . count($debugState['trace']['content']));
             }
@@ -2755,7 +2796,7 @@ final class DebugServer
                 $xml->registerXPathNamespace('xdebug', 'https://xdebug.org/dbgp/xdebug');
                 $messages = $xml->xpath('//xdebug:message');
 
-                if ($messages !== []) {
+                if (is_array($messages) && $messages !== []) {
                     $message = $messages[0];
                     $filename = (string) $message['filename'];
                     $lineno = (string) $message['lineno'];
@@ -2795,11 +2836,15 @@ final class DebugServer
 
     /**
      * Storage for backtrace results
+     *
+     * @var list<string>
      */
     private array $backtraceResult = [];
 
     /**
      * Get backtrace result by using existing getStackTrace method
+     *
+     * @return list<string>
      */
     public function getBacktraceResult(): array
     {

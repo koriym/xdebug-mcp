@@ -43,7 +43,7 @@ class CLIParamsNormalizer
      *
      * @param string $cliString CLI arguments string
      *
-     * @return array Normalized MCP params
+     * @return array<string, scalar|list<scalar>|list<string>|array<array-key, scalar|array<array-key, scalar>>> Normalized MCP params
      *
      * @throws InvalidArgumentException On invalid format.
      */
@@ -80,6 +80,8 @@ class CLIParamsNormalizer
 
     /**
      * Tokenize CLI string respecting quotes
+     *
+     * @return list<string>
      */
     private function tokenize(string $cliString): array
     {
@@ -125,6 +127,9 @@ class CLIParamsNormalizer
 
     /**
      * Parse single option: --key:type=value or --key=value
+     *
+     * @param array<string, mixed> $params
+     * @param-out array<string, mixed> $params
      */
     private function parseOption(string $option, array &$params): void
     {
@@ -180,6 +185,8 @@ class CLIParamsNormalizer
 
     /**
      * Convert string value to specified type
+     *
+     * @return bool|float|int|string|array<array-key, scalar|array<array-key, scalar>>
      */
     private function convertValue(string $value, string $type, string $key): mixed
     {
@@ -231,10 +238,16 @@ class CLIParamsNormalizer
         );
     }
 
+    /**
+     * @return bool|float|int|string|array<array-key, scalar|array<array-key, scalar>>
+     */
     private function convertJson(string $value, string $key): mixed
     {
         try {
-            return json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+            /** @var bool|float|int|string|array<array-key, scalar|array<array-key, scalar>> $decoded */
+            $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+
+            return $decoded;
         } catch (\JsonException $e) {
             throw new InvalidArgumentException(
                 "不正：--{$key}:json の値は有効なJSONではありません。エラー: " . $e->getMessage(),
