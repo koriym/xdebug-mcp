@@ -35,7 +35,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('jsonrpc', $response);
         $this->assertEquals('2.0', $response['jsonrpc']);
@@ -55,7 +56,8 @@ class McpServerTest extends TestCase
             'method' => 'tools/list',
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('tools', $response['result']);
@@ -83,7 +85,8 @@ class McpServerTest extends TestCase
             'method' => 'unknown/method',
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals(-32601, $response['error']['code']);
@@ -111,7 +114,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals(-32000, $response['error']['code']);
@@ -130,7 +134,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals(-32000, $response['error']['code']);
@@ -165,7 +170,8 @@ class McpServerTest extends TestCase
             'method' => 'resources/list',
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('resources', $response['result']);
@@ -180,7 +186,8 @@ class McpServerTest extends TestCase
             'method' => 'prompts/list',
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('prompts', $response['result']);
@@ -219,7 +226,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals(-32601, $response['error']['code']);
@@ -265,7 +273,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         // Should default to latest supported version
@@ -328,7 +337,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals(-32000, $response['error']['code']);
@@ -351,7 +361,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertEquals('2.0', $response['jsonrpc']);
@@ -376,7 +387,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertEquals('2.0', $response['jsonrpc']);
@@ -401,7 +413,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertEquals('2.0', $response['jsonrpc']);
@@ -440,7 +453,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertEquals('2.0', $response['jsonrpc']);
