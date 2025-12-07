@@ -120,7 +120,7 @@ class CLIParamsNormalizer
             $tokens[] = $current;
         }
 
-        return array_values(array_filter($tokens, static fn($t): bool => $t !== '')); // Remove only empty strings, preserve "0"
+        return $tokens;
     }
 
     /**

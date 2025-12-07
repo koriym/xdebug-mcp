@@ -8,6 +8,7 @@ use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use RuntimeException;
 
 use function array_filter;
+use function array_keys;
 use function array_map;
 use function array_merge;
 use function array_unshift;
@@ -253,7 +254,7 @@ class XdebugTracer
             }
 
             // Track unique functions
-            if ($function && $function !== '') {
+            if ($function !== '') {
                 $stats['unique_functions'][$function] = true;
 
                 // Count file I/O operations
@@ -342,7 +343,7 @@ class XdebugTracer
     private function countDatabaseQueries(array $stats): int
     {
         $dbQueryCount = 0;
-        foreach ($stats['unique_functions'] as $function => $unused) {
+        foreach (array_keys($stats['unique_functions']) as $function) {
             if (
                 str_contains(strtolower((string) $function), 'query')
                 || str_contains(strtolower((string) $function), 'execute')
