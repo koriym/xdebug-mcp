@@ -130,7 +130,6 @@ class McpServerIntegrationTest extends TestCase
     {
         $reflection = new ReflectionClass($object);
         $method = $reflection->getMethod($methodName);
-        $method->setAccessible(true);
 
         return $method->invokeArgs($object, $parameters);
     }
