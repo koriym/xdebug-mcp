@@ -38,7 +38,7 @@ final class NoMixedInArrayShapeRule implements Rule
             $docComment = $node->getDocComment();
         }
 
-        if ($docComment === null) {
+        if (!$docComment instanceof \PhpParser\Comment\Doc) {
             return [];
         }
 

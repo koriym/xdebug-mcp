@@ -23,6 +23,5 @@ final class ProfileAnalysis
         public readonly int $fileIoOperations,
         public readonly int $databaseOperations,
         public readonly array $bottleneckFunctions,
-    ) {
-    }
+    ) {}
 }

@@ -26,7 +26,6 @@ use function getenv;
 use function implode;
 use function in_array;
 use function is_array;
-use function is_numeric;
 use function is_string;
 use function json_decode;
 use function json_encode;
@@ -260,7 +259,7 @@ final class McpServer
                     try {
                         $response = $this->handleRequest($request);
 
-                        if ($response !== null) {
+                        if ($response instanceof \Koriym\XdebugMcp\DTO\JsonRpcResponse) {
                             $this->debugLog('Sending response', ['id' => $response->id]);
                             echo json_encode($response, JSON_THROW_ON_ERROR) . "\n";
                             fflush(STDOUT);
@@ -368,131 +367,131 @@ final class McpServer
     {
         return JsonRpcResponse::success($id, new GenericResult([
             'prompts' => [
-                    [
-                        'name' => 'xtrace',
-                        'description' => 'Trace PHP execution flow | ex) /xtrace --script=test.php --context="Debug login flow" | PHPUnit: /xtrace --script="vendor/bin/phpunit --filter testMethod TestClass.php" --context="Testing user auth"',
-                        'arguments' => [
-                            [
-                                'name' => 'script',
-                                'description' => 'PHP script to trace (e.g., "tests/fixtures/debug_test.php") | PHPUnit: "vendor/bin/phpunit --filter testMethod TestClass.php"',
-                                'required' => true,
-                            ],
-                            [
-                                'name' => 'context',
-                                'description' => 'Context description for AI analysis (e.g., "Testing user authentication flow")',
-                                'required' => false,
-                            ],
-                            [
-                                'name' => 'last',
-                                'description' => 'Use settings from last execution (true/false)',
-                                'required' => false,
-                            ],
+                [
+                    'name' => 'xtrace',
+                    'description' => 'Trace PHP execution flow | ex) /xtrace --script=test.php --context="Debug login flow" | PHPUnit: /xtrace --script="vendor/bin/phpunit --filter testMethod TestClass.php" --context="Testing user auth"',
+                    'arguments' => [
+                        [
+                            'name' => 'script',
+                            'description' => 'PHP script to trace (e.g., "tests/fixtures/debug_test.php") | PHPUnit: "vendor/bin/phpunit --filter testMethod TestClass.php"',
+                            'required' => true,
+                        ],
+                        [
+                            'name' => 'context',
+                            'description' => 'Context description for AI analysis (e.g., "Testing user authentication flow")',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'last',
+                            'description' => 'Use settings from last execution (true/false)',
+                            'required' => false,
                         ],
                     ],
-                    [
-                        'name' => 'xstep',
-                        'description' => 'Step debugging with breakpoints | ex) /xstep --script="php test.php" --break="test.php:15:$user==null" --steps=100 --context="debug context"',
-                        'arguments' => [
-                            [
-                                'name' => 'script',
-                                'description' => 'PHP script to debug (e.g., "tests/fixtures/debug_test.php")',
-                                'required' => true,
-                            ],
-                            [
-                                'name' => 'breakpoints',
-                                'description' => 'Comma-separated breakpoint locations (e.g., "file.php:15,file.php:25")',
-                                'required' => false,
-                            ],
-                            [
-                                'name' => 'steps',
-                                'description' => 'Maximum debugging steps to execute',
-                                'required' => false,
-                            ],
-                            [
-                                'name' => 'context',
-                                'description' => 'Context description for debugging session',
-                                'required' => false,
-                            ],
-                            [
-                                'name' => 'last',
-                                'description' => 'Use settings from last execution (true/false)',
-                                'required' => false,
-                            ],
+                ],
+                [
+                    'name' => 'xstep',
+                    'description' => 'Step debugging with breakpoints | ex) /xstep --script="php test.php" --break="test.php:15:$user==null" --steps=100 --context="debug context"',
+                    'arguments' => [
+                        [
+                            'name' => 'script',
+                            'description' => 'PHP script to debug (e.g., "tests/fixtures/debug_test.php")',
+                            'required' => true,
+                        ],
+                        [
+                            'name' => 'breakpoints',
+                            'description' => 'Comma-separated breakpoint locations (e.g., "file.php:15,file.php:25")',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'steps',
+                            'description' => 'Maximum debugging steps to execute',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'context',
+                            'description' => 'Context description for debugging session',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'last',
+                            'description' => 'Use settings from last execution (true/false)',
+                            'required' => false,
                         ],
                     ],
-                    [
-                        'name' => 'xprofile',
-                        'description' => 'Profile performance bottlenecks | ex) /xprofile --script=slow-app.php --context="API performance"',
-                        'arguments' => [
-                            [
-                                'name' => 'script',
-                                'description' => 'PHP script to profile (e.g., "tests/fixtures/performance_test.php")',
-                                'required' => true,
-                            ],
-                            [
-                                'name' => 'context',
-                                'description' => 'Context description for performance analysis',
-                                'required' => false,
-                            ],
-                            [
-                                'name' => 'last',
-                                'description' => 'Use settings from last execution (true/false)',
-                                'required' => false,
-                            ],
+                ],
+                [
+                    'name' => 'xprofile',
+                    'description' => 'Profile performance bottlenecks | ex) /xprofile --script=slow-app.php --context="API performance"',
+                    'arguments' => [
+                        [
+                            'name' => 'script',
+                            'description' => 'PHP script to profile (e.g., "tests/fixtures/performance_test.php")',
+                            'required' => true,
+                        ],
+                        [
+                            'name' => 'context',
+                            'description' => 'Context description for performance analysis',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'last',
+                            'description' => 'Use settings from last execution (true/false)',
+                            'required' => false,
                         ],
                     ],
-                    [
-                        'name' => 'xcoverage',
-                        'description' => 'Analyze test coverage | ex) /xcoverage --script="vendor/bin/phpunit UserTest.php"',
-                        'arguments' => [
-                            [
-                                'name' => 'script',
-                                'description' => 'PHP script to analyze coverage (e.g., "vendor/bin/phpunit")',
-                                'required' => true,
-                            ],
-                            [
-                                'name' => 'context',
-                                'description' => 'Context description for coverage analysis',
-                                'required' => false,
-                            ],
-                            [
-                                'name' => 'format',
-                                'description' => 'Output format: json, html, xml, text (default: json)',
-                                'required' => false,
-                            ],
-                            [
-                                'name' => 'last',
-                                'description' => 'Use settings from last execution (true/false)',
-                                'required' => false,
-                            ],
+                ],
+                [
+                    'name' => 'xcoverage',
+                    'description' => 'Analyze test coverage | ex) /xcoverage --script="vendor/bin/phpunit UserTest.php"',
+                    'arguments' => [
+                        [
+                            'name' => 'script',
+                            'description' => 'PHP script to analyze coverage (e.g., "vendor/bin/phpunit")',
+                            'required' => true,
+                        ],
+                        [
+                            'name' => 'context',
+                            'description' => 'Context description for coverage analysis',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'format',
+                            'description' => 'Output format: json, html, xml, text (default: json)',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'last',
+                            'description' => 'Use settings from last execution (true/false)',
+                            'required' => false,
                         ],
                     ],
-                    [
-                        'name' => 'xback',
-                        'description' => 'Get stack trace (backtrace) at breakpoint | ex) /xback --script="app.php" --break="app.php:50"',
-                        'arguments' => [
-                            [
-                                'name' => 'script',
-                                'description' => 'PHP script to get backtrace from (e.g., "tests/fixtures/debug_test.php")',
-                                'required' => true,
-                            ],
-                            [
-                                'name' => 'breakpoint',
-                                'description' => 'Breakpoint location (e.g., "file.php:15")',
-                                'required' => false,
-                            ],
-                            [
-                                'name' => 'depth',
-                                'description' => 'Maximum stack depth to return (default: 10)',
-                                'required' => false,
-                            ],
-                            [
-                                'name' => 'context',
-                                'description' => 'Context description for backtrace analysis',
-                                'required' => false,
-                            ],
+                ],
+                [
+                    'name' => 'xback',
+                    'description' => 'Get stack trace (backtrace) at breakpoint | ex) /xback --script="app.php" --break="app.php:50"',
+                    'arguments' => [
+                        [
+                            'name' => 'script',
+                            'description' => 'PHP script to get backtrace from (e.g., "tests/fixtures/debug_test.php")',
+                            'required' => true,
+                        ],
+                        [
+                            'name' => 'breakpoint',
+                            'description' => 'Breakpoint location (e.g., "file.php:15")',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'depth',
+                            'description' => 'Maximum stack depth to return (default: 10)',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'context',
+                            'description' => 'Context description for backtrace analysis',
+                            'required' => false,
                         ],
                     ],
+                ],
             ],
         ]));
     }

@@ -24,8 +24,7 @@ final class FullAnalysisResult implements JsonSerializable
         public readonly array $slowestFunctions,
         public readonly array $potentialIssues,
         public readonly array $executionPatterns,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{metadata: array<string, string>, statistics: array<string, int|float>, performance_analysis: array{slowest_functions: list<array<string, string|float>>}, execution_insights: array{potential_issues: list<string>, execution_patterns: list<string>}}

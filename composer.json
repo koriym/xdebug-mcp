@@ -20,7 +20,7 @@
         "justinrainbow/json-schema": "^6.4",
         "phpstan/phpstan": "^2.1",
         "rector/rector": "^2.2",
-        "laravel/pint": "^1.26"
+        "laravel/pint": "^1.20"
     },
     "autoload": {
         "psr-4": {

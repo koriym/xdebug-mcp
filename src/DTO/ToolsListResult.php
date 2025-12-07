@@ -14,8 +14,7 @@ final class ToolsListResult implements JsonRpcResultInterface
      */
     public function __construct(
         public readonly array $tools,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{tools: list<array{name: string, description: string, inputSchema: array{type: string, properties: array<string, array{type: string, description: string, default?: string|int}>, required: list<string>}}>}
@@ -24,7 +23,7 @@ final class ToolsListResult implements JsonRpcResultInterface
     {
         return [
             'tools' => array_map(
-                static fn (McpTool $tool): array => $tool->jsonSerialize(),
+                static fn(McpTool $tool): array => $tool->jsonSerialize(),
                 $this->tools,
             ),
         ];

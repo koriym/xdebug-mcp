@@ -17,8 +17,7 @@ final class ProfileStatistics
         public readonly string $targetFile,
         public readonly string $creator,
         public readonly string $command = '',
-    ) {
-    }
+    ) {}
 
     public function getFileSizeFormatted(): string
     {

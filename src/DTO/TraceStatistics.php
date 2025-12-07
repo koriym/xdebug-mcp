@@ -27,8 +27,7 @@ final class TraceStatistics
         public ?float $startTime = null,
         public float $endTime = 0,
         public float $executionTime = 0,
-    ) {
-    }
+    ) {}
 
     public function incrementTotalLines(): void
     {

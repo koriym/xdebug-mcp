@@ -28,8 +28,7 @@ final class CliParams
         public readonly array $boolParams = [],
         public readonly array $jsonParams = [],
         public readonly array $positionalArgs = [],
-    ) {
-    }
+    ) {}
 
     /**
      * Get a string parameter value
