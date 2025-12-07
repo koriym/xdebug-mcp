@@ -245,21 +245,23 @@ class McpServerTest extends TestCase
         $this->assertEquals('php script.py', $this->invokePrivateMethod($this->server, 'processScriptArgument', ['script.py'])); // doesn't end with php - gets prefix
     }
 
-    public function testNormalizePositionalArgs(): void
+    public function testMapPositionalArgs(): void
     {
-        // Test xtrace normalization
-        $args = ['script.php', 'test context'];
-        $normalized = $this->invokePrivateMethod($this->server, 'normalizePositionalArgs', [$args, 'xtrace']);
-        $this->assertEquals('script.php', $normalized['script']);
-        $this->assertEquals('test context', $normalized['context']);
+        // Test xtrace mapping - positional args are mapped to named args
+        $namedArgs = [];
+        $positionalArgs = ['script.php', 'test context'];
+        $mapped = $this->invokePrivateMethod($this->server, 'mapPositionalArgs', [$namedArgs, $positionalArgs, 'xtrace']);
+        $this->assertEquals('script.php', $mapped['script']);
+        $this->assertEquals('test context', $mapped['context']);
 
-        // Test xstep normalization
-        $args = ['script.php', 'file.php:10', '50', 'debug context'];
-        $normalized = $this->invokePrivateMethod($this->server, 'normalizePositionalArgs', [$args, 'xstep']);
-        $this->assertEquals('script.php', $normalized['script']);
-        $this->assertEquals('file.php:10', $normalized['breakpoints']);
-        $this->assertEquals('50', $normalized['steps']);
-        $this->assertEquals('debug context', $normalized['context']);
+        // Test xstep mapping
+        $namedArgs = [];
+        $positionalArgs = ['script.php', 'file.php:10', '50', 'debug context'];
+        $mapped = $this->invokePrivateMethod($this->server, 'mapPositionalArgs', [$namedArgs, $positionalArgs, 'xstep']);
+        $this->assertEquals('script.php', $mapped['script']);
+        $this->assertEquals('file.php:10', $mapped['breakpoints']);
+        $this->assertEquals('50', $mapped['steps']);
+        $this->assertEquals('debug context', $mapped['context']);
     }
 
     public function testInitializeWithUnsupportedVersion(): void

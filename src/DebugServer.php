@@ -1023,7 +1023,8 @@ final class DebugServer
 
             public function log(mixed $level, string|Stringable $message, array $context = []): void
             {
-                fwrite(STDERR, "[HTTP-Server] [{$level}] {$message}\n");
+                $levelStr = is_string($level) ? $level : (is_int($level) || is_float($level) ? (string) $level : 'UNKNOWN');
+                fwrite(STDERR, "[HTTP-Server] [{$levelStr}] {$message}\n");
             }
         };
 
