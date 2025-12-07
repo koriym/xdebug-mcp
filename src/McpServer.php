@@ -25,6 +25,7 @@ use function fgets;
 use function getenv;
 use function implode;
 use function in_array;
+use function is_array;
 use function is_numeric;
 use function is_string;
 use function json_decode;
@@ -58,7 +59,7 @@ final class McpServer
     /**
      * @codeCoverageIgnore Uses error_log() side effect - difficult to test without mocking global functions
      *
-     * @param array<string, mixed> $data
+     * @param array<string, string|int|null> $data
      */
     private function debugLog(string $message, array $data = []): void
     {
@@ -240,22 +241,35 @@ final class McpServer
                         // @codeCoverageIgnoreEnd
                     }
 
-                    error_log('DEBUG: Processing request method = ' . ($request['method'] ?? 'unknown'));
-                    $this->debugLog('Received request', $request);
+                    // Validate request is an array
+                    if (! is_array($request)) {
+                        $errorResponse = JsonRpcResponse::error(null, -32600, 'Invalid Request: expected object');
+                        echo json_encode($errorResponse, JSON_THROW_ON_ERROR) . "\n";
+                        fflush(STDOUT);
+                        $input = '';
+
+                        continue;
+                    }
+
+                    /** @var array{method?: string, params?: array<string, string|int|bool|array<string, string|int|bool>>, id?: string|int|null} $request */
+                    $requestMethod = $request['method'] ?? 'unknown';
+                    $requestId = $request['id'] ?? null;
+
+                    error_log('DEBUG: Processing request method = ' . $requestMethod);
 
                     try {
                         $response = $this->handleRequest($request);
 
                         if ($response !== null) {
-                            $this->debugLog('Sending response', $response->toArray());
+                            $this->debugLog('Sending response', ['id' => $response->id]);
                             echo json_encode($response, JSON_THROW_ON_ERROR) . "\n";
                             fflush(STDOUT);
                         }
                     } catch (Throwable $e) {
-                        error_log('DEBUG: MCP Server Error for method ' . ($request['method'] ?? 'unknown') . ': ' . $e->getMessage());
+                        error_log('DEBUG: MCP Server Error for method ' . $requestMethod . ': ' . $e->getMessage());
                         error_log('MCP Server Error: ' . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString());
 
-                        $errorResponse = JsonRpcResponse::error($request['id'] ?? null, -32603, 'Internal error: ' . $e->getMessage());
+                        $errorResponse = JsonRpcResponse::error($requestId, -32603, 'Internal error: ' . $e->getMessage());
                         echo json_encode($errorResponse, JSON_THROW_ON_ERROR) . "\n";
                         fflush(STDOUT);
                     }
@@ -285,7 +299,7 @@ final class McpServer
     }
 
     /**
-     * @param array{method?: string, params?: array<string, string|int|bool>, id?: string|int|null} $request
+     * @param array{method?: string, params?: array<string, string|int|bool|array<string, string|int|bool>>, id?: string|int|null} $request
      */
     private function handleRequest(array $request): ?JsonRpcResponse
     {
@@ -311,7 +325,7 @@ final class McpServer
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param array<string, string|int|bool|array<string, string|int|bool>> $params
      */
     private function handleInitialize(string|int|null $id, array $params): JsonRpcResponse
     {
@@ -484,7 +498,7 @@ final class McpServer
     }
 
     /**
-     * @param array<string, string|int|bool|array<string, string>> $params
+     * @param array<string, string|int|bool|array<string, string|int|bool>> $params
      */
     private function handlePromptsGet(string|int|null $id, array $params): JsonRpcResponse
     {
@@ -496,17 +510,15 @@ final class McpServer
         if (isset($args['cli'])) {
             try {
                 $normalizer = new CLIParamsNormalizer();
-                $normalizedArgs = $normalizer->normalize($args['cli']);
-                // Merge CLI-normalized params with any existing args (CLI takes precedence)
-                $args = array_merge($args, $normalizedArgs);
+                $cliParams = $normalizer->normalize($args['cli']);
                 unset($args['cli']); // Remove the raw CLI string
+                // Merge string params, then map positional args to named args
+                $args = array_merge($args, $cliParams->toStringArray());
+                $args = $this->mapPositionalArgs($args, $cliParams->positionalArgs, $promptName);
             } catch (\InvalidArgumentException $e) {
                 return JsonRpcResponse::error($id, -32602, 'CLI引数正規化エラー: ' . $e->getMessage());
             }
         }
-
-        // Convert positional arguments to named arguments for each prompt type
-        $args = $this->normalizePositionalArgs($args, $promptName);
 
         return match ($promptName) {
             'xtrace' => $this->executeXTrace($id, $args),
@@ -519,92 +531,34 @@ final class McpServer
     }
 
     /**
-     * Convert positional arguments to named arguments based on prompt type
+     * Map positional arguments to named arguments based on prompt type
      *
-     * @param array<array-key, mixed> $args
+     * @param array<string, string> $args Named arguments
+     * @param list<string> $positionalArgs Positional arguments from CLI
      *
-     * @return array<string, mixed>
+     * @return array<string, string>
      */
-    private function normalizePositionalArgs(array $args, string $promptName): array
+    private function mapPositionalArgs(array $args, array $positionalArgs, string $promptName): array
     {
-        // Only process if we have numeric keys (positional arguments)
-        if (! isset($args[0])) {
-            /** @var array<string, mixed> $args */
+        if ($positionalArgs === []) {
             return $args;
         }
 
-        switch ($promptName) {
-            case 'xtrace':
+        $mapping = match ($promptName) {
+            'xtrace', 'xprofile' => ['script', 'context'],
+            'xstep' => ['script', 'breakpoints', 'steps', 'context'],
+            'xcoverage' => ['script', 'context', 'format'],
+            'xback' => ['script', 'breakpoint', 'depth', 'context'],
+            default => [],
+        };
 
-            case 'xprofile':
-                // $args[0] is guaranteed to exist (checked above)
-                $args['script'] = $args[0];
-
-                if (isset($args[1])) {
-                    $args['context'] = $args[1];
-                }
-
-                break;
-            case 'xstep':
-                // $args[0] is guaranteed to exist (checked above)
-                $args['script'] = $args[0];
-
-                if (isset($args[1])) {
-                    $args['breakpoints'] = $args[1];
-                }
-
-                if (isset($args[2])) {
-                    $args['steps'] = $args[2];
-                }
-
-                if (isset($args[3])) {
-                    $args['context'] = $args[3];
-                }
-
-                break;
-
-            case 'xcoverage':
-                // $args[0] is guaranteed to exist (checked above)
-                $args['script'] = $args[0];
-
-                if (isset($args[1])) {
-                    $args['context'] = $args[1];
-                }
-
-                if (isset($args[2])) {
-                    $args['format'] = $args[2];
-                }
-
-                break;
-
-            case 'xback':
-                // $args[0] is guaranteed to exist (checked above)
-                $args['script'] = $args[0];
-
-                if (isset($args[1])) {
-                    $args['breakpoint'] = $args[1];
-                }
-
-                if (isset($args[2])) {
-                    $args['depth'] = $args[2];
-                }
-
-                if (isset($args[3])) {
-                    $args['context'] = $args[3];
-                }
-
-                break;
-        }
-
-        // Remove numeric keys to avoid confusion
-        $filteredArgs = [];
-        foreach ($args as $key => $value) {
-            if (! is_numeric($key)) {
-                $filteredArgs[$key] = $value;
+        foreach ($positionalArgs as $index => $value) {
+            if (isset($mapping[$index])) {
+                $args[$mapping[$index]] = $value;
             }
         }
 
-        return $filteredArgs;
+        return $args;
     }
 
     /**
@@ -655,7 +609,7 @@ final class McpServer
     }
 
     /**
-     * @param array<string, string|int|bool|array<string, string>> $params
+     * @param array<string, string|int|bool|array<string, string|int|bool>> $params
      */
     private function handleToolCall(string|int|null $id, array $params): JsonRpcResponse
     {
@@ -687,37 +641,59 @@ final class McpServer
         switch ($toolName) {
             case 'xtrace':
                 $result = $this->executeXTrace(null, $arguments);
-                $data = $result->result?->jsonSerialize() ?? [];
 
-                return $data['messages'][0]['content']['text'] ?? 'No result';
+                return $this->extractResultText($result);
 
             case 'xprofile':
                 $result = $this->executeXProfile(null, $arguments);
-                $data = $result->result?->jsonSerialize() ?? [];
 
-                return $data['messages'][0]['content']['text'] ?? 'No result';
+                return $this->extractResultText($result);
 
             case 'xstep':
                 $result = $this->executeXDebug(null, $arguments);
-                $data = $result->result?->jsonSerialize() ?? [];
 
-                return $data['messages'][0]['content']['text'] ?? 'No result';
+                return $this->extractResultText($result);
 
             case 'xcoverage':
                 $result = $this->executeXCoverage(null, $arguments);
-                $data = $result->result?->jsonSerialize() ?? [];
 
-                return $data['messages'][0]['content']['text'] ?? 'No result';
+                return $this->extractResultText($result);
 
             case 'xback':
                 $result = $this->executeXBacktrace(null, $arguments);
-                $data = $result->result?->jsonSerialize() ?? [];
 
-                return $data['messages'][0]['content']['text'] ?? 'No result';
+                return $this->extractResultText($result);
 
             default:
                 throw new InvalidToolException("Unknown tool: $toolName");
         }
+    }
+
+    /**
+     * Extract text content from JsonRpcResponse result
+     */
+    private function extractResultText(JsonRpcResponse $response): string
+    {
+        $data = $response->result?->jsonSerialize();
+        if (! is_array($data)) {
+            return 'No result';
+        }
+
+        if (! isset($data['messages']) || ! is_array($data['messages'])) {
+            return 'No result';
+        }
+
+        $firstMessage = $data['messages'][0] ?? null;
+        if (! is_array($firstMessage)) {
+            return 'No result';
+        }
+
+        $content = $firstMessage['content'] ?? null;
+        if (! is_array($content)) {
+            return 'No result';
+        }
+
+        return isset($content['text']) && is_string($content['text']) ? $content['text'] : 'No result';
     }
 
     /**
@@ -990,17 +966,17 @@ final class McpServer
     }
 
     /**
-     * @param array<string, string|int> $args
+     * @param array<string, string> $args
      */
     private function executeXBacktrace(string|int|null $id, array $args): JsonRpcResponse
     {
         try {
-            $originalScript = isset($args['script']) ? (string) $args['script'] : '';
+            $originalScript = $args['script'] ?? '';
             $script = $this->processScriptArgument($originalScript);
             $this->validatePhpBinaryScript($script);
-            $context = isset($args['context']) ? (string) $args['context'] : '';
-            $breakpoint = isset($args['breakpoint']) ? (string) $args['breakpoint'] : '';
-            $depth = $args['depth'] ?? 10;
+            $context = $args['context'] ?? '';
+            $breakpoint = $args['breakpoint'] ?? '';
+            $depth = $args['depth'] ?? '10';
 
             // Build command
             $cmd = $this->binDir . '/xback';

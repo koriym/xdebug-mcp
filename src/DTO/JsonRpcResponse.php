@@ -30,7 +30,7 @@ final readonly class JsonRpcResponse implements JsonSerializable
     }
 
     /**
-     * @return array{jsonrpc: string, id: string|int|null, result?: array<string, bool|float|int|string|list<array<string, bool|float|int|string|array<string, bool|float|int|string|array<string, int|string>>>>|array<string, bool|float|int|string>>, error?: array{code: int, message: string}}
+     * @return array{jsonrpc: string, id: string|int|null, result?: array<string, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null>>>>>, error?: array{code: int, message: string}}
      */
     public function jsonSerialize(): array
     {
@@ -51,7 +51,7 @@ final readonly class JsonRpcResponse implements JsonSerializable
     }
 
     /**
-     * @return array{jsonrpc: string, id: string|int|null, result?: array<string, bool|float|int|string|list<array<string, bool|float|int|string|array<string, bool|float|int|string|array<string, int|string>>>>|array<string, bool|float|int|string>>, error?: array{code: int, message: string}}
+     * @return array{jsonrpc: string, id: string|int|null, result?: array<string, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null>>>>>, error?: array{code: int, message: string}}
      */
     public function toArray(): array
     {

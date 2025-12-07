@@ -6,6 +6,7 @@ namespace Koriym\XdebugMcp;
 
 use JsonSchema\Constraints\Constraint;
 use JsonSchema\Validator;
+use Koriym\XdebugMcp\DTO;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use RuntimeException;
 
@@ -111,18 +112,15 @@ class XdebugProfiler
         return $profileFiles[0];
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function parseProfileFile(string $profileFile): array
+    public function parseProfileFile(string $profileFile): DTO\ProfileStatistics
     {
         if (! file_exists($profileFile) || ! is_readable($profileFile)) {
             throw new InvalidArgumentException("Profile file not found or not readable: $profileFile");
         }
 
         $fileSize = filesize($profileFile);
-        if ($fileSize === 0) {
-            throw new RuntimeException("Profile file is empty: $profileFile");
+        if ($fileSize === false || $fileSize === 0) {
+            throw new RuntimeException("Profile file is empty or unreadable: $profileFile");
         }
 
         $content = file_get_contents($profileFile);
@@ -131,70 +129,67 @@ class XdebugProfiler
         }
 
         // Parse Cachegrind format
-        $stats = [
-            'file_path' => $profileFile,
-            'file_size' => $fileSize,
-            'functions_count' => substr_count($content, "\nfn="),
-            'calls_count' => substr_count($content, "\ncalls="),
-            'target_file' => '',
-            'creator' => '',
-            'command' => '',
-        ];
+        $functionsCount = substr_count($content, "\nfn=");
+        $callsCount = substr_count($content, "\ncalls=");
+        $targetFile = '';
+        $creator = '';
+        $command = '';
 
         // Extract header information
         $lines = explode("\n", $content);
         foreach ($lines as $line) {
             if (str_starts_with($line, 'creator: ')) {
-                $stats['creator'] = substr($line, 9);
+                $creator = substr($line, 9);
             } elseif (str_starts_with($line, 'cmd: ')) {
-                $stats['command'] = substr($line, 5);
+                $command = substr($line, 5);
                 // Extract target file from command
-                $parts = explode(' ', $stats['command']);
-                $stats['target_file'] = end($parts);
+                $parts = explode(' ', $command);
+                $targetFile = end($parts);
             }
         }
 
-        return $stats;
+        return new DTO\ProfileStatistics(
+            filePath: $profileFile,
+            fileSize: $fileSize,
+            functionsCount: $functionsCount,
+            callsCount: $callsCount,
+            targetFile: $targetFile,
+            creator: $creator,
+            command: $command,
+        );
     }
 
     /**
      * Generate schema-compliant JSON output for AI analysis
      *
-     * @param array<string, mixed> $stats
-     *
-     * @return array<string, mixed>
+     * @return array<string, string|list<string>>
      */
-    private function generateSchemaCompliantOutput(array $stats): array
+    private function generateSchemaCompliantOutput(DTO\ProfileStatistics $stats): array
     {
         // Parse the actual profile file for detailed analysis
-        $detailedStats = $this->analyzeProfileContent($stats['file_path']);
+        $detailedStats = $this->analyzeProfileContent($stats->filePath);
 
         return [
-            '📁 profile_file' => $stats['file_path'],
-            '📊 total_lines' => $detailedStats['total_lines'] . ' lines',
-            '💾 file_size_bytes' => $stats['file_size'] . ' bytes',
-            '📏 file_size_formatted' => $stats['file_size_formatted'],
-            '📈 functions_count' => $detailedStats['functions_count'] . ' functions',
-            '👤 user_functions' => $detailedStats['user_functions'] . ' user',
-            '⚙️ internal_functions' => $detailedStats['internal_functions'] . ' internal',
-            '📞 total_calls' => $detailedStats['total_calls'] . ' calls',
-            '⏱️ execution_time_ms' => $detailedStats['execution_time_ms'] . 'ms',
-            '🧠 peak_memory_mb' => $detailedStats['peak_memory_mb'] . 'MB',
-            '📂 file_io_operations' => $detailedStats['file_io_operations'] . ' operations',
-            '🗃️ database_operations' => $detailedStats['database_operations'] . ' queries',
-            '🎯 bottleneck_functions' => $detailedStats['bottleneck_functions'],
+            '📁 profile_file' => $stats->filePath,
+            '📊 total_lines' => $detailedStats->totalLines . ' lines',
+            '💾 file_size_bytes' => $stats->fileSize . ' bytes',
+            '📏 file_size_formatted' => $stats->getFileSizeFormatted(),
+            '📈 functions_count' => $detailedStats->functionsCount . ' functions',
+            '👤 user_functions' => $detailedStats->userFunctions . ' user',
+            '⚙️ internal_functions' => $detailedStats->internalFunctions . ' internal',
+            '📞 total_calls' => $detailedStats->totalCalls . ' calls',
+            '⏱️ execution_time_ms' => $detailedStats->executionTimeMs . 'ms',
+            '🧠 peak_memory_mb' => $detailedStats->peakMemoryMb . 'MB',
+            '📂 file_io_operations' => $detailedStats->fileIoOperations . ' operations',
+            '🗃️ database_operations' => $detailedStats->databaseOperations . ' queries',
+            '🎯 bottleneck_functions' => $detailedStats->bottleneckFunctions,
             '💡 optimization_suggestions' => [],
             '📋 specification' => 'https://kcachegrind.github.io/html/CallgrindFormat.html',
             '🔗 schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json',
         ];
     }
 
-    /**
-     * Analyze profile content for detailed statistics
-     *
-     * @return array<string, mixed>
-     */
-    private function analyzeProfileContent(string $profileFile): array
+    private function analyzeProfileContent(string $profileFile): DTO\ProfileAnalysis
     {
         $content = file_get_contents($profileFile);
         if ($content === false) {
@@ -203,19 +198,14 @@ class XdebugProfiler
 
         $lines = explode("\n", $content);
 
-        $analysis = [
-            'total_lines' => count($lines),
-            'functions_count' => 0,
-            'user_functions' => 0,
-            'internal_functions' => 0,
-            'total_calls' => 0,
-            'execution_time_ms' => 0,
-            'peak_memory_mb' => 0,
-            'file_io_operations' => 0,
-            'database_operations' => 0,
-            'bottleneck_functions' => [],
-        ];
-
+        $totalLines = count($lines);
+        $functionsCount = 0;
+        $userFunctions = 0;
+        $internalFunctions = 0;
+        $totalCalls = 0;
+        $executionTimeMs = 0.0;
+        $peakMemoryMb = 0.0;
+        /** @var array<string, array{cost: int, calls: int}> $functions */
         $functions = [];
         $currentFunction = null;
 
@@ -223,31 +213,33 @@ class XdebugProfiler
             $line = trim($line);
 
             if (str_starts_with($line, 'fn=')) {
-                $analysis['functions_count']++;
+                $functionsCount++;
                 $functionName = substr($line, 3);
                 $currentFunction = $functionName;
 
                 // Classify function type
                 if (str_contains($functionName, 'php::') || str_contains($functionName, '{main}')) {
-                    $analysis['internal_functions']++;
+                    $internalFunctions++;
                 } else {
-                    $analysis['user_functions']++;
+                    $userFunctions++;
                 }
 
                 $functions[$functionName] = ['cost' => 0, 'calls' => 0];
             } elseif (str_starts_with($line, 'calls=')) {
-                $analysis['total_calls'] += (int) explode(' ', $line)[0];
-                if ($currentFunction && isset($functions[$currentFunction])) {
+                $callsParts = explode(' ', $line);
+                $callsValue = substr($callsParts[0], 6); // Remove 'calls=' prefix
+                $totalCalls += (int) $callsValue;
+                if ($currentFunction !== null && isset($functions[$currentFunction])) {
                     $functions[$currentFunction]['calls']++;
                 }
             } elseif (str_starts_with($line, 'summary:')) {
                 $parts = explode(' ', $line);
                 if (count($parts) >= 2) {
                     $totalCost = (int) $parts[1];
-                    $analysis['execution_time_ms'] = round($totalCost / 100000, 2); // Rough estimate
-                    $analysis['peak_memory_mb'] = round($totalCost / 1000000, 1); // Rough estimate
+                    $executionTimeMs = round($totalCost / 100000, 2); // Rough estimate
+                    $peakMemoryMb = round($totalCost / 1000000, 1); // Rough estimate
                 }
-            } elseif (preg_match('/^\d+/', $line) && $currentFunction) {
+            } elseif (preg_match('/^\d+/', $line) === 1 && $currentFunction !== null) {
                 // Cost line
                 $costs = explode(' ', $line);
                 if (is_numeric($costs[0])) {
@@ -260,24 +252,37 @@ class XdebugProfiler
         }
 
         // Find bottleneck functions (top 5 by cost)
-        uasort($functions, static fn($a, $b): int => $b['cost'] <=> $a['cost']);
+        uasort($functions, static fn(array $a, array $b): int => $b['cost'] <=> $a['cost']);
         $topFunctions = array_slice($functions, 0, 5, true);
         $totalCost = array_sum(array_column($functions, 'cost'));
 
+        /** @var list<string> $bottleneckFunctions */
+        $bottleneckFunctions = [];
         if ($totalCost > 0) {
             foreach ($topFunctions as $name => $data) {
                 $percentage = round($data['cost'] / $totalCost * 100, 1);
-                $analysis['bottleneck_functions'][] = "{$name} ({$percentage}%)";
+                $bottleneckFunctions[] = "{$name} ({$percentage}%)";
             }
         }
 
-        return $analysis;
+        return new DTO\ProfileAnalysis(
+            totalLines: $totalLines,
+            functionsCount: $functionsCount,
+            userFunctions: $userFunctions,
+            internalFunctions: $internalFunctions,
+            totalCalls: $totalCalls,
+            executionTimeMs: $executionTimeMs,
+            peakMemoryMb: $peakMemoryMb,
+            fileIoOperations: 0,
+            databaseOperations: 0,
+            bottleneckFunctions: $bottleneckFunctions,
+        );
     }
 
     /**
      * Validate JSON output against xdebug-profile.json schema
      *
-     * @param array<string, mixed> $data
+     * @param array<string, string|list<string>> $data
      */
     private function validateJsonOutput(array $data): void
     {
@@ -304,7 +309,17 @@ class XdebugProfiler
         if (! $validator->isValid()) {
             $errors = [];
             foreach ($validator->getErrors() as $error) {
-                $errors[] = sprintf("Property '%s': %s", $error['property'], $error['message']);
+                if (! is_array($error)) {
+                    continue;
+                }
+
+                $property = isset($error['property']) && is_string($error['property'])
+                    ? $error['property']
+                    : 'unknown';
+                $message = isset($error['message']) && is_string($error['message'])
+                    ? $error['message']
+                    : 'unknown error';
+                $errors[] = sprintf("Property '%s': %s", $property, $message);
             }
 
             throw new RuntimeException(
@@ -314,30 +329,22 @@ class XdebugProfiler
     }
 
     /**
-     * @param array<string, mixed> $stats
-     *
-     * @return array<string, mixed>
+     * @return array{profile_file: string, file_size_bytes: int, file_size_formatted: string, functions_count: int, calls_count: int, target_file: string, creator: string}
      */
-    public function generateStatistics(array $stats): array
+    public function generateStatistics(DTO\ProfileStatistics $stats): array
     {
-        $fileSize = $stats['file_size'];
-        $sizeFormatted = $fileSize > 1024 ? round($fileSize / 1024, 1) . 'K' : $fileSize . 'B';
-
         return [
-            'profile_file' => $stats['file_path'],
-            'file_size_bytes' => $fileSize,
-            'file_size_formatted' => $sizeFormatted,
-            'functions_count' => $stats['functions_count'],
-            'calls_count' => $stats['calls_count'],
-            'target_file' => $stats['target_file'],
-            'creator' => $stats['creator'],
+            'profile_file' => $stats->filePath,
+            'file_size_bytes' => $stats->fileSize,
+            'file_size_formatted' => $stats->getFileSizeFormatted(),
+            'functions_count' => $stats->functionsCount,
+            'calls_count' => $stats->callsCount,
+            'target_file' => $stats->targetFile,
+            'creator' => $stats->creator,
         ];
     }
 
-    /**
-     * @param array<string, mixed> $stats
-     */
-    public function displayResults(array $stats, bool $jsonOutput = false): void
+    public function displayResults(DTO\ProfileStatistics $stats, bool $jsonOutput = false): void
     {
         if ($jsonOutput) {
             // Generate schema-compliant JSON output
@@ -348,18 +355,18 @@ class XdebugProfiler
 
             echo json_encode($schemaCompliantOutput, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         } else {
-            echo "✅ Profile complete: {$stats['profile_file']}\n";
-            echo "📊 Size: {$stats['file_size_formatted']}\n";
+            echo "✅ Profile complete: {$stats->filePath}\n";
+            echo "📊 Size: {$stats->getFileSizeFormatted()}\n";
 
-            if ($stats['functions_count'] > 0) {
-                echo "📈 Functions: {$stats['functions_count']}\n";
-                echo "📞 Calls: {$stats['calls_count']}\n";
+            if ($stats->functionsCount > 0) {
+                echo "📈 Functions: {$stats->functionsCount}\n";
+                echo "📞 Calls: {$stats->callsCount}\n";
             }
 
             echo "\n💡 Analyze with Claude Code:\n";
-            echo "   claude \"Analyze {$stats['profile_file']}\"\n";
+            echo "   claude \"Analyze {$stats->filePath}\"\n";
             echo "\n💡 Or use KCachegrind/qcachegrind:\n";
-            echo "   kcachegrind {$stats['profile_file']}\n";
+            echo "   kcachegrind {$stats->filePath}\n";
         }
     }
 
