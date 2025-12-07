@@ -17,8 +17,6 @@ use function in_array;
 use function is_array;
 use function is_numeric;
 use function json_decode;
-use function json_last_error;
-use function json_last_error_msg;
 use function ltrim;
 use function str_contains;
 use function str_replace;
@@ -26,8 +24,6 @@ use function str_starts_with;
 use function strlen;
 use function strtolower;
 use function substr;
-
-use const JSON_ERROR_NONE;
 
 /**
  * CLI arguments to MCP params normalizer
@@ -237,14 +233,12 @@ class CLIParamsNormalizer
 
     private function convertJson(string $value, string $key): mixed
     {
-        $decoded = json_decode($value, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
+        try {
+            return json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
             throw new InvalidArgumentException(
-                "不正：--{$key}:json の値は有効なJSONではありません。エラー: " . json_last_error_msg(),
+                "不正：--{$key}:json の値は有効なJSONではありません。エラー: " . $e->getMessage(),
             );
         }
-
-        return $decoded;
     }
 }

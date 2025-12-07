@@ -1161,7 +1161,7 @@ final class DebugServer
                     return new Response(
                         HttpStatus::OK,
                         $headers,
-                        json_encode($result, JSON_PRETTY_PRINT),
+                        json_encode($result, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT),
                     );
                 } catch (Throwable $e) {
                     $error = [
@@ -1173,7 +1173,7 @@ final class DebugServer
                     return new Response(
                         HttpStatus::INTERNAL_SERVER_ERROR,
                         $headers,
-                        json_encode($error, JSON_PRETTY_PRINT),
+                        json_encode($error, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT),
                     );
                 }
             }
@@ -1352,7 +1352,7 @@ final class DebugServer
                             'lines' => $lines,
                             'size' => $sizeKB,
                             'command' => $command,
-                        ]) . "\n";
+                        ], JSON_THROW_ON_ERROR) . "\n";
                     } else {
                         $this->log("📊 Trace file generated up to conditional breakpoint: {$latestTrace} ({$lines} lines, {$sizeKB}KB)");
                     }
@@ -1362,7 +1362,7 @@ final class DebugServer
                         'lines' => 0,
                         'size' => 0,
                         'command' => implode(' ', $this->options['command'] ?? ['php', $this->targetScript]),
-                    ]) . "\n";
+                    ], JSON_THROW_ON_ERROR) . "\n";
                 } else {
                     $this->log("📊 Trace file generated up to conditional breakpoint: {$latestTrace}");
                 }
@@ -2196,7 +2196,7 @@ final class DebugServer
             ];
         }
 
-        echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+        echo json_encode($result, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
     }
 
     /**
@@ -2666,10 +2666,10 @@ final class DebugServer
     {
         try {
             $stackXml = $this->getStack();
-            $this->log('📋 Stack info: ' . json_encode($stackXml));
+            $this->log('📋 Stack info: ' . json_encode($stackXml, JSON_THROW_ON_ERROR));
 
             $variables = $this->getCurrentVariables();
-            $this->log('📋 Variables: ' . json_encode($variables));
+            $this->log('📋 Variables: ' . json_encode($variables, JSON_THROW_ON_ERROR));
 
             // Parse stack XML to get current location
             $location = $this->parseStackLocation($stackXml);
@@ -2735,7 +2735,7 @@ final class DebugServer
 
         // Output format based on jsonMode or jsonOutput option
         if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
-            echo json_encode($debugState, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+            echo json_encode($debugState, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
         } else {
             // Human-readable format
             $this->log("\n" . str_repeat('=', 60));
@@ -2749,7 +2749,7 @@ final class DebugServer
                 if (isset($break['variables']) && $break['variables'] !== []) {
                     $this->log('📊 Variables:');
                     foreach ($break['variables'] as $name => $value) {
-                        $displayValue = is_string($value) ? $value : json_encode($value);
+                        $displayValue = is_string($value) ? $value : json_encode($value, JSON_THROW_ON_ERROR);
                         $this->log("  {$name} = {$displayValue}");
                     }
                 }
