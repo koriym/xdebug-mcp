@@ -9,14 +9,14 @@ use JsonSerializable;
 /**
  * Statistics from trace analysis
  */
-final readonly class TraceAnalysisStatistics implements JsonSerializable
+final class TraceAnalysisStatistics implements JsonSerializable
 {
     public function __construct(
-        public int $uniqueFunctionsCount,
-        public int $totalFunctionCalls,
-        public int $uniqueFilesCount,
-        public int $maxCallDepth,
-        public float $totalExecutionTime,
+        public readonly int $uniqueFunctionsCount,
+        public readonly int $totalFunctionCalls,
+        public readonly int $uniqueFilesCount,
+        public readonly int $maxCallDepth,
+        public readonly float $totalExecutionTime,
     ) {
     }
 

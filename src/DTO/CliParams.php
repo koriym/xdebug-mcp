@@ -11,7 +11,7 @@ use const JSON_THROW_ON_ERROR;
 /**
  * Normalized CLI parameters
  */
-final readonly class CliParams
+final class CliParams
 {
     /**
      * @param array<string, string> $stringParams String parameters
@@ -22,12 +22,12 @@ final readonly class CliParams
      * @param list<string> $positionalArgs Positional arguments after --
      */
     public function __construct(
-        public array $stringParams = [],
-        public array $intParams = [],
-        public array $floatParams = [],
-        public array $boolParams = [],
-        public array $jsonParams = [],
-        public array $positionalArgs = [],
+        public readonly array $stringParams = [],
+        public readonly array $intParams = [],
+        public readonly array $floatParams = [],
+        public readonly array $boolParams = [],
+        public readonly array $jsonParams = [],
+        public readonly array $positionalArgs = [],
     ) {
     }
 

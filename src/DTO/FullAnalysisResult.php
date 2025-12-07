@@ -11,7 +11,7 @@ use function array_map;
 /**
  * Full trace analysis result
  */
-final readonly class FullAnalysisResult implements JsonSerializable
+final class FullAnalysisResult implements JsonSerializable
 {
     /**
      * @param list<SlowFunction> $slowestFunctions
@@ -19,11 +19,11 @@ final readonly class FullAnalysisResult implements JsonSerializable
      * @param list<string> $executionPatterns
      */
     public function __construct(
-        public AnalysisMetadata $metadata,
-        public TraceAnalysisStatistics $statistics,
-        public array $slowestFunctions,
-        public array $potentialIssues,
-        public array $executionPatterns,
+        public readonly AnalysisMetadata $metadata,
+        public readonly TraceAnalysisStatistics $statistics,
+        public readonly array $slowestFunctions,
+        public readonly array $potentialIssues,
+        public readonly array $executionPatterns,
     ) {
     }
 

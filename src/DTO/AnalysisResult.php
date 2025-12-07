@@ -9,7 +9,7 @@ use JsonSerializable;
 /**
  * Base class for analysis results with JSON serialization
  */
-abstract readonly class AnalysisResult implements JsonSerializable
+abstract class AnalysisResult implements JsonSerializable
 {
     /**
      * @return array<string, scalar|array<string, scalar|array<string, scalar|list<scalar>>>>

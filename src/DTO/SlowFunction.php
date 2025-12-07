@@ -9,12 +9,12 @@ use JsonSerializable;
 /**
  * A slow function identified during performance analysis
  */
-final readonly class SlowFunction implements JsonSerializable
+final class SlowFunction implements JsonSerializable
 {
     public function __construct(
-        public string $functionName,
-        public float $durationSeconds,
-        public string $optimizationPriority,
+        public readonly string $functionName,
+        public readonly float $durationSeconds,
+        public readonly string $optimizationPriority,
     ) {
     }
 

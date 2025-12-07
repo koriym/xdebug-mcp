@@ -7,16 +7,16 @@ namespace Koriym\XdebugMcp\DTO;
 /**
  * Options for the UnifiedAnalyzer
  */
-final readonly class AnalyzerOptions
+final class AnalyzerOptions
 {
     public function __construct(
-        public bool $compare = false,
-        public bool $summary = false,
-        public int $bottlenecks = 0,
-        public string $context = '',
-        public int $limit = 1000,
-        public float $threshold = 0.0,
-        public ?string $search = null,
+        public readonly bool $compare = false,
+        public readonly bool $summary = false,
+        public readonly int $bottlenecks = 0,
+        public readonly string $context = '',
+        public readonly int $limit = 1000,
+        public readonly float $threshold = 0.0,
+        public readonly ?string $search = null,
     ) {
     }
 

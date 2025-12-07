@@ -9,13 +9,13 @@ use JsonSerializable;
 /**
  * JSON-RPC 2.0 Response
  */
-final readonly class JsonRpcResponse implements JsonSerializable
+final class JsonRpcResponse implements JsonSerializable
 {
     public function __construct(
-        public string|int|null $id,
-        public ?JsonRpcResultInterface $result = null,
-        public ?JsonRpcError $error = null,
-        public string $jsonrpc = '2.0',
+        public readonly string|int|null $id,
+        public readonly ?JsonRpcResultInterface $result = null,
+        public readonly ?JsonRpcError $error = null,
+        public readonly string $jsonrpc = '2.0',
     ) {
     }
 

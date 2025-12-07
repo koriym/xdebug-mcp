@@ -9,11 +9,11 @@ use JsonSerializable;
 /**
  * JSON-RPC 2.0 Error
  */
-final readonly class JsonRpcError implements JsonSerializable
+final class JsonRpcError implements JsonSerializable
 {
     public function __construct(
-        public int $code,
-        public string $message,
+        public readonly int $code,
+        public readonly string $message,
     ) {
     }
 
