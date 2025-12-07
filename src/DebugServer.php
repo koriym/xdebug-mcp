@@ -192,12 +192,12 @@ final class DebugServer
             $this->log('⏳ Waiting for Xdebug connection...');
 
             // Notify listener ready (Opus pattern)
-            $this->listenerReady->complete(true);
+            $this->listenerReady?->complete(true);
 
             // Accept connection with timeout
             $connectionTimeout = $this->options['connectionTimeout'] ?? self::DEFAULT_CONNECTION_TIMEOUT;
             $cancellation = new TimeoutCancellation($connectionTimeout);
-            $socket = $this->server->accept($cancellation);
+            $socket = $this->server?->accept($cancellation);
 
             if (!$socket instanceof \Amp\Socket\Socket) {
                 throw new SocketException(sprintf(
@@ -210,7 +210,7 @@ final class DebugServer
             $this->xdebugSocket = $socket;
 
             // Close server socket after accepting connection
-            $this->server->close();
+            $this->server?->close();
             $this->server = null;
 
             // Read init packet
@@ -224,7 +224,7 @@ final class DebugServer
             }
 
             // Notify connection established
-            $this->xdebugConnected->complete(true);
+            $this->xdebugConnected?->complete(true);
         } catch (Throwable $e) {
             if ($this->listenerReady && ! $this->listenerReady->isComplete()) {
                 $this->listenerReady->error($e);
@@ -246,7 +246,7 @@ final class DebugServer
         try {
             // Wait for listener ready
             $cancellation = new TimeoutCancellation(3.0);
-            $this->listenerReady->getFuture()->await($cancellation);
+            $this->listenerReady?->getFuture()->await($cancellation);
 
             // Check if custom command is provided
             if (isset($this->options['command']) && $this->options['command'] !== []) {
@@ -384,7 +384,7 @@ final class DebugServer
                 // Wait for process completion with timeout
                 $executionTimeout = $this->options['executionTimeout'] ?? self::DEFAULT_EXECUTION_TIMEOUT;
                 $cancellation = new TimeoutCancellation($executionTimeout);
-                $exitCode = $this->process->join($cancellation);
+                $exitCode = $this->process?->join($cancellation);
 
                 if ($exitCode !== 0) {
                     $this->log("⚠️ Script exited with code: {$exitCode}");
@@ -406,7 +406,7 @@ final class DebugServer
         try {
             // Wait for connection
             $cancellation = new TimeoutCancellation(30.0);
-            $socket = $this->xdebugConnected->getFuture()->await($cancellation);
+            $this->xdebugConnected?->getFuture()->await($cancellation);
 
             $this->log('🎯 Starting debug session');
 
@@ -657,7 +657,7 @@ final class DebugServer
      */
     private function sendCommand(string $command, array $params = []): string
     {
-        if (! $this->isConnected()) {
+        if (! $this->isConnected() || $this->xdebugSocket === null) {
             throw new RuntimeException('No active Xdebug connection');
         }
 
@@ -1056,7 +1056,7 @@ final class DebugServer
 
         $requestHandler = $this->createHttpRequestHandler();
         $errorHandler = new DefaultErrorHandler();
-        $this->httpServer->start($requestHandler, $errorHandler);
+        $this->httpServer?->start($requestHandler, $errorHandler);
 
         // Keep server running (until quit is called)
         while ($this->httpServer && ! $this->shouldExit) {
@@ -2471,6 +2471,10 @@ final class DebugServer
      */
     private function getJsonEncodeOutput(string $varName): ?string
     {
+        if ($this->xdebugSocket === null) {
+            return null;
+        }
+
         try {
             // Use eval to execute json_encode($var, JSON_UNESCAPED_UNICODE)
             $expression = "json_encode({$varName}, JSON_UNESCAPED_UNICODE)";
@@ -2714,16 +2718,18 @@ final class DebugServer
             $xml = simplexml_load_string($stackXml);
             if ($xml && (property_exists($xml, 'stack') && $xml->stack !== null) && count($xml->stack) > 0) {
                 $currentFrame = $xml->stack[0];
-                $filename = (string) $currentFrame['filename'];
-                $line = (int) $currentFrame['lineno'];
+                if ($currentFrame !== null) {
+                    $filename = (string) ($currentFrame['filename'] ?? '');
+                    $line = (int) ($currentFrame['lineno'] ?? 0);
 
-                // Clean up file:// protocol from filename
-                $file = str_replace('file://', '', $filename);
+                    // Clean up file:// protocol from filename
+                    $file = str_replace('file://', '', $filename);
 
-                return [
-                    'file' => basename($file),
-                    'line' => $line,
-                ];
+                    return [
+                        'file' => basename($file),
+                        'line' => $line,
+                    ];
+                }
             }
         } catch (Throwable $e) {
             $this->log('❌ Error parsing stack location: ' . $e->getMessage());
