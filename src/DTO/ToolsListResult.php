@@ -7,13 +7,13 @@ namespace Koriym\XdebugMcp\DTO;
 /**
  * Result DTO for tools/list JSON-RPC response
  */
-final readonly class ToolsListResult implements JsonRpcResultInterface
+final class ToolsListResult implements JsonRpcResultInterface
 {
     /**
      * @param list<McpTool> $tools
      */
     public function __construct(
-        public array $tools,
+        public readonly array $tools,
     ) {
     }
 

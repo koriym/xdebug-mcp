@@ -7,16 +7,16 @@ namespace Koriym\XdebugMcp\DTO;
 /**
  * Statistics from parsing an Xdebug profile (Cachegrind) file
  */
-final readonly class ProfileStatistics
+final class ProfileStatistics
 {
     public function __construct(
-        public string $filePath,
-        public int $fileSize,
-        public int $functionsCount,
-        public int $callsCount,
-        public string $targetFile,
-        public string $creator,
-        public string $command = '',
+        public readonly string $filePath,
+        public readonly int $fileSize,
+        public readonly int $functionsCount,
+        public readonly int $callsCount,
+        public readonly string $targetFile,
+        public readonly string $creator,
+        public readonly string $command = '',
     ) {
     }
 

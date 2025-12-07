@@ -11,15 +11,15 @@ use function date;
 /**
  * Metadata for trace analysis
  */
-final readonly class AnalysisMetadata implements JsonSerializable
+final class AnalysisMetadata implements JsonSerializable
 {
-    public string $generatedAt;
+    public readonly string $generatedAt;
 
     public function __construct(
-        public string $sourceTraceFile,
-        public string $sourceFileSize,
-        public string $analysisContext,
-        public string $analysisVersion = '2.0.0-unified',
+        public readonly string $sourceTraceFile,
+        public readonly string $sourceFileSize,
+        public readonly string $analysisContext,
+        public readonly string $analysisVersion = '2.0.0-unified',
     ) {
         $this->generatedAt = date('c');
     }

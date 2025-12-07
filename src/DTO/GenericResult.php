@@ -10,13 +10,13 @@ namespace Koriym\XdebugMcp\DTO;
  * Use this when a specific result DTO doesn't exist yet.
  * Prefer creating specific DTOs for type safety where practical.
  */
-final readonly class GenericResult implements JsonRpcResultInterface
+final class GenericResult implements JsonRpcResultInterface
 {
     /**
      * @param array<string, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null>>>>> $data
      */
     public function __construct(
-        private array $data,
+        private readonly array $data,
     ) {
     }
 

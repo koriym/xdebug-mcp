@@ -7,22 +7,22 @@ namespace Koriym\XdebugMcp\DTO;
 /**
  * Detailed analysis results from a profile file
  */
-final readonly class ProfileAnalysis
+final class ProfileAnalysis
 {
     /**
      * @param list<string> $bottleneckFunctions
      */
     public function __construct(
-        public int $totalLines,
-        public int $functionsCount,
-        public int $userFunctions,
-        public int $internalFunctions,
-        public int $totalCalls,
-        public float $executionTimeMs,
-        public float $peakMemoryMb,
-        public int $fileIoOperations,
-        public int $databaseOperations,
-        public array $bottleneckFunctions,
+        public readonly int $totalLines,
+        public readonly int $functionsCount,
+        public readonly int $userFunctions,
+        public readonly int $internalFunctions,
+        public readonly int $totalCalls,
+        public readonly float $executionTimeMs,
+        public readonly float $peakMemoryMb,
+        public readonly int $fileIoOperations,
+        public readonly int $databaseOperations,
+        public readonly array $bottleneckFunctions,
     ) {
     }
 }

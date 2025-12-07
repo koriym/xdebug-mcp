@@ -9,15 +9,15 @@ use JsonSerializable;
 /**
  * MCP Tool Definition
  */
-final readonly class McpTool implements JsonSerializable
+final class McpTool implements JsonSerializable
 {
     /**
      * @param array{type: string, properties: array<string, array{type: string, description: string, default?: string|int}>, required: list<string>} $inputSchema
      */
     public function __construct(
-        public string $name,
-        public string $description,
-        public array $inputSchema,
+        public readonly string $name,
+        public readonly string $description,
+        public readonly array $inputSchema,
     ) {
     }
 
