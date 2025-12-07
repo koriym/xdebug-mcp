@@ -116,10 +116,10 @@ try {
     if ($jsonOutput) {
         $result = [
             'trace_file' => $traceFile,
-            'total_lines' => $stats['total_lines'],
-            'unique_functions' => count($stats['unique_functions']),
-            'max_call_depth' => $stats['max_depth'],
-            'database_queries' => $stats['db_operations'],
+            'total_lines' => $stats->totalLines,
+            'unique_functions' => $stats->getUniqueFunctionCount(),
+            'max_call_depth' => $stats->maxDepth,
+            'database_queries' => $stats->dbOperations,
             'specification' => 'https://xdebug.org/docs/trace'
         ];
 
@@ -133,14 +133,14 @@ try {
         if ($context !== null) {
             echo "🎯 Context: $context\n";
         }
-        echo "📊 {$stats['total_lines']} lines generated\n";
+        echo "📊 {$stats->totalLines} lines generated\n";
 
-        $uniqueFunctionCount = count($stats['unique_functions']);
+        $uniqueFunctionCount = $stats->getUniqueFunctionCount();
         echo "📚 $uniqueFunctionCount unique functions\n";
-        echo "🔄 {$stats['max_depth']} max call depth\n";
+        echo "🔄 {$stats->maxDepth} max call depth\n";
 
-        if ($stats['db_operations'] > 0) {
-            echo "🗃️ {$stats['db_operations']} database queries\n";
+        if ($stats->dbOperations > 0) {
+            echo "🗃️ {$stats->dbOperations} database queries\n";
         }
 
         echo "\n💡 claude \"Analyze $traceFile\"\n";

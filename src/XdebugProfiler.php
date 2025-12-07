@@ -54,6 +54,9 @@ use const JSON_UNESCAPED_UNICODE;
  */
 class XdebugProfiler
 {
+    /**
+     * @param list<string> $phpArgs
+     */
     public function executeProfile(string $targetFile, array $phpArgs = [], bool $jsonOutput = false): string
     {
         if (! file_exists($targetFile)) {
@@ -108,6 +111,9 @@ class XdebugProfiler
         return $profileFiles[0];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function parseProfileFile(string $profileFile): array
     {
         if (! file_exists($profileFile) || ! is_readable($profileFile)) {
@@ -120,6 +126,9 @@ class XdebugProfiler
         }
 
         $content = file_get_contents($profileFile);
+        if ($content === false) {
+            throw new RuntimeException("Failed to read profile file: $profileFile");
+        }
 
         // Parse Cachegrind format
         $stats = [
@@ -150,6 +159,10 @@ class XdebugProfiler
 
     /**
      * Generate schema-compliant JSON output for AI analysis
+     *
+     * @param array<string, mixed> $stats
+     *
+     * @return array<string, mixed>
      */
     private function generateSchemaCompliantOutput(array $stats): array
     {
@@ -178,10 +191,16 @@ class XdebugProfiler
 
     /**
      * Analyze profile content for detailed statistics
+     *
+     * @return array<string, mixed>
      */
     private function analyzeProfileContent(string $profileFile): array
     {
         $content = file_get_contents($profileFile);
+        if ($content === false) {
+            throw new RuntimeException("Failed to read profile file: $profileFile");
+        }
+
         $lines = explode("\n", $content);
 
         $analysis = [
@@ -257,6 +276,8 @@ class XdebugProfiler
 
     /**
      * Validate JSON output against xdebug-profile.json schema
+     *
+     * @param array<string, mixed> $data
      */
     private function validateJsonOutput(array $data): void
     {
@@ -268,7 +289,12 @@ class XdebugProfiler
         }
 
         $validator = new Validator();
-        $schema = json_decode(file_get_contents($schemaPath), false, 512, JSON_THROW_ON_ERROR);
+        $schemaContent = file_get_contents($schemaPath);
+        if ($schemaContent === false) {
+            throw new RuntimeException("Failed to read schema file: $schemaPath");
+        }
+
+        $schema = json_decode($schemaContent, false, 512, JSON_THROW_ON_ERROR);
 
         // Convert to object for validation
         $jsonData = json_decode(json_encode($data, JSON_THROW_ON_ERROR), false, 512, JSON_THROW_ON_ERROR);
@@ -287,6 +313,11 @@ class XdebugProfiler
         }
     }
 
+    /**
+     * @param array<string, mixed> $stats
+     *
+     * @return array<string, mixed>
+     */
     public function generateStatistics(array $stats): array
     {
         $fileSize = $stats['file_size'];
@@ -303,6 +334,9 @@ class XdebugProfiler
         ];
     }
 
+    /**
+     * @param array<string, mixed> $stats
+     */
     public function displayResults(array $stats, bool $jsonOutput = false): void
     {
         if ($jsonOutput) {
