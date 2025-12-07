@@ -4,19 +4,24 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp\Profiler;
 
+use function array_pop;
 use function count;
 use function date;
+use function explode;
 use function filesize;
 use function floor;
+use function implode;
 use function is_array;
 use function is_readable;
 use function is_string;
 use function log;
 use function max;
 use function min;
-use function pow;
-use function realpath;
+use function preg_match;
 use function round;
+use function str_replace;
+use function str_starts_with;
+use function substr;
 use function trim;
 
 /**
@@ -54,12 +59,8 @@ class UnifiedAnalyzer
                 continue;
             }
 
-            // Try to resolve to realpath
-            $realPath = realpath($file);
-            if ($realPath === false) {
-                // If realpath fails, use original path for final readability check
-                $realPath = $file;
-            }
+            // Normalise path (phar-compatible alternative to realpath)
+            $realPath = $this->normalisePath($file);
 
             // Skip if not readable
             if (! is_readable($realPath)) {
@@ -87,6 +88,41 @@ class UnifiedAnalyzer
             'limit' => $options['limit'] ?? 1000,
             'threshold' => $options['threshold'] ?? 0.0,
         ];
+    }
+
+    /**
+     * Normalise a path by resolving . and .. segments.
+     * Compatible with phar:// and other stream wrappers unlike realpath().
+     */
+    private function normalisePath(string $path): string
+    {
+        // Handle Windows paths by normalising to forward slashes
+        $path = str_replace('\\', '/', $path);
+
+        // Preserve stream wrapper prefix (phar://, zip://, etc.)
+        $prefix = '';
+        if (preg_match('#^([a-zA-Z][a-zA-Z0-9+.-]*://)(.*)$#', $path, $matches)) {
+            $prefix = $matches[1];
+            $path = $matches[2];
+        } elseif (str_starts_with($path, '/')) {
+            $prefix = '/';
+            $path = substr($path, 1);
+        }
+
+        $parts = [];
+        foreach (explode('/', $path) as $part) {
+            if ($part === '' || $part === '.') {
+                continue;
+            }
+
+            if ($part === '..') {
+                array_pop($parts);
+            } else {
+                $parts[] = $part;
+            }
+        }
+
+        return $prefix . implode('/', $parts);
     }
 
     private function safeFilesize(string $path): int
@@ -132,14 +168,14 @@ class UnifiedAnalyzer
                 '🎯 analysis_context' => $this->options['context'] ?? 'General analysis',
                 '🔍 analysis_version' => '2.0.0-unified',
             ],
-            '📈 statistics' => $this->generateStatistics($traceFile),
-            '🚀 performance_analysis' => $this->analyzePerformance($traceFile),
-            '🔍 execution_insights' => $this->generateInsights($traceFile),
+            '📈 statistics' => $this->generateStatistics(),
+            '🚀 performance_analysis' => $this->analyzePerformance(),
+            '🔍 execution_insights' => $this->generateInsights(),
         ];
 
         // Add search results if specified
         if ($this->options['search']) {
-            $result['🔎 search_results'] = $this->searchFunction($traceFile, $this->options['search']);
+            $result['🔎 search_results'] = $this->searchFunction($this->options['search']);
         }
 
         return $result;
@@ -157,9 +193,9 @@ class UnifiedAnalyzer
                 '🎯 analysis_context' => $this->options['context'] ?: 'Trace comparison',
                 '🔄 comparison_type' => 'before_after_analysis',
             ],
-            '📈 performance_diff' => $this->comparePerformance($file1, $file2),
-            '🔄 execution_changes' => $this->compareExecution($file1, $file2),
-            '💡 insights' => $this->generateComparisonInsights($file1, $file2),
+            '📈 performance_diff' => $this->comparePerformance(),
+            '🔄 execution_changes' => $this->compareExecution(),
+            '💡 insights' => $this->generateComparisonInsights(),
         ];
     }
 
@@ -172,9 +208,9 @@ class UnifiedAnalyzer
             '📊 executive_summary' => [
                 '🎯 context' => $this->options['context'] ?? 'Executive summary',
                 '📏 file_size' => $this->formatBytes($this->safeFilesize($traceFile)),
-                '⏱️ key_performance_issues' => $this->getTopIssues($traceFile, 3),
-                '🎯 recommendations' => $this->generateRecommendations($traceFile),
-                '🚨 critical_warnings' => $this->getCriticalWarnings($traceFile),
+                '⏱️ key_performance_issues' => $this->getTopIssues(),
+                '🎯 recommendations' => $this->generateRecommendations(),
+                '🚨 critical_warnings' => $this->getCriticalWarnings(),
             ],
         ];
     }
@@ -189,8 +225,8 @@ class UnifiedAnalyzer
                 '🎯 analysis_focus' => "Top {$limit} performance bottlenecks",
                 '📁 source_file' => $traceFile,
             ],
-            '🐌 bottlenecks' => $this->getTopBottlenecks($traceFile, $limit),
-            '💡 optimization_suggestions' => $this->generateOptimizationSuggestions($traceFile, $limit),
+            '🐌 bottlenecks' => $this->getTopBottlenecks(),
+            '💡 optimization_suggestions' => $this->generateOptimizationSuggestions(),
         ];
     }
 
@@ -201,12 +237,12 @@ class UnifiedAnalyzer
         $bytes = max($bytes, 0);
         $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
         $pow = min($pow, count($units) - 1);
-        $bytes /= pow(1024, $pow);
+        $bytes /= 1024 ** $pow;
 
         return round($bytes, 2) . ' ' . $units[$pow];
     }
 
-    private function generateStatistics(string $traceFile): array
+    private function generateStatistics(): array
     {
         // TODO: Implement actual trace parsing
         return [
@@ -218,7 +254,7 @@ class UnifiedAnalyzer
         ];
     }
 
-    private function analyzePerformance(string $traceFile): array
+    private function analyzePerformance(): array
     {
         // TODO: Implement actual performance analysis
         return [
@@ -232,7 +268,7 @@ class UnifiedAnalyzer
         ];
     }
 
-    private function generateInsights(string $traceFile): array
+    private function generateInsights(): array
     {
         return [
             '🚨 potential_issues' => [
@@ -246,7 +282,7 @@ class UnifiedAnalyzer
         ];
     }
 
-    private function searchFunction(string $traceFile, string $search): array
+    private function searchFunction(string $search): array
     {
         // TODO: Implement function search
         return [
@@ -260,42 +296,42 @@ class UnifiedAnalyzer
     }
 
     // Additional helper methods for other modes...
-    private function comparePerformance(string $file1, string $file2): array
+    private function comparePerformance(): array
     {
         return [];
     }
 
-    private function compareExecution(string $file1, string $file2): array
+    private function compareExecution(): array
     {
         return [];
     }
 
-    private function generateComparisonInsights(string $file1, string $file2): array
+    private function generateComparisonInsights(): array
     {
         return [];
     }
 
-    private function getTopIssues(string $traceFile, int $limit): array
+    private function getTopIssues(): array
     {
         return [];
     }
 
-    private function generateRecommendations(string $traceFile): array
+    private function generateRecommendations(): array
     {
         return [];
     }
 
-    private function getCriticalWarnings(string $traceFile): array
+    private function getCriticalWarnings(): array
     {
         return [];
     }
 
-    private function getTopBottlenecks(string $traceFile, int $limit): array
+    private function getTopBottlenecks(): array
     {
         return [];
     }
 
-    private function generateOptimizationSuggestions(string $traceFile, int $limit): array
+    private function generateOptimizationSuggestions(): array
     {
         return [];
     }

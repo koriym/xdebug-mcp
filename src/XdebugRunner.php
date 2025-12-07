@@ -156,13 +156,11 @@ class XdebugRunner
     public function getLatestTraceFile(): string|null
     {
         $traceFiles = glob($this->outputDir . '/trace.*.xt');
-        if (empty($traceFiles)) {
+        if ($traceFiles === [] || $traceFiles === false) {
             return null;
         }
 
-        usort($traceFiles, static function ($a, $b) {
-            return filemtime($b) - filemtime($a);
-        });
+        usort($traceFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
 
         return $traceFiles[0];
     }
@@ -173,13 +171,11 @@ class XdebugRunner
     public function getLatestProfileFile(): string|null
     {
         $profileFiles = glob($this->outputDir . '/cachegrind.out.*');
-        if (empty($profileFiles)) {
+        if ($profileFiles === [] || $profileFiles === false) {
             return null;
         }
 
-        usort($profileFiles, static function ($a, $b) {
-            return filemtime($b) - filemtime($a);
-        });
+        usort($profileFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
 
         return $profileFiles[0];
     }
@@ -218,7 +214,7 @@ class XdebugRunner
 
         $this->commandParts = array_slice($argv, (int) $separatorIndex + 1);
 
-        if (empty($this->commandParts)) {
+        if ($this->commandParts === []) {
             throw new RuntimeException('Command is required after --');
         }
     }
@@ -256,7 +252,7 @@ class XdebugRunner
 
         $xdebugArgs = $this->generateXdebugArguments();
 
-        return 'php ' . implode(' ', $xdebugArgs) . ' ' . implode(' ', array_map('escapeshellarg', $workingParts));
+        return 'php ' . implode(' ', $xdebugArgs) . ' ' . implode(' ', array_map(escapeshellarg(...), $workingParts));
     }
 
     /**

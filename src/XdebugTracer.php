@@ -127,7 +127,7 @@ class XdebugTracer
 
         // Combine all arguments
         $allArgs = array_merge($xdebugOptions, [$targetFile], $phpArgs);
-        $cmd = 'php ' . implode(' ', array_map('escapeshellarg', $allArgs));
+        $cmd = 'php ' . implode(' ', array_map(escapeshellarg(...), $allArgs));
 
         // Execute with passthru to show output
         $exitCode = 0;
@@ -144,11 +144,11 @@ class XdebugTracer
         // Convert Xdebug format specifiers to glob wildcards
         // %c=CRC32, %p=PID, %r=Random, %s=Script, %t=Timestamp, %u=Microseconds, etc.
         // @see https://xdebug.org/docs/trace#trace_output_name
-        $filePattern = preg_replace('/%(c|p|r|s|t|u|H|R|U|S)/', '*', $escapedTraceOutputName);
+        $filePattern = preg_replace('/%(c|p|r|s|t|u|H|R|U|S)/', '*', (string) $escapedTraceOutputName);
 
         // Find trace files using dynamic pattern
         $traceFiles = glob("{$xdebugOutputDir}/{$filePattern}.xt");
-        if (empty($traceFiles)) {
+        if ($traceFiles === [] || $traceFiles === false) {
             throw new RuntimeException(sprintf(
                 'Trace file not found. Looked in "%s" with pattern based on trace_output_name "%s".',
                 $xdebugOutputDir,
@@ -157,9 +157,7 @@ class XdebugTracer
         }
 
         // Get the most recent trace file
-        usort($traceFiles, static function ($a, $b) {
-            return filemtime($b) - filemtime($a);
-        });
+        usort($traceFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
 
         return $traceFiles[0];
     }
@@ -318,9 +316,9 @@ class XdebugTracer
 
         // Handle both compressed and uncompressed trace files
         if (str_ends_with($traceFile, '.gz')) {
-            $content = array_filter(explode("\n", gzdecode(file_get_contents($traceFile))), 'trim');
+            $content = array_filter(explode("\n", gzdecode(file_get_contents($traceFile))), trim(...));
         } else {
-            $content = array_filter(explode("\n", file_get_contents($traceFile)), 'trim');
+            $content = array_filter(explode("\n", file_get_contents($traceFile)), trim(...));
         }
 
         return [
@@ -346,9 +344,9 @@ class XdebugTracer
         $dbQueryCount = 0;
         foreach ($stats['unique_functions'] as $function => $unused) {
             if (
-                str_contains(strtolower($function), 'query') ||
-                str_contains(strtolower($function), 'execute') ||
-                str_contains(strtolower($function), 'prepare')
+                str_contains(strtolower((string) $function), 'query') ||
+                str_contains(strtolower((string) $function), 'execute') ||
+                str_contains(strtolower((string) $function), 'prepare')
             ) {
                 $dbQueryCount++;
             }

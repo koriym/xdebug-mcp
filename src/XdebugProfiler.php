@@ -87,7 +87,7 @@ class XdebugProfiler
 
         // Combine all arguments
         $allArgs = array_merge($xdebugOptions, [$targetFile], $phpArgs);
-        $cmd = 'php ' . implode(' ', array_map('escapeshellarg', $allArgs));
+        $cmd = 'php ' . implode(' ', array_map(escapeshellarg(...), $allArgs));
 
         // Execute with passthru to show output
         $exitCode = 0;
@@ -99,14 +99,12 @@ class XdebugProfiler
 
         // Find the created profile file (Xdebug generates its own filename)
         $profileFiles = glob("{$xdebugOutputDir}/cachegrind.out.*");
-        if (empty($profileFiles)) {
+        if ($profileFiles === [] || $profileFiles === false) {
             throw new RuntimeException('Profile file not created. Check Xdebug installation.');
         }
 
         // Get the most recent profile file
-        usort($profileFiles, static function ($a, $b) {
-            return filemtime($b) - filemtime($a);
-        });
+        usort($profileFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
 
         return $profileFiles[0];
     }
@@ -138,9 +136,9 @@ class XdebugProfiler
         // Extract header information
         $lines = explode("\n", $content);
         foreach ($lines as $line) {
-            if (strpos($line, 'creator: ') === 0) {
+            if (str_starts_with($line, 'creator: ')) {
                 $stats['creator'] = substr($line, 9);
-            } elseif (strpos($line, 'cmd: ') === 0) {
+            } elseif (str_starts_with($line, 'cmd: ')) {
                 $stats['command'] = substr($line, 5);
                 // Extract target file from command
                 $parts = explode(' ', $stats['command']);
@@ -202,7 +200,6 @@ class XdebugProfiler
 
         $functions = [];
         $currentFunction = null;
-        $summary = [];
 
         foreach ($lines as $line) {
             $line = trim($line);
@@ -235,7 +232,7 @@ class XdebugProfiler
             } elseif (preg_match('/^\d+/', $line) && $currentFunction) {
                 // Cost line
                 $costs = explode(' ', $line);
-                if (count($costs) > 0 && is_numeric($costs[0])) {
+                if (is_numeric($costs[0])) {
                     $cost = (int) $costs[0];
                     if (isset($functions[$currentFunction])) {
                         $functions[$currentFunction]['cost'] += $cost;
@@ -245,7 +242,7 @@ class XdebugProfiler
         }
 
         // Find bottleneck functions (top 5 by cost)
-        uasort($functions, static fn ($a, $b) => $b['cost'] <=> $a['cost']);
+        uasort($functions, static fn ($a, $b): int => $b['cost'] <=> $a['cost']);
         $topFunctions = array_slice($functions, 0, 5, true);
         $totalCost = array_sum(array_column($functions, 'cost'));
 

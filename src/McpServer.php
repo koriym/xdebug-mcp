@@ -42,7 +42,7 @@ final class McpServer
 {
     protected array $tools = [];
     private bool $debugMode = false;
-    private string $binDir;
+    private readonly string $binDir;
 
     public function __construct()
     {
@@ -267,11 +267,11 @@ final class McpServer
     private function isCompleteJsonRpc(string $input): bool
     {
         $trimmed = trim($input);
-        if (empty($trimmed)) {
+        if ($trimmed === '') {
             return false;
         }
 
-        $decoded = json_decode($trimmed);
+        json_decode($trimmed);
 
         return json_last_error() === JSON_ERROR_NONE;
     }
@@ -283,39 +283,24 @@ final class McpServer
         $id = $request['id'] ?? null;
 
         try {
-            switch ($method) {
-                case 'initialize':
-                    return $this->handleInitialize($id, $params);
-
-                case 'tools/list':
-                    return $this->handleToolsList($id);
-
-                case 'tools/call':
-                    return $this->handleToolCall($id, $params);
-
-                case 'resources/list':
-                    return $this->handleResourcesList($id);
-
-                case 'prompts/list':
-                    return $this->handlePromptsList($id);
-
-                case 'prompts/get':
-                    return $this->handlePromptsGet($id, $params);
-
-                case 'notifications/initialized':
-                    // Handle initialized notification (no response needed)
-                    return null;
-
-                default:
-                    return [
-                        'jsonrpc' => '2.0',
-                        'id' => $id,
-                        'error' => [
-                            'code' => -32601,
-                            'message' => "Method not found: {$method}",
-                        ],
-                    ];
-            }
+            return match ($method) {
+                'initialize' => $this->handleInitialize($id, $params),
+                'tools/list' => $this->handleToolsList($id),
+                'tools/call' => $this->handleToolCall($id, $params),
+                'resources/list' => $this->handleResourcesList($id),
+                'prompts/list' => $this->handlePromptsList($id),
+                'prompts/get' => $this->handlePromptsGet($id, $params),
+                // Handle initialized notification (no response needed)
+                'notifications/initialized' => null,
+                default => [
+                    'jsonrpc' => '2.0',
+                    'id' => $id,
+                    'error' => [
+                        'code' => -32601,
+                        'message' => "Method not found: {$method}",
+                    ],
+                ],
+            };
         } catch (Throwable $e) {
             return [
                 'jsonrpc' => '2.0',
@@ -544,32 +529,21 @@ final class McpServer
         // Convert positional arguments to named arguments for each prompt type
         $args = $this->normalizePositionalArgs($args, $promptName);
 
-        switch ($promptName) {
-            case 'xtrace':
-                return $this->executeXTrace($id, $args);
-
-            case 'xstep':
-                return $this->executeXDebug($id, $args);
-
-            case 'xprofile':
-                return $this->executeXProfile($id, $args);
-
-            case 'xcoverage':
-                return $this->executeXCoverage($id, $args);
-
-            case 'xback':
-                return $this->executeXBacktrace($id, $args);
-
-            default:
-                return [
-                    'jsonrpc' => '2.0',
-                    'id' => $id,
-                    'error' => [
-                        'code' => -32601,
-                        'message' => "Unknown prompt: {$promptName}",
-                    ],
-                ];
-        }
+        return match ($promptName) {
+            'xtrace' => $this->executeXTrace($id, $args),
+            'xstep' => $this->executeXDebug($id, $args),
+            'xprofile' => $this->executeXProfile($id, $args),
+            'xcoverage' => $this->executeXCoverage($id, $args),
+            'xback' => $this->executeXBacktrace($id, $args),
+            default => [
+                'jsonrpc' => '2.0',
+                'id' => $id,
+                'error' => [
+                    'code' => -32601,
+                    'message' => "Unknown prompt: {$promptName}",
+                ],
+            ],
+        };
     }
 
     /**
@@ -584,6 +558,8 @@ final class McpServer
 
         switch ($promptName) {
             case 'xtrace':
+
+            case 'xprofile':
                 if (isset($args[0])) {
                     $args['script'] = $args[0];
                 }
@@ -593,7 +569,6 @@ final class McpServer
                 }
 
                 break;
-
             case 'xstep':
                 if (isset($args[0])) {
                     $args['script'] = $args[0];
@@ -609,17 +584,6 @@ final class McpServer
 
                 if (isset($args[3])) {
                     $args['context'] = $args[3];
-                }
-
-                break;
-
-            case 'xprofile':
-                if (isset($args[0])) {
-                    $args['script'] = $args[0];
-                }
-
-                if (isset($args[1])) {
-                    $args['context'] = $args[1];
                 }
 
                 break;
@@ -676,7 +640,7 @@ final class McpServer
     private function processScriptArgument(string $script): string
     {
         // Handle empty script first
-        if (empty(trim($script))) {
+        if (trim($script) === '') {
             return $script;
         }
 
@@ -696,7 +660,7 @@ final class McpServer
 
         // Auto-prepend 'php' if script doesn't start with a PHP binary
         if (! preg_match('/^(\S*php)(\s+|$)/', $script)) {
-            $script = 'php ' . $script;
+            return 'php ' . $script;
         }
 
         return $script;
@@ -707,7 +671,7 @@ final class McpServer
      */
     private function validatePhpBinaryScript(string $script): void
     {
-        if (empty($script)) {
+        if ($script === '') {
             throw new InvalidArgumentException('Script argument is required');
         }
 
@@ -882,22 +846,22 @@ final class McpServer
             $cmd = $this->binDir . '/xstep --exit-on-break';
 
             // Add breakpoints if specified
-            if (! empty($breakpoints)) {
+            if ($breakpoints !== '') {
                 $cmd .= ' --break=' . escapeshellarg($breakpoints);
             }
 
-            if (! empty($context)) {
-                $cmd .= ' --context=' . escapeshellarg($context);
+            if ($context !== '') {
+                $cmd .= ' --context=' . escapeshellarg((string) $context);
             }
 
             // Note: --steps parameter causes issues, temporarily disabled
-            // if (! empty($steps)) {
+            // if ($steps !== '') {
             //     $cmd .= ' --steps=' . escapeshellarg($steps);
             // }
 
             // Add include_vendor option if specified
-            if (! empty($includeVendor)) {
-                $cmd .= ' --include-vendor=' . escapeshellarg($includeVendor);
+            if ($includeVendor !== '') {
+                $cmd .= ' --include-vendor=' . escapeshellarg((string) $includeVendor);
             }
 
             // Build command - user must specify PHP binary explicitly
@@ -914,10 +878,8 @@ final class McpServer
                 throw new InvalidArgumentException('Invalid breakpoint format. Use: file.php:line or file.php:line:condition');
             }
 
-            if ($returnCode === 255 && str_contains($outputText, 'RuntimeException')) {
-                if (preg_match('/RuntimeException: (.+?) in/', $outputText, $matches)) {
-                    throw new InvalidArgumentException('Debug error: ' . $matches[1]);
-                }
+            if ($returnCode === 255 && str_contains($outputText, 'RuntimeException') && preg_match('/RuntimeException: (.+?) in/', $outputText, $matches)) {
+                throw new InvalidArgumentException('Debug error: ' . $matches[1]);
             }
 
             $result = [
@@ -1107,12 +1069,12 @@ final class McpServer
             $cmd = $this->binDir . '/xback';
 
             // Add breakpoint if specified
-            if (! empty($breakpoint)) {
-                $cmd .= ' --break=' . escapeshellarg($breakpoint);
+            if ($breakpoint !== '') {
+                $cmd .= ' --break=' . escapeshellarg((string) $breakpoint);
             }
 
-            if (! empty($context)) {
-                $cmd .= ' --context=' . escapeshellarg($context);
+            if ($context !== '') {
+                $cmd .= ' --context=' . escapeshellarg((string) $context);
             }
 
             if ($depth !== null && $depth !== '' && (int) $depth > 0 && (int) $depth <= 1000) {

@@ -20,7 +20,7 @@ class SocketException extends RuntimeException
 {
     private const array CONNECTION_LOST_ERROR_CODES = [SOCKET_EPIPE, SOCKET_ECONNRESET];
 
-    public function __construct(string $message = '', int $code = 0, private int|null $socketErrorCode = null, Throwable|null $previous = null)
+    public function __construct(string $message = '', int $code = 0, private readonly int|null $socketErrorCode = null, Throwable|null $previous = null)
     {
         parent::__construct($message, $code, $previous);
     }
