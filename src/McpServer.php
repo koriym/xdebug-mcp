@@ -566,9 +566,8 @@ final class McpServer
             case 'xtrace':
 
             case 'xprofile':
-                if (isset($args[0])) {
-                    $args['script'] = $args[0];
-                }
+                // $args[0] is guaranteed to exist (checked above)
+                $args['script'] = $args[0];
 
                 if (isset($args[1])) {
                     $args['context'] = $args[1];
@@ -576,9 +575,8 @@ final class McpServer
 
                 break;
             case 'xstep':
-                if (isset($args[0])) {
-                    $args['script'] = $args[0];
-                }
+                // $args[0] is guaranteed to exist (checked above)
+                $args['script'] = $args[0];
 
                 if (isset($args[1])) {
                     $args['breakpoints'] = $args[1];
@@ -595,9 +593,8 @@ final class McpServer
                 break;
 
             case 'xcoverage':
-                if (isset($args[0])) {
-                    $args['script'] = $args[0];
-                }
+                // $args[0] is guaranteed to exist (checked above)
+                $args['script'] = $args[0];
 
                 if (isset($args[1])) {
                     $args['context'] = $args[1];
@@ -610,9 +607,8 @@ final class McpServer
                 break;
 
             case 'xback':
-                if (isset($args[0])) {
-                    $args['script'] = $args[0];
-                }
+                // $args[0] is guaranteed to exist (checked above)
+                $args['script'] = $args[0];
 
                 if (isset($args[1])) {
                     $args['breakpoint'] = $args[1];
@@ -1083,7 +1079,7 @@ final class McpServer
                 $cmd .= ' --context=' . escapeshellarg((string) $context);
             }
 
-            if ($depth !== null && $depth !== '' && (int) $depth > 0 && (int) $depth <= 1000) {
+            if ($depth !== '' && (int) $depth > 0 && (int) $depth <= 1000) {
                 $cmd .= ' --depth=' . escapeshellarg((string) (int) $depth);
             }
 

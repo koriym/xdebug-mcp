@@ -374,34 +374,13 @@ final class DebugServer
                 // Wait for process completion with timeout
                 $executionTimeout = $this->options['executionTimeout'] ?? self::DEFAULT_EXECUTION_TIMEOUT;
                 $cancellation = new TimeoutCancellation($executionTimeout);
-                $result = $this->process->join($cancellation);
-            } else {
-                // For interactive debugging, don't wait for process completion
-                $result = 0; // Mock exit code
-            }
+                $exitCode = $this->process->join($cancellation);
 
-            // Handle case where join() returns int instead of ProcessResult
-            if (is_int($result)) {
-                $exitCode = $result;
-                $stdout = '';
-                $stderr = '';
-            } else {
-                $stdout = $result->getStdout();
-                $stderr = $result->getStderr();
-                $exitCode = $result->getExitCode();
+                if ($exitCode !== 0) {
+                    $this->log("⚠️ Script exited with code: {$exitCode}");
+                }
             }
-
-            if ($stdout !== '') {
-                $this->log("\n[SCRIPT OUTPUT]\n{$stdout}");
-            }
-
-            if ($stderr !== '') {
-                fwrite(STDERR, "\n[SCRIPT STDERR]\n{$stderr}\n");
-            }
-
-            if ($exitCode !== 0) {
-                $this->log("⚠️ Script exited with code: {$exitCode}");
-            }
+            // For interactive debugging, don't wait for process completion
         } catch (Throwable $e) {
             $this->log('❌ Script execution error: ' . $e->getMessage());
 
@@ -506,7 +485,7 @@ final class DebugServer
             $this->log("--- Step {$stepCount} ---");
 
             $stackInfo = $this->getStackTrace();
-            if ($stackInfo === null) {
+            if ($stackInfo === []) {
                 $this->log('⚠️ No stack info available, execution may have completed');
                 break;
             }
@@ -1793,7 +1772,7 @@ final class DebugServer
         try {
             // Get and display stack info
             $stackInfo = $this->getStack();
-            if ($stackInfo !== '' && $stackInfo !== null) {
+            if ($stackInfo !== '') {
                 $this->displayStackInfo($stackInfo);
             }
         } catch (Throwable $e) {
@@ -1803,7 +1782,7 @@ final class DebugServer
         try {
             // Get and display variables
             $variables = $this->getVariables();
-            if ($variables !== '' && $variables !== null) {
+            if ($variables !== '') {
                 $this->displayVariables($variables);
             }
         } catch (Throwable $e) {
@@ -2287,7 +2266,7 @@ final class DebugServer
 
             // Include last 20 lines of trace for context
             $traceLines = file($context['trace_file']);
-            if ($traceLines && count($traceLines) > 0) {
+            if ($traceLines !== false && $traceLines !== []) {
                 $lastLines = array_slice($traceLines, -20);
                 $prompt .= "Recent trace data:\n```\n" . implode('', $lastLines) . "```\n\n";
             }

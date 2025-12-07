@@ -75,11 +75,6 @@ class UnifiedAnalyzer
 
     private function normalizeOptions(array $options): array
     {
-        // Coerce to array and apply defaults
-        if (! is_array($options)) {
-            $options = [];
-        }
-
         return [
             'compare' => $options['compare'] ?? false,
             'summary' => $options['summary'] ?? false,
