@@ -1,6 +1,0 @@
-{
-    "preset": "per",
-    "notPath": [
-        "tests/fake/buggy-script.php"
-    ]
-}
