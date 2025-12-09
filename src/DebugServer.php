@@ -29,8 +29,11 @@ use function Amp\async;
 use function Amp\delay;
 use function Amp\Socket\listen;
 use function array_filter;
+use function array_keys;
 use function array_map;
 use function array_merge;
+use function array_pop;
+use function array_push;
 use function array_reverse;
 use function array_slice;
 use function array_splice;
@@ -55,8 +58,11 @@ use function fwrite;
 use function getenv;
 use function glob;
 use function implode;
+use function in_array;
 use function is_array;
+use function is_float;
 use function is_int;
+use function is_scalar;
 use function is_string;
 use function json_encode;
 use function libxml_clear_errors;
@@ -67,6 +73,8 @@ use function microtime;
 use function parse_str;
 use function preg_match;
 use function preg_replace;
+use function property_exists;
+use function rawurlencode;
 use function register_shutdown_function;
 use function round;
 use function shell_exec;
@@ -86,6 +94,7 @@ use function usort;
 use const DIRECTORY_SEPARATOR;
 use const FILE_IGNORE_NEW_LINES;
 use const JSON_PRETTY_PRINT;
+use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
 use const STDERR;
@@ -104,32 +113,28 @@ final class DebugServer
     private const MAX_STEPS = 200;  // Default maximum steps for step recording
 
     /** @var DeferredFuture<bool>|null */
-    private ?DeferredFuture $listenerReady = null;
+    private DeferredFuture|null $listenerReady = null;
 
     /** @var DeferredFuture<bool>|null */
-    private ?DeferredFuture $xdebugConnected = null;
-
-    private ?Socket $xdebugSocket = null;
-    private ?ServerSocket $server = null;
-    private ?Process $process = null;
+    private DeferredFuture|null $xdebugConnected = null;
+    private Socket|null $xdebugSocket = null;
+    private ServerSocket|null $server = null;
+    private Process|null $process = null;
     private int $transactionId = 1;
-    private ?string $traceFile = null;
-    private ?SocketHttpServer $httpServer = null;
+    private string|null $traceFile = null;
+    private SocketHttpServer|null $httpServer = null;
     private bool $httpMode = false;
     private bool $shouldExit = false;
 
     /** @var list<array{step: int, location: array{file: string, line: int}, variables: array<string, string>, recording_type: string}> */
     private array $breaks = [];
-
     private bool $isDockerCommand = false;
 
-    /**
-     * @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float} $options
-     */
+    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float} $options */
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
-        private readonly ?int $initialBreakpointLine = null,
+        private readonly int|null $initialBreakpointLine = null,
         private array $options = [],
         private readonly bool $jsonMode = false,
     ) {
@@ -162,9 +167,9 @@ final class DebugServer
 
         // 3 parallel tasks (Opus pattern)
         $tasks = [
-            'listener' => async(fn() => $this->startXdebugListener()),
-            'executor' => async(fn() => $this->executeTargetScript()),
-            'handler' => async(fn() => $this->handleDebugSession()),
+            'listener' => async(fn () => $this->startXdebugListener()),
+            'executor' => async(fn () => $this->executeTargetScript()),
+            'handler' => async(fn () => $this->handleDebugSession()),
         ];
 
         try {
@@ -199,7 +204,7 @@ final class DebugServer
             $cancellation = new TimeoutCancellation($connectionTimeout);
             $socket = $this->server?->accept($cancellation);
 
-            if (!$socket instanceof \Amp\Socket\Socket) {
+            if (! $socket instanceof Socket) {
                 throw new SocketException(sprintf(
                     'No Xdebug connection within %.1f seconds',
                     $connectionTimeout,
@@ -657,7 +662,7 @@ final class DebugServer
      */
     private function sendCommand(string $command, array $params = []): string
     {
-        if (! $this->isConnected() || !$this->xdebugSocket instanceof \Amp\Socket\Socket) {
+        if (! $this->isConnected() || ! $this->xdebugSocket instanceof Socket) {
             throw new RuntimeException('No active Xdebug connection');
         }
 
@@ -744,9 +749,11 @@ final class DebugServer
             if ($part === '') {
                 continue;
             }
+
             if ($part === '.') {
                 continue;
             }
+
             if ($part === '..') {
                 array_pop($parts);
             } else {
@@ -787,7 +794,7 @@ final class DebugServer
     /**
      * Set breakpoint
      */
-    private function setBreakpoint(string $filename, int $line, ?string $condition = null): string
+    private function setBreakpoint(string $filename, int $line, string|null $condition = null): string
     {
         $fileUri = $this->toFileUri($filename);
         $params = [
@@ -886,6 +893,7 @@ final class DebugServer
         if ($response !== '' && $response !== '0') {
             $this->log('✅ Step into completed');
         }
+
         return $response;
     }
 
@@ -951,13 +959,13 @@ final class DebugServer
     /**
      * Finalize trace when breakpoint is hit
      */
-    private function finalizeTraceOnBreak(): ?string
+    private function finalizeTraceOnBreak(): string|null
     {
         // いま開いているトレースを閉じて、ファイル名を返す
         $code = base64_encode('return function_exists("xdebug_stop_trace") ? xdebug_stop_trace() : null;');
         $resp = $this->sendCommand('eval', ['--' => $code]);
         $xml  = $this->parseXmlResponse($resp);
-        if (! $xml || (!property_exists($xml, 'property') || $xml->property === null)) {
+        if (! $xml || (! property_exists($xml, 'property') || $xml->property === null)) {
             return null;
         }
 
@@ -976,7 +984,7 @@ final class DebugServer
     /**
      * Enable HTTP API mode instead of interactive console
      */
-    public function enableHttpMode(?int $httpPort = null): void
+    public function enableHttpMode(int|null $httpPort = null): void
     {
         $this->httpMode = true;
         $port = $httpPort ?: $this->debugPort + 100; // Default: debug port + 100
@@ -1104,7 +1112,9 @@ final class DebugServer
     private function createHttpRequestHandler(): RequestHandler
     {
         return new class ($this) implements RequestHandler {
-            public function __construct(private readonly DebugServer $debugServer) {}
+            public function __construct(private readonly DebugServer $debugServer)
+            {
+            }
 
             public function handleRequest(Request $request): Response
             {
@@ -1296,7 +1306,7 @@ final class DebugServer
     /**
      * Read user input from stdin (blocking)
      */
-    private function readUserInputWithTimeout(): ?string
+    private function readUserInputWithTimeout(): string|null
     {
         // Use blocking read from STDIN - let the user interact normally
         $handle = fopen('php://stdin', 'r');
@@ -1333,7 +1343,7 @@ final class DebugServer
         if ($allTraceFiles !== []) {
             // Remove duplicates and sort by modification time, get the most recent
             $allTraceFiles = array_unique($allTraceFiles);
-            usort($allTraceFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
+            usort($allTraceFiles, static fn ($a, $b): int => filemtime($b) - filemtime($a));
             $latestTrace = $allTraceFiles[0];
             // For exit-on-break mode: simple message with filename and size for AI analysis
             if ($this->options['traceOnly'] ?? false) {
@@ -1678,7 +1688,7 @@ final class DebugServer
 
             // Parse and format the result
             $xml = $this->parseXmlResponse($result);
-            if ($xml instanceof \SimpleXMLElement) {
+            if ($xml instanceof SimpleXMLElement) {
                 $this->displayPropertyResult($xml, $variable);
             } else {
                 $this->log("📋 Raw result: {$result}");
@@ -1823,7 +1833,7 @@ final class DebugServer
         }
 
         $xml = $this->parseXmlResponse($xmlResponse);
-        if (!$xml instanceof \SimpleXMLElement) {
+        if (! $xml instanceof SimpleXMLElement) {
             $this->log('⚠️ Failed to parse stack XML response');
 
             return;
@@ -1879,7 +1889,7 @@ final class DebugServer
         }
 
         $xml = $this->parseXmlResponse($xmlResponse);
-        if (!$xml instanceof \SimpleXMLElement) {
+        if (! $xml instanceof SimpleXMLElement) {
             $this->log('⚠️ Failed to parse variables XML response');
 
             return;
@@ -1932,7 +1942,7 @@ final class DebugServer
     /**
      * Parse XML response safely without error suppression
      */
-    private function parseXmlResponse(string $xmlString): ?SimpleXMLElement
+    private function parseXmlResponse(string $xmlString): SimpleXMLElement|null
     {
         if ($xmlString === '') {
             return null;
@@ -1993,7 +2003,7 @@ final class DebugServer
             // FIXED: Correct argument order - Cancellation first, then length
             $lengthStr = '';
             while (true) {
-                $char = $timeout instanceof \Amp\TimeoutCancellation ? $socket->read($timeout, 1) : $socket->read(null, 1);
+                $char = $timeout instanceof TimeoutCancellation ? $socket->read($timeout, 1) : $socket->read(null, 1);
                 if ($char === null || $char === '') {
                     throw new RuntimeException('Connection closed while reading length');
                 }
@@ -2015,7 +2025,7 @@ final class DebugServer
             $response = '';
             $remaining = $length;
             while ($remaining > 0) {
-                $chunk = $timeout instanceof \Amp\TimeoutCancellation ? $socket->read($timeout, $remaining) : $socket->read(null, $remaining);
+                $chunk = $timeout instanceof TimeoutCancellation ? $socket->read($timeout, $remaining) : $socket->read(null, $remaining);
                 if ($chunk === null || $chunk === '') {
                     throw new RuntimeException('Connection closed while reading response data');
                 }
@@ -2026,7 +2036,7 @@ final class DebugServer
 
             // Read the trailing NULL byte
             // FIXED: Correct argument order
-            $trailingNull = $timeout instanceof \Amp\TimeoutCancellation ? $socket->read($timeout, 1) : $socket->read(null, 1);
+            $trailingNull = $timeout instanceof TimeoutCancellation ? $socket->read($timeout, 1) : $socket->read(null, 1);
             if ($trailingNull !== "\0") {
                 $this->log('Warning: Expected trailing NULL byte, got: ' . bin2hex($trailingNull ?? ''));
             }
@@ -2117,7 +2127,7 @@ final class DebugServer
     private function cleanup(): void
     {
         // Close server socket if still open
-        if ($this->server instanceof \Amp\Socket\ServerSocket) {
+        if ($this->server instanceof ServerSocket) {
             try {
                 $this->server->close();
             } catch (Throwable) {
@@ -2178,7 +2188,7 @@ final class DebugServer
 
             if ($allTraceFiles !== []) {
                 // Sort by modification time (newest first)
-                usort($allTraceFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
+                usort($allTraceFiles, static fn ($a, $b): int => filemtime($b) - filemtime($a));
                 $latestTraceFile = $allTraceFiles[0];
 
                 // Use XdebugTracer for comprehensive trace statistics
@@ -2228,7 +2238,7 @@ final class DebugServer
                 $this->log('📊 Claude Analysis Result:');
                 $lines = explode("\n", trim($output));
                 foreach ($lines as $line) {
-                    if (!in_array(trim($line), ['', '0'], true)) {
+                    if (! in_array(trim($line), ['', '0'], true)) {
                         $this->log('   ' . $line);
                     }
                 }
@@ -2280,7 +2290,7 @@ final class DebugServer
     /**
      * Build Claude analysis prompt with context
      *
-     * @param array<string, string|int|null|array<array-key, string>> $context
+     * @param array<string, string|int|array<array-key, string>|null> $context
      */
     private function buildClaudeAnalysisPrompt(array $context, string $userArgs): string
     {
@@ -2403,11 +2413,11 @@ final class DebugServer
     /**
      * Extract child details from XML property node
      */
-    private function extractChildDetails(SimpleXMLElement $prop, string $type): ?string
+    private function extractChildDetails(SimpleXMLElement $prop, string $type): string|null
     {
         try {
             // Check if property has child elements
-            if (!property_exists($prop, 'property') || $prop->property === null) {
+            if (! property_exists($prop, 'property') || $prop->property === null) {
                 return null;
             }
 
@@ -2472,9 +2482,9 @@ final class DebugServer
     /**
      * Get json_encode output for a variable using Xdebug eval
      */
-    private function getJsonEncodeOutput(string $varName): ?string
+    private function getJsonEncodeOutput(string $varName): string|null
     {
-        if (!$this->xdebugSocket instanceof \Amp\Socket\Socket) {
+        if (! $this->xdebugSocket instanceof Socket) {
             return null;
         }
 
@@ -2492,7 +2502,7 @@ final class DebugServer
             }
 
             $xml = simplexml_load_string($response);
-            if (! $xml || (!property_exists($xml, 'property') || $xml->property === null)) {
+            if (! $xml || (! property_exists($xml, 'property') || $xml->property === null)) {
                 return null;
             }
 
@@ -2587,7 +2597,7 @@ final class DebugServer
 
         // Remove duplicates and sort by modification time, get the most recent
         $allTraceFiles = array_unique($allTraceFiles);
-        usort($allTraceFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
+        usort($allTraceFiles, static fn ($a, $b): int => filemtime($b) - filemtime($a));
 
         $latestTrace = $allTraceFiles[0];
 
@@ -2686,7 +2696,7 @@ final class DebugServer
      *
      * @return array{step: int, location: array{file: string, line: int}, variables: array<string, string>}|null
      */
-    private function captureCurrentDebugState(int $breakNumber): ?array
+    private function captureCurrentDebugState(int $breakNumber): array|null
     {
         try {
             $stackXml = $this->getStack();

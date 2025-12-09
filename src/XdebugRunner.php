@@ -13,6 +13,7 @@ use function array_search;
 use function array_shift;
 use function array_slice;
 use function array_splice;
+use function escapeshellarg;
 use function file_exists;
 use function filemtime;
 use function fwrite;
@@ -46,14 +47,14 @@ class XdebugRunner
 
     /** @var string[] */
     private array $xdebugOptions = [];
-    private ?string $context = null;
-    private ?string $includeVendor = null;
+    private string|null $context = null;
+    private string|null $includeVendor = null;
     private string $outputDir = '/tmp';
 
     /**
      * @param string[] $argv Command line arguments including '--' separator
      *
-     * @throws RuntimeException If '--' separator is missing or no command provided
+     * @throws RuntimeException If '--' separator is missing or no command provided.
      */
     public function __construct(array $argv)
     {
@@ -72,26 +73,26 @@ class XdebugRunner
         return $this->mode;
     }
 
-    public function setContext(?string $context): self
+    public function setContext(string|null $context): self
     {
         $this->context = $context;
 
         return $this;
     }
 
-    public function getContext(): ?string
+    public function getContext(): string|null
     {
         return $this->context;
     }
 
-    public function setIncludeVendor(?string $includeVendor): self
+    public function setIncludeVendor(string|null $includeVendor): self
     {
         $this->includeVendor = $includeVendor;
 
         return $this;
     }
 
-    public function getIncludeVendor(): ?string
+    public function getIncludeVendor(): string|null
     {
         return $this->includeVendor;
     }
@@ -153,14 +154,14 @@ class XdebugRunner
     /**
      * Get the most recently generated trace file
      */
-    public function getLatestTraceFile(): ?string
+    public function getLatestTraceFile(): string|null
     {
         $traceFiles = glob($this->outputDir . '/trace.*.xt');
         if ($traceFiles === [] || $traceFiles === false) {
             return null;
         }
 
-        usort($traceFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
+        usort($traceFiles, static fn ($a, $b): int => filemtime($b) - filemtime($a));
 
         return $traceFiles[0];
     }
@@ -168,14 +169,14 @@ class XdebugRunner
     /**
      * Get the most recently generated profile file
      */
-    public function getLatestProfileFile(): ?string
+    public function getLatestProfileFile(): string|null
     {
         $profileFiles = glob($this->outputDir . '/cachegrind.out.*');
         if ($profileFiles === [] || $profileFiles === false) {
             return null;
         }
 
-        usort($profileFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
+        usort($profileFiles, static fn ($a, $b): int => filemtime($b) - filemtime($a));
 
         return $profileFiles[0];
     }

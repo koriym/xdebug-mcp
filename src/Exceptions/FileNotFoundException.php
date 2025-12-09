@@ -9,4 +9,6 @@ use RuntimeException;
 /**
  * Exception thrown when a required file is not found
  */
-class FileNotFoundException extends RuntimeException {}
+class FileNotFoundException extends RuntimeException
+{
+}

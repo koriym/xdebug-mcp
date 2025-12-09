@@ -11,8 +11,6 @@ use JsonSerializable;
  */
 abstract class AnalysisResult implements JsonSerializable
 {
-    /**
-     * @return array<string, scalar|array<string, scalar|array<string, scalar|list<scalar>>>>
-     */
+    /** @return array<string, scalar|array<string, scalar|array<string, scalar|list<scalar>>>> */
     abstract public function jsonSerialize(): array;
 }

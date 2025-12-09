@@ -14,11 +14,10 @@ final class JsonRpcError implements JsonSerializable
     public function __construct(
         public readonly int $code,
         public readonly string $message,
-    ) {}
+    ) {
+    }
 
-    /**
-     * @return array{code: int, message: string}
-     */
+    /** @return array{code: int, message: string} */
     public function jsonSerialize(): array
     {
         return [

@@ -9,9 +9,7 @@ namespace Koriym\XdebugMcp\DTO;
  */
 final class ProfileAnalysis
 {
-    /**
-     * @param list<string> $bottleneckFunctions
-     */
+    /** @param list<string> $bottleneckFunctions */
     public function __construct(
         public readonly int $totalLines,
         public readonly int $functionsCount,
@@ -23,5 +21,6 @@ final class ProfileAnalysis
         public readonly int $fileIoOperations,
         public readonly int $databaseOperations,
         public readonly array $bottleneckFunctions,
-    ) {}
+    ) {
+    }
 }

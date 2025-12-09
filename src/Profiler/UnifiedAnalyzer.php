@@ -37,9 +37,7 @@ class UnifiedAnalyzer
     /** @var list<string> */
     private array $traceFiles;
 
-    /**
-     * @param list<string> $traceFiles
-     */
+    /** @param list<string> $traceFiles */
     public function __construct(array $traceFiles, private readonly AnalyzerOptions $options)
     {
         $this->traceFiles = $this->normalizeTraceFiles($traceFiles);
@@ -48,7 +46,7 @@ class UnifiedAnalyzer
     /**
      * Factory method for backwards compatibility with array options
      *
-     * @param list<string> $traceFiles
+     * @param list<string>                              $traceFiles
      * @param array<string, bool|int|float|string|null> $options
      */
     public static function create(array $traceFiles, array $options = []): self
@@ -105,9 +103,11 @@ class UnifiedAnalyzer
             if ($part === '') {
                 continue;
             }
+
             if ($part === '.') {
                 continue;
             }
+
             if ($part === '..') {
                 array_pop($parts);
             } else {

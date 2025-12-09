@@ -9,4 +9,6 @@ use RuntimeException;
 /**
  * Exception thrown when invalid arguments are provided
  */
-class InvalidArgumentException extends RuntimeException {}
+class InvalidArgumentException extends RuntimeException
+{
+}

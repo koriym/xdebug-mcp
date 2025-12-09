@@ -7,4 +7,6 @@ namespace Koriym\XdebugMcp\Exceptions;
 /**
  * Exception thrown when an invalid line number is specified for breakpoints or file operations
  */
-final class InvalidLineException extends InvalidArgumentException {}
+final class InvalidLineException extends InvalidArgumentException
+{
+}

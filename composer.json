@@ -62,7 +62,7 @@
             "psalm --clear-cache"
         ],
         "sa": [
-            "@psalm"
+            "phpstan"
         ],
         "test-json": "./bin/test-json",
         "install-mcp": "./bin/check-env --install-mcp",

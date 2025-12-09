@@ -14,8 +14,6 @@ use JsonSerializable;
  */
 interface JsonRpcResultInterface extends JsonSerializable
 {
-    /**
-     * @return array<string, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null|array<array-key, bool|float|int|string|null>>>>>
-     */
+    /** @return array<string, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|null>|null>|null>|null>|null> */
     public function jsonSerialize(): array;
 }
