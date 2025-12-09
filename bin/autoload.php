@@ -7,9 +7,9 @@
  *
  * IIFE(Immediately Invoked Function Expression) to avoid polluting global namespace
  */
-return (function (){
+return (function () {
     // Validate xdebug tool CLI format using closure for clean separation
-    $validate = function() {
+    $validate = function () {
         if (PHP_SAPI !== 'cli' || !isset($GLOBALS['argv']) || count($GLOBALS['argv']) === 0) {
             return; // Skip validation for non-CLI contexts
         }
@@ -43,7 +43,7 @@ return (function (){
                     break;
                 }
             }
-            
+
             if ($nonFlagArg !== null) {
                 fwrite(STDERR, "❌ Error: Missing '--'. Did you mean: {$scriptName} -- php {$nonFlagArg}?\n");
             } else {

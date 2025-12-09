@@ -22,15 +22,15 @@ class FakeXdebugSession
         $this->currentFile = __DIR__ . '/sample.php';
         $this->currentLine = 1;
         $this->status = 'break';
-        
+
         $this->callStack = [
             [
                 'level' => 0,
                 'type' => 'file',
                 'filename' => $this->currentFile,
                 'lineno' => $this->currentLine,
-                'where' => 'main'
-            ]
+                'where' => 'main',
+            ],
         ];
 
         $this->variables = [
@@ -38,21 +38,21 @@ class FakeXdebugSession
                 '$numbers' => [
                     'type' => 'array',
                     'size' => 5,
-                    'value' => [1, 2, 3, 4, 5]
+                    'value' => [1, 2, 3, 4, 5],
                 ],
                 '$sum' => [
-                    'type' => 'int', 
-                    'value' => 0
+                    'type' => 'int',
+                    'value' => 0,
                 ],
                 '$i' => [
                     'type' => 'int',
-                    'value' => 0
-                ]
+                    'value' => 0,
+                ],
             ],
             'global' => [
                 '$_GET' => ['type' => 'array', 'size' => 0, 'value' => []],
-                '$_POST' => ['type' => 'array', 'size' => 0, 'value' => []]
-            ]
+                '$_POST' => ['type' => 'array', 'size' => 0, 'value' => []],
+            ],
         ];
     }
 
@@ -71,18 +71,18 @@ class FakeXdebugSession
 
     public function setBreakpoint(string $filename, int $line, string $condition = ''): array
     {
-        $id = (string)$this->breakpointIdCounter++;
+        $id = (string) $this->breakpointIdCounter++;
         $this->breakpoints[$id] = [
             'filename' => $filename,
             'line' => $line,
             'condition' => $condition,
-            'enabled' => true
+            'enabled' => true,
         ];
 
         return [
             'command' => 'breakpoint_set',
             'transaction_id' => '1',
-            'id' => $id
+            'id' => $id,
         ];
     }
 
@@ -91,7 +91,7 @@ class FakeXdebugSession
         unset($this->breakpoints[$id]);
         return [
             'command' => 'breakpoint_remove',
-            'transaction_id' => '2'
+            'transaction_id' => '2',
         ];
     }
 
@@ -99,12 +99,12 @@ class FakeXdebugSession
     {
         $this->currentLine++;
         $this->updateExecutionState();
-        
+
         return [
             'command' => 'step_into',
             'transaction_id' => '3',
             'status' => $this->status,
-            'reason' => 'ok'
+            'reason' => 'ok',
         ];
     }
 
@@ -112,12 +112,12 @@ class FakeXdebugSession
     {
         $this->currentLine++;
         $this->updateExecutionState();
-        
+
         return [
-            'command' => 'step_over', 
+            'command' => 'step_over',
             'transaction_id' => '4',
             'status' => $this->status,
-            'reason' => 'ok'
+            'reason' => 'ok',
         ];
     }
 
@@ -130,12 +130,12 @@ class FakeXdebugSession
             $this->currentLine++;
         }
         $this->updateExecutionState();
-        
+
         return [
             'command' => 'step_out',
-            'transaction_id' => '5', 
+            'transaction_id' => '5',
             'status' => $this->status,
-            'reason' => 'ok'
+            'reason' => 'ok',
         ];
     }
 
@@ -148,19 +148,19 @@ class FakeXdebugSession
                 break;
             }
         }
-        
+
         if ($this->status !== 'break') {
             $this->currentLine += 5;
             $this->status = 'stopping';
         }
-        
+
         $this->updateExecutionState();
-        
+
         return [
             'command' => 'run',
             'transaction_id' => '6',
             'status' => $this->status,
-            'reason' => $this->status === 'break' ? 'breakpoint' : 'ok'
+            'reason' => $this->status === 'break' ? 'breakpoint' : 'ok',
         ];
     }
 
@@ -169,31 +169,31 @@ class FakeXdebugSession
         return [
             'command' => 'stack_get',
             'transaction_id' => '7',
-            'stack' => $this->callStack
+            'stack' => $this->callStack,
         ];
     }
 
     public function getVariables(int $context = 0): array
     {
-        $contextName = $context === 0 ? 'local' : 'global'; 
+        $contextName = $context === 0 ? 'local' : 'global';
         $vars = $this->variables[$contextName] ?? [];
-        
+
         $properties = [];
         foreach ($vars as $name => $data) {
             $properties[] = [
                 'name' => $name,
                 'fullname' => $name,
                 'type' => $data['type'],
-                'size' => $data['size'] ?? strlen((string)$data['value']),
-                'value' => $this->formatValue($data['value'])
+                'size' => $data['size'] ?? strlen((string) $data['value']),
+                'value' => $this->formatValue($data['value']),
             ];
         }
-        
+
         return [
             'command' => 'context_get',
             'transaction_id' => '8',
             'context' => $context,
-            'properties' => $properties
+            'properties' => $properties,
         ];
     }
 
@@ -201,10 +201,10 @@ class FakeXdebugSession
     {
         $result = '';
         $type = 'string';
-        
+
         switch ($expression) {
             case '$sum':
-                $result = (string)$this->variables['local']['$sum']['value'];
+                $result = (string) $this->variables['local']['$sum']['value'];
                 $type = 'int';
                 break;
             case '$numbers':
@@ -222,22 +222,22 @@ class FakeXdebugSession
             default:
                 $result = "Unknown expression: $expression";
         }
-        
+
         return [
             'command' => 'eval',
             'transaction_id' => '9',
             'success' => '1',
             'result' => [
                 'type' => $type,
-                'value' => $result
-            ]
+                'value' => $result,
+            ],
         ];
     }
 
     private function updateExecutionState(): void
     {
         $this->callStack[0]['lineno'] = $this->currentLine;
-        
+
         switch ($this->currentLine) {
             case 3:
                 $this->variables['local']['$sum']['value'] = 15;
@@ -248,7 +248,7 @@ class FakeXdebugSession
                     'type' => 'call',
                     'filename' => $this->currentFile,
                     'lineno' => $this->currentLine,
-                    'where' => 'fibonacci'
+                    'where' => 'fibonacci',
                 ];
                 $this->variables['local']['$n'] = ['type' => 'int', 'value' => 6];
                 break;
@@ -259,8 +259,8 @@ class FakeXdebugSession
                     'value' => [
                         'name' => 'John',
                         'age' => 30,
-                        'city' => 'Tokyo'
-                    ]
+                        'city' => 'Tokyo',
+                    ],
                 ];
                 break;
         }
@@ -275,7 +275,7 @@ class FakeXdebugSession
         if (is_array($value)) {
             return json_encode($value);
         }
-        return (string)$value;
+        return (string) $value;
     }
 
     public function getCurrentState(): array
@@ -285,7 +285,7 @@ class FakeXdebugSession
             'line' => $this->currentLine,
             'status' => $this->status,
             'breakpoints' => count($this->breakpoints),
-            'stack_depth' => count($this->callStack)
+            'stack_depth' => count($this->callStack),
         ];
     }
 }

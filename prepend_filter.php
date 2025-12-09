@@ -8,13 +8,21 @@ declare(strict_types=1);
  * Usage:
  * - Default: Excludes entire vendor/ directory
  * - --include-vendor=bear/resource,ray/di (specific packages)
- * - --include-vendor=bear/star,ray/star (pattern matching)  
+ * - --include-vendor=bear/star,ray/star (pattern matching)
  * - --include-vendor=star/star (include all vendor)
  */
 
 if (!extension_loaded('xdebug')) {
     return;
 }
+
+require_once __DIR__ . '/src/Utilities/PathNormalizer.php';
+
+use Koriym\XdebugMcp\Utilities\PathNormalizer;
+
+$normalisePath = static function (string $path): string {
+    return PathNormalizer::normalise($path);
+};
 
 // Parse CLI arguments for vendor filtering options
 $options = getopt('', ['include-vendor::']); // :: = optional value
@@ -24,7 +32,7 @@ $includeVendor = $options['include-vendor'] ?? null;
 $vendorPath = null;
 foreach ([__DIR__ . '/../../../vendor', __DIR__ . '/vendor'] as $path) {
     if (is_dir($path)) {
-        $vendorPath = realpath($path);
+        $vendorPath = $normalisePath($path);
         break;
     }
 }
@@ -47,8 +55,8 @@ if ($vendorPath) {
                     break;
                 }
             }
-            if (!$matches && $realPath = realpath($packageDir)) {
-                $excludePaths[] = $realPath;
+            if (!$matches) {
+                $excludePaths[] = $normalisePath($packageDir);
             }
         }
     }

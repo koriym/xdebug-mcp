@@ -47,7 +47,7 @@ class XdebugTraceAnalyzerV2
                 '📋 total_trace_lines' => 0,
                 '⏱️ total_execution_time' => 0,
                 '💾 peak_memory_usage' => 0,
-                '🔍 analysis_version' => '2.0.0'
+                '🔍 analysis_version' => '2.0.0',
             ],
             '📈 statistics' => [
                 '🔢 unique_functions_count' => 0,
@@ -58,20 +58,20 @@ class XdebugTraceAnalyzerV2
                 '🏷️ vendor_vs_user' => [
                     '👤 user_functions' => 0,
                     '📦 vendor_functions' => 0,
-                    '⚙️ internal_functions' => 0
-                ]
+                    '⚙️ internal_functions' => 0,
+                ],
             ],
             '🚀 performance_analysis' => [
                 '🐌 slowest_functions' => [],
                 '💾 memory_intensive_functions' => [],
                 '🔄 frequently_called_functions' => [],
-                '⚠️ performance_warnings' => []
+                '⚠️ performance_warnings' => [],
             ],
             '🗂️ function_index' => [],
             '📂 file_index' => [],
             '🎯 analysis_context' => $context,
             '🔗 specification' => 'https://xdebug.org/docs/trace',
-            '📋 schema' => 'https://bear.sunday/schemas/trace-analysis-schema.json'
+            '📋 schema' => 'https://bear.sunday/schemas/trace-analysis-schema.json',
         ];
     }
 
@@ -111,33 +111,31 @@ class XdebugTraceAnalyzerV2
                 continue;
             }
 
-            $level = (int)$parts[0];
-            $functionNumber = (int)$parts[1];
+            $level = (int) $parts[0];
             $type = $parts[2];
-            $time = (float)$parts[3];
-            $memory = (int)$parts[4];
+            $time = (float) $parts[3];
+            $memory = (int) $parts[4];
 
             // Update peak values
             $this->analysisResult['📊 metadata']['⏱️ total_execution_time'] = max(
                 $this->analysisResult['📊 metadata']['⏱️ total_execution_time'],
-                $time
+                $time,
             );
             $this->analysisResult['📊 metadata']['💾 peak_memory_usage'] = max(
                 $this->analysisResult['📊 metadata']['💾 peak_memory_usage'],
-                $memory
+                $memory,
             );
             $this->analysisResult['📈 statistics']['🏗️ max_call_depth'] = max(
                 $this->analysisResult['📈 statistics']['🏗️ max_call_depth'],
-                $level
+                $level,
             );
 
             if ($type === '0' && count($parts) >= 7) {
                 // Function entry
                 $functionName = $parts[5] ?? '';
-                $userDefined = (int)($parts[6] ?? 0);
-                $includeFilename = $parts[7] ?? '';
+                $userDefined = (int) ($parts[6] ?? 0);
                 $filename = $parts[8] ?? '';
-                $sourceLine = (int)($parts[9] ?? 0);
+                $sourceLine = (int) ($parts[9] ?? 0);
 
                 if (!empty($functionName)) {
                     $uniqueFunctions[$functionName] = true;
@@ -164,7 +162,7 @@ class XdebugTraceAnalyzerV2
                         '💾 memory_usage' => $memory,
                         '📂 file_path' => $filename,
                         '📏 source_line' => $sourceLine,
-                        '🏗️ call_depth_level' => $level
+                        '🏗️ call_depth_level' => $level,
                     ];
 
                     // File index
@@ -178,7 +176,7 @@ class XdebugTraceAnalyzerV2
                             '📍 trace_line' => $lineNumber,
                             '🕒 timestamp' => $time,
                             '💾 memory_usage' => $memory,
-                            '📏 source_line' => $sourceLine
+                            '📏 source_line' => $sourceLine,
                         ];
                     }
 
@@ -190,7 +188,7 @@ class XdebugTraceAnalyzerV2
                         'start_line' => $lineNumber,
                         'file_path' => $filename,
                         'source_line' => $sourceLine,
-                        'level' => $level
+                        'level' => $level,
                     ];
 
                     $this->analysisResult['📈 statistics']['📞 total_function_calls']++;
@@ -210,7 +208,7 @@ class XdebugTraceAnalyzerV2
                     '📍 trace_end_line' => $lineNumber,
                     '🏗️ call_depth_level' => $level,
                     '📂 file_path' => $call['file_path'],
-                    '📏 source_line' => $call['source_line']
+                    '📏 source_line' => $call['source_line'],
                 ];
 
                 unset($callStack[$level]);
@@ -249,7 +247,7 @@ class XdebugTraceAnalyzerV2
                 '💾 memory_delta_bytes' => $entry['💾 memory_delta_bytes'],
                 '📊 memory_delta_formatted' => $entry['📊 memory_delta_formatted'],
                 '⏱️ duration_seconds' => $entry['⏱️ duration_seconds'],
-                '🏗️ call_depth_level' => $entry['🏗️ call_depth_level']
+                '🏗️ call_depth_level' => $entry['🏗️ call_depth_level'],
             ];
         }
         $this->analysisResult['🚀 performance_analysis']['💾 memory_intensive_functions'] = $memoryEntries;
@@ -275,7 +273,7 @@ class XdebugTraceAnalyzerV2
                 '🔢 call_count' => $count,
                 '⏱️ total_duration_seconds' => $totalDuration,
                 '📊 average_duration_seconds' => $count > 0 ? $totalDuration / $count : 0,
-                '💾 total_memory_delta_bytes' => $totalMemoryDelta
+                '💾 total_memory_delta_bytes' => $totalMemoryDelta,
             ];
         }
         $this->analysisResult['🚀 performance_analysis']['🔄 frequently_called_functions'] = $frequentFunctions;
@@ -294,11 +292,11 @@ class XdebugTraceAnalyzerV2
                     '📄 message' => sprintf(
                         'Function %s took %.3fs to execute',
                         $entry['🏷️ function_name'],
-                        $entry['⏱️ duration_seconds']
+                        $entry['⏱️ duration_seconds'],
                     ),
                     '🎯 function_name' => $entry['🏷️ function_name'],
                     '📊 severity' => $entry['⏱️ duration_seconds'] > 2.0 ? 'high' : 'medium',
-                    '💡 suggestion' => 'Consider profiling this function for optimization opportunities'
+                    '💡 suggestion' => 'Consider profiling this function for optimization opportunities',
                 ];
             }
         }
@@ -311,11 +309,11 @@ class XdebugTraceAnalyzerV2
                     '📄 message' => sprintf(
                         'Function %s allocated %s of memory',
                         $entry['🏷️ function_name'],
-                        $entry['📊 memory_delta_formatted']
+                        $entry['📊 memory_delta_formatted'],
                     ),
                     '🎯 function_name' => $entry['🏷️ function_name'],
                     '📊 severity' => $entry['💾 memory_delta_bytes'] > 10 * 1024 * 1024 ? 'high' : 'medium',
-                    '💡 suggestion' => 'Review memory usage patterns and consider optimization'
+                    '💡 suggestion' => 'Review memory usage patterns and consider optimization',
                 ];
             }
         }
@@ -327,7 +325,7 @@ class XdebugTraceAnalyzerV2
                 '🏷️ type' => 'deep_recursion',
                 '📄 message' => sprintf('Maximum call depth reached %d levels', $maxDepth),
                 '📊 severity' => $maxDepth > 500 ? 'critical' : 'medium',
-                '💡 suggestion' => 'Check for potential infinite recursion or optimize recursive algorithms'
+                '💡 suggestion' => 'Check for potential infinite recursion or optimize recursive algorithms',
             ];
         }
 
@@ -340,7 +338,7 @@ class XdebugTraceAnalyzerV2
                     '📄 message' => sprintf('Function %s was called %d times', $functionName, $count),
                     '🎯 function_name' => $functionName,
                     '📊 severity' => $count > 5000 ? 'high' : 'medium',
-                    '💡 suggestion' => 'Consider caching or optimizing this frequently called function'
+                    '💡 suggestion' => 'Consider caching or optimizing this frequently called function',
                 ];
             }
         }
@@ -421,8 +419,8 @@ if ($argc < 2) {
             '--context="description"' => 'Add analysis context',
             '--compact' => 'Output compact JSON',
             '--search="function"' => 'Search for specific function',
-            '--validate' => 'Validate result against schema'
-        ]
+            '--validate' => 'Validate result against schema',
+        ],
     ], JSON_PRETTY_PRINT) . "\n";
     exit(1);
 }
@@ -455,7 +453,7 @@ try {
         echo json_encode([
             'search_query' => $searchFunction,
             'results' => $searchResults,
-            'total_matches' => count($searchResults)
+            'total_matches' => count($searchResults),
         ], JSON_PRETTY_PRINT) . "\n";
     } else {
         $result = $analyzer->analyzeTrace($context);
@@ -464,7 +462,7 @@ try {
             $validationErrors = $analyzer->validateSchema();
             if (!empty($validationErrors)) {
                 echo json_encode([
-                    'validation_errors' => $validationErrors
+                    'validation_errors' => $validationErrors,
                 ], JSON_PRETTY_PRINT) . "\n";
                 exit(1);
             }
@@ -475,7 +473,7 @@ try {
 } catch (Exception $e) {
     echo json_encode([
         'error' => $e->getMessage(),
-        'trace_file' => $traceFile
+        'trace_file' => $traceFile,
     ], JSON_PRETTY_PRINT) . "\n";
     exit(1);
 }
