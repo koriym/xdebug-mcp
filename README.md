@@ -116,9 +116,6 @@ xcoverage -- vendor/bin/phpunit
 
 # Stack trace at breakpoint
 xback --break='app.php:50' -- php app.php
-
-# Analyze trace files
-xanalyze trace.xt --summary
 ```
 
 Run `--help` on any tool for detailed options.
