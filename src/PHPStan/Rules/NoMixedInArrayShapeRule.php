@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp\PHPStan\Rules;
 
+use PhpParser\Comment\Doc;
 use PhpParser\Node;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Function_;
 use PhpParser\Node\Stmt\Property;
 use PHPStan\Analyser\Scope;
 use PHPStan\Rules\Rule;
+use PHPStan\Rules\RuleError;
 use PHPStan\Rules\RuleErrorBuilder;
 
 use function preg_match;
@@ -27,9 +29,7 @@ final class NoMixedInArrayShapeRule implements Rule
         return Node::class;
     }
 
-    /**
-     * @return list<\PHPStan\Rules\RuleError>
-     */
+    /** @return list<RuleError> */
     public function processNode(Node $node, Scope $scope): array
     {
         $docComment = null;
@@ -38,7 +38,7 @@ final class NoMixedInArrayShapeRule implements Rule
             $docComment = $node->getDocComment();
         }
 
-        if (!$docComment instanceof \PhpParser\Comment\Doc) {
+        if (! $docComment instanceof Doc) {
             return [];
         }
 

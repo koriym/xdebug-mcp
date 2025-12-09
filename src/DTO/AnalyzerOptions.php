@@ -16,8 +16,9 @@ final class AnalyzerOptions
         public readonly string $context = '',
         public readonly int $limit = 1000,
         public readonly float $threshold = 0.0,
-        public readonly ?string $search = null,
-    ) {}
+        public readonly string|null $search = null,
+    ) {
+    }
 
     /**
      * Create from an associative array (for backwards compatibility)

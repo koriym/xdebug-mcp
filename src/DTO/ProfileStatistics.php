@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp\DTO;
 
+use function round;
+
 /**
  * Statistics from parsing an Xdebug profile (Cachegrind) file
  */
@@ -17,7 +19,8 @@ final class ProfileStatistics
         public readonly string $targetFile,
         public readonly string $creator,
         public readonly string $command = '',
-    ) {}
+    ) {
+    }
 
     public function getFileSizeFormatted(): string
     {

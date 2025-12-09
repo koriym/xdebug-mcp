@@ -26,8 +26,10 @@ use function filesize;
 use function glob;
 use function implode;
 use function ini_get;
+use function is_array;
 use function is_numeric;
 use function is_readable;
+use function is_string;
 use function json_decode;
 use function json_encode;
 use function passthru;
@@ -43,6 +45,7 @@ use function trim;
 use function uasort;
 use function usort;
 
+use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
 
@@ -54,9 +57,7 @@ use const JSON_UNESCAPED_UNICODE;
  */
 class XdebugProfiler
 {
-    /**
-     * @param list<string> $phpArgs
-     */
+    /** @param list<string> $phpArgs */
     public function executeProfile(string $targetFile, array $phpArgs = [], bool $jsonOutput = false): string
     {
         if (! file_exists($targetFile)) {
@@ -106,7 +107,7 @@ class XdebugProfiler
         }
 
         // Get the most recent profile file
-        usort($profileFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
+        usort($profileFiles, static fn ($a, $b): int => filemtime($b) - filemtime($a));
 
         return $profileFiles[0];
     }
@@ -251,7 +252,7 @@ class XdebugProfiler
         }
 
         // Find bottleneck functions (top 5 by cost)
-        uasort($functions, static fn(array $a, array $b): int => $b['cost'] <=> $a['cost']);
+        uasort($functions, static fn (array $a, array $b): int => $b['cost'] <=> $a['cost']);
         $topFunctions = array_slice($functions, 0, 5, true);
         $totalCost = array_sum(array_column($functions, 'cost'));
 
@@ -327,9 +328,7 @@ class XdebugProfiler
         }
     }
 
-    /**
-     * @return array{profile_file: string, file_size_bytes: int, file_size_formatted: string, functions_count: int, calls_count: int, target_file: string, creator: string}
-     */
+    /** @return array{profile_file: string, file_size_bytes: int, file_size_formatted: string, functions_count: int, calls_count: int, target_file: string, creator: string} */
     public function generateStatistics(DTO\ProfileStatistics $stats): array
     {
         return [

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp;
 
+use JsonException;
 use Koriym\XdebugMcp\DTO\GenericResult;
 use Koriym\XdebugMcp\DTO\JsonRpcResponse;
 use Koriym\XdebugMcp\DTO\McpTool;
@@ -37,6 +38,7 @@ use function strlen;
 use function substr;
 use function trim;
 
+use const JSON_THROW_ON_ERROR;
 use const STDIN;
 use const STDOUT;
 
@@ -56,9 +58,9 @@ final class McpServer
     }
 
     /**
-     * @codeCoverageIgnore Uses error_log() side effect - difficult to test without mocking global functions
-     *
      * @param array<string, string|int|null> $data
+     *
+     * @codeCoverageIgnore Uses error_log() side effect - difficult to test without mocking global functions
      */
     private function debugLog(string $message, array $data = []): void
     {
@@ -221,7 +223,7 @@ final class McpServer
 
                     try {
                         $request = json_decode(trim($input), true, 512, JSON_THROW_ON_ERROR);
-                    } catch (\JsonException) {
+                    } catch (JsonException) {
                         // @codeCoverageIgnoreStart - JSON parse error path rarely triggered in tests
                         // Invalid JSON, send parse error
                         $errorResponse = [
@@ -259,7 +261,7 @@ final class McpServer
                     try {
                         $response = $this->handleRequest($request);
 
-                        if ($response instanceof \Koriym\XdebugMcp\DTO\JsonRpcResponse) {
+                        if ($response instanceof JsonRpcResponse) {
                             $this->debugLog('Sending response', ['id' => $response->id]);
                             echo json_encode($response, JSON_THROW_ON_ERROR) . "\n";
                             fflush(STDOUT);
@@ -292,15 +294,13 @@ final class McpServer
             json_decode($trimmed, false, 512, JSON_THROW_ON_ERROR);
 
             return true;
-        } catch (\JsonException) {
+        } catch (JsonException) {
             return false;
         }
     }
 
-    /**
-     * @param array{method?: string, params?: array<string, string|int|bool|array<string, string|int|bool>>, id?: string|int|null} $request
-     */
-    private function handleRequest(array $request): ?JsonRpcResponse
+    /** @param array{method?: string, params?: array<string, string|int|bool|array<string, string|int|bool>>, id?: string|int|null} $request */
+    private function handleRequest(array $request): JsonRpcResponse|null
     {
         $method = $request['method'] ?? '';
         $params = $request['params'] ?? [];
@@ -323,9 +323,7 @@ final class McpServer
         }
     }
 
-    /**
-     * @param array<string, string|int|bool|array<string, string|int|bool>> $params
-     */
+    /** @param array<string, string|int|bool|array<string, string|int|bool>> $params */
     private function handleInitialize(string|int|null $id, array $params): JsonRpcResponse
     {
         // Use the protocol version requested by the client, defaulting to latest
@@ -496,9 +494,7 @@ final class McpServer
         ]));
     }
 
-    /**
-     * @param array<string, string|int|bool|array<string, string|int|bool>> $params
-     */
+    /** @param array<string, string|int|bool|array<string, string|int|bool>> $params */
     private function handlePromptsGet(string|int|null $id, array $params): JsonRpcResponse
     {
         $promptName = isset($params['name']) && is_string($params['name']) ? $params['name'] : '';
@@ -532,8 +528,8 @@ final class McpServer
     /**
      * Map positional arguments to named arguments based on prompt type
      *
-     * @param array<string, string> $args Named arguments
-     * @param list<string> $positionalArgs Positional arguments from CLI
+     * @param array<string, string> $args           Named arguments
+     * @param list<string>          $positionalArgs Positional arguments from CLI
      *
      * @return array<string, string>
      */
@@ -574,13 +570,11 @@ final class McpServer
         if (str_starts_with($script, '"') && ! str_ends_with($script, '"')) {
             // Remove leading quote from incomplete input
             $script = substr($script, 1);
-        }
-        // Strip complete outer double quotes if present (Claude CLI client adds extra quotes)
-        elseif (strlen($script) >= 2 && str_starts_with($script, '"') && str_ends_with($script, '"')) {
+        } elseif (strlen($script) >= 2 && str_starts_with($script, '"') && str_ends_with($script, '"')) {
+            // Strip complete outer double quotes if present (Claude CLI client adds extra quotes)
             $script = substr($script, 1, -1);
-        }
-        // Handle trailing quote without leading quote (Claude CLI parsing issue)
-        elseif (str_ends_with($script, '"') && ! str_starts_with($script, '"')) {
+        } elseif (str_ends_with($script, '"') && ! str_starts_with($script, '"')) {
+            // Handle trailing quote without leading quote (Claude CLI parsing issue)
             $script = substr($script, 0, -1);
         }
 
@@ -607,9 +601,7 @@ final class McpServer
         }
     }
 
-    /**
-     * @param array<string, string|int|bool|array<string, string|int|bool>> $params
-     */
+    /** @param array<string, string|int|bool|array<string, string|int|bool>> $params */
     private function handleToolCall(string|int|null $id, array $params): JsonRpcResponse
     {
         $toolName = isset($params['name']) && is_string($params['name']) ? $params['name'] : '';
@@ -632,9 +624,7 @@ final class McpServer
         }
     }
 
-    /**
-     * @param array<string, string> $arguments
-     */
+    /** @param array<string, string> $arguments */
     private function executeToolCall(string $toolName, array $arguments): string
     {
         switch ($toolName) {
@@ -695,9 +685,7 @@ final class McpServer
         return isset($content['text']) && is_string($content['text']) ? $content['text'] : 'No result';
     }
 
-    /**
-     * @param array<string, string> $args
-     */
+    /** @param array<string, string> $args */
     private function executeXTrace(string|int|null $id, array $args): JsonRpcResponse
     {
         try {
@@ -750,9 +738,7 @@ final class McpServer
         }
     }
 
-    /**
-     * @param array<string, string> $args
-     */
+    /** @param array<string, string> $args */
     private function executeXDebug(string|int|null $id, array $args): JsonRpcResponse
     {
         try {
@@ -852,9 +838,7 @@ final class McpServer
         }
     }
 
-    /**
-     * @param array<string, string> $args
-     */
+    /** @param array<string, string> $args */
     private function executeXProfile(string|int|null $id, array $args): JsonRpcResponse
     {
         try {
@@ -907,9 +891,7 @@ final class McpServer
         }
     }
 
-    /**
-     * @param array<string, string> $args
-     */
+    /** @param array<string, string> $args */
     private function executeXCoverage(string|int|null $id, array $args): JsonRpcResponse
     {
         try {
@@ -964,9 +946,7 @@ final class McpServer
         }
     }
 
-    /**
-     * @param array<string, string> $args
-     */
+    /** @param array<string, string> $args */
     private function executeXBacktrace(string|int|null $id, array $args): JsonRpcResponse
     {
         try {

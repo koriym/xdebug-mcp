@@ -55,7 +55,7 @@ final class XdebugFinder
      *
      * @return string|null Path to xdebug.so or null if not found
      */
-    public static function detectXdebugPath(): ?string
+    public static function detectXdebugPath(): string|null
     {
         // 1. Check if already loaded (shouldn't reach here from getXdebugFlag but safety check)
         if (extension_loaded('xdebug')) {

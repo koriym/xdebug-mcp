@@ -15,8 +15,8 @@ final class FullAnalysisResult implements JsonSerializable
 {
     /**
      * @param list<SlowFunction> $slowestFunctions
-     * @param list<string> $potentialIssues
-     * @param list<string> $executionPatterns
+     * @param list<string>       $potentialIssues
+     * @param list<string>       $executionPatterns
      */
     public function __construct(
         public readonly AnalysisMetadata $metadata,
@@ -24,11 +24,10 @@ final class FullAnalysisResult implements JsonSerializable
         public readonly array $slowestFunctions,
         public readonly array $potentialIssues,
         public readonly array $executionPatterns,
-    ) {}
+    ) {
+    }
 
-    /**
-     * @return array{metadata: array<string, string>, statistics: array<string, int|float>, performance_analysis: array{slowest_functions: list<array<string, string|float>>}, execution_insights: array{potential_issues: list<string>, execution_patterns: list<string>}}
-     */
+    /** @return array{metadata: array<string, string>, statistics: array<string, int|float>, performance_analysis: array{slowest_functions: list<array<string, string|float>>}, execution_insights: array{potential_issues: list<string>, execution_patterns: list<string>}} */
     public function jsonSerialize(): array
     {
         return [
@@ -36,7 +35,7 @@ final class FullAnalysisResult implements JsonSerializable
             'statistics' => $this->statistics->jsonSerialize(),
             'performance_analysis' => [
                 'slowest_functions' => array_map(
-                    static fn(SlowFunction $f): array => $f->jsonSerialize(),
+                    static fn (SlowFunction $f): array => $f->jsonSerialize(),
                     $this->slowestFunctions,
                 ),
             ],

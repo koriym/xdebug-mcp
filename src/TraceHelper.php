@@ -9,6 +9,7 @@ use function function_exists;
 use function getenv;
 use function ini_get;
 use function preg_match;
+use function preg_replace;
 use function str_contains;
 use function xdebug_start_trace;
 use function xdebug_stop_trace;
@@ -49,11 +50,11 @@ final class TraceHelper
      */
     public static function shouldTrace(string $testName): bool
     {
-        if (!self::$initialised) {
+        if (! self::$initialised) {
             self::init();
         }
 
-        if (!self::$xdebugAvailable || self::$tracePattern === '') {
+        if (! self::$xdebugAvailable || self::$tracePattern === '') {
             return false;
         }
 
@@ -65,7 +66,7 @@ final class TraceHelper
      */
     public static function startTrace(string $testName): void
     {
-        if (!self::$xdebugAvailable) {
+        if (! self::$xdebugAvailable) {
             return;
         }
 
@@ -84,7 +85,7 @@ final class TraceHelper
     {
         unset($testName); // Unused, kept for API consistency
 
-        if (!self::$xdebugAvailable) {
+        if (! self::$xdebugAvailable) {
             return;
         }
 
@@ -96,7 +97,7 @@ final class TraceHelper
      */
     public static function isAvailable(): bool
     {
-        if (!self::$initialised) {
+        if (! self::$initialised) {
             self::init();
         }
 

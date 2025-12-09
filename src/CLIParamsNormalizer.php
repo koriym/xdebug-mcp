@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp;
 
+use JsonException;
 use Koriym\XdebugMcp\DTO\CliParams;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 
@@ -249,7 +250,7 @@ class CLIParamsNormalizer
     {
         try {
             $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
+        } catch (JsonException) {
             throw new InvalidArgumentException(
                 "不正：--{$key}:json の値は有効なJSONではありません。入力: '{$value}'",
             );

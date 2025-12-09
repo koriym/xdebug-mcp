@@ -14,12 +14,12 @@ use const JSON_THROW_ON_ERROR;
 final class CliParams
 {
     /**
-     * @param array<string, string> $stringParams String parameters
-     * @param array<string, int> $intParams Integer parameters
-     * @param array<string, float> $floatParams Float parameters
-     * @param array<string, bool> $boolParams Boolean parameters
-     * @param array<string, list<string>> $jsonParams JSON array parameters
-     * @param list<string> $positionalArgs Positional arguments after --
+     * @param array<string, string>       $stringParams   String parameters
+     * @param array<string, int>          $intParams      Integer parameters
+     * @param array<string, float>        $floatParams    Float parameters
+     * @param array<string, bool>         $boolParams     Boolean parameters
+     * @param array<string, list<string>> $jsonParams     JSON array parameters
+     * @param list<string>                $positionalArgs Positional arguments after --
      */
     public function __construct(
         public readonly array $stringParams = [],
@@ -28,7 +28,8 @@ final class CliParams
         public readonly array $boolParams = [],
         public readonly array $jsonParams = [],
         public readonly array $positionalArgs = [],
-    ) {}
+    ) {
+    }
 
     /**
      * Get a string parameter value

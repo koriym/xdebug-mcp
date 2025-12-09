@@ -13,6 +13,7 @@ use function array_keys;
 use function array_map;
 use function array_merge;
 use function array_unshift;
+use function array_values;
 use function count;
 use function dirname;
 use function escapeshellarg;
@@ -34,7 +35,6 @@ use function implode;
 use function in_array;
 use function ini_get;
 use function is_readable;
-use function max;
 use function number_format;
 use function passthru;
 use function preg_replace;
@@ -95,9 +95,7 @@ class XdebugTracer
         'sqlite_query',
     ];
 
-    /**
-     * @param list<string> $phpArgs
-     */
+    /** @param list<string> $phpArgs */
     public function executeTrace(string $targetFile, array $phpArgs = []): string
     {
         if (! file_exists($targetFile)) {
@@ -165,7 +163,7 @@ class XdebugTracer
         }
 
         // Get the most recent trace file
-        usort($traceFiles, static fn($a, $b): int => filemtime($b) - filemtime($a));
+        usort($traceFiles, static fn ($a, $b): int => filemtime($b) - filemtime($a));
 
         return $traceFiles[0];
     }
@@ -306,7 +304,7 @@ class XdebugTracer
         $stats = $this->parseTraceFile($traceFile);
 
         // Handle both compressed and uncompressed trace files
-        $filterNonEmpty = static fn(string $line): bool => trim($line) !== '';
+        $filterNonEmpty = static fn (string $line): bool => trim($line) !== '';
         if (str_ends_with($traceFile, '.gz')) {
             $content = array_filter(explode("\n", (string) gzdecode((string) file_get_contents($traceFile))), $filterNonEmpty);
         } else {
@@ -344,9 +342,7 @@ class XdebugTracer
         return $dbQueryCount;
     }
 
-    /**
-     * @return array{file_path: string, total_lines: string, function_calls: string, user_function_calls: string, internal_function_calls: string, file_io_operations: int, db_operations: int, execution_time_ms: float, peak_memory_mb: float, unique_function_count: string, max_depth: int}
-     */
+    /** @return array{file_path: string, total_lines: string, function_calls: string, user_function_calls: string, internal_function_calls: string, file_io_operations: int, db_operations: int, execution_time_ms: float, peak_memory_mb: float, unique_function_count: string, max_depth: int} */
     public function generateStatistics(TraceStatistics $stats): array
     {
         return [

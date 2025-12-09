@@ -15,11 +15,10 @@ final class SlowFunction implements JsonSerializable
         public readonly string $functionName,
         public readonly float $durationSeconds,
         public readonly string $optimizationPriority,
-    ) {}
+    ) {
+    }
 
-    /**
-     * @return array{function_name: string, duration_seconds: float, optimization_priority: string}
-     */
+    /** @return array{function_name: string, duration_seconds: float, optimization_priority: string} */
     public function jsonSerialize(): array
     {
         return [

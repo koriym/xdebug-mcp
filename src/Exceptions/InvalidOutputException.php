@@ -9,4 +9,6 @@ use RuntimeException;
 /**
  * Exception thrown when command output doesn't contain valid JSON
  */
-class InvalidOutputException extends RuntimeException {}
+class InvalidOutputException extends RuntimeException
+{
+}

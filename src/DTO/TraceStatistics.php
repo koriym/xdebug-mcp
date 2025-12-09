@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp\DTO;
 
+use function count;
+
 /**
  * Statistics from parsing an Xdebug trace file
  */
@@ -24,10 +26,11 @@ final class TraceStatistics
         public int $maxDepth = 0,
         public int $maxCallDepth = 0,
         public int $peakMemory = 0,
-        public ?float $startTime = null,
+        public float|null $startTime = null,
         public float $endTime = 0,
         public float $executionTime = 0,
-    ) {}
+    ) {
+    }
 
     public function incrementTotalLines(): void
     {

@@ -24,9 +24,7 @@ final class AnalysisMetadata implements JsonSerializable
         $this->generatedAt = date('c');
     }
 
-    /**
-     * @return array{generated_at: string, source_trace_file: string, source_file_size: string, analysis_context: string, analysis_version: string}
-     */
+    /** @return array{generated_at: string, source_trace_file: string, source_file_size: string, analysis_context: string, analysis_version: string} */
     public function jsonSerialize(): array
     {
         return [

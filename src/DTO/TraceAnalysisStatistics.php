@@ -17,11 +17,10 @@ final class TraceAnalysisStatistics implements JsonSerializable
         public readonly int $uniqueFilesCount,
         public readonly int $maxCallDepth,
         public readonly float $totalExecutionTime,
-    ) {}
+    ) {
+    }
 
-    /**
-     * @return array{unique_functions_count: int, total_function_calls: int, unique_files_count: int, max_call_depth: int, total_execution_time: float}
-     */
+    /** @return array{unique_functions_count: int, total_function_calls: int, unique_files_count: int, max_call_depth: int, total_execution_time: float} */
     public function jsonSerialize(): array
     {
         return [
