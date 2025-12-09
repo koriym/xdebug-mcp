@@ -112,5 +112,5 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
-      - name: Run Pint
-        run: vendor/bin/pint --test
+      - name: Run PHPCS
+        run: composer cs
