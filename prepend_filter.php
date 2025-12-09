@@ -16,40 +16,12 @@ if (!extension_loaded('xdebug')) {
     return;
 }
 
-/**
- * Normalise a path by resolving . and .. segments.
- * Compatible with phar:// and other stream wrappers unlike realpath().
- *
- * @param string $path The path to normalise
- * @return string The normalised path
- */
+require_once __DIR__ . '/src/Utilities/PathNormalizer.php';
+
+use Koriym\XdebugMcp\Utilities\PathNormalizer;
+
 $normalisePath = static function (string $path): string {
-    // Handle Windows paths by normalising to forward slashes
-    $path = str_replace('\\', '/', $path);
-
-    // Preserve stream wrapper prefix (phar://, zip://, etc.)
-    $prefix = '';
-    if (preg_match('#^([a-zA-Z][a-zA-Z0-9+.-]*://)(.*)$#', $path, $matches)) {
-        $prefix = $matches[1];
-        $path = $matches[2];
-    } elseif (str_starts_with($path, '/')) {
-        $prefix = '/';
-        $path = substr($path, 1);
-    }
-
-    $parts = [];
-    foreach (explode('/', $path) as $part) {
-        if ($part === '' || $part === '.') {
-            continue;
-        }
-        if ($part === '..') {
-            array_pop($parts);
-        } else {
-            $parts[] = $part;
-        }
-    }
-
-    return $prefix . implode('/', $parts);
+    return PathNormalizer::normalise($path);
 };
 
 // Parse CLI arguments for vendor filtering options

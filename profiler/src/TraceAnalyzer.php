@@ -112,7 +112,6 @@ class XdebugTraceAnalyzerV2
             }
 
             $level = (int) $parts[0];
-            $functionNumber = (int) $parts[1];
             $type = $parts[2];
             $time = (float) $parts[3];
             $memory = (int) $parts[4];
@@ -135,7 +134,6 @@ class XdebugTraceAnalyzerV2
                 // Function entry
                 $functionName = $parts[5] ?? '';
                 $userDefined = (int) ($parts[6] ?? 0);
-                $includeFilename = $parts[7] ?? '';
                 $filename = $parts[8] ?? '';
                 $sourceLine = (int) ($parts[9] ?? 0);
 

@@ -66,11 +66,15 @@ final class TraceHelper
      */
     public static function startTrace(string $testName): void
     {
+        if (! self::$initialised) {
+            self::init();
+        }
+
         if (! self::$xdebugAvailable) {
             return;
         }
 
-        $safeTestName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $testName);
+        $safeTestName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $testName) ?? $testName;
         $traceFile = self::$outputDir . '/trace_' . $safeTestName;
 
         xdebug_start_trace($traceFile);
