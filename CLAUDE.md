@@ -399,9 +399,8 @@ This project prioritizes **execution-time trace analysis** over traditional code
 #### Available Xdebug Tools:
 - `./bin/xstep` - Interactive step debugging with breakpoints
 - `./bin/xprofile` - Performance profiling
-- `./bin/xcoverage` - Code coverage analysis  
+- `./bin/xcoverage` - Code coverage analysis
 - `./bin/xtrace` - Execution tracing
-- `./bin/xanalyze` - Analysis tool
 - `./bin/xdebug-mcp` - MCP server entry point
 
 #### MCP Slash Commands for Claude Code:
