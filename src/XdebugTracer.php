@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp;
 
+use Koriym\XdebugMcp\DTO\TraceStatistics;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use RuntimeException;
 
 use function array_filter;
+use function array_keys;
 use function array_map;
 use function array_merge;
 use function array_unshift;
+use function array_values;
 use function count;
 use function dirname;
 use function escapeshellarg;
@@ -32,7 +35,6 @@ use function implode;
 use function in_array;
 use function ini_get;
 use function is_readable;
-use function max;
 use function number_format;
 use function passthru;
 use function preg_replace;
@@ -53,6 +55,7 @@ use function usort;
  */
 class XdebugTracer
 {
+    /** @var list<string> */
     private array $fileIOFunctions = [
         'file_get_contents',
         'file_put_contents',
@@ -74,6 +77,8 @@ class XdebugTracer
         'touch',
         'readfile',
     ];
+
+    /** @var list<string> */
     private array $dbFunctions = [
         'mysqli_query',
         'mysqli_prepare',
@@ -90,6 +95,7 @@ class XdebugTracer
         'sqlite_query',
     ];
 
+    /** @param list<string> $phpArgs */
     public function executeTrace(string $targetFile, array $phpArgs = []): string
     {
         if (! file_exists($targetFile)) {
@@ -127,7 +133,7 @@ class XdebugTracer
 
         // Combine all arguments
         $allArgs = array_merge($xdebugOptions, [$targetFile], $phpArgs);
-        $cmd = 'php ' . implode(' ', array_map('escapeshellarg', $allArgs));
+        $cmd = 'php ' . implode(' ', array_map(escapeshellarg(...), $allArgs));
 
         // Execute with passthru to show output
         $exitCode = 0;
@@ -144,11 +150,11 @@ class XdebugTracer
         // Convert Xdebug format specifiers to glob wildcards
         // %c=CRC32, %p=PID, %r=Random, %s=Script, %t=Timestamp, %u=Microseconds, etc.
         // @see https://xdebug.org/docs/trace#trace_output_name
-        $filePattern = preg_replace('/%(c|p|r|s|t|u|H|R|U|S)/', '*', $escapedTraceOutputName);
+        $filePattern = preg_replace('/%(c|p|r|s|t|u|H|R|U|S)/', '*', (string) $escapedTraceOutputName);
 
         // Find trace files using dynamic pattern
         $traceFiles = glob("{$xdebugOutputDir}/{$filePattern}.xt");
-        if (empty($traceFiles)) {
+        if ($traceFiles === [] || $traceFiles === false) {
             throw new RuntimeException(sprintf(
                 'Trace file not found. Looked in "%s" with pattern based on trace_output_name "%s".',
                 $xdebugOutputDir,
@@ -157,42 +163,27 @@ class XdebugTracer
         }
 
         // Get the most recent trace file
-        usort($traceFiles, static function ($a, $b) {
-            return filemtime($b) - filemtime($a);
-        });
+        usort($traceFiles, static fn ($a, $b): int => filemtime($b) - filemtime($a));
 
         return $traceFiles[0];
     }
 
-    public function parseTraceFile(string $traceFile): array
+    public function parseTraceFile(string $traceFile): TraceStatistics
     {
         if (! file_exists($traceFile) || ! is_readable($traceFile)) {
             throw new InvalidArgumentException("Trace file not found or not readable: $traceFile");
         }
 
         $fileSize = filesize($traceFile);
-        if ($fileSize === 0) {
+        if ($fileSize === 0 || $fileSize === false) {
             throw new RuntimeException("Trace file is empty: $traceFile");
         }
 
-        // Initialize statistics
-        $stats = [
-            'file_path' => $traceFile,
-            'file_size' => $fileSize,
-            'total_lines' => 0,
-            'function_calls' => 0,
-            'user_function_calls' => 0,
-            'internal_function_calls' => 0,
-            'unique_functions' => [],
-            'file_io_operations' => 0,
-            'db_operations' => 0,
-            'max_depth' => 0,
-            'max_call_depth' => 0,  // Add missing key
-            'peak_memory' => 0,
-            'start_time' => null,
-            'end_time' => 0,
-            'execution_time' => 0,
-        ];
+        // Initialize statistics using DTO
+        $stats = new TraceStatistics(
+            filePath: $traceFile,
+            fileSize: $fileSize,
+        );
 
         // Parse trace file line by line (handle both compressed and uncompressed)
         if (str_ends_with($traceFile, '.gz')) {
@@ -202,7 +193,7 @@ class XdebugTracer
             }
 
             while (($line = gzgets($handle)) !== false) {
-                $stats['total_lines']++;
+                $stats->incrementTotalLines();
                 $this->parseTraceLine(trim($line), $stats);
             }
 
@@ -214,7 +205,7 @@ class XdebugTracer
             }
 
             while (($line = fgets($handle)) !== false) {
-                $stats['total_lines']++;
+                $stats->incrementTotalLines();
                 $this->parseTraceLine(trim($line), $stats);
             }
 
@@ -222,14 +213,12 @@ class XdebugTracer
         }
 
         // Calculate execution time
-        if ($stats['start_time'] !== null) {
-            $stats['execution_time'] = $stats['end_time'] - $stats['start_time'];
-        }
+        $stats->calculateExecutionTime();
 
         return $stats;
     }
 
-    private function parseTraceLine(string $line, array &$stats): void
+    private function parseTraceLine(string $line, TraceStatistics $stats): void
     {
         $parts = explode("\t", $line);
         if (count($parts) < 6) {
@@ -244,53 +233,49 @@ class XdebugTracer
 
         // Only count function entries (not exits or returns)
         if ($entryExit === '0') {
-            $stats['function_calls']++;
+            $stats->incrementFunctionCalls();
 
             // Check if user-defined (1) or internal (0) function
             $isUserDefined = (int) ($parts[6] ?? 0);
             if ($isUserDefined === 1) {
-                $stats['user_function_calls']++;
+                $stats->incrementUserFunctionCalls();
             } else {
-                $stats['internal_function_calls']++;
+                $stats->incrementInternalFunctionCalls();
             }
 
             // Track unique functions
-            if ($function && $function !== '') {
-                $stats['unique_functions'][$function] = true;
+            if ($function !== '') {
+                $stats->trackFunction($function);
 
                 // Count file I/O operations
                 if (in_array($function, $this->fileIOFunctions, true)) {
-                    $stats['file_io_operations']++;
+                    $stats->incrementFileIoOperations();
                 }
 
                 // Count database operations
                 if (in_array($function, $this->dbFunctions, true)) {
-                    $stats['db_operations']++;
+                    $stats->incrementDbOperations();
                 }
             }
         }
 
         // Track max depth (from all lines)
-        $stats['max_depth'] = max($stats['max_depth'], $level);
+        $stats->updateMaxDepth($level);
 
         // Track peak memory (from all lines)
-        $stats['peak_memory'] = max($stats['peak_memory'], $memory);
+        $stats->updatePeakMemory($memory);
 
         // Track timing (from all lines)
-        if ($stats['start_time'] === null) {
-            $stats['start_time'] = $time;
-        }
-
-        $stats['end_time'] = $time;
+        $stats->setStartTime($time);
+        $stats->setEndTime($time);
     }
 
     /**
      * Generate AI-optimized trace data with strategic metadata
      *
-     * @param string $targetFile PHP file to trace
-     * @param array  $phpArgs    Additional arguments for PHP script
+     * @param list<string> $phpArgs Additional arguments for PHP script
      *
-     * @return array JSON structure conforming to xdebug-trace schema
+     * @return array{trace_file: string, total_lines: int, specification: string}
      */
     public function generateTraceData(string $targetFile, array $phpArgs = []): array
     {
@@ -299,7 +284,7 @@ class XdebugTracer
 
         return [
             'trace_file' => $traceFile,
-            'total_lines' => $stats['total_lines'],
+            'total_lines' => $stats->totalLines,
             'specification' => 'https://xdebug.org/docs/trace',
         ];
     }
@@ -307,6 +292,8 @@ class XdebugTracer
     /**
      * Generate comprehensive trace statistics from existing trace file
      * Used by both standalone trace analysis and debug output
+     *
+     * @return array{file: string, content: list<string>, trace_file: string, total_lines: int, unique_functions: int, max_call_depth: int, database_queries: int, specification: string}
      */
     public function generateTraceStatistics(string $traceFile): array
     {
@@ -317,38 +304,36 @@ class XdebugTracer
         $stats = $this->parseTraceFile($traceFile);
 
         // Handle both compressed and uncompressed trace files
+        $filterNonEmpty = static fn (string $line): bool => trim($line) !== '';
         if (str_ends_with($traceFile, '.gz')) {
-            $content = array_filter(explode("\n", gzdecode(file_get_contents($traceFile))), 'trim');
+            $content = array_filter(explode("\n", (string) gzdecode((string) file_get_contents($traceFile))), $filterNonEmpty);
         } else {
-            $content = array_filter(explode("\n", file_get_contents($traceFile)), 'trim');
+            $content = array_filter(explode("\n", (string) file_get_contents($traceFile)), $filterNonEmpty);
         }
 
         return [
             // Compatibility with debug schema (old format)
             'file' => $traceFile,
-            'content' => $content,
+            'content' => array_values($content),
 
             // Full trace schema compliance (new format)
             'trace_file' => $traceFile,
-            'total_lines' => $stats['total_lines'],
-            'unique_functions' => count($stats['unique_functions']),
-            'max_call_depth' => $stats['max_call_depth'],
+            'total_lines' => $stats->totalLines,
+            'unique_functions' => $stats->getUniqueFunctionCount(),
+            'max_call_depth' => $stats->maxCallDepth,
             'database_queries' => $this->countDatabaseQueries($stats),
             'specification' => 'https://xdebug.org/docs/trace',
         ];
     }
 
-    /**
-     * Count database queries in trace statistics
-     */
-    private function countDatabaseQueries(array $stats): int
+    private function countDatabaseQueries(TraceStatistics $stats): int
     {
         $dbQueryCount = 0;
-        foreach ($stats['unique_functions'] as $function => $unused) {
+        foreach (array_keys($stats->uniqueFunctions) as $function) {
             if (
-                str_contains(strtolower($function), 'query') ||
-                str_contains(strtolower($function), 'execute') ||
-                str_contains(strtolower($function), 'prepare')
+                str_contains(strtolower($function), 'query')
+                || str_contains(strtolower($function), 'execute')
+                || str_contains(strtolower($function), 'prepare')
             ) {
                 $dbQueryCount++;
             }
@@ -357,41 +342,42 @@ class XdebugTracer
         return $dbQueryCount;
     }
 
-    public function generateStatistics(array $stats): array
+    /** @return array{file_path: string, total_lines: string, function_calls: string, user_function_calls: string, internal_function_calls: string, file_io_operations: int, db_operations: int, execution_time_ms: float, peak_memory_mb: float, unique_function_count: string, max_depth: int} */
+    public function generateStatistics(TraceStatistics $stats): array
     {
         return [
-            'file_path' => $stats['file_path'],
-            'total_lines' => number_format($stats['total_lines']),
-            'function_calls' => number_format($stats['function_calls']),
-            'user_function_calls' => number_format($stats['user_function_calls']),
-            'internal_function_calls' => number_format($stats['internal_function_calls']),
-            'file_io_operations' => $stats['file_io_operations'],
-            'db_operations' => $stats['db_operations'],
-            'execution_time_ms' => round($stats['execution_time'] * 1000),
-            'peak_memory_mb' => round($stats['peak_memory'] / 1024 / 1024, 1),
-            'unique_function_count' => number_format(count($stats['unique_functions'])),
-            'max_depth' => $stats['max_depth'],
+            'file_path' => $stats->filePath,
+            'total_lines' => number_format($stats->totalLines),
+            'function_calls' => number_format($stats->functionCalls),
+            'user_function_calls' => number_format($stats->userFunctionCalls),
+            'internal_function_calls' => number_format($stats->internalFunctionCalls),
+            'file_io_operations' => $stats->fileIoOperations,
+            'db_operations' => $stats->dbOperations,
+            'execution_time_ms' => round($stats->executionTime * 1000),
+            'peak_memory_mb' => round($stats->peakMemory / 1024 / 1024, 1),
+            'unique_function_count' => number_format($stats->getUniqueFunctionCount()),
+            'max_depth' => $stats->maxDepth,
         ];
     }
 
-    public function displayResults(array $stats): void
+    public function displayResults(TraceStatistics $stats): void
     {
-        echo "✅ Trace complete: {$stats['file_path']}\n";
-        echo "📊 {$stats['total_lines']} lines generated\n";
-        echo "📞 {$stats['function_calls']} function calls ({$stats['user_function_calls']} user + {$stats['internal_function_calls']} internal)\n";
-        echo "📂 {$stats['file_io_operations']} file I/O operations\n";
-        echo "🗃️ {$stats['db_operations']} database queries\n";
+        echo "✅ Trace complete: {$stats->filePath}\n";
+        echo "📊 {$stats->totalLines} lines generated\n";
+        echo "📞 {$stats->functionCalls} function calls ({$stats->userFunctionCalls} user + {$stats->internalFunctionCalls} internal)\n";
+        echo "📂 {$stats->fileIoOperations} file I/O operations\n";
+        echo "🗃️ {$stats->dbOperations} database queries\n";
 
-        $executionTimeMs = round($stats['execution_time'] * 1000);
+        $executionTimeMs = round($stats->executionTime * 1000);
         echo "⏱️ {$executionTimeMs}ms execution time\n";
 
-        $peakMemoryMb = round($stats['peak_memory'] / 1024 / 1024, 1);
+        $peakMemoryMb = round($stats->peakMemory / 1024 / 1024, 1);
         echo "🧠 {$peakMemoryMb}MB peak memory\n";
 
-        $uniqueFunctionCount = count($stats['unique_functions']);
+        $uniqueFunctionCount = $stats->getUniqueFunctionCount();
         echo "📚 {$uniqueFunctionCount} unique functions\n";
 
-        echo "🔄 {$stats['max_depth']} max call depth\n";
+        echo "🔄 {$stats->maxDepth} max call depth\n";
     }
 
     public function analyzeWithClaude(string $traceFile): void

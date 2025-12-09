@@ -33,3 +33,4 @@ mcp.json
 ## Home directory
 ~/
 *.phpcs-cache
+.claude/settings.local.json

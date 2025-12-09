@@ -57,13 +57,14 @@ composer global require koriym/xdebug-mcp
   "mcpServers": {
     "xdebug": {
       "command": "php",
-      "args": ["~/.composer/vendor/bin/xdebug-mcp"],
+      "args": ["/Users/YOUR_USERNAME/.composer/vendor/bin/xdebug-mcp"],
       "env": {
         "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
       }
     }
   }
 }
+# Note: Replace YOUR_USERNAME with your actual username, or use absolute path from: which xdebug-mcp
 
 # 4. Restart your AI assistant
 ```

@@ -35,7 +35,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('jsonrpc', $response);
         $this->assertEquals('2.0', $response['jsonrpc']);
@@ -55,7 +56,8 @@ class McpServerTest extends TestCase
             'method' => 'tools/list',
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('tools', $response['result']);
@@ -83,7 +85,8 @@ class McpServerTest extends TestCase
             'method' => 'unknown/method',
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals(-32601, $response['error']['code']);
@@ -111,7 +114,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals(-32000, $response['error']['code']);
@@ -130,7 +134,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals(-32000, $response['error']['code']);
@@ -146,13 +151,11 @@ class McpServerTest extends TestCase
         // Debug logging should be enabled
         $reflection = new ReflectionClass($debugServer);
         $debugMode = $reflection->getProperty('debugMode');
-        $debugMode->setAccessible(true);
         $this->assertTrue($debugMode->getValue($debugServer));
 
         // Test debug mode disabled
         putenv('MCP_DEBUG=0');
         $normalServer = new McpServer();
-        $debugMode->setAccessible(true);
         $this->assertFalse($debugMode->getValue($normalServer));
 
         // Restore environment
@@ -167,7 +170,8 @@ class McpServerTest extends TestCase
             'method' => 'resources/list',
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('resources', $response['result']);
@@ -182,7 +186,8 @@ class McpServerTest extends TestCase
             'method' => 'prompts/list',
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('prompts', $response['result']);
@@ -221,7 +226,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals(-32601, $response['error']['code']);
@@ -239,21 +245,23 @@ class McpServerTest extends TestCase
         $this->assertEquals('php script.py', $this->invokePrivateMethod($this->server, 'processScriptArgument', ['script.py'])); // doesn't end with php - gets prefix
     }
 
-    public function testNormalizePositionalArgs(): void
+    public function testMapPositionalArgs(): void
     {
-        // Test xtrace normalization
-        $args = ['script.php', 'test context'];
-        $normalized = $this->invokePrivateMethod($this->server, 'normalizePositionalArgs', [$args, 'xtrace']);
-        $this->assertEquals('script.php', $normalized['script']);
-        $this->assertEquals('test context', $normalized['context']);
+        // Test xtrace mapping - positional args are mapped to named args
+        $namedArgs = [];
+        $positionalArgs = ['script.php', 'test context'];
+        $mapped = $this->invokePrivateMethod($this->server, 'mapPositionalArgs', [$namedArgs, $positionalArgs, 'xtrace']);
+        $this->assertEquals('script.php', $mapped['script']);
+        $this->assertEquals('test context', $mapped['context']);
 
-        // Test xstep normalization
-        $args = ['script.php', 'file.php:10', '50', 'debug context'];
-        $normalized = $this->invokePrivateMethod($this->server, 'normalizePositionalArgs', [$args, 'xstep']);
-        $this->assertEquals('script.php', $normalized['script']);
-        $this->assertEquals('file.php:10', $normalized['breakpoints']);
-        $this->assertEquals('50', $normalized['steps']);
-        $this->assertEquals('debug context', $normalized['context']);
+        // Test xstep mapping
+        $namedArgs = [];
+        $positionalArgs = ['script.php', 'file.php:10', '50', 'debug context'];
+        $mapped = $this->invokePrivateMethod($this->server, 'mapPositionalArgs', [$namedArgs, $positionalArgs, 'xstep']);
+        $this->assertEquals('script.php', $mapped['script']);
+        $this->assertEquals('file.php:10', $mapped['breakpoints']);
+        $this->assertEquals('50', $mapped['steps']);
+        $this->assertEquals('debug context', $mapped['context']);
     }
 
     public function testInitializeWithUnsupportedVersion(): void
@@ -262,12 +270,11 @@ class McpServerTest extends TestCase
             'jsonrpc' => '2.0',
             'id' => 9,
             'method' => 'initialize',
-            'params' => [
-                'protocolVersion' => '1999-01-01', // Unsupported version
-            ],
+            'params' => ['protocolVersion' => '1999-01-01'], // Unsupported version
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         // Should default to latest supported version
@@ -330,7 +337,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals(-32000, $response['error']['code']);
@@ -353,7 +361,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertEquals('2.0', $response['jsonrpc']);
@@ -378,7 +387,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertEquals('2.0', $response['jsonrpc']);
@@ -403,7 +413,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertEquals('2.0', $response['jsonrpc']);
@@ -442,7 +453,8 @@ class McpServerTest extends TestCase
             ],
         ];
 
-        $response = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
         $this->assertEquals('2.0', $response['jsonrpc']);
@@ -455,7 +467,6 @@ class McpServerTest extends TestCase
     {
         $reflection = new ReflectionClass($object);
         $method = $reflection->getMethod($methodName);
-        $method->setAccessible(true);
 
         return $method->invokeArgs($object, $parameters);
     }

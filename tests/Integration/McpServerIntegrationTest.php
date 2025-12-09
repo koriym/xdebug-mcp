@@ -33,7 +33,8 @@ class McpServerIntegrationTest extends TestCase
             ],
         ];
 
-        $initResponse = $this->invokeMethod($this->server, 'handleRequest', [$initRequest]);
+        $initResponseObj = $this->invokeMethod($this->server, 'handleRequest', [$initRequest]);
+        $initResponse = $initResponseObj->toArray();
 
         $this->assertEquals('2.0', $initResponse['jsonrpc']);
         $this->assertEquals(1, $initResponse['id']);
@@ -48,7 +49,8 @@ class McpServerIntegrationTest extends TestCase
             'method' => 'tools/list',
         ];
 
-        $toolsResponse = $this->invokeMethod($this->server, 'handleRequest', [$toolsRequest]);
+        $toolsResponseObj = $this->invokeMethod($this->server, 'handleRequest', [$toolsRequest]);
+        $toolsResponse = $toolsResponseObj->toArray();
 
         $this->assertEquals('2.0', $toolsResponse['jsonrpc']);
         $this->assertEquals(2, $toolsResponse['id']);
@@ -80,7 +82,8 @@ class McpServerIntegrationTest extends TestCase
             'method' => 'invalid/method',
         ];
 
-        $response = $this->invokeMethod($this->server, 'handleRequest', [$invalidRequest]);
+        $responseObj = $this->invokeMethod($this->server, 'handleRequest', [$invalidRequest]);
+        $response = $responseObj->toArray();
 
         $this->assertEquals('2.0', $response['jsonrpc']);
         $this->assertEquals(11, $response['id']);
@@ -99,7 +102,8 @@ class McpServerIntegrationTest extends TestCase
             ],
         ];
 
-        $response = $this->invokeMethod($this->server, 'handleRequest', [$invalidToolRequest]);
+        $responseObj = $this->invokeMethod($this->server, 'handleRequest', [$invalidToolRequest]);
+        $response = $responseObj->toArray();
 
         $this->assertEquals('2.0', $response['jsonrpc']);
         $this->assertEquals(12, $response['id']);
@@ -130,7 +134,6 @@ class McpServerIntegrationTest extends TestCase
     {
         $reflection = new ReflectionClass($object);
         $method = $reflection->getMethod($methodName);
-        $method->setAccessible(true);
 
         return $method->invokeArgs($object, $parameters);
     }

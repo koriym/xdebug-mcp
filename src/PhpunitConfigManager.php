@@ -15,9 +15,9 @@ use const STDERR;
 
 class PhpunitConfigManager
 {
-    private string $projectRoot;
+    private readonly string $projectRoot;
 
-    public function __construct(string $projectRoot, private bool $verbose = false)
+    public function __construct(string $projectRoot, private readonly bool $verbose = false)
     {
         $this->projectRoot = rtrim($projectRoot, '/');
     }
@@ -55,19 +55,19 @@ class PhpunitConfigManager
         }
 
         // Create minimal config content
-        return <<<'XML'
-<?xml version="1.0" encoding="UTF-8"?>
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
-         bootstrap="vendor/autoload.php"
-         colors="true">
-    <testsuites>
-        <testsuite name="default">
-            <directory>tests</directory>
-        </testsuite>
-    </testsuites>
-</phpunit>
-XML;
+        return <<<'XML_WRAP'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+                 bootstrap="vendor/autoload.php"
+                 colors="true">
+            <testsuites>
+                <testsuite name="default">
+                    <directory>tests</directory>
+                </testsuite>
+            </testsuites>
+        </phpunit>
+        XML_WRAP;
     }
 
     /**

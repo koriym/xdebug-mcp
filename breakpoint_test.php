@@ -1,10 +1,13 @@
 <?php
-function calculateSum($a, $b) {
+
+function calculateSum($a, $b)
+{
     $result = $a + $b;  // Line 3 - Basic breakpoint test
     return $result;
 }
 
-function processArray($numbers) {
+function processArray($numbers)
+{
     $total = 0;
     foreach ($numbers as $num) {
         if ($num > 5) {  // Line 10 - Conditional breakpoint test
