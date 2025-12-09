@@ -19,6 +19,7 @@ use Amp\Socket\SocketException;
 use Amp\TimeoutCancellation;
 use Koriym\XdebugMcp\Exceptions\DebugSessionException;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
+use Koriym\XdebugMcp\Utilities\PathNormalizer;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use SimpleXMLElement;
@@ -32,7 +33,6 @@ use function array_filter;
 use function array_keys;
 use function array_map;
 use function array_merge;
-use function array_pop;
 use function array_push;
 use function array_reverse;
 use function array_slice;
@@ -731,37 +731,7 @@ final class DebugServer
      */
     private function normalisePath(string $path): string
     {
-        // Handle Windows paths by normalising to forward slashes
-        $path = str_replace('\\', '/', $path);
-
-        // Preserve stream wrapper prefix (phar://, zip://, etc.)
-        $prefix = '';
-        if (preg_match('#^([a-zA-Z][a-zA-Z0-9+.-]*://)(.*)$#', $path, $matches)) {
-            $prefix = $matches[1];
-            $path = $matches[2];
-        } elseif (str_starts_with($path, '/')) {
-            $prefix = '/';
-            $path = substr($path, 1);
-        }
-
-        $parts = [];
-        foreach (explode('/', $path) as $part) {
-            if ($part === '') {
-                continue;
-            }
-
-            if ($part === '.') {
-                continue;
-            }
-
-            if ($part === '..') {
-                array_pop($parts);
-            } else {
-                $parts[] = $part;
-            }
-        }
-
-        return $prefix . implode('/', $parts);
+        return PathNormalizer::normalise($path);
     }
 
     /**

@@ -155,7 +155,7 @@ class FakeProfilingDemo
                 echo "❌ エラー: " . ($response['error']['message'] ?? 'Unknown error') . "\n";
             }
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             echo "❌ 例外: " . $e->getMessage() . "\n";
         }
 

@@ -9,22 +9,16 @@ use Koriym\XdebugMcp\DTO\AnalyzerOptions;
 use Koriym\XdebugMcp\DTO\FullAnalysisResult;
 use Koriym\XdebugMcp\DTO\SlowFunction;
 use Koriym\XdebugMcp\DTO\TraceAnalysisStatistics;
+use Koriym\XdebugMcp\Utilities\PathNormalizer;
 
-use function array_pop;
 use function count;
-use function explode;
 use function filesize;
 use function floor;
-use function implode;
 use function is_readable;
 use function log;
 use function max;
 use function min;
-use function preg_match;
 use function round;
-use function str_replace;
-use function str_starts_with;
-use function substr;
 use function trim;
 
 /**
@@ -87,35 +81,7 @@ class UnifiedAnalyzer
      */
     private function normalisePath(string $path): string
     {
-        $path = str_replace('\\', '/', $path);
-
-        $prefix = '';
-        if (preg_match('#^([a-zA-Z][a-zA-Z0-9+.-]*://)(.*)$#', $path, $matches)) {
-            $prefix = $matches[1];
-            $path = $matches[2];
-        } elseif (str_starts_with($path, '/')) {
-            $prefix = '/';
-            $path = substr($path, 1);
-        }
-
-        $parts = [];
-        foreach (explode('/', $path) as $part) {
-            if ($part === '') {
-                continue;
-            }
-
-            if ($part === '.') {
-                continue;
-            }
-
-            if ($part === '..') {
-                array_pop($parts);
-            } else {
-                $parts[] = $part;
-            }
-        }
-
-        return $prefix . implode('/', $parts);
+        return PathNormalizer::normalise($path);
     }
 
     private function safeFilesize(string $path): int
