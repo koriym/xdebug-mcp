@@ -38,7 +38,6 @@
         "bin/xprofile",
         "bin/xcoverage",
         "bin/xback",
-        "bin/xanalyze",
         "bin/check-env",
         "bin/test-json"
     ],
