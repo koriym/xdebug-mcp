@@ -270,9 +270,7 @@ class McpServerTest extends TestCase
             'jsonrpc' => '2.0',
             'id' => 9,
             'method' => 'initialize',
-            'params' => [
-                'protocolVersion' => '1999-01-01', // Unsupported version
-            ],
+            'params' => ['protocolVersion' => '1999-01-01'], // Unsupported version
         ];
 
         $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);

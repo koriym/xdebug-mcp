@@ -19,6 +19,8 @@
     <file>tests</file>
     <exclude-pattern>*/tmp/*</exclude-pattern>
     <exclude-pattern>*/Fake/*</exclude-pattern>
+    <exclude-pattern>*/fixtures/*</exclude-pattern>
+    <exclude-pattern>tests/SimpleTest.php</exclude-pattern>
 
     <!-- PSR12 Coding Standard -->
     <rule ref="PSR12"/>
