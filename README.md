@@ -51,20 +51,20 @@ composer global require koriym/xdebug-mcp
 # 2. Verify Xdebug is available (even if disabled in php.ini)
 ~/.composer/vendor/bin/check-env
 
-# 3. Configure your AI assistant's MCP settings
-#    For Claude Code, edit: ~/.claude.json
+# 3a. Setup Skills (recommended for Claude Code / Codex)
+ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills .claude/skills
+
+# 3b. Or configure MCP (for Cursor, Windsurf, and other MCP-compatible AI assistants)
+#     Create .mcp.json in your project root:
 {
   "mcpServers": {
     "xdebug": {
       "command": "php",
-      "args": ["/Users/YOUR_USERNAME/.composer/vendor/bin/xdebug-mcp"],
-      "env": {
-        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
-      }
+      "args": ["/Users/YOUR_USERNAME/.composer/vendor/bin/xdebug-mcp"]
     }
   }
 }
-# Note: Replace YOUR_USERNAME with your actual username, or use absolute path from: which xdebug-mcp
+# Replace YOUR_USERNAME, or use: which xdebug-mcp
 
 # 4. Restart your AI assistant
 ```
@@ -120,9 +120,9 @@ xback --break='app.php:50' -- php app.php
 
 Run `--help` on any tool for detailed options.
 
-## Claude Code Skills
+## Skills (Recommended)
 
-For [Claude Code](https://claude.ai/code) users, pre-configured skills are available in `.claude/skills/`:
+Pre-configured skills for Claude Code and Codex. **This is the recommended setup** - simpler than MCP configuration.
 
 | Skill | Purpose |
 |-------|---------|
@@ -131,10 +131,10 @@ For [Claude Code](https://claude.ai/code) users, pre-configured skills are avail
 | `xcoverage` | Test coverage analysis |
 | `xstep` | Breakpoint debugging, variable inspection |
 
-Copy to your project:
+Setup (symlink from global install):
 
 ```bash
-cp -r vendor/koriym/xdebug-mcp/.claude/skills/ .claude/skills/
+ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills .claude/skills
 ```
 
 ## Interactive REPL
