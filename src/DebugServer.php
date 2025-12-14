@@ -110,7 +110,7 @@ final class DebugServer
     private const DEFAULT_CONNECTION_TIMEOUT = 30.0;  // Initial connection only
     private const DEFAULT_EXECUTION_TIMEOUT = 3600.0;  // 1 hour for long debugging sessions
     private const DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
-    private const MAX_STEPS = 200;  // Default maximum steps for step recording
+    private const MAX_STEPS = 100;  // Default maximum steps for step recording
 
     /** @var DeferredFuture<bool>|null */
     private DeferredFuture|null $listenerReady = null;
@@ -2119,8 +2119,8 @@ final class DebugServer
             $this->xdebugSocket->close();
         }
 
-        // Output Step Recording results in JSON mode
-        if ($this->jsonMode && $this->breaks !== []) {
+        // Output Step Recording results in JSON mode (always output even if no breaks hit)
+        if ($this->jsonMode) {
             $this->outputStepRecordingResults();
         }
 

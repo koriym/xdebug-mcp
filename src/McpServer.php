@@ -339,7 +339,7 @@ final class McpServer
             'protocolVersion' => $clientVersion,
             'capabilities' => [
                 'tools' => ['listChanged' => true],
-                'resources' => [],
+                'resources' => ['listChanged' => false],
                 'prompts' => ['listChanged' => true],
             ],
             'serverInfo' => [
@@ -579,7 +579,9 @@ final class McpServer
         }
 
         // Auto-prepend 'php' if script doesn't start with a PHP binary
-        if (! preg_match('/^(\S*php)(\s+|$)/', $script)) {
+        // Pattern: matches "php", "php8.1", "/usr/bin/php", etc. followed by space or end
+        // Must NOT match ".php" file extensions
+        if (! preg_match('/^(\S*\/)?php([0-9.]*)?(\s|$)/', $script)) {
             return 'php ' . $script;
         }
 
@@ -760,7 +762,8 @@ final class McpServer
             $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
             $breakpoints = $args['breakpoints'] ?? '';
-            $breakpoints = $this->processScriptArgument($breakpoints); // Process quotes in breakpoints too
+            // Note: Do NOT apply processScriptArgument() to breakpoints
+            // It would incorrectly prepend 'php ' to "file.php:15" making it "php file.php:15"
 
             // Claude CLI bug workaround: if breakpoints contains a script-like value, treat as empty
             if (str_contains($breakpoints, '.php') && ! str_contains($breakpoints, ':')) {
@@ -771,7 +774,7 @@ final class McpServer
             $includeVendor = $args['include_vendor'] ?? '';
 
             // Build command
-            $cmd = $this->binDir . '/xstep --exit-on-break';
+            $cmd = $this->binDir . '/xstep --json --exit-on-break';
 
             // Add breakpoints if specified
             if ($breakpoints !== '') {
@@ -782,10 +785,10 @@ final class McpServer
                 $cmd .= ' --context=' . escapeshellarg((string) $context);
             }
 
-            // Note: --steps parameter causes issues, temporarily disabled
-            // if ($steps !== '') {
-            //     $cmd .= ' --steps=' . escapeshellarg($steps);
-            // }
+            // Add steps parameter if specified
+            if ($steps !== '') {
+                $cmd .= ' --steps=' . escapeshellarg($steps);
+            }
 
             // Add include_vendor option if specified
             if ($includeVendor !== '') {
@@ -795,13 +798,19 @@ final class McpServer
             // Build command - user must specify PHP binary explicitly
             $cmd .= ' -- ' . $script;
 
-            // Execute command
-            $output = [];
+            // Execute command and redirect output to temp file (shutdown function output requires file redirect)
+            $tmpFile = tempnam(sys_get_temp_dir(), 'xstep_');
             $returnCode = 0;
-            exec($cmd . ' 2>&1', $output, $returnCode);
+            exec($cmd . ' > ' . escapeshellarg($tmpFile) . ' 2>&1', $execOutput, $returnCode);
+
+            // Read output from temp file
+            $outputText = '';
+            if (file_exists($tmpFile)) {
+                $outputText = file_get_contents($tmpFile);
+                unlink($tmpFile);
+            }
 
             // Handle common error cases with user-friendly messages
-            $outputText = implode("\n", $output);
             if ($returnCode === 255 && str_contains($outputText, 'Breakpoint file not found')) {
                 throw new InvalidArgumentException('Invalid breakpoint format. Use: file.php:line or file.php:line:condition');
             }
