@@ -14,19 +14,27 @@ use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\Exceptions\InvalidToolException;
 use Throwable;
 
+use function array_map;
 use function array_merge;
 use function array_values;
+use function count;
 use function date;
 use function dirname;
 use function error_log;
 use function escapeshellarg;
 use function exec;
+use function explode;
 use function fflush;
 use function fgets;
+use function file;
+use function file_exists;
+use function file_get_contents;
+use function getcwd;
 use function getenv;
 use function implode;
 use function in_array;
 use function is_array;
+use function is_numeric;
 use function is_string;
 use function json_decode;
 use function json_encode;
@@ -36,7 +44,10 @@ use function str_ends_with;
 use function str_starts_with;
 use function strlen;
 use function substr;
+use function sys_get_temp_dir;
+use function tempnam;
 use function trim;
+use function unlink;
 
 use const JSON_THROW_ON_ERROR;
 use const STDIN;
@@ -603,6 +614,76 @@ final class McpServer
         }
     }
 
+    /**
+     * Validate breakpoint specifications
+     * Format: "file.php:line" or "file.php:line:condition"
+     * Multiple breakpoints: "file1.php:10,file2.php:20"
+     *
+     * @throws InvalidArgumentException if breakpoint format is invalid or file doesn't exist
+     */
+    private function validateBreakpoints(string $breakpoints): void
+    {
+        $breakpointList = array_map('trim', explode(',', $breakpoints));
+
+        foreach ($breakpointList as $breakpoint) {
+            // Parse breakpoint format: file:line or file:line:condition
+            $parts = explode(':', $breakpoint);
+            if (count($parts) < 2) {
+                throw new InvalidArgumentException(
+                    'Invalid breakpoint format: "' . $breakpoint . '". ' .
+                    'Expected format: "file.php:line" or "file.php:line:condition"'
+                );
+            }
+
+            $file = $parts[0];
+            $line = $parts[1];
+
+            // Validate line number is numeric
+            if (! is_numeric($line)) {
+                throw new InvalidArgumentException(
+                    'Invalid line number in breakpoint "' . $breakpoint . '": "' . $line . '" is not a number'
+                );
+            }
+
+            $lineNumber = (int) $line;
+            if ($lineNumber < 1) {
+                throw new InvalidArgumentException(
+                    'Invalid line number in breakpoint "' . $breakpoint . '": line number must be >= 1'
+                );
+            }
+
+            // Convert to absolute path if relative
+            $absolutePath = $file;
+            if (! str_starts_with($file, '/')) {
+                $absolutePath = getcwd() . '/' . $file;
+            }
+
+            // Check if file exists
+            if (! file_exists($absolutePath)) {
+                throw new InvalidArgumentException(
+                    'Breakpoint file not found: "' . $file . '"' .
+                    ($absolutePath !== $file ? ' (resolved to: "' . $absolutePath . '")' : '')
+                );
+            }
+
+            // Validate line number is within file bounds
+            $fileContents = file($absolutePath);
+            if ($fileContents === false) {
+                throw new InvalidArgumentException(
+                    'Cannot read breakpoint file: "' . $file . '"'
+                );
+            }
+
+            $totalLines = count($fileContents);
+            if ($lineNumber > $totalLines) {
+                throw new InvalidArgumentException(
+                    'Invalid line number in breakpoint "' . $breakpoint . '": ' .
+                    'line ' . $lineNumber . ' exceeds file length (' . $totalLines . ' lines)'
+                );
+            }
+        }
+    }
+
     /** @param array<string, string|int|bool|array<string, string|int|bool>> $params */
     private function handleToolCall(string|int|null $id, array $params): JsonRpcResponse
     {
@@ -772,6 +853,11 @@ final class McpServer
 
             $steps = $args['steps'] ?? '100';
             $includeVendor = $args['include_vendor'] ?? '';
+
+            // Validate breakpoints if specified
+            if ($breakpoints !== '') {
+                $this->validateBreakpoints($breakpoints);
+            }
 
             // Build command
             $cmd = $this->binDir . '/xstep --json --exit-on-break';
