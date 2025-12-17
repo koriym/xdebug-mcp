@@ -187,7 +187,7 @@ final class McpServer
             ),
             'xback' => new McpTool(
                 'xback',
-                'Get stack trace (backtrace) at breakpoint | ex) ./xback --break="app.php:50" "php app.php"',
+                'Capture call stack (backtrace) at specific line - Lightweight, non-interactive stack trace collection | Use when: Need backtrace/stack trace at specific location | ex) ./xback --break="app.php:50" "php app.php"',
                 [
                     'type' => 'object',
                     'properties' => [
@@ -197,7 +197,7 @@ final class McpServer
                         ],
                         'breakpoint' => [
                             'type' => 'string',
-                            'description' => 'Breakpoint location (e.g., "file.php:15")',
+                            'description' => 'Line location to capture backtrace (e.g., "file.php:15")',
                             'default' => '',
                         ],
                         'depth' => [
@@ -478,7 +478,7 @@ final class McpServer
                 ],
                 [
                     'name' => 'xback',
-                    'description' => 'Get stack trace (backtrace) at breakpoint | ex) /xback --script="app.php" --break="app.php:50"',
+                    'description' => 'Capture call stack (backtrace) at specific line - Lightweight, non-interactive stack trace collection | Use when: Need backtrace/stack trace at specific location | ex) /xback --script="app.php" --break="app.php:50"',
                     'arguments' => [
                         [
                             'name' => 'script',
@@ -487,7 +487,7 @@ final class McpServer
                         ],
                         [
                             'name' => 'breakpoint',
-                            'description' => 'Breakpoint location (e.g., "file.php:15")',
+                            'description' => 'Line location to capture backtrace (e.g., "file.php:15")',
                             'required' => false,
                         ],
                         [
