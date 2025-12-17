@@ -613,9 +613,9 @@ final class McpServer
             throw new InvalidArgumentException('Script argument is required');
         }
 
-        // Check that script starts with PHP binary (handles paths like /usr/bin/php, /path/to/php83/php)
-        if (! preg_match('/^(\S*php)(\s+|$)/', $script)) {
-            throw new InvalidArgumentException('Script must start with PHP binary. Examples: "php script.php", "/usr/bin/php script.php", "/path/to/php83/php script.php". Received: "' . $script . '"');
+        // Check that script starts with PHP binary (handles php, php8.1, /usr/bin/php, /path/to/php83/php, etc.)
+        if (! preg_match('/^(\S*\/)?php([0-9.]*)?(\\s+|$)/i', $script)) {
+            throw new InvalidArgumentException('Script must start with PHP binary. Examples: "php script.php", "php8.1 script.php", "/usr/bin/php script.php". Received: "' . $script . '"');
         }
     }
 
