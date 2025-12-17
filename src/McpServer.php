@@ -662,7 +662,14 @@ final class McpServer
             // Convert to absolute path if relative
             $absolutePath = $file;
             if (! str_starts_with($file, '/')) {
-                $absolutePath = getcwd() . '/' . $file;
+                $cwd = getcwd();
+                if ($cwd === false) {
+                    throw new InvalidArgumentException(
+                        'Cannot determine current working directory for relative breakpoint path: "' . $file . '"',
+                    );
+                }
+
+                $absolutePath = $cwd . '/' . $file;
             }
 
             // Check if file exists
