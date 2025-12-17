@@ -14,6 +14,7 @@ use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\Exceptions\InvalidToolException;
 use Throwable;
 
+use function array_filter;
 use function array_map;
 use function array_merge;
 use function array_values;
@@ -589,14 +590,18 @@ final class McpServer
             $script = substr($script, 0, -1);
         }
 
-        // Auto-prepend 'php' if script doesn't start with a PHP binary
-        // Pattern: matches "php", "php8.1", "/usr/bin/php", etc. followed by space or end
-        // Must NOT match ".php" file extensions
-        if (! preg_match('/^(\S*\/)?php([0-9.]*)?(\s|$)/', $script)) {
-            return 'php ' . $script;
+        // If the command already starts with a PHP binary (php, php8.2, /usr/bin/php) keep as-is
+        if (preg_match('/^(\S*\/)?php([0-9.]*)?(\s|$)/', $script)) {
+            return $script;
         }
 
-        return $script;
+        // Also keep plain PHP script paths (e.g., "demo.php", "./bin/cli.php", "app.php --flag")
+        if (preg_match('/^\S+\.php(\s|$)/', $script)) {
+            return $script;
+        }
+
+        // Otherwise, prepend php for non-PHP commands (e.g., "script.py" -> "php script.py")
+        return 'php ' . $script;
     }
 
     /**
@@ -619,19 +624,21 @@ final class McpServer
      * Format: "file.php:line" or "file.php:line:condition"
      * Multiple breakpoints: "file1.php:10,file2.php:20"
      *
-     * @throws InvalidArgumentException if breakpoint format is invalid or file doesn't exist
+     * @throws InvalidArgumentException If breakpoint format is invalid or file doesn't exist.
      */
     private function validateBreakpoints(string $breakpoints): void
     {
-        $breakpointList = array_map('trim', explode(',', $breakpoints));
+        // Filter out empty entries from trailing commas (e.g., "a.php:1,")
+        $breakpointList = array_filter(array_map('trim', explode(',', $breakpoints)));
 
         foreach ($breakpointList as $breakpoint) {
             // Parse breakpoint format: file:line or file:line:condition
-            $parts = explode(':', $breakpoint);
+            // Use limit 3 to preserve colons in conditions (e.g., "file.php:10:$a==$b:1")
+            $parts = explode(':', $breakpoint, 3);
             if (count($parts) < 2) {
                 throw new InvalidArgumentException(
                     'Invalid breakpoint format: "' . $breakpoint . '". ' .
-                    'Expected format: "file.php:line" or "file.php:line:condition"'
+                    'Expected format: "file.php:line" or "file.php:line:condition"',
                 );
             }
 
@@ -641,14 +648,14 @@ final class McpServer
             // Validate line number is numeric
             if (! is_numeric($line)) {
                 throw new InvalidArgumentException(
-                    'Invalid line number in breakpoint "' . $breakpoint . '": "' . $line . '" is not a number'
+                    'Invalid line number in breakpoint "' . $breakpoint . '": "' . $line . '" is not a number',
                 );
             }
 
             $lineNumber = (int) $line;
             if ($lineNumber < 1) {
                 throw new InvalidArgumentException(
-                    'Invalid line number in breakpoint "' . $breakpoint . '": line number must be >= 1'
+                    'Invalid line number in breakpoint "' . $breakpoint . '": line number must be >= 1',
                 );
             }
 
@@ -662,7 +669,7 @@ final class McpServer
             if (! file_exists($absolutePath)) {
                 throw new InvalidArgumentException(
                     'Breakpoint file not found: "' . $file . '"' .
-                    ($absolutePath !== $file ? ' (resolved to: "' . $absolutePath . '")' : '')
+                    ($absolutePath !== $file ? ' (resolved to: "' . $absolutePath . '")' : ''),
                 );
             }
 
@@ -670,7 +677,7 @@ final class McpServer
             $fileContents = file($absolutePath);
             if ($fileContents === false) {
                 throw new InvalidArgumentException(
-                    'Cannot read breakpoint file: "' . $file . '"'
+                    'Cannot read breakpoint file: "' . $file . '"',
                 );
             }
 
@@ -678,7 +685,7 @@ final class McpServer
             if ($lineNumber > $totalLines) {
                 throw new InvalidArgumentException(
                     'Invalid line number in breakpoint "' . $breakpoint . '": ' .
-                    'line ' . $lineNumber . ' exceeds file length (' . $totalLines . ' lines)'
+                    'line ' . $lineNumber . ' exceeds file length (' . $totalLines . ' lines)',
                 );
             }
         }
@@ -887,13 +894,22 @@ final class McpServer
             // Execute command and redirect output to temp file (shutdown function output requires file redirect)
             $tmpFile = tempnam(sys_get_temp_dir(), 'xstep_');
             $returnCode = 0;
-            exec($cmd . ' > ' . escapeshellarg($tmpFile) . ' 2>&1', $execOutput, $returnCode);
 
-            // Read output from temp file
-            $outputText = '';
-            if (file_exists($tmpFile)) {
-                $outputText = file_get_contents($tmpFile);
-                unlink($tmpFile);
+            // Handle tempnam() failure
+            if ($tmpFile === false) {
+                // Fallback to direct exec without temp file
+                $output = [];
+                exec($cmd . ' 2>&1', $output, $returnCode);
+                $outputText = implode("\n", $output);
+            } else {
+                exec($cmd . ' > ' . escapeshellarg($tmpFile) . ' 2>&1', $output, $returnCode);
+
+                // Read output from temp file
+                $outputText = '';
+                if (file_exists($tmpFile)) {
+                    $outputText = file_get_contents($tmpFile) ?: '';
+                    unlink($tmpFile);
+                }
             }
 
             // Handle common error cases with user-friendly messages
