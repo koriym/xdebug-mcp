@@ -21,6 +21,7 @@ use function getenv;
 use function glob;
 use function implode;
 use function passthru;
+use function trim;
 use function usort;
 
 use const STDERR;
@@ -296,12 +297,20 @@ class XdebugRunner
     /** @return string[] */
     private function generateXdebugArguments(): array
     {
-        $args = [
+        // Add zend_extension flag if Xdebug is not already loaded
+        $xdebugFlag = XdebugFinder::getXdebugFlag();
+        $args = [];
+
+        if ($xdebugFlag !== '') {
+            $args[] = trim($xdebugFlag);
+        }
+
+        $args = array_merge($args, [
             '-dxdebug.mode=' . $this->mode,
             '-dxdebug.start_with_request=yes',
             '-dxdebug.output_dir=' . $this->outputDir,
             '-dxdebug.use_compression=0',
-        ];
+        ]);
 
         // Add mode-specific options
         if ($this->mode === 'trace') {

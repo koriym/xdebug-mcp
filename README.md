@@ -73,6 +73,78 @@ Now ask your AI to debug PHP code.
 
 **New to xdebug-mcp?** Try the [demo/](demo/) folder with sample buggy code, performance issues, and coverage examples.
 
+## Try It Out
+
+### 1. Check Xdebug Installation
+
+**Recommended Setup:** Xdebug installed but disabled in php.ini (loaded on-demand for zero performance impact)
+
+```bash
+./bin/check-env
+```
+
+Expected output:
+```
+✅ PHP 8.4.15
+✅ Xdebug 3.5.0 (on-demand)
+```
+
+> ⚠️ If you see `(always loaded)`, disable Xdebug in php.ini. This tool loads it on-demand only when needed.
+
+### 2. Try CLI Tools
+
+Run the demo examples to see each tool in action:
+
+```bash
+# Debug buggy code with breakpoints (JSON output)
+./bin/xstep --break="demo/buggy.php:22" -- php demo/buggy.php
+
+# Trace execution flow
+./bin/xtrace --context="Debug demo" -- php demo/buggy.php
+
+# Profile performance bottlenecks
+./bin/xprofile --json -- php demo/slow.php
+
+# Analyze code coverage
+./bin/xcoverage -- php demo/coverage.php
+
+# Get stack trace at breakpoint
+./bin/xback --break="demo/buggy.php:44" -- php demo/buggy.php
+```
+
+Each command outputs structured JSON data that AI can analyze to provide debugging insights.
+
+### 3. Setup for AI Integration
+
+#### Option A: Skills (Recommended for Claude Code)
+
+```bash
+# Link skills to your project
+ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills .claude/skills
+
+# Restart Claude Code
+# Now use natural language: "Debug demo/buggy.php"
+```
+
+#### Option B: MCP Server (For Cursor, Windsurf, etc.)
+
+Create `.mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "xdebug": {
+      "command": "php",
+      "args": ["/Users/YOUR_USERNAME/.composer/vendor/bin/xdebug-mcp"]
+    }
+  }
+}
+```
+
+Find the correct path: `which xdebug-mcp`
+
+Restart your AI assistant and ask: "Debug my PHP code"
+
 ## How It Works
 
 ```mermaid
@@ -135,6 +207,7 @@ Setup (symlink from global install):
 
 ```bash
 ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills .claude/skills
+
 ```
 
 ## Interactive REPL

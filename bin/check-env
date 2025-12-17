@@ -15,42 +15,21 @@ use Koriym\XdebugMcp\XdebugFinder;
 
 $action = $argv[1] ?? null;
 
-echo "🔧 Xdebug MCP Environment Check\n";
-echo "===============================\n\n";
-
 $projectRoot = dirname(__DIR__);
 $mcpServerPath = $projectRoot . '/bin/xdebug-mcp';
 
-// Check basic environment
-echo "📁 Project root: $projectRoot\n";
-echo "🚀 MCP server: $mcpServerPath\n\n";
-
 // Check PHP version
 $phpVersion = PHP_VERSION;
-echo "🐘 PHP Version: $phpVersion ";
 if (version_compare($phpVersion, '8.0.0', '>=')) {
-    echo "✅\n";
+    echo "✅ PHP {$phpVersion}\n";
 } else {
-    echo "❌ (Requires PHP 8.0+)\n";
+    echo "❌ PHP {$phpVersion} (Requires 8.0+)\n";
 }
 
 // Check Xdebug status directly
 $loaded = extension_loaded('xdebug');
 $available = XdebugFinder::isXdebugAvailable();
 $detectedPath = XdebugFinder::detectXdebugPath();
-
-echo "🔍 Xdebug Status:\n";
-echo "   Default loading: " . ($loaded ? "❌ (Loaded by default - may impact performance)" : "✅ (Not loaded by default - good for performance)") . "\n";
-echo "   Availability: " . ($available ? "✅ Available" : "❌ Not available") . "\n";
-
-if ($available && !$loaded) {
-    echo "   Detection: ✅ (Found at: {$detectedPath})\n";
-    $xdebugFlag = XdebugFinder::getXdebugFlag();
-    echo "   Loading flag: {$xdebugFlag}\n";
-} elseif (!$available) {
-    echo "   Status: ❌ (Not found - installation required)\n";
-    XdebugFinder::showInstallationGuidance(false);
-}
 
 $canLoadXdebug = $available;
 $zendFlag = $available ? XdebugFinder::getXdebugFlag() : null;
@@ -59,11 +38,10 @@ $zendFlag = $available ? XdebugFinder::getXdebugFlag() : null;
 if ($canLoadXdebug) {
     if ($loaded) {
         $version = phpversion('xdebug') ?: 'Unknown';
-        echo "🔍 Xdebug version: {$version} ";
         if (version_compare($version, '3.0.0', '>=')) {
-            echo "✅\n";
+            echo "⚠️  Xdebug {$version} (always loaded - impacts performance)\n";
         } else {
-            echo "⚠️  (Consider upgrading to 3.0+)\n";
+            echo "⚠️  Xdebug {$version} (always loaded, consider upgrading to 3.0+)\n";
         }
     } else {
         $phpBin = escapeshellcmd(PHP_BINARY);
@@ -74,47 +52,23 @@ if ($canLoadXdebug) {
             $zendFlag
         ), $output);
         if (!empty($output[0])) {
-            echo "🔍 Xdebug version: {$output[0]} ";
             if (version_compare($output[0], '3.0.0', '>=')) {
-                echo "✅\n";
+                echo "✅ Xdebug {$output[0]} (on-demand)\n";
             } else {
-                echo "⚠️  (Consider upgrading to 3.0+)\n";
+                echo "⚠️  Xdebug {$output[0]} (on-demand, consider upgrading to 3.0+)\n";
             }
         }
     }
+} else {
+    echo "❌ Xdebug Not available\n";
+    XdebugFinder::showInstallationGuidance(false);
 }
 
-// Check Xdebug modes
-if ($canLoadXdebug) {
-    echo "🔍 Xdebug modes: ";
-    if ($loaded) {
-        $modes = ini_get('xdebug.mode') ?: 'Unknown';
-        echo ($modes && strpos($modes, 'debug') !== false)
-            ? "✅ ({$modes})\n"
-            : "⚠️  ({$modes})\n";
-    } else {
-        $phpBin = escapeshellcmd(PHP_BINARY);
-        $output = [];
-        exec(sprintf(
-            "%s %s -dxdebug.mode=debug,profile,coverage,trace -r \"echo ini_get('xdebug.mode');\" 2>/dev/null",
-            $phpBin,
-            $zendFlag
-        ), $output);
-        echo (!empty($output) && strpos($output[0], 'debug') !== false)
-            ? "✅ (Modes ok)\n"
-            : "⚠️  (Mode verification inconclusive)\n";
-    }
-}
-
-// Check required PHP extensions
+// Check required PHP extensions (only show if missing)
 $requiredExtensions = ['sockets', 'xml', 'json'];
-echo "\n📦 Required PHP Extensions:\n";
 foreach ($requiredExtensions as $ext) {
-    echo "   - $ext: ";
-    if (extension_loaded($ext)) {
-        echo "✅\n";
-    } else {
-        echo "❌ (Missing)\n";
+    if (!extension_loaded($ext)) {
+        echo "❌ Extension: {$ext} (Missing)\n";
     }
 }
 
@@ -194,18 +148,6 @@ if ($action === '--install-mcp') {
         echo "❓ Platform not detected. Please configure manually.\n";
     }
     
-} else {
-    echo "🎯 Next Steps:\n";
-    echo "==============\n";
-    echo "1. Install MCP integration:\n";
-    echo "   composer install-mcp      # For Claude Code\n";
-    echo "   composer install-desktop  # For Claude Desktop\n\n";
-    echo "2. Test the installation:\n";
-    echo "   composer test-json\n\n";
-    echo "3. Use xdebug commands:\n";
-    echo "   ./bin/xdebug-debug your-script.php\n";
-    echo "   ./bin/xdebug-trace --json -- php your-script.php\n";
-    echo "   ./bin/xdebug-profile --json -- php your-script.php\n\n";
 }
 
 $hasIssues = !$canLoadXdebug || $loaded || !extension_loaded('sockets') || !extension_loaded('xml');

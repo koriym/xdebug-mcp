@@ -17,80 +17,119 @@ class InvalidBreakpointFormatException extends \RuntimeException
 /**
  * Display help information
  */
-function showHelp(): void
+function showHelp(string $commandName = 'xstep'): void
 {
-    echo "Usage: xstep [options] [--] command\n";
-    echo "\n";
-    echo "🔍 AI-Optimized Interactive PHP Step Debugger\n";
-    echo "\n";
-    echo "PURPOSE:\n";
-    echo "  Revolutionary approach to PHP debugging - no var_dump(), no print_r(), no code modification.\n";
-    echo "  Provides runtime execution analysis through interactive breakpoints and variable inspection.\n";
-    echo "  AI can control step-by-step execution and analyze variable states at any point.\n";
-    echo "\n";
-    echo "KEY BENEFITS FOR AI DEBUGGING:\n";
-    echo "  ✅ Non-invasive: Zero source code modification required\n";
-    echo "  ✅ Interactive: Step through execution, inspect variables in real-time\n";
-    echo "  ✅ Conditional breakpoints: Break only when specific conditions are met\n";
-    echo "  ✅ JSON output: Structured data perfect for AI analysis\n";
-    echo "  ✅ Step recording: Capture variable evolution over N execution steps\n";
-    echo "  ✅ Context aware: Add descriptions for better AI understanding\n";
-    echo "\n";
-    echo "CORE OPTIONS:\n";
-    echo "  --break=SPEC            Set breakpoints (file.php:line or file.php:line:condition)\n";
-    echo "  --exit-on-break         Auto-continue and output complete trace (JSON mode)\n";
-    echo "  --steps=N               Record N steps of variable evolution\n";
-    echo "  --context=TEXT          Add contextual description for AI analysis\n";
-    echo "  --include-vendor=PATTERNS Include vendor packages in trace\n";
-    echo "  --json                  Force JSON output format\n";
-    echo "  --help, -h              Show this help\n";
+    $isRepl = ($commandName === 'xrepl');
+
+    if ($isRepl) {
+        echo "Usage: xrepl [options] [--] command\n";
+        echo "\n";
+        echo "🔍 Interactive PHP REPL Debugger\n";
+        echo "\n";
+        echo "PURPOSE:\n";
+        echo "  Interactive debugging with breakpoints and variable inspection.\n";
+        echo "\n";
+        echo "CORE OPTIONS:\n";
+        echo "  --break=SPEC            Set breakpoints (file.php:line or file.php:line:condition)\n";
+        echo "  --include-vendor=PATTERNS Include vendor packages in trace\n";
+        echo "  --help, -h              Show this help\n";
+    } else {
+        echo "Usage: xstep [options] [--] command\n";
+        echo "       xrepl [options] [--] command (for interactive REPL)\n";
+        echo "\n";
+        echo "🔍 AI-Optimized PHP Step Debugger\n";
+        echo "\n";
+        echo "PURPOSE:\n";
+        echo "  Revolutionary approach to PHP debugging - no var_dump(), no print_r(), no code modification.\n";
+        echo "  Provides runtime execution analysis through breakpoints and variable inspection.\n";
+        echo "\n";
+        echo "COMMANDS:\n";
+        echo "  xstep    JSON output mode (AI-optimized, default)\n";
+        echo "  xrepl    Interactive REPL mode (human-friendly debugging)\n";
+        echo "\n";
+        echo "KEY BENEFITS FOR AI DEBUGGING:\n";
+        echo "  ✅ Non-invasive: Zero source code modification required\n";
+        echo "  ✅ Conditional breakpoints: Break only when specific conditions are met\n";
+        echo "  ✅ JSON output: Structured data perfect for AI analysis\n";
+        echo "  ✅ Step recording: Capture variable evolution over N execution steps\n";
+        echo "  ✅ Context aware: Add descriptions for better AI understanding\n";
+        echo "\n";
+        echo "CORE OPTIONS:\n";
+        echo "  --break=SPEC            Set breakpoints (file.php:line or file.php:line:condition)\n";
+        echo "  --steps=N               Record N steps of variable evolution (JSON output)\n";
+        echo "  --context=TEXT          Add contextual description for AI analysis (JSON output)\n";
+        echo "  --include-vendor=PATTERNS Include vendor packages in trace\n";
+        echo "  --help, -h              Show this help\n";
+    }
     echo "\n";
     echo "BREAKPOINT PATTERNS:\n";
-    echo "  file.php:15                     # Break at line 15\n";
-    echo "  file.php:20:\$user==null        # Break only when \$user is null\n";
+    echo "  file.php:15                    # Break at line 15\n";
+    echo "  file.php:20:\$user==null       # Break only when \$user is null\n";
     echo "  file1.php:5,file2.php:10       # Multiple breakpoints\n";
-    echo "  api.php:42:\$id>100             # Break when \$id exceeds 100\n";
+    echo "  api.php:42:\$id>100            # Break when \$id exceeds 100\n";
     echo "\n";
-    echo "COMMON AI DEBUGGING WORKFLOWS:\n";
-    echo "\n";
-    echo "  # 1. Quick bug investigation (most common)\n";
-    echo "  xstep --context=\"Debug login failure\" --exit-on-break -- php login.php\n";
-    echo "\n";
-    echo "  # 2. Variable state tracking\n";
-    echo "  xstep --break=app.php:50 --steps=20 --context=\"Track \$user evolution\" -- php app.php\n";
-    echo "\n";
-    echo "  # 3. Conditional debugging\n";
-    echo "  xstep --break=\"user.php:15:\$id==null\" --context=\"Debug null ID bug\" -- php user.php\n";
-    echo "\n";
-    echo "  # 4. Multi-point analysis\n";
-    echo "  xstep --break=\"auth.php:20,user.php:45\" --context=\"Debug auth flow\" -- php main.php\n";
-    echo "\n";
-    echo "OUTPUT FORMATS:\n";
-    echo "  Interactive: Real-time debugging session with step control\n";
-    echo "  JSON: Complete execution trace with variable states (--exit-on-break)\n";
-    echo "  Benefits: AI can analyze exact variable values at breakpoints without guesswork\n";
-    echo "\n";
-    echo "📋 JSON SCHEMA RESOURCES (Essential for AI):\n";
-    echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xstep.json\n";
-    echo "  Xdebug Trace Docs: https://xdebug.org/docs/trace\n";
-    echo "  Debug Guidelines: https://koriym.github.io/xdebug-mcp/debug_guideline_for_ai.md\n";
-    echo "  Forward Trace™ Guide: Complete methodology for AI-powered PHP debugging\n";
-    echo "  Schema Note: Combines 'crime scene photo' (breakpoints) + 'surveillance footage' (traces)\n";
-    echo "\n";
-    echo "AI WORKFLOW INTEGRATION:\n";
-    echo "  1. Set contextual breakpoints based on error analysis\n";
-    echo "  2. Execute script with breakpoint conditions\n";
-    echo "  3. AI analyzes variable states at break points\n";
-    echo "  4. AI identifies root cause and suggests fixes\n";
-    echo "  5. No source code cleanup needed (no debug statements added)\n";
-    echo "\n";
-    echo "RECOMMENDED AI PROMPT:\n";
-    echo "  'Run xstep --help first, then help me debug this PHP issue using breakpoints'\n";
-    echo "\n";
-    echo "VS. TRADITIONAL DEBUGGING:\n";
-    echo "  ❌ Traditional: Add var_dump(), run, analyze, remove debug code\n";
-    echo "  ✅ This tool: Set breakpoints, analyze runtime data, done\n";
-    echo "\n";
+
+    if ($isRepl) {
+        echo "EXAMPLES:\n";
+        echo "\n";
+        echo "  # Interactive debugging session\n";
+        echo "  xrepl --break=\"auth.php:20\" -- php main.php\n";
+        echo "\n";
+        echo "  # Conditional breakpoint\n";
+        echo "  xrepl --break=\"user.php:15:\$id==null\" -- php user.php\n";
+        echo "\n";
+        echo "REPL COMMANDS:\n";
+        echo "  s        Step into function\n";
+        echo "  o        Step over line\n";
+        echo "  out      Step out of function\n";
+        echo "  c        Continue execution\n";
+        echo "  p <var>  Print variable (e.g., p \$user)\n";
+        echo "  bt       Show backtrace\n";
+        echo "  l        List source code\n";
+        echo "  q        Quit debugger\n";
+        echo "\n";
+    } else {
+        echo "EXAMPLES:\n";
+        echo "\n";
+        echo "  # AI: JSON output for analysis\n";
+        echo "  xstep --break=\"login.php:42\" --context=\"Debug login failure\" -- php login.php\n";
+        echo "\n";
+        echo "  # AI: Variable state tracking\n";
+        echo "  xstep --break=app.php:50 --steps=20 --context=\"Track \$user evolution\" -- php app.php\n";
+        echo "\n";
+        echo "  # AI: Conditional debugging\n";
+        echo "  xstep --break=\"user.php:15:\$id==null\" --context=\"Debug null ID bug\" -- php user.php\n";
+        echo "\n";
+        echo "  # Human: Interactive REPL\n";
+        echo "  xrepl --break=\"auth.php:20\" -- php main.php\n";
+        echo "\n";
+        echo "OUTPUT FORMATS:\n";
+        echo "  xstep: JSON output with complete execution trace and variable states\n";
+        echo "  xrepl: Interactive REPL with step control (s, o, c, p, bt, q commands)\n";
+        echo "  Benefits: AI can analyze exact variable values at breakpoints without guesswork\n";
+        echo "\n";
+        echo "📋 JSON SCHEMA RESOURCES (Essential for AI):\n";
+        echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xstep.json\n";
+        echo "  Xdebug Trace Docs: https://xdebug.org/docs/trace\n";
+        echo "  Debug Guidelines: https://koriym.github.io/xdebug-mcp/debug_guideline_for_ai.md\n";
+        echo "  Forward Trace™ Guide: Complete methodology for AI-powered PHP debugging\n";
+        echo "  Schema Note: Combines 'crime scene photo' (breakpoints) + 'surveillance footage' (traces)\n";
+        echo "\n";
+        echo "AI WORKFLOW INTEGRATION:\n";
+        echo "  1. Set contextual breakpoints based on error analysis\n";
+        echo "  2. Execute script with breakpoint conditions\n";
+        echo "  3. AI analyzes variable states at break points\n";
+        echo "  4. AI identifies root cause and suggests fixes\n";
+        echo "  5. No source code cleanup needed (no debug statements added)\n";
+        echo "\n";
+        echo "RECOMMENDED AI PROMPT:\n";
+        echo "  'Run xstep --help first, then help me debug this PHP issue using breakpoints'\n";
+        echo "\n";
+        echo "VS. TRADITIONAL DEBUGGING:\n";
+        echo "  ❌ Traditional: Add var_dump(), run, analyze, remove debug code\n";
+        echo "  ✅ This tool: Set breakpoints, analyze runtime data, done\n";
+        echo "\n";
+    }
     exit(0);
 }
 
@@ -193,9 +232,13 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
 (function () use ($argv){
     require_once __DIR__ . '/autoload.php';
 
+    // Detect if called as xrepl (internal implementation detail)
+    $commandName = basename($argv[0]);
+    $isRepl = ($commandName === 'xrepl');
+
     // Show help if no arguments provided
     if (count($argv) === 1) {
-        showHelp();
+        showHelp($commandName);
     }
 
     // Parse command line arguments
@@ -205,8 +248,7 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
     $breakSpec = null;
     $command = [];
     $parseOptions = true;
-    $traceOnly = false;
-    $jsonOutput = false;
+    $replMode = $isRepl;  // Default to REPL mode if called as xrepl
     $context = null;
     $maxSteps = null;
 
@@ -234,14 +276,9 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             continue;
         }
 
-        if ($parseOptions && $arg === '--exit-on-break') {
-            $traceOnly = true;
-            $jsonOutput = true;  // Auto-enable JSON mode for trace-only sessions
-            continue;
-        }
-
-        if ($parseOptions && $arg === '--json') {
-            $jsonOutput = true;
+        if ($parseOptions && $arg === '--repl') {
+            // Internal flag - not shown in help
+            $replMode = true;
             continue;
         }
 
@@ -264,7 +301,7 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
         }
 
         if ($parseOptions && ($arg === '--help' || $arg === '-h')) {
-            showHelp();
+            showHelp($commandName);
         }
 
         if (!$parseOptions || !str_starts_with($arg, '--')) {
@@ -272,9 +309,15 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
         }
     }
 
+    // Set modes based on command name
+    // xstep (default): traceOnly=true, jsonOutput=true (AI-optimized JSON output)
+    // xrepl: traceOnly=false, jsonOutput=false (interactive REPL)
+    $traceOnly = !$replMode;
+    $jsonOutput = !$replMode;
+
     // Determine target script and command to execute
     if (empty($command)) {
-        showHelp();
+        showHelp($commandName);
     }
 
     // Detect Docker/Podman/Kubectl commands

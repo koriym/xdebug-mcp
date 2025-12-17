@@ -2137,6 +2137,11 @@ final class DebugServer
             'breaks' => $this->breaks,
         ];
 
+        // Preserve caller-provided context in JSON output
+        if (($this->options['context'] ?? '') !== '') {
+            $result['context'] = $this->options['context'];
+        }
+
         // Add trace file if available - use the most recent trace file directly
         try {
             // Get all trace files sorted by modification time
