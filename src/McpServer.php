@@ -902,6 +902,7 @@ final class McpServer
                 exec($cmd . ' 2>&1', $output, $returnCode);
                 $outputText = implode("\n", $output);
             } else {
+                $output = [];
                 exec($cmd . ' > ' . escapeshellarg($tmpFile) . ' 2>&1', $output, $returnCode);
 
                 // Read output from temp file
