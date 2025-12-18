@@ -36,7 +36,7 @@ The AI automatically selects the appropriate tool, executes it, and analyzes the
 
 ## Requirements
 
-- PHP 8.0+
+- PHP 8.1+
 - [Xdebug 3.x](https://xdebug.org/docs/install) extension (installed, but **not** enabled by default)
 - MCP-compatible AI assistant (Claude Code, etc.)
 
