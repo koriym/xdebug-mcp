@@ -61,7 +61,7 @@ composer global require koriym/xdebug-mcp
 ~/.composer/vendor/bin/check-env
 
 # 3a. Setup Skills (recommended for Claude Code / Codex)
-ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills/xdebug ~/.claude/skills/xdebug
+ln -s ~/.composer/vendor/koriym/xdebug-mcp/skills/xdebug ~/.claude/skills/xdebug
 
 # 3b. Or configure MCP (for Cursor, Windsurf, and other MCP-compatible AI assistants)
 #     Create .mcp.json in your project root:
@@ -129,7 +129,7 @@ Each command outputs structured JSON data that AI can analyze to provide debuggi
 
 ```bash
 # Link skill globally (available in all projects)
-ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills/xdebug ~/.claude/skills/xdebug
+ln -s ~/.composer/vendor/koriym/xdebug-mcp/skills/xdebug ~/.claude/skills/xdebug
 
 # Restart Claude Code
 # Now use natural language: "Debug demo/buggy.php"
@@ -218,7 +218,7 @@ Pre-configured skills for Claude Code and Codex. **This is the recommended setup
 Symlink to your global Claude skills directory:
 
 ```bash
-ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills/xdebug ~/.claude/skills/xdebug
+ln -s ~/.composer/vendor/koriym/xdebug-mcp/skills/xdebug ~/.claude/skills/xdebug
 ```
 
 The skill will be available in all projects automatically and updated with `composer global update`.
@@ -229,7 +229,7 @@ Symlink for a specific project:
 
 ```bash
 mkdir -p .claude/skills
-ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills/xdebug .claude/skills/xdebug
+ln -s ~/.composer/vendor/koriym/xdebug-mcp/skills/xdebug .claude/skills/xdebug
 ```
 
 ## Interactive REPL
