@@ -47,6 +47,7 @@ The AI automatically selects the appropriate tool, executes it, and analyzes the
 ```bash
 git clone https://github.com/koriym/xdebug-mcp.git
 cd xdebug-mcp
+rm ./CLAUDE.md  # Remove to test fresh AI tool discovery
 claude
 > Read tests/ai/demo.md and follow the instructions.
 ```
