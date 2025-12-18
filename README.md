@@ -17,7 +17,7 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that 
 Just tell your AI assistant what you want:
 
 **English:**
-```
+```text
 "Debug script.php and find why $user is null at line 42"
 "Profile api.php and find the performance bottleneck"
 "Trace the authentication flow in login.php"
@@ -25,7 +25,7 @@ Just tell your AI assistant what you want:
 ```
 
 **日本語:**
-```
+```text
 "script.phpをデバッグして、42行目で$userがnullになる原因を調べて"
 "api.phpのパフォーマンスボトルネックを見つけて"
 "login.phpの認証フローをトレースして"
@@ -53,18 +53,31 @@ claude
 
 ## Quick Start
 
+### 1. Install
+
 ```bash
-# 1. Install
 composer global require koriym/xdebug-mcp
+```
 
-# 2. Verify Xdebug is available (even if disabled in php.ini)
+### 2. Verify Xdebug
+
+```bash
 ~/.composer/vendor/bin/check-env
+```
 
-# 3a. Setup Skills (recommended for Claude Code / Codex)
+### 3. Setup AI Integration
+
+**Option A: Skills (Recommended for Claude Code / Codex)**
+
+```bash
 ln -s ~/.composer/vendor/koriym/xdebug-mcp/skills/xdebug ~/.claude/skills/xdebug
+```
 
-# 3b. Or configure MCP (for Cursor, Windsurf, and other MCP-compatible AI assistants)
-#     Create .mcp.json in your project root:
+**Option B: MCP Server (For Cursor, Windsurf, etc.)**
+
+Create `.mcp.json` in your project root:
+
+```json
 {
   "mcpServers": {
     "xdebug": {
@@ -73,10 +86,11 @@ ln -s ~/.composer/vendor/koriym/xdebug-mcp/skills/xdebug ~/.claude/skills/xdebug
     }
   }
 }
-# Replace YOUR_USERNAME, or use: which xdebug-mcp
-
-# 4. Restart your AI assistant
 ```
+
+Find the correct path: `which xdebug-mcp`
+
+### 4. Restart your AI assistant
 
 Now ask your AI to debug PHP code.
 
@@ -122,37 +136,6 @@ Run the demo examples to see each tool in action:
 ```
 
 Each command outputs structured JSON data that AI can analyze to provide debugging insights.
-
-### 3. Setup for AI Integration
-
-#### Option A: Skills (Recommended for Claude Code)
-
-```bash
-# Link skill globally (available in all projects)
-ln -s ~/.composer/vendor/koriym/xdebug-mcp/skills/xdebug ~/.claude/skills/xdebug
-
-# Restart Claude Code
-# Now use natural language: "Debug demo/buggy.php"
-```
-
-#### Option B: MCP Server (For Cursor, Windsurf, etc.)
-
-Create `.mcp.json` in your project root:
-
-```json
-{
-  "mcpServers": {
-    "xdebug": {
-      "command": "php",
-      "args": ["/Users/YOUR_USERNAME/.composer/vendor/bin/xdebug-mcp"]
-    }
-  }
-}
-```
-
-Find the correct path: `which xdebug-mcp`
-
-Restart your AI assistant and ask: "Debug my PHP code"
 
 ## How It Works
 
