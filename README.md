@@ -42,6 +42,15 @@ The AI automatically selects the appropriate tool, executes it, and analyzes the
 
 > **💡 Performance Tip:** Keep Xdebug disabled in php.ini for daily use. This tool loads Xdebug on-demand only when needed.
 
+## Quick Demo (Try Before Install)
+
+```bash
+git clone https://github.com/koriym/xdebug-mcp.git
+cd xdebug-mcp
+claude
+> Read tests/ai/demo.md and follow the instructions.
+```
+
 ## Quick Start
 
 ```bash
@@ -52,7 +61,7 @@ composer global require koriym/xdebug-mcp
 ~/.composer/vendor/bin/check-env
 
 # 3a. Setup Skills (recommended for Claude Code / Codex)
-ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills .claude/skills
+ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills/xdebug ~/.claude/skills/xdebug
 
 # 3b. Or configure MCP (for Cursor, Windsurf, and other MCP-compatible AI assistants)
 #     Create .mcp.json in your project root:
@@ -102,7 +111,7 @@ Run the demo examples to see each tool in action:
 # Trace execution flow
 ./bin/xtrace --context="Debug demo" -- php demo/buggy.php
 
-# Profile performance bottlenecks
+README# Profile performance bottlenecks
 ./bin/xprofile --json -- php demo/slow.php
 
 # Analyze code coverage
@@ -119,8 +128,8 @@ Each command outputs structured JSON data that AI can analyze to provide debuggi
 #### Option A: Skills (Recommended for Claude Code)
 
 ```bash
-# Link skills to your project
-ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills .claude/skills
+# Link skill globally (available in all projects)
+ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills/xdebug ~/.claude/skills/xdebug
 
 # Restart Claude Code
 # Now use natural language: "Debug demo/buggy.php"
@@ -202,12 +211,25 @@ Pre-configured skills for Claude Code and Codex. **This is the recommended setup
 | `xprofile` | Performance profiling, bottleneck detection |
 | `xcoverage` | Test coverage analysis |
 | `xstep` | Breakpoint debugging, variable inspection |
+| `xback` | Call stack analysis at specific points |
 
-Setup (symlink from global install):
+### Global Installation (All Projects)
+
+Symlink to your global Claude skills directory:
 
 ```bash
-ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills .claude/skills
+ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills/xdebug ~/.claude/skills/xdebug
+```
 
+The skill will be available in all projects automatically and updated with `composer global update`.
+
+### Project-Level Installation
+
+Symlink for a specific project:
+
+```bash
+mkdir -p .claude/skills
+ln -s ~/.composer/vendor/koriym/xdebug-mcp/.claude/skills/xdebug .claude/skills/xdebug
 ```
 
 ## Interactive REPL
@@ -245,6 +267,10 @@ xtrace -- docker compose run --rm php php /app/script.php
 The tools automatically detect container runtime and configure Xdebug networking.
 
 See [tests/docker/README.md](tests/docker/README.md) for details.
+
+## For Developers
+
+See [tests/ai/README.md](tests/ai/README.md) for tool discoverability testing.
 
 ## Resources
 
