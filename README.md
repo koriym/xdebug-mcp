@@ -93,7 +93,7 @@ Now ask your AI to debug PHP code.
 ```
 
 Expected output:
-```
+```text
 ✅ PHP 8.4.15
 ✅ Xdebug 3.5.0 (on-demand)
 ```
