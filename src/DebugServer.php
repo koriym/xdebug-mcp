@@ -2076,7 +2076,7 @@ final class DebugServer
 
     /**
      * Emergency cleanup called by register_shutdown_function
-     * This ensures cleanup even on abnormal termina実際にtion
+     * This ensures cleanup even on abnormal termination
      */
     public function emergencyCleanup(): void
     {
