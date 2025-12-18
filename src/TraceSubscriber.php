@@ -11,6 +11,8 @@ use PHPUnit\Event\Test\PreparedSubscriber;
 
 /**
  * PHPUnit 10+ Event Subscriber for test tracing
+ *
+ * @codeCoverageIgnore PHPUnit extension runtime
  */
 final class TraceSubscriber implements PreparedSubscriber, FinishedSubscriber
 {

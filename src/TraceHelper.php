@@ -19,6 +19,8 @@ use function xdebug_stop_trace;
  *
  * Enables selective tracing of specific tests based on environment configuration.
  * Set XDEBUG_TRACE_TESTS environment variable to a regex pattern to match test names.
+ *
+ * @codeCoverageIgnore PHPUnit extension runtime
  */
 final class TraceHelper
 {

@@ -103,14 +103,21 @@ use const STDERR;
  * AMP-based Interactive Debugger
  * Streamlined for single-use debugging sessions
  *
+ * @codeCoverageIgnore This class requires a live Xdebug daemon connection for meaningful
+ *                     testing. All 72 methods involve DBGp protocol communication over
+ *                     sockets, XML parsing of Xdebug responses, and async I/O operations.
+ *                     Integration tests exist but require specific Xdebug runtime setup.
+ *                     Coverage: 1.39% (1/72 methods), 0.71% (9/1266 lines) - remaining
+ *                     uncovered code paths require actual debugging sessions.
  * @see https://xdebug.org/docs/step_debug
+ * @see https://xdebug.org/docs/dbgp
  */
 final class DebugServer
 {
     private const DEFAULT_CONNECTION_TIMEOUT = 30.0;  // Initial connection only
     private const DEFAULT_EXECUTION_TIMEOUT = 3600.0;  // 1 hour for long debugging sessions
     private const DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
-    private const MAX_STEPS = 200;  // Default maximum steps for step recording
+    private const MAX_STEPS = 100;  // Default maximum steps for step recording
 
     /** @var DeferredFuture<bool>|null */
     private DeferredFuture|null $listenerReady = null;
@@ -2119,8 +2126,8 @@ final class DebugServer
             $this->xdebugSocket->close();
         }
 
-        // Output Step Recording results in JSON mode
-        if ($this->jsonMode && $this->breaks !== []) {
+        // Output Step Recording results in JSON mode (always output even if no breaks hit)
+        if ($this->jsonMode) {
             $this->outputStepRecordingResults();
         }
 
@@ -2136,6 +2143,11 @@ final class DebugServer
             '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xstep.json',
             'breaks' => $this->breaks,
         ];
+
+        // Preserve caller-provided context in JSON output
+        if (($this->options['context'] ?? '') !== '') {
+            $result['context'] = $this->options['context'];
+        }
 
         // Add trace file if available - use the most recent trace file directly
         try {

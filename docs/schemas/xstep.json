@@ -7,11 +7,10 @@
   "properties": {
     "breaks": {
       "type": "array",
-      "description": "Breakpoints hit during execution (supports multiple breakpoints)",
+      "description": "Breakpoints hit during execution (supports multiple breakpoints). Empty array if no breakpoints were hit or no breakpoints were set.",
       "items": {
         "$ref": "#/definitions/breakpoint"
-      },
-      "minItems": 1
+      }
     },
     "trace": {
       "$ref": "xtrace.json"

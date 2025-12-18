@@ -11,7 +11,15 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
+use function file_exists;
+use function file_put_contents;
+use function mkdir;
+use function rmdir;
 use function strpos;
+use function sys_get_temp_dir;
+use function tempnam;
+use function uniqid;
+use function unlink;
 
 #[CoversClass(XdebugRunner::class)]
 final class XdebugRunnerTest extends TestCase
@@ -406,5 +414,117 @@ final class XdebugRunnerTest extends TestCase
 
         $this->assertStringContainsString('-dmemory_limit=512M', $command);
         $this->assertStringContainsString('-dmax_execution_time=300', $command);
+    }
+
+    #[Test]
+    public function setAndGetOutputDir(): void
+    {
+        $runner = new XdebugRunner(['script', '--', __FILE__]);
+        $runner->setOutputDir('/custom/output/dir');
+
+        $command = $runner->buildCommand();
+
+        $this->assertStringContainsString('-dxdebug.output_dir=/custom/output/dir', $command);
+    }
+
+    #[Test]
+    public function getLatestTraceFileReturnsNullWhenNoFiles(): void
+    {
+        $runner = new XdebugRunner(['script', '--', __FILE__]);
+        $runner->setOutputDir('/nonexistent/directory');
+
+        $this->assertNull($runner->getLatestTraceFile());
+    }
+
+    #[Test]
+    public function getLatestProfileFileReturnsNullWhenNoFiles(): void
+    {
+        $runner = new XdebugRunner(['script', '--', __FILE__]);
+        $runner->setOutputDir('/nonexistent/directory');
+
+        $this->assertNull($runner->getLatestProfileFile());
+    }
+
+    #[Test]
+    public function runExecutesCommandSuccessfully(): void
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'test_');
+        file_put_contents($tempFile, '<?php exit(0);');
+
+        $runner = new XdebugRunner(['script', '--', 'php', $tempFile]);
+        $exitCode = $runner->run();
+
+        $this->assertSame(0, $exitCode);
+
+        unlink($tempFile);
+    }
+
+    #[Test]
+    public function buildsTraceCommandWithIncludeVendor(): void
+    {
+        $runner = new XdebugRunner(['script', '--', __FILE__]);
+        $runner->setMode('trace');
+        $runner->setIncludeVendor('symfony/*,doctrine/*');
+
+        $command = $runner->buildCommand();
+
+        $this->assertStringContainsString('-dxdebug.mode=trace', $command);
+        // prepend_filter.php is loaded when includeVendor is set
+        if (file_exists(__DIR__ . '/../../src/prepend_filter.php')) {
+            $this->assertStringContainsString('-dauto_prepend_file=', $command);
+        }
+    }
+
+    #[Test]
+    public function buildsCommandWithoutIncludeVendor(): void
+    {
+        $runner = new XdebugRunner(['script', '--', __FILE__]);
+        $runner->setMode('trace');
+        // Don't set includeVendor
+
+        $command = $runner->buildCommand();
+
+        $this->assertStringContainsString('-dxdebug.mode=trace', $command);
+        $this->assertStringNotContainsString('-dauto_prepend_file=', $command);
+    }
+
+    #[Test]
+    public function getLatestTraceFileReturnsFileWhenExists(): void
+    {
+        $tempDir = sys_get_temp_dir() . '/xdebug_test_' . uniqid();
+        mkdir($tempDir);
+
+        $traceFile = $tempDir . '/trace.12345.xt';
+        file_put_contents($traceFile, 'trace content');
+
+        $runner = new XdebugRunner(['script', '--', __FILE__]);
+        $runner->setOutputDir($tempDir);
+
+        $result = $runner->getLatestTraceFile();
+
+        $this->assertSame($traceFile, $result);
+
+        unlink($traceFile);
+        rmdir($tempDir);
+    }
+
+    #[Test]
+    public function getLatestProfileFileReturnsFileWhenExists(): void
+    {
+        $tempDir = sys_get_temp_dir() . '/xdebug_test_' . uniqid();
+        mkdir($tempDir);
+
+        $profileFile = $tempDir . '/cachegrind.out.12345';
+        file_put_contents($profileFile, 'profile content');
+
+        $runner = new XdebugRunner(['script', '--', __FILE__]);
+        $runner->setOutputDir($tempDir);
+
+        $result = $runner->getLatestProfileFile();
+
+        $this->assertSame($profileFile, $result);
+
+        unlink($profileFile);
+        rmdir($tempDir);
     }
 }

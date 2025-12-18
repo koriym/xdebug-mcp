@@ -34,3 +34,4 @@ mcp.json
 ~/
 *.phpcs-cache
 .claude/settings.local.json
+# CLAUDE.md - Kept in repo for AI assistant context. Removed from .gitignore for testing fresh AI behavior.

@@ -14,19 +14,28 @@ use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\Exceptions\InvalidToolException;
 use Throwable;
 
+use function array_filter;
+use function array_map;
 use function array_merge;
 use function array_values;
+use function count;
 use function date;
 use function dirname;
 use function error_log;
 use function escapeshellarg;
 use function exec;
+use function explode;
 use function fflush;
 use function fgets;
+use function file;
+use function file_exists;
+use function file_get_contents;
+use function getcwd;
 use function getenv;
 use function implode;
 use function in_array;
 use function is_array;
+use function is_numeric;
 use function is_string;
 use function json_decode;
 use function json_encode;
@@ -36,7 +45,10 @@ use function str_ends_with;
 use function str_starts_with;
 use function strlen;
 use function substr;
+use function sys_get_temp_dir;
+use function tempnam;
 use function trim;
+use function unlink;
 
 use const JSON_THROW_ON_ERROR;
 use const STDIN;
@@ -175,7 +187,7 @@ final class McpServer
             ),
             'xback' => new McpTool(
                 'xback',
-                'Get stack trace (backtrace) at breakpoint | ex) ./xback --break="app.php:50" "php app.php"',
+                'Capture call stack (backtrace) at specific line - Lightweight, non-interactive stack trace collection | Use when: Need backtrace/stack trace at specific location | ex) ./xback --break="app.php:50" "php app.php"',
                 [
                     'type' => 'object',
                     'properties' => [
@@ -185,7 +197,7 @@ final class McpServer
                         ],
                         'breakpoint' => [
                             'type' => 'string',
-                            'description' => 'Breakpoint location (e.g., "file.php:15")',
+                            'description' => 'Line location to capture backtrace (e.g., "file.php:15")',
                             'default' => '',
                         ],
                         'depth' => [
@@ -339,7 +351,7 @@ final class McpServer
             'protocolVersion' => $clientVersion,
             'capabilities' => [
                 'tools' => ['listChanged' => true],
-                'resources' => [],
+                'resources' => ['listChanged' => false],
                 'prompts' => ['listChanged' => true],
             ],
             'serverInfo' => [
@@ -466,7 +478,7 @@ final class McpServer
                 ],
                 [
                     'name' => 'xback',
-                    'description' => 'Get stack trace (backtrace) at breakpoint | ex) /xback --script="app.php" --break="app.php:50"',
+                    'description' => 'Capture call stack (backtrace) at specific line - Lightweight, non-interactive stack trace collection | Use when: Need backtrace/stack trace at specific location | ex) /xback --script="app.php" --break="app.php:50"',
                     'arguments' => [
                         [
                             'name' => 'script',
@@ -475,7 +487,7 @@ final class McpServer
                         ],
                         [
                             'name' => 'breakpoint',
-                            'description' => 'Breakpoint location (e.g., "file.php:15")',
+                            'description' => 'Line location to capture backtrace (e.g., "file.php:15")',
                             'required' => false,
                         ],
                         [
@@ -578,12 +590,18 @@ final class McpServer
             $script = substr($script, 0, -1);
         }
 
-        // Auto-prepend 'php' if script doesn't start with a PHP binary
-        if (! preg_match('/^(\S*php)(\s+|$)/', $script)) {
-            return 'php ' . $script;
+        // If the command already starts with a PHP binary (php, php8.2, /usr/bin/php, C:\php\php.exe) keep as-is
+        if (preg_match('/^(\S*[\/\\\\])?php([0-9.]*)?(\.exe)?(\s|$)/i', $script)) {
+            return $script;
         }
 
-        return $script;
+        // Also keep plain PHP script paths (e.g., "demo.php", "./bin/cli.php", "app.php --flag")
+        if (preg_match('/^\S+\.php(\s|$)/', $script)) {
+            return $script;
+        }
+
+        // Otherwise, prepend php for non-PHP commands (e.g., "script.py" -> "php script.py")
+        return 'php ' . $script;
     }
 
     /**
@@ -595,9 +613,88 @@ final class McpServer
             throw new InvalidArgumentException('Script argument is required');
         }
 
-        // Check that script starts with PHP binary (handles paths like /usr/bin/php, /path/to/php83/php)
-        if (! preg_match('/^(\S*php)(\s+|$)/', $script)) {
-            throw new InvalidArgumentException('Script must start with PHP binary. Examples: "php script.php", "/usr/bin/php script.php", "/path/to/php83/php script.php". Received: "' . $script . '"');
+        // Check that script starts with PHP binary (handles php, php8.1, /usr/bin/php, C:\php\php.exe, etc.)
+        if (! preg_match('/^(\S*[\/\\\\])?php([0-9.]*)?(\.exe)?(\\s+|$)/i', $script)) {
+            throw new InvalidArgumentException('Script must start with PHP binary. Examples: "php script.php", "php8.1 script.php", "/usr/bin/php script.php", "C:\php\php.exe script.php". Received: "' . $script . '"');
+        }
+    }
+
+    /**
+     * Validate breakpoint specifications
+     * Format: "file.php:line" or "file.php:line:condition"
+     * Multiple breakpoints: "file1.php:10,file2.php:20"
+     *
+     * @throws InvalidArgumentException If breakpoint format is invalid or file doesn't exist.
+     */
+    private function validateBreakpoints(string $breakpoints): void
+    {
+        // Filter out empty entries from trailing commas (e.g., "a.php:1,")
+        $breakpointList = array_filter(array_map('trim', explode(',', $breakpoints)));
+
+        foreach ($breakpointList as $breakpoint) {
+            // Parse breakpoint format: file:line or file:line:condition
+            // Use limit 3 to preserve colons in conditions (e.g., "file.php:10:$a==$b:1")
+            $parts = explode(':', $breakpoint, 3);
+            if (count($parts) < 2) {
+                throw new InvalidArgumentException(
+                    'Invalid breakpoint format: "' . $breakpoint . '". ' .
+                    'Expected format: "file.php:line" or "file.php:line:condition"',
+                );
+            }
+
+            $file = $parts[0];
+            $line = $parts[1];
+
+            // Validate line number is numeric
+            if (! is_numeric($line)) {
+                throw new InvalidArgumentException(
+                    'Invalid line number in breakpoint "' . $breakpoint . '": "' . $line . '" is not a number',
+                );
+            }
+
+            $lineNumber = (int) $line;
+            if ($lineNumber < 1) {
+                throw new InvalidArgumentException(
+                    'Invalid line number in breakpoint "' . $breakpoint . '": line number must be >= 1',
+                );
+            }
+
+            // Convert to absolute path if relative
+            $absolutePath = $file;
+            if (! str_starts_with($file, '/')) {
+                $cwd = getcwd();
+                if ($cwd === false) {
+                    throw new InvalidArgumentException(
+                        'Cannot determine current working directory for relative breakpoint path: "' . $file . '"',
+                    );
+                }
+
+                $absolutePath = $cwd . '/' . $file;
+            }
+
+            // Check if file exists
+            if (! file_exists($absolutePath)) {
+                throw new InvalidArgumentException(
+                    'Breakpoint file not found: "' . $file . '"' .
+                    ($absolutePath !== $file ? ' (resolved to: "' . $absolutePath . '")' : ''),
+                );
+            }
+
+            // Validate line number is within file bounds
+            $fileContents = file($absolutePath);
+            if ($fileContents === false) {
+                throw new InvalidArgumentException(
+                    'Cannot read breakpoint file: "' . $file . '"',
+                );
+            }
+
+            $totalLines = count($fileContents);
+            if ($lineNumber > $totalLines) {
+                throw new InvalidArgumentException(
+                    'Invalid line number in breakpoint "' . $breakpoint . '": ' .
+                    'line ' . $lineNumber . ' exceeds file length (' . $totalLines . ' lines)',
+                );
+            }
         }
     }
 
@@ -760,7 +857,8 @@ final class McpServer
             $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
             $breakpoints = $args['breakpoints'] ?? '';
-            $breakpoints = $this->processScriptArgument($breakpoints); // Process quotes in breakpoints too
+            // Note: Do NOT apply processScriptArgument() to breakpoints
+            // It would incorrectly prepend 'php ' to "file.php:15" making it "php file.php:15"
 
             // Claude CLI bug workaround: if breakpoints contains a script-like value, treat as empty
             if (str_contains($breakpoints, '.php') && ! str_contains($breakpoints, ':')) {
@@ -770,8 +868,13 @@ final class McpServer
             $steps = $args['steps'] ?? '100';
             $includeVendor = $args['include_vendor'] ?? '';
 
+            // Validate breakpoints if specified
+            if ($breakpoints !== '') {
+                $this->validateBreakpoints($breakpoints);
+            }
+
             // Build command
-            $cmd = $this->binDir . '/xstep --exit-on-break';
+            $cmd = $this->binDir . '/xstep --json --exit-on-break';
 
             // Add breakpoints if specified
             if ($breakpoints !== '') {
@@ -782,10 +885,10 @@ final class McpServer
                 $cmd .= ' --context=' . escapeshellarg((string) $context);
             }
 
-            // Note: --steps parameter causes issues, temporarily disabled
-            // if ($steps !== '') {
-            //     $cmd .= ' --steps=' . escapeshellarg($steps);
-            // }
+            // Add steps parameter if specified
+            if ($steps !== '') {
+                $cmd .= ' --steps=' . escapeshellarg($steps);
+            }
 
             // Add include_vendor option if specified
             if ($includeVendor !== '') {
@@ -795,13 +898,29 @@ final class McpServer
             // Build command - user must specify PHP binary explicitly
             $cmd .= ' -- ' . $script;
 
-            // Execute command
-            $output = [];
+            // Execute command and redirect output to temp file (shutdown function output requires file redirect)
+            $tmpFile = tempnam(sys_get_temp_dir(), 'xstep_');
             $returnCode = 0;
-            exec($cmd . ' 2>&1', $output, $returnCode);
+
+            // Handle tempnam() failure
+            if ($tmpFile === false) {
+                // Fallback to direct exec without temp file
+                $output = [];
+                exec($cmd . ' 2>&1', $output, $returnCode);
+                $outputText = implode("\n", $output);
+            } else {
+                $output = [];
+                exec($cmd . ' > ' . escapeshellarg($tmpFile) . ' 2>&1', $output, $returnCode);
+
+                // Read output from temp file
+                $outputText = '';
+                if (file_exists($tmpFile)) {
+                    $outputText = file_get_contents($tmpFile) ?: '';
+                    unlink($tmpFile);
+                }
+            }
 
             // Handle common error cases with user-friendly messages
-            $outputText = implode("\n", $output);
             if ($returnCode === 255 && str_contains($outputText, 'Breakpoint file not found')) {
                 throw new InvalidArgumentException('Invalid breakpoint format. Use: file.php:line or file.php:line:condition');
             }
