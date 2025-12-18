@@ -416,7 +416,7 @@ final class XdebugRunnerTest extends TestCase
     #[Test]
     public function setAndGetOutputDir(): void
     {
-        $runner = new XdebugRunner(['script', '--', 'php', 'test.php']);
+        $runner = new XdebugRunner(['script', '--', __FILE__]);
         $runner->setOutputDir('/custom/output/dir');
 
         $command = $runner->buildCommand();
@@ -427,7 +427,7 @@ final class XdebugRunnerTest extends TestCase
     #[Test]
     public function getLatestTraceFileReturnsNullWhenNoFiles(): void
     {
-        $runner = new XdebugRunner(['script', '--', 'php', 'test.php']);
+        $runner = new XdebugRunner(['script', '--', __FILE__]);
         $runner->setOutputDir('/nonexistent/directory');
 
         $this->assertNull($runner->getLatestTraceFile());
@@ -436,7 +436,7 @@ final class XdebugRunnerTest extends TestCase
     #[Test]
     public function getLatestProfileFileReturnsNullWhenNoFiles(): void
     {
-        $runner = new XdebugRunner(['script', '--', 'php', 'test.php']);
+        $runner = new XdebugRunner(['script', '--', __FILE__]);
         $runner->setOutputDir('/nonexistent/directory');
 
         $this->assertNull($runner->getLatestProfileFile());

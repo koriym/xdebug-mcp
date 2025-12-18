@@ -103,8 +103,14 @@ use const STDERR;
  * AMP-based Interactive Debugger
  * Streamlined for single-use debugging sessions
  *
- * @codeCoverageIgnore Requires actual Xdebug daemon connection and socket communication
+ * @codeCoverageIgnore This class requires a live Xdebug daemon connection for meaningful
+ *                     testing. All 72 methods involve DBGp protocol communication over
+ *                     sockets, XML parsing of Xdebug responses, and async I/O operations.
+ *                     Integration tests exist but require specific Xdebug runtime setup.
+ *                     Coverage: 1.39% (1/72 methods), 0.71% (9/1266 lines) - remaining
+ *                     uncovered code paths require actual debugging sessions.
  * @see https://xdebug.org/docs/step_debug
+ * @see https://xdebug.org/docs/dbgp
  */
 final class DebugServer
 {
