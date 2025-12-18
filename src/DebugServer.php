@@ -103,6 +103,7 @@ use const STDERR;
  * AMP-based Interactive Debugger
  * Streamlined for single-use debugging sessions
  *
+ * @codeCoverageIgnore Requires actual Xdebug daemon connection and socket communication
  * @see https://xdebug.org/docs/step_debug
  */
 final class DebugServer
@@ -2069,7 +2070,7 @@ final class DebugServer
 
     /**
      * Emergency cleanup called by register_shutdown_function
-     * This ensures cleanup even on abnormal termination
+     * This ensures cleanup even on abnormal termina実際にtion
      */
     public function emergencyCleanup(): void
     {
