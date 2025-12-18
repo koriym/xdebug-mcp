@@ -13,9 +13,12 @@ use RuntimeException;
 
 use function file_exists;
 use function file_put_contents;
+use function mkdir;
+use function rmdir;
 use function strpos;
 use function sys_get_temp_dir;
 use function tempnam;
+use function uniqid;
 use function unlink;
 
 #[CoversClass(XdebugRunner::class)]
@@ -483,5 +486,45 @@ final class XdebugRunnerTest extends TestCase
 
         $this->assertStringContainsString('-dxdebug.mode=trace', $command);
         $this->assertStringNotContainsString('-dauto_prepend_file=', $command);
+    }
+
+    #[Test]
+    public function getLatestTraceFileReturnsFileWhenExists(): void
+    {
+        $tempDir = sys_get_temp_dir() . '/xdebug_test_' . uniqid();
+        mkdir($tempDir);
+
+        $traceFile = $tempDir . '/trace.12345.xt';
+        file_put_contents($traceFile, 'trace content');
+
+        $runner = new XdebugRunner(['script', '--', __FILE__]);
+        $runner->setOutputDir($tempDir);
+
+        $result = $runner->getLatestTraceFile();
+
+        $this->assertSame($traceFile, $result);
+
+        unlink($traceFile);
+        rmdir($tempDir);
+    }
+
+    #[Test]
+    public function getLatestProfileFileReturnsFileWhenExists(): void
+    {
+        $tempDir = sys_get_temp_dir() . '/xdebug_test_' . uniqid();
+        mkdir($tempDir);
+
+        $profileFile = $tempDir . '/cachegrind.out.12345';
+        file_put_contents($profileFile, 'profile content');
+
+        $runner = new XdebugRunner(['script', '--', __FILE__]);
+        $runner->setOutputDir($tempDir);
+
+        $result = $runner->getLatestProfileFile();
+
+        $this->assertSame($profileFile, $result);
+
+        unlink($profileFile);
+        rmdir($tempDir);
     }
 }

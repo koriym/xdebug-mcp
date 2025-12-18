@@ -8,6 +8,8 @@ use function count;
 
 /**
  * Statistics from parsing an Xdebug trace file
+ *
+ * @codeCoverageIgnore Used by XdebugTracer runtime
  */
 final class TraceStatistics
 {

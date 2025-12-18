@@ -21,6 +21,7 @@ use function preg_match_all;
  * PHPStan rule to detect 'mixed' type in array shapes and annotations
  *
  * @implements Rule<Node>
+ * @codeCoverageIgnore Static analysis tool, not runtime code
  */
 final class NoMixedInArrayShapeRule implements Rule
 {

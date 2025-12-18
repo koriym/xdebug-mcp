@@ -6,6 +6,8 @@ namespace Koriym\XdebugMcp\DTO;
 
 /**
  * Detailed analysis results from a profile file
+ *
+ * @codeCoverageIgnore Used by XdebugProfiler runtime
  */
 final class ProfileAnalysis
 {

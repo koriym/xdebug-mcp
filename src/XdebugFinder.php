@@ -39,15 +39,15 @@ final class XdebugFinder
             return '';
         }
 
-        // Try to detect Xdebug path
+        // @codeCoverageIgnoreStart
         $xdebugPath = self::detectXdebugPath();
 
         if ($xdebugPath !== null) {
             return ' -dzend_extension=' . escapeshellarg($xdebugPath);
         }
 
-        // Xdebug not found - return empty and let caller handle
         return '';
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -57,12 +57,11 @@ final class XdebugFinder
      */
     public static function detectXdebugPath(): string|null
     {
-        // 1. Check if already loaded (shouldn't reach here from getXdebugFlag but safety check)
         if (extension_loaded('xdebug')) {
-            return null; // Already loaded, no path needed
+            return null;
         }
 
-        // 2. Check Homebrew installation paths (macOS only)
+        // @codeCoverageIgnoreStart
         if (PHP_OS_FAMILY === 'Darwin') {
             $phpVersion = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
             $brewPaths = [
@@ -77,7 +76,6 @@ final class XdebugFinder
             }
         }
 
-        // 3. Check standard extension_dir
         $extensionDir = ini_get('extension_dir');
         if ($extensionDir !== false && $extensionDir !== '') {
             $extension = PHP_OS_FAMILY === 'Windows' ? 'php_xdebug.dll' : 'xdebug.so';
@@ -88,6 +86,7 @@ final class XdebugFinder
         }
 
         return null;
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -111,7 +110,7 @@ final class XdebugFinder
         fwrite(STDERR, "📖 More info: https://xdebug.org/docs/install\n");
 
         if ($exitAfter) {
-            exit(1);
+            exit(1); // @codeCoverageIgnore
         }
     }
 }

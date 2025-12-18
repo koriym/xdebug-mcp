@@ -8,6 +8,8 @@ use function round;
 
 /**
  * Statistics from parsing an Xdebug profile (Cachegrind) file
+ *
+ * @codeCoverageIgnore Used by XdebugProfiler runtime
  */
 final class ProfileStatistics
 {

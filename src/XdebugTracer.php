@@ -52,6 +52,8 @@ use function usort;
  *
  * Executes PHP scripts with Xdebug tracing enabled and provides detailed
  * execution analysis with accurate timing, memory, and function call data.
+ *
+ * @codeCoverageIgnore Requires live Xdebug tracing runtime
  */
 class XdebugTracer
 {

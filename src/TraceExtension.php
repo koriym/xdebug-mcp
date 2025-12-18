@@ -19,6 +19,8 @@ use PHPUnit\TextUI\Configuration\Configuration;
  * <extensions>
  *     <bootstrap class="Koriym\XdebugMcp\TraceExtension"/>
  * </extensions>
+ *
+ * @codeCoverageIgnore PHPUnit extension runtime
  */
 final class TraceExtension implements Extension
 {

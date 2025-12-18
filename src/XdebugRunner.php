@@ -121,14 +121,14 @@ class XdebugRunner
     public function run(): int
     {
         if ($this->isDockerCommand($this->commandParts)) {
-            $command = $this->buildDockerCommand($this->commandParts);
+            $command = $this->buildDockerCommand($this->commandParts); // @codeCoverageIgnore
         } else {
             $this->validateLocalFile($this->commandParts);
             $command = $this->buildLocalCommand($this->commandParts);
         }
 
         if (getenv('XDEBUG_RUNNER_DEBUG')) {
-            fwrite(STDERR, "DEBUG: Executing command: $command\n");
+            fwrite(STDERR, "DEBUG: Executing command: $command\n"); // @codeCoverageIgnore
         }
 
         passthru($command, $exitCode);
@@ -302,7 +302,7 @@ class XdebugRunner
         $args = [];
 
         if ($xdebugFlag !== '') {
-            $args[] = trim($xdebugFlag);
+            $args[] = trim($xdebugFlag); // @codeCoverageIgnore
         }
 
         $args = array_merge($args, [

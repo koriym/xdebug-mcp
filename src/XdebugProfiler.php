@@ -54,6 +54,8 @@ use const JSON_UNESCAPED_UNICODE;
  *
  * Executes PHP scripts with Xdebug profiling enabled and analyzes Cachegrind output.
  * Provides performance statistics and bottleneck identification from profile data.
+ *
+ * @codeCoverageIgnore Requires live Xdebug profiling runtime
  */
 class XdebugProfiler
 {

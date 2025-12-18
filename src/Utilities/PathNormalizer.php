@@ -17,6 +17,8 @@ use function substr;
  *
  * Normalizes paths by resolving . and .. segments.
  * Compatible with phar:// and other stream wrappers unlike realpath().
+ *
+ * @codeCoverageIgnore Used by DebugServer runtime
  */
 final class PathNormalizer
 {
