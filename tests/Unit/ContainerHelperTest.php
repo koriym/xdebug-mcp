@@ -111,7 +111,7 @@ final class ContainerHelperTest extends TestCase
     #[Test]
     public function findScriptIndexSkipsPhpOptions(): void
     {
-        $this->assertSame(4, ContainerHelper::findScriptIndex(['docker', 'run', 'php', '-d', 'error_reporting=E_ALL', 'script.php'], 2));
+        $this->assertSame(5, ContainerHelper::findScriptIndex(['docker', 'run', 'php', '-d', 'error_reporting=E_ALL', 'script.php'], 2));
     }
 
     #[Test]

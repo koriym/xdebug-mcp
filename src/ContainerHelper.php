@@ -87,6 +87,9 @@ final class ContainerHelper
         return false;
     }
 
+    /** PHP CLI options that take a separate value argument */
+    private const PHP_OPTIONS_WITH_VALUE = ['-d', '-c', '-z', '-B', '-R', '-F', '-E'];
+
     /**
      * Skip PHP options to find the actual script argument index
      *
@@ -101,7 +104,13 @@ final class ContainerHelper
 
         // Skip PHP options (starting with -)
         while (isset($parts[$scriptIndex]) && str_starts_with($parts[$scriptIndex], '-')) {
+            $currentOption = $parts[$scriptIndex];
             $scriptIndex++;
+
+            // If this option takes a value, skip the next argument too
+            if (in_array($currentOption, self::PHP_OPTIONS_WITH_VALUE, true) && isset($parts[$scriptIndex])) {
+                $scriptIndex++;
+            }
         }
 
         return isset($parts[$scriptIndex]) ? $scriptIndex : false;
