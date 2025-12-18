@@ -111,7 +111,7 @@ Run the demo examples to see each tool in action:
 # Trace execution flow
 ./bin/xtrace --context="Debug demo" -- php demo/buggy.php
 
-README# Profile performance bottlenecks
+# Profile performance bottlenecks
 ./bin/xprofile --json -- php demo/slow.php
 
 # Analyze code coverage
