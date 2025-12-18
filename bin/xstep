@@ -176,13 +176,14 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             continue;
         }
 
-        // Try to resolve file path - check both as-is and relative to current directory
+        // Try to resolve file path - convert to absolute path for Xdebug
         $resolvedFile = null;
         if (file_exists($file)) {
-            $resolvedFile = $file;
+            // Use realpath to get absolute path
+            $resolvedFile = realpath($file);
         } elseif (!str_starts_with($file, '/') && file_exists(getcwd() . '/' . $file)) {
             // Try relative to current working directory
-            $resolvedFile = getcwd() . '/' . $file;
+            $resolvedFile = realpath(getcwd() . '/' . $file);
         } else {
             // Try common project paths
             $commonPaths = [
@@ -190,10 +191,10 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
                 './' . $file,
                 'tests/fake/' . basename($file)  // Support common test locations
             ];
-            
+
             foreach ($commonPaths as $testPath) {
                 if (file_exists($testPath)) {
-                    $resolvedFile = $testPath;
+                    $resolvedFile = realpath($testPath);
                     break;
                 }
             }
@@ -202,7 +203,7 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
         if (!$resolvedFile) {
             throw new RuntimeException("Breakpoint file not found: $file (searched current dir and common paths)");
         }
-        
+
         $file = $resolvedFile;
 
         if ($line <= 0) {
