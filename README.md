@@ -68,13 +68,13 @@ composer global require koriym/xdebug-mcp
 
 ### 3. Setup AI Integration
 
-**Option A: Skills (Recommended for Claude Code / Codex)**
+#### Option A: Skills (Recommended for Claude Code / Codex)
 
 ```bash
 ln -s ~/.composer/vendor/koriym/xdebug-mcp/skills/xdebug ~/.claude/skills/xdebug
 ```
 
-**Option B: MCP Server (For Cursor, Windsurf, etc.)**
+#### Option B: MCP Server (For Cursor, Windsurf, etc.)
 
 Create `.mcp.json` in your project root:
 
