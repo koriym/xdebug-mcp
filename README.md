@@ -1,4 +1,4 @@
-# Xdebug Tools for AI
+# Xdebug MCP
 
 <img width="256" alt="xdebug-mcp" src="docs/images/logo.jpeg" />
 
