@@ -151,15 +151,6 @@ xback --break='app.php:50' -- php app.php
 
 Run `--help` on any tool for detailed options.
 
-## Claude Code Plugin
-
-**Recommended for Claude Code users** - simpler than MCP configuration.
-
-```text
-/plugin marketplace add koriym/xdebug-mcp
-/plugin install xdebug@xdebug-mcp
-```
-
 ## MCP Configuration
 
 For Cursor, Windsurf, and other MCP-compatible tools.
@@ -184,7 +175,7 @@ Find the correct path: `which xdebug-mcp`
 For hands-on debugging without AI, use the interactive debugger:
 
 ```bash
-xstep -- php script.php
+xstep --break="script.php:42" -- php script.php
 ```
 
 **Commands:**
