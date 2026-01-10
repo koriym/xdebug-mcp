@@ -125,20 +125,19 @@ try {
 
     if ($jsonOutput) {
         $result = [
-            'trace_file' => $traceFile,
-            'total_lines' => $stats->totalLines,
-            'unique_functions' => $stats->getUniqueFunctionCount(),
-            'max_call_depth' => $stats->maxDepth,
-            'database_queries' => $stats->dbOperations,
-            'specification' => 'https://xdebug.org/docs/trace'
+            'file' => $traceFile,
+            'lines' => $stats->totalLines,
+            'functions' => $stats->getUniqueFunctionCount(),
+            'max_depth' => $stats->maxDepth,
+            'db_queries' => $stats->dbOperations,
         ];
 
         if ($context !== null) {
-            $result['analysis_context'] = $context;
+            $result['context'] = $context;
         }
 
         if ($scriptOutput !== null && $scriptOutput !== '') {
-            $result['script_output'] = $scriptOutput;
+            $result['output'] = $scriptOutput;
         }
 
         echo json_encode($result, JSON_UNESCAPED_SLASHES) . "\n";
