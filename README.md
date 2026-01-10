@@ -68,13 +68,19 @@ composer global require koriym/xdebug-mcp
 
 ### 3. Setup AI Integration
 
-#### Option A: Skills (Recommended for Claude Code / Codex)
+#### Option A: Plugin Marketplace (Recommended for Claude Code)
 
-```bash
-ln -s ~/.composer/vendor/koriym/xdebug-mcp/skills/xdebug ~/.claude/skills/xdebug
+```
+/plugin marketplace https://github.com/koriym/xdebug-mcp
 ```
 
-#### Option B: MCP Server (For Cursor, Windsurf, etc.)
+Or manually symlink:
+
+```bash
+ln -s ~/.composer/vendor/koriym/xdebug-mcp ~/.claude/plugins/xdebug
+```
+
+### # Option B: MCP Server (For Cursor, Windsurf, etc.)
 
 Create `.mcp.json` in your project root:
 
@@ -185,35 +191,41 @@ xback --break='app.php:50' -- php app.php
 
 Run `--help` on any tool for detailed options.
 
-## Skills (Recommended)
+## Plugin Installation (Recommended)
 
-Pre-configured skills for Claude Code and Codex. **This is the recommended setup** - simpler than MCP configuration.
+Pre-configured plugin for Claude Code. **This is the recommended setup** - simpler than MCP configuration.
 
-| Skill | Purpose |
-|-------|---------|
+| Tool | Purpose |
+|------|---------|
 | `xtrace` | Execution flow analysis, general debugging |
 | `xprofile` | Performance profiling, bottleneck detection |
 | `xcoverage` | Test coverage analysis |
 | `xstep` | Breakpoint debugging, variable inspection |
 | `xback` | Call stack analysis at specific points |
 
-### Global Installation (All Projects)
+### Install via Plugin Marketplace
 
-Symlink to your global Claude skills directory:
-
-```bash
-ln -s ~/.composer/vendor/koriym/xdebug-mcp/skills/xdebug ~/.claude/skills/xdebug
+```
+/plugin marketplace https://github.com/koriym/xdebug-mcp
 ```
 
-The skill will be available in all projects automatically and updated with `composer global update`.
+### Manual Installation (All Projects)
+
+Symlink to your global Claude plugins directory:
+
+```bash
+ln -s ~/.composer/vendor/koriym/xdebug-mcp ~/.claude/plugins/xdebug
+```
+
+The plugin will be available in all projects automatically and updated with `composer global update`.
 
 ### Project-Level Installation
 
 Symlink for a specific project:
 
 ```bash
-mkdir -p .claude/skills
-ln -s ~/.composer/vendor/koriym/xdebug-mcp/skills/xdebug .claude/skills/xdebug
+mkdir -p .claude/plugins
+ln -s ~/.composer/vendor/koriym/xdebug-mcp .claude/plugins/xdebug
 ```
 
 ## Interactive REPL

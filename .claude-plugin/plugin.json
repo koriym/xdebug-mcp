@@ -1,0 +1,13 @@
+{
+  "name": "xdebug",
+  "description": "PHP debugging and analysis tools using Xdebug. Trace execution, step debug, profile performance, and analyze code coverage.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Akihito Koriyama",
+    "email": "akihito.koriyama@gmail.com"
+  },
+  "homepage": "https://koriym.github.io/xdebug-mcp/",
+  "repository": "https://github.com/koriym/xdebug-mcp",
+  "license": "MIT",
+  "keywords": ["php", "xdebug", "debugging", "profiling", "coverage", "trace"]
+}
