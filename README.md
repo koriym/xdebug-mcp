@@ -80,7 +80,7 @@ Or manually symlink:
 ln -s ~/.composer/vendor/koriym/xdebug-mcp ~/.claude/plugins/xdebug
 ```
 
-### # Option B: MCP Server (For Cursor, Windsurf, etc.)
+#### Option B: MCP Server (For Cursor, Windsurf, etc.)
 
 Create `.mcp.json` in your project root:
 
