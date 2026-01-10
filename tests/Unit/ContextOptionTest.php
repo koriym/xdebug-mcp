@@ -7,6 +7,7 @@ namespace Koriym\XdebugMcp\Tests\Unit;
 use PHPUnit\Framework\TestCase;
 
 use function dirname;
+use function extension_loaded;
 use function shell_exec;
 use function sprintf;
 
@@ -20,6 +21,10 @@ class ContextOptionTest extends TestCase
 
     protected function setUp(): void
     {
+        if (! extension_loaded('xdebug')) {
+            $this->markTestSkipped('Xdebug extension is not loaded');
+        }
+
         $this->projectRoot = dirname(__DIR__, 2);
         $this->testScript = $this->projectRoot . '/tests/fake/loop-counter.php';
     }
@@ -38,7 +43,7 @@ class ContextOptionTest extends TestCase
         $this->assertNotNull($output);
 
         // Validate JSON output with context
-        $this->assertStringContainsString('"🎯 analysis_context":', $output);
+        $this->assertStringContainsString('"context":', $output);
         $this->assertStringContainsString('"' . $context . '"', $output);
     }
 
@@ -56,7 +61,7 @@ class ContextOptionTest extends TestCase
         $this->assertNotNull($output);
 
         // Validate JSON output with context
-        $this->assertStringContainsString('"analysis_context":', $output);
+        $this->assertStringContainsString('"context":', $output);
         $this->assertStringContainsString('"' . $context . '"', $output);
     }
 
