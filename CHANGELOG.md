@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Claude Code Plugin**: Plugin marketplace support (`.claude-plugin/plugin.json`)
-  - Install via: `/plugin marketplace https://github.com/koriym/xdebug-mcp`
+  - Install via: `/plugin marketplace add koriym/xdebug-mcp`
 
 ### Changed
 - **Token Optimization**: Reduce xcoverage output by 89% using range notation

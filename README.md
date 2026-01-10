@@ -70,7 +70,7 @@ composer global require koriym/xdebug-mcp
 
 **Claude Code:**
 ```text
-/plugin marketplace https://github.com/koriym/xdebug-mcp
+/plugin marketplace add koriym/xdebug-mcp
 ```
 
 **Cursor / Windsurf:** See [MCP Configuration](#mcp-configuration) below.
@@ -173,16 +173,8 @@ Run `--help` on any tool for detailed options.
 
 **Recommended for Claude Code users** - simpler than MCP configuration.
 
-### Install via Plugin Marketplace
-
 ```text
-/plugin marketplace https://github.com/koriym/xdebug-mcp
-```
-
-### Local Installation
-
-```text
-/plugin marketplace add ~/.composer/vendor/koriym/xdebug-mcp
+/plugin marketplace add koriym/xdebug-mcp
 ```
 
 ## MCP Configuration
