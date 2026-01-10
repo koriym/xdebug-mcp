@@ -224,6 +224,13 @@ pkill -f "XDEBUG_SESSION=xdebug-mcp"  // Only kills our sessions
 - **Transaction management**: Proper request/response correlation for concurrent operations
 - **Error handling**: Comprehensive error reporting and connection recovery
 
+## Release Process
+
+Before creating a release:
+1. Update `CHANGELOG.md` with the new version entry
+2. Commit the changelog update
+3. Create the GitHub release with `gh release create`
+
 ## Development Workflow
 
 ### MCP Server Development

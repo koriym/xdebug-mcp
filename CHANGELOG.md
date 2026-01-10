@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-01-11
+
+### Added
+- **Claude Code Plugin**: Plugin marketplace support (`.claude-plugin/plugin.json`)
+  - Install via: `/plugin marketplace https://github.com/koriym/xdebug-mcp`
+
+### Changed
+- **Token Optimization**: Reduce xcoverage output by 89% using range notation
+- **Key Naming**: Improve readability (`user_functions`, `db_queries`)
+- **README**: Update for plugin-first approach, add "Why xdebug-mcp?" section
+
+### Fixed
+- **Schema**: Support cross-platform path regex (Windows/Unix)
+
 ## [0.3.2] - 2025-11-03
 
 ### Fixed
