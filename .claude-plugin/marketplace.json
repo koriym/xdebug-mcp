@@ -1,12 +1,15 @@
 {
   "name": "xdebug-mcp",
-  "description": "PHP debugging tools marketplace",
+  "owner": {
+    "name": "Akihito Koriyama",
+    "email": "akihito.koriyama@gmail.com"
+  },
   "plugins": [
     {
       "name": "xdebug",
+      "source": ".",
       "description": "PHP debugging and analysis tools using Xdebug. Trace execution, step debug, profile performance, and analyze code coverage.",
-      "version": "1.0.0",
-      "path": ".."
+      "version": "1.0.0"
     }
   ]
 }
