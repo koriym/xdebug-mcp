@@ -2192,7 +2192,7 @@ final class DebugServer
             ];
         }
 
-        echo json_encode($result, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+        echo json_encode($result, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
     }
 
     /**
@@ -2757,7 +2757,7 @@ final class DebugServer
 
         // Output format based on jsonMode or jsonOutput option
         if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
-            echo json_encode($debugState, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+            echo json_encode($debugState, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
         } else {
             // Human-readable format
             $this->log("\n" . str_repeat('=', 60));

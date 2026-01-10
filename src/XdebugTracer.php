@@ -294,8 +294,9 @@ class XdebugTracer
     /**
      * Generate comprehensive trace statistics from existing trace file
      * Used by both standalone trace analysis and debug output
+     * Token-optimized: returns file path and summary only (AI can read file if needed)
      *
-     * @return array{file: string, content: list<string>, trace_file: string, total_lines: int, unique_functions: int, max_call_depth: int, database_queries: int, specification: string}
+     * @return array{file: string, lines: int, functions: int, max_depth: int, db_queries: int}
      */
     public function generateTraceStatistics(string $traceFile): array
     {
@@ -305,26 +306,12 @@ class XdebugTracer
 
         $stats = $this->parseTraceFile($traceFile);
 
-        // Handle both compressed and uncompressed trace files
-        $filterNonEmpty = static fn (string $line): bool => trim($line) !== '';
-        if (str_ends_with($traceFile, '.gz')) {
-            $content = array_filter(explode("\n", (string) gzdecode((string) file_get_contents($traceFile))), $filterNonEmpty);
-        } else {
-            $content = array_filter(explode("\n", (string) file_get_contents($traceFile)), $filterNonEmpty);
-        }
-
         return [
-            // Compatibility with debug schema (old format)
             'file' => $traceFile,
-            'content' => array_values($content),
-
-            // Full trace schema compliance (new format)
-            'trace_file' => $traceFile,
-            'total_lines' => $stats->totalLines,
-            'unique_functions' => $stats->getUniqueFunctionCount(),
-            'max_call_depth' => $stats->maxCallDepth,
-            'database_queries' => $this->countDatabaseQueries($stats),
-            'specification' => 'https://xdebug.org/docs/trace',
+            'lines' => $stats->totalLines,
+            'functions' => $stats->getUniqueFunctionCount(),
+            'max_depth' => $stats->maxCallDepth,
+            'db_queries' => $this->countDatabaseQueries($stats),
         ];
     }
 

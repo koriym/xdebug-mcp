@@ -141,7 +141,7 @@ try {
             $result['script_output'] = $scriptOutput;
         }
 
-        echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+        echo json_encode($result, JSON_UNESCAPED_SLASHES) . "\n";
     } else {
         echo "✅ Trace complete: $traceFile\n";
         if ($context !== null) {
