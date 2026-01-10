@@ -1,10 +1,10 @@
-# PHP Xdebug MCP Server
+# Xdebug Tools for AI
 
 <img width="256" alt="xdebug-mcp" src="docs/images/logo.jpeg" />
 
 **Debug PHP with Natural Language — No var_dump(), No Guesswork**
 
-An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that enables AI assistants to debug PHP using Xdebug's runtime analysis.
+AI-powered PHP debugging tools using Xdebug's runtime analysis. Works with Claude Code (plugin), Cursor, Windsurf (MCP), and CLI.
 
 [![AI Native](https://img.shields.io/badge/AI_Native-YES-green)](https://github.com/koriym/xdebug-mcp)
 [![Runtime Data](https://img.shields.io/badge/Runtime_Data-YES-green)](https://github.com/koriym/xdebug-mcp)
@@ -38,7 +38,7 @@ The AI automatically selects the appropriate tool, executes it, and analyzes the
 
 - PHP 8.1+
 - [Xdebug 3.x](https://xdebug.org/docs/install) extension (installed, but **not** enabled by default)
-- MCP-compatible AI assistant (Claude Code, etc.)
+- AI assistant: Claude Code (plugin), Cursor/Windsurf (MCP), or CLI
 
 > **💡 Performance Tip:** Keep Xdebug disabled in php.ini for daily use. This tool loads Xdebug on-demand only when needed.
 
@@ -68,34 +68,12 @@ composer global require koriym/xdebug-mcp
 
 ### 3. Setup AI Integration
 
-#### Option A: Plugin Marketplace (Recommended for Claude Code)
-
+**Claude Code:**
 ```
 /plugin marketplace https://github.com/koriym/xdebug-mcp
 ```
 
-Or manually symlink:
-
-```bash
-ln -s ~/.composer/vendor/koriym/xdebug-mcp ~/.claude/plugins/xdebug
-```
-
-#### Option B: MCP Server (For Cursor, Windsurf, etc.)
-
-Create `.mcp.json` in your project root:
-
-```json
-{
-  "mcpServers": {
-    "xdebug": {
-      "command": "php",
-      "args": ["/Users/YOUR_USERNAME/.composer/vendor/bin/xdebug-mcp"]
-    }
-  }
-}
-```
-
-Find the correct path: `which xdebug-mcp`
+**Cursor / Windsurf:** See [MCP Configuration](#mcp-configuration) below.
 
 ### 4. Restart your AI assistant
 
@@ -149,7 +127,7 @@ Each command outputs structured JSON data that AI can analyze to provide debuggi
 ```mermaid
 flowchart LR
     A[You] -->|"Debug login.php"| B[AI Assistant]
-    B -->|MCP| C[xdebug-mcp]
+    B -->|CLI / MCP| C[xtrace, xstep, ...]
     C -->|Runtime Analysis| D[Xdebug]
     D -->|JSON| C
     C -->|Results| B
@@ -158,7 +136,7 @@ flowchart LR
 
 **No var_dump(). No code modification. No guesswork.**
 
-## MCP Tools
+## Available Tools
 
 | Tool | Purpose | Example Prompt |
 |------|---------|----------------|
@@ -191,17 +169,9 @@ xback --break='app.php:50' -- php app.php
 
 Run `--help` on any tool for detailed options.
 
-## Plugin Installation (Recommended)
+## Claude Code Plugin
 
-Pre-configured plugin for Claude Code. **This is the recommended setup** - simpler than MCP configuration.
-
-| Tool | Purpose |
-|------|---------|
-| `xtrace` | Execution flow analysis, general debugging |
-| `xprofile` | Performance profiling, bottleneck detection |
-| `xcoverage` | Test coverage analysis |
-| `xstep` | Breakpoint debugging, variable inspection |
-| `xback` | Call stack analysis at specific points |
+**Recommended for Claude Code users** - simpler than MCP configuration.
 
 ### Install via Plugin Marketplace
 
@@ -209,24 +179,37 @@ Pre-configured plugin for Claude Code. **This is the recommended setup** - simpl
 /plugin marketplace https://github.com/koriym/xdebug-mcp
 ```
 
-### Manual Installation (All Projects)
+### Manual Installation
 
-Symlink to your global Claude plugins directory:
-
+**Global (all projects):**
 ```bash
 ln -s ~/.composer/vendor/koriym/xdebug-mcp ~/.claude/plugins/xdebug
 ```
 
-The plugin will be available in all projects automatically and updated with `composer global update`.
-
-### Project-Level Installation
-
-Symlink for a specific project:
-
+**Project-level:**
 ```bash
 mkdir -p .claude/plugins
 ln -s ~/.composer/vendor/koriym/xdebug-mcp .claude/plugins/xdebug
 ```
+
+## MCP Configuration
+
+For Cursor, Windsurf, and other MCP-compatible tools.
+
+Create `.mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "xdebug": {
+      "command": "php",
+      "args": ["/Users/YOUR_USERNAME/.composer/vendor/bin/xdebug-mcp"]
+    }
+  }
+}
+```
+
+Find the correct path: `which xdebug-mcp`
 
 ## Interactive REPL
 
@@ -267,6 +250,12 @@ See [tests/docker/README.md](tests/docker/README.md) for details.
 ## For Developers
 
 See [tests/ai/README.md](tests/ai/README.md) for tool discoverability testing.
+
+## Why "xdebug-mcp"?
+
+This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. While MCP remains supported for tools like Cursor and Windsurf, we now recommend the **plugin approach** for Claude Code users — it's simpler and requires no MCP configuration.
+
+The CLI tools (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`) work independently of both MCP and plugins.
 
 ## Resources
 
