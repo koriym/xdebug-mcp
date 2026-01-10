@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "xdebug",
-      "source": ".",
+      "source": "./",
       "description": "PHP debugging and analysis tools using Xdebug. Trace execution, step debug, profile performance, and analyze code coverage.",
       "version": "1.0.0"
     }
