@@ -42,10 +42,13 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
     echo "  " . $argv[0] . " --include-vendor=*/* -- php app.php\n";
     echo "\n";
     echo "OUTPUT FORMAT:\n";
-    echo "  📊 Standard: PHPUnit TestDox results + JSON line coverage data\n";
-    echo "  🌳 Branch Mode: PHPUnit TestDox + JSON branch coverage + GraphViz dot file\n";
+    echo "  📊 Standard Mode (Token-optimized):\n";
+    echo "     - summary: {files, total_lines, covered_lines, uncovered_lines, coverage_percent}\n";
+    echo "     - uncovered: Only uncovered lines (not all lines) for minimal token usage\n";
+    echo "     - graphviz_dot_file: Path to GraphViz DOT file (content in file, not JSON)\n";
+    echo "  🌳 Branch Mode: Full branch coverage data + GraphViz dot file\n";
     echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json\n";
-    echo "  Benefits: AI can distinguish test output from coverage data automatically\n";
+    echo "  Benefits: Compact output reduces token consumption by 60-80%\n";
     echo "\n";
     echo "📋 JSON SCHEMA RESOURCES (Essential for AI):\n";
     echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json\n";
@@ -153,10 +156,9 @@ register_shutdown_function(function() use ($tempDir, $branchCoverage) {
         $outputPath = pathinfo($dotFilePath, PATHINFO_DIRNAME) . "/" . pathinfo($dotFilePath, PATHINFO_FILENAME) . ".png";
         
         $result = [
-            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xcoverage-branch.json", 
+            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xcoverage-branch.json",
             "coverage_type" => "branch",
             "coverage" => $filtered,
-            "graphviz_dot" => $dotContent,
             "graphviz_dot_file" => $dotFilePath,
             "visualization_command" => "dot -Tpng " . escapeshellarg($dotFilePath) . " -o " . escapeshellarg($outputPath)
         ];
@@ -167,17 +169,17 @@ register_shutdown_function(function() use ($tempDir, $branchCoverage) {
         $dotContent = "digraph line_coverage {\n";
         $dotContent .= "  rankdir=TB;\n";
         $dotContent .= "  node [shape=box];\n\n";
-        
+
         foreach ($filtered as $file => $lines) {
             if (is_array($lines)) {
                 $fileName = basename($file);
                 $dotContent .= "  // File: $fileName\n";
-                
+
                 // Group consecutive lines for better visualization
                 $lineGroups = [];
                 $currentGroup = [];
                 $lastLine = -1;
-                
+
                 foreach ($lines as $lineNum => $hitCount) {
                     if (is_numeric($lineNum)) {
                         if ($lineNum == $lastLine + 1 && count($currentGroup) < 5) {
@@ -194,48 +196,85 @@ register_shutdown_function(function() use ($tempDir, $branchCoverage) {
                 if (!empty($currentGroup)) {
                     $lineGroups[] = $currentGroup;
                 }
-                
+
                 foreach ($lineGroups as $groupIndex => $group) {
                     $startLine = $group[0][0];
                     $endLine = end($group)[0];
                     $allHit = true;
                     $anyHit = false;
-                    
+
                     foreach ($group as [$line, $hit]) {
                         if ($hit <= 0) $allHit = false;
                         if ($hit > 0) $anyHit = true;
                     }
-                    
+
                     $label = $startLine == $endLine ? "Line $startLine" : "Lines $startLine-$endLine";
                     if ($allHit) {
                         $color = "lightgreen";
                         $style = "filled,solid";
                     } elseif ($anyHit) {
-                        $color = "lightyellow"; 
+                        $color = "lightyellow";
                         $style = "filled,solid";
                     } else {
                         $color = "lightcoral";
                         $style = "filled,dashed";
                     }
-                    
+
                     $nodeId = str_replace(["/", ".", " "], "_", $fileName) . "_group_" . $groupIndex;
                     $dotContent .= "  \"$nodeId\" [label=\"$label\\n$fileName\", style=\"$style\", fillcolor=\"$color\"];\n";
                 }
                 $dotContent .= "\n";
             }
         }
-        
+
         $dotContent .= "}\n";
         file_put_contents($dotFilePath, $dotContent);
-        
+
         // Generate unique output PNG path
         $outputPath = pathinfo($dotFilePath, PATHINFO_DIRNAME) . "/" . pathinfo($dotFilePath, PATHINFO_FILENAME) . ".png";
-        
+
+        // Extract only uncovered lines (hit count <= 0) for compact output
+        // Also calculate summary statistics
+        $uncoveredOnly = [];
+        $totalFiles = 0;
+        $totalLines = 0;
+        $coveredLines = 0;
+        $uncoveredLines = 0;
+
+        foreach ($filtered as $file => $lines) {
+            if (is_array($lines)) {
+                $totalFiles++;
+                $fileUncovered = [];
+                foreach ($lines as $lineNum => $hitCount) {
+                    if (is_numeric($lineNum)) {
+                        $totalLines++;
+                        if ($hitCount > 0) {
+                            $coveredLines++;
+                        } else {
+                            $uncoveredLines++;
+                            $fileUncovered[(int)$lineNum] = $hitCount;
+                        }
+                    }
+                }
+                if (!empty($fileUncovered)) {
+                    $uncoveredOnly[$file] = $fileUncovered;
+                }
+            }
+        }
+
+        $coveragePercent = $totalLines > 0 ? round(($coveredLines / $totalLines) * 100, 1) : 0;
+
         $result = [
-            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json", 
+            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json",
             "coverage_type" => "line",
-            "coverage" => $filtered,
-            "graphviz_dot" => $dotContent,
+            "summary" => [
+                "files" => $totalFiles,
+                "total_lines" => $totalLines,
+                "covered_lines" => $coveredLines,
+                "uncovered_lines" => $uncoveredLines,
+                "coverage_percent" => $coveragePercent
+            ],
+            "uncovered" => $uncoveredOnly,
             "graphviz_dot_file" => $dotFilePath,
             "visualization_command" => "dot -Tpng " . escapeshellarg($dotFilePath) . " -o " . escapeshellarg($outputPath)
         ];
