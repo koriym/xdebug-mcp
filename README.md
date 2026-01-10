@@ -71,15 +71,25 @@ composer global require koriym/xdebug-mcp
 **Claude Code:**
 ```text
 /plugin marketplace add koriym/xdebug-mcp
+/plugin install xdebug@xdebug-mcp
 ```
 
 **Cursor / Windsurf:** See [MCP Configuration](#mcp-configuration) below.
 
-### 4. Restart your AI assistant
+### 4. Restart your AI assistant and try it
 
-Now ask your AI to debug PHP code.
+```text
+# Download demo files
+git clone --depth 1 https://github.com/koriym/xdebug-mcp.git /tmp/xdebug-demo
 
-**New to xdebug-mcp?** Try the [demo/](demo/) folder with sample buggy code, performance issues, and coverage examples.
+# Ask Claude to debug
+"Debug /tmp/xdebug-demo/demo/buggy.php and find the bugs"
+```
+
+Or use the skill directly:
+```text
+/xdebug
+```
 
 ## Try It Out
 
@@ -175,6 +185,7 @@ Run `--help` on any tool for detailed options.
 
 ```text
 /plugin marketplace add koriym/xdebug-mcp
+/plugin install xdebug@xdebug-mcp
 ```
 
 ## MCP Configuration
