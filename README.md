@@ -69,7 +69,7 @@ composer global require koriym/xdebug-mcp
 ### 3. Setup AI Integration
 
 **Claude Code:**
-```
+```text
 /plugin marketplace https://github.com/koriym/xdebug-mcp
 ```
 
@@ -175,13 +175,13 @@ Run `--help` on any tool for detailed options.
 
 ### Install via Plugin Marketplace
 
-```
+```text
 /plugin marketplace https://github.com/koriym/xdebug-mcp
 ```
 
 ### Local Installation
 
-```
+```text
 /plugin marketplace add ~/.composer/vendor/koriym/xdebug-mcp
 ```
 
