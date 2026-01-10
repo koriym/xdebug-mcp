@@ -43,11 +43,11 @@ function showHelp(string $scriptName): void
     echo "  $scriptName -- docker compose exec -T php php /app/script.php\n";
     echo "\n";
     echo "  # JSON output for tooling\n";
-    echo "  $scriptName --json -- php script.php | jq '.\"🎯 bottleneck_functions\"'\n";
+    echo "  $scriptName --json -- php script.php | jq '.bottlenecks'\n";
     echo "\n";
     echo "OUTPUT:\n";
     echo "  Default: Human-readable with KCachegrind suggestions\n";
-    echo "  --json: AI-optimized JSON with emoji keys and metrics\n";
+    echo "  --json: Compact JSON with short keys (file, lines, bottlenecks, etc.)\n";
     echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xprofile.json\n";
     echo "\n";
 }
@@ -122,9 +122,9 @@ try {
     $result = generateEnhancedProfileData($profileFile, $jsonOutput, $context, $scriptOutput);
 
     if ($jsonOutput) {
-        // AI-optimized JSON output with emoji keys and units
-        echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
-        $profileFile = $result['📁 profile_file'];
+        // AI-optimized compact JSON output
+        echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        $profileFile = $result['file'];
     } else {
         // Human-readable output with proper units and formatting
         displayHumanReadableProfile($result);
@@ -159,53 +159,30 @@ function generateEnhancedProfileData(string $profileFile, bool $jsonOutput = fal
     // Comprehensive analysis
     $stats = analyzeCachegrindFile($profileFile);
 
-    // Add context to result if provided
-    if ($context !== null) {
-        if ($jsonOutput) {
-            $contextKey = '🎯 analysis_context';
-        } else {
-            $contextKey = 'analysis_context';
-        }
-    }
-
     if ($jsonOutput) {
-        // Enhanced result with emoji keys and units for AI
         $result = [
-            // Core file information
-            '📁 profile_file' => $profileFile,
-            '📊 total_lines' => $stats['total_lines'] . ' lines',
-            '💾 file_size_bytes' => $fileSize . ' bytes',
-            '📏 file_size_formatted' => $fileSize > 1024 ? round($fileSize / 1024, 1) . 'KB' : $fileSize . 'B',
-
-            // Function statistics
-            '📈 functions_count' => $stats['functions_count'] . ' functions',
-            '👤 user_functions' => $stats['user_functions'] . ' user',
-            '⚙️ internal_functions' => $stats['internal_functions'] . ' internal',
-            '📞 total_calls' => $stats['total_calls'] . ' calls',
-
-            // Performance metrics
-            '⏱️ execution_time_ms' => $stats['execution_time_ms'] . 'ms',
-            '🧠 peak_memory_mb' => $stats['peak_memory_mb'] . 'MB',
-
-            // I/O and database operations
-            '📂 file_io_operations' => $stats['file_io_operations'] . ' operations',
-            '🗃️ database_operations' => $stats['database_operations'] . ' queries',
-
-            // Analysis metadata
-            '🎯 bottleneck_functions' => $stats['bottleneck_functions'],
-            '💡 optimization_suggestions' => $stats['optimization_suggestions'],
-
-            // Schema and specification
-            '📋 specification' => 'https://kcachegrind.github.io/html/CallgrindFormat.html',
-            '🔗 schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xprofile.json'
+            'specification' => 'https://xdebug.org/docs/profiler',
+            'schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xprofile.json',
+            'file' => $profileFile,
+            'lines' => $stats['total_lines'],
+            'size' => $fileSize,
+            'functions' => $stats['functions_count'],
+            'user_functions' => $stats['user_functions'],
+            'internal_functions' => $stats['internal_functions'],
+            'calls' => $stats['total_calls'],
+            'time_ms' => $stats['execution_time_ms'],
+            'memory_mb' => $stats['peak_memory_mb'],
+            'file_io' => $stats['file_io_operations'],
+            'db_queries' => $stats['database_operations'],
+            'bottlenecks' => $stats['bottleneck_functions'],
         ];
 
         if ($context !== null) {
-            $result['🎯 analysis_context'] = $context;
+            $result['context'] = $context;
         }
 
         if ($scriptOutput !== null && $scriptOutput !== '') {
-            $result['📺 script_output'] = $scriptOutput;
+            $result['output'] = $scriptOutput;
         }
 
         return $result;

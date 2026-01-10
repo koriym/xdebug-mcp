@@ -2,108 +2,105 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json",
   "title": "Xdebug Coverage Result",
-  "description": "Raw Xdebug code coverage data output from xdebug_get_code_coverage(). See https://xdebug.org/docs/code_coverage for complete coverage documentation and interpretation guidelines.",
+  "description": "Code coverage data showing only uncovered lines with summary statistics and range-based line grouping.",
   "type": "object",
   "properties": {
     "$schema": {
       "type": "string",
       "format": "uri",
-      "description": "JSON Schema reference for this coverage data structure"
+      "description": "JSON Schema reference"
     },
-    "coverage": {
+    "coverage_type": {
+      "type": "string",
+      "enum": ["line"],
+      "description": "Coverage analysis type"
+    },
+    "summary": {
       "type": "object",
-      "description": "Raw coverage data from xdebug_get_code_coverage() - maps file paths to line execution data",
-      "patternProperties": {
-        "^/.+\\.php$": {
-          "type": "object",
-          "description": "Coverage data for a single PHP file - key is absolute file path",
-          "patternProperties": {
-            "^[0-9]+$": {
-              "type": "integer",
-              "enum": [1, -1, -2],
-              "description": "Line execution status: 1=executed, -1=not executed, -2=not executable"
-            }
-          },
-          "additionalProperties": false
-        }
+      "description": "Coverage statistics summary",
+      "properties": {
+        "files": { "type": "integer", "description": "Number of files analyzed" },
+        "total_lines": { "type": "integer", "description": "Total executable lines" },
+        "covered_lines": { "type": "integer", "description": "Lines executed" },
+        "uncovered_lines": { "type": "integer", "description": "Lines not executed" },
+        "coverage_percent": { "type": "number", "description": "Coverage percentage" }
       },
-      "additionalProperties": false
+      "required": ["files", "total_lines", "covered_lines", "uncovered_lines", "coverage_percent"]
+    },
+    "uncovered": {
+      "type": "object",
+      "description": "Uncovered lines per file, grouped as ranges. Range semantics (start < end) validated by application.",
+      "patternProperties": {
+        "^(?:/|[A-Za-z]:\\\\).+\\.php$": {
+          "type": "array",
+          "description": "Array of line numbers or ranges (e.g., [10, \"15-20\", 25])",
+          "items": {
+            "oneOf": [
+              { "type": "integer", "description": "Single uncovered line" },
+              { "type": "string", "pattern": "^[0-9]+-[0-9]+$", "description": "Range of uncovered lines (start-end, validated by app)" }
+            ]
+          }
+        }
+      }
+    },
+    "graphviz_dot_file": {
+      "type": "string",
+      "description": "Path to generated GraphViz DOT file"
+    },
+    "visualization_command": {
+      "type": "string",
+      "description": "Command to generate PNG from DOT file"
     }
   },
-  "required": ["$schema", "coverage"],
-  "additionalProperties": false,
+  "required": ["$schema", "coverage_type", "summary", "uncovered"],
+
+  "examples": [
+    {
+      "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json",
+      "coverage_type": "line",
+      "summary": {
+        "files": 3,
+        "total_lines": 150,
+        "covered_lines": 120,
+        "uncovered_lines": 30,
+        "coverage_percent": 80.0
+      },
+      "uncovered": {
+        "/path/to/src/UserService.php": ["45-50", 72],
+        "/path/to/src/OrderService.php": [15, "20-25"]
+      },
+      "graphviz_dot_file": "/tmp/xdebug_line_coverage_abc123.dot",
+      "visualization_command": "dot -Tpng '/tmp/xdebug_line_coverage_abc123.dot' -o '/tmp/xdebug_line_coverage_abc123.png'"
+    }
+  ],
+
+  "x-interpretation-guide": {
+    "uncovered_format": {
+      "single_line": "Integer like 72 means line 72 is uncovered",
+      "range": "String like \"45-50\" means lines 45 through 50 are uncovered"
+    },
+    "ai_analysis_tips": {
+      "quick_scan": "Check summary.coverage_percent for overall health",
+      "focus_areas": "Look at uncovered ranges to identify untested code blocks",
+      "file_reading": "Use Read tool on specific files to understand uncovered lines"
+    }
+  },
 
   "links": [
     {
       "rel": "specification",
       "href": "https://xdebug.org/docs/code_coverage",
-      "title": "Official Xdebug Code Coverage Documentation",
-      "description": "Complete documentation of Xdebug code coverage functionality, data formats, and interpretation"
+      "title": "Xdebug Code Coverage Documentation"
     },
     {
       "rel": "function-reference",
       "href": "https://xdebug.org/docs/code_coverage#xdebug_get_code_coverage",
-      "title": "xdebug_get_code_coverage() Documentation",
-      "description": "API documentation for the function that generates this coverage data"
+      "title": "xdebug_get_code_coverage() Documentation"
     },
     {
       "rel": "self",
       "href": "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json",
-      "title": "JSON Schema for Xdebug Coverage Results",
-      "description": "This schema definition for validating Xdebug coverage output"
-    },
-    {
-      "rel": "related",
-      "href": "https://github.com/koriym/xdebug-mcp",
-      "title": "Xdebug MCP Server Repository",
-      "description": "Source code and documentation for the Xdebug MCP Server project"
-    },
-    {
-      "rel": "tool",
-      "href": "mcp://xcoverage",
-      "title": "MCP Tool: Coverage",
-      "description": "MCP tool to generate coverage data programmatically"
-    },
-    {
-      "rel": "command",
-      "href": "file://bin/xcoverage",
-      "title": "CLI Coverage Tool",
-      "description": "Command line tool that generates this coverage data format"
+      "title": "JSON Schema for Xdebug Coverage Results"
     }
-  ],
-
-  "examples": [
-    {
-      "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json",
-      "coverage": {
-        "/path/to/src/Class.php": {
-          "1": -2,
-          "3": 1,
-          "4": 1,
-          "7": -1,
-          "8": -1,
-          "12": 1
-        }
-      }
-    }
-  ],
-
-  "x-interpretation-guide": {
-    "line_status_codes": {
-      "1": "Line was executed during test run",
-      "-1": "Line is executable but was not executed",
-      "-2": "Line is not executable (comments, declarations, etc.)"
-    },
-    "coverage_calculation": {
-      "formula": "(executed_lines / executable_lines) * 100",
-      "executable_lines": "Count of lines with status 1 or -1",
-      "executed_lines": "Count of lines with status 1",
-      "ignored_lines": "Lines with status -2 are not counted in coverage percentage"
-    },
-    "ai_analysis_tips": {
-      "focus_on_negative_one": "Lines with status -1 are the gaps - these need test coverage",
-      "group_consecutive_gaps": "Consecutive -1 lines often represent untested functions or branches",
-      "prioritize_by_importance": "Focus coverage efforts on business-critical code paths first"
-    }
-  }
+  ]
 }

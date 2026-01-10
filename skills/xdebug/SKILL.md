@@ -1,4 +1,5 @@
 ---
+name: xdebug
 description: PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, or analyze coverage of PHP code.
 ---
 

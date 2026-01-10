@@ -238,6 +238,30 @@ pkill -f "XDEBUG_SESSION=xdebug-mcp"  // Only kills our sessions
 3. Test debugging workflow through MCP tools
 4. Verify profiling and coverage features
 
+## Documentation Style
+
+### Code Blocks
+Always specify a language identifier for fenced code blocks:
+
+```bash
+# Good
+```bash
+composer install
+```
+
+# Bad - no language identifier
+```
+composer install
+```
+```
+
+Common language identifiers:
+- `bash` - Shell commands
+- `php` - PHP code
+- `json` - JSON data
+- `text` - Plain text, Claude Code commands (e.g., `/plugin marketplace`)
+- `ini` - Configuration files
+
 ## AI Debugging Support with Trace Information
 
 ### Overview

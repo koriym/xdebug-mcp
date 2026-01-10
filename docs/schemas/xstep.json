@@ -2,12 +2,12 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://koriym.github.io/xdebug-mcp/schemas/xstep.json",
   "title": "Xdebug Debug Result",
-  "description": "Comprehensive debugging result combining breakpoint state ('crime scene photo') and execution trace ('surveillance footage') for AI-powered PHP debugging. Follows the principle: 'Error message is the crime photo. Trace is the crime footage.' - providing both the current state at breakpoints and the complete execution history in Xdebug .xt format.",
+  "description": "Debug state at breakpoints plus execution trace. Breakpoints show 'crime scene photo', trace shows 'surveillance footage'.",
   "type": "object",
   "properties": {
     "breaks": {
       "type": "array",
-      "description": "Breakpoints hit during execution (supports multiple breakpoints). Empty array if no breakpoints were hit or no breakpoints were set.",
+      "description": "Breakpoints hit during execution",
       "items": {
         "$ref": "#/definitions/breakpoint"
       }
@@ -15,50 +15,35 @@
     "trace": {
       "$ref": "xtrace.json"
     },
-    "analysis_context": {
+    "context": {
       "type": "string",
-      "description": "Optional contextual description for AI analysis",
-      "examples": ["Debugging login validation with invalid credentials", "Step debugging payment processing failure", "Variable state analysis in user registration"]
+      "description": "Optional analysis context"
     }
   },
   "required": ["breaks", "trace"],
-  "additionalProperties": false,
 
   "definitions": {
     "breakpoint": {
       "type": "object",
-      "description": "Debug state captured at a breakpoint - the 'crime scene photo' showing current execution location and variable values when execution paused",
       "properties": {
         "step": {
           "type": "integer",
-          "minimum": 1,
-          "description": "Sequential step number for this breakpoint in Forward Trace debugging"
+          "description": "Sequential step number"
         },
         "location": {
           "type": "object",
-          "description": "Execution location where break occurred",
           "properties": {
-            "file": {
-              "type": "string",
-              "description": "File path where break occurred"
-            },
-            "line": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Line number where break occurred"
-            }
+            "file": { "type": "string" },
+            "line": { "type": "integer" }
           },
-          "required": ["file", "line"],
-          "additionalProperties": false
+          "required": ["file", "line"]
         },
         "variables": {
           "type": "object",
-          "description": "Variable values at this breakpoint",
-          "additionalProperties": true
+          "description": "Variable values at breakpoint"
         }
       },
-      "required": ["location", "variables"],
-      "additionalProperties": false
+      "required": ["location", "variables"]
     }
   },
 
@@ -66,25 +51,17 @@
     {
       "rel": "specification",
       "href": "https://xdebug.org/docs/trace",
-      "title": "Xdebug Trace Format Documentation",
-      "description": "Official documentation for Xdebug trace file format (.xt) structure and interpretation"
+      "title": "Xdebug Trace Format Documentation"
     },
     {
       "rel": "debug-guide",
       "href": "https://koriym.github.io/xdebug-mcp/debug_guideline_for_ai.md",
-      "title": "PHP Xdebug Trace Analysis Guidelines",
-      "description": "Complete debugging guide: Forward Trace methodology, conditional breakpoints, step recording, performance profiling, and trace analysis for runtime debugging without code modifications"
+      "title": "PHP Xdebug Trace Analysis Guidelines"
     },
     {
       "rel": "self",
       "href": "https://koriym.github.io/xdebug-mcp/schemas/xstep.json",
       "title": "JSON Schema for Xdebug Debug Results"
-    },
-    {
-      "rel": "example",
-      "href": "{trace_file}",
-      "title": "Generated Trace File",
-      "templated": true
     }
   ]
 }

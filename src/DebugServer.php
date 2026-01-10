@@ -2177,22 +2177,28 @@ final class DebugServer
                 $tracer = new XdebugTracer();
                 $result['trace'] = $tracer->generateTraceStatistics($latestTraceFile);
             } else {
-                // No trace files found
+                // No trace files found - use token-optimized structure
                 $result['trace'] = [
                     'file' => '',
-                    'content' => [],
+                    'lines' => 0,
+                    'functions' => 0,
+                    'max_depth' => 0,
+                    'db_queries' => 0,
                 ];
             }
         } catch (Throwable $e) {
-            // Error handling - still provide empty trace structure
+            // Error handling - still provide trace structure with error
             $result['trace'] = [
                 'file' => '',
-                'content' => [],
+                'lines' => 0,
+                'functions' => 0,
+                'max_depth' => 0,
+                'db_queries' => 0,
                 'error' => $e->getMessage(),
             ];
         }
 
-        echo json_encode($result, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+        echo json_encode($result, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
     }
 
     /**
@@ -2549,9 +2555,9 @@ final class DebugServer
     }
 
     /**
-     * Get trace file information with content
+     * Get trace file information (token-optimized)
      *
-     * @return array{file: string, content: list<string>}
+     * @return array{file: string, lines: int, functions: int, max_depth: int, db_queries: int}
      */
     private function getTraceInfo(): array
     {
@@ -2573,7 +2579,10 @@ final class DebugServer
         if ($allTraceFiles === []) {
             return [
                 'file' => '',
-                'content' => [],
+                'lines' => 0,
+                'functions' => 0,
+                'max_depth' => 0,
+                'db_queries' => 0,
             ];
         }
 
@@ -2583,19 +2592,10 @@ final class DebugServer
 
         $latestTrace = $allTraceFiles[0];
 
-        // Read trace file content (last 1000 lines maximum)
-        $traceLines = [];
-        if (file_exists($latestTrace)) {
-            $lines = file($latestTrace, FILE_IGNORE_NEW_LINES);
-            if ($lines !== false) {
-                $traceLines = array_slice($lines, -1000);
-            }
-        }
+        // Use XdebugTracer for token-optimized statistics
+        $tracer = new XdebugTracer();
 
-        return [
-            'file' => $latestTrace,
-            'content' => $traceLines,
-        ];
+        return $tracer->generateTraceStatistics($latestTrace);
     }
 
     /**
@@ -2757,7 +2757,7 @@ final class DebugServer
 
         // Output format based on jsonMode or jsonOutput option
         if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
-            echo json_encode($debugState, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+            echo json_encode($debugState, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
         } else {
             // Human-readable format
             $this->log("\n" . str_repeat('=', 60));
@@ -2780,7 +2780,7 @@ final class DebugServer
 
             if ($debugState['trace']['file'] !== '') {
                 $this->log("📈 Trace file: {$debugState['trace']['file']}");
-                $this->log('📊 Trace lines: ' . count($debugState['trace']['content']));
+                $this->log("📊 Trace lines: {$debugState['trace']['lines']}");
             }
         }
     }

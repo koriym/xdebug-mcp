@@ -2,108 +2,62 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://koriym.github.io/xdebug-mcp/schemas/xback.json",
   "title": "Xdebug Backtrace Result",
-  "description": "AI-optimized stack trace data for PHP debugging. Shows call hierarchy at a specific breakpoint or execution point.",
+  "description": "Stack trace at breakpoint or execution point. Shows call hierarchy.",
   "type": "object",
   "properties": {
     "$schema": {
       "type": "string",
-      "const": "https://koriym.github.io/xdebug-mcp/schemas/xback.json",
-      "description": "JSON Schema reference for this backtrace result"
+      "const": "https://koriym.github.io/xdebug-mcp/schemas/xback.json"
     },
     "script": {
       "type": "string",
-      "description": "Target PHP script that was executed"
+      "description": "Target PHP script"
     },
     "breakpoint": {
       "type": ["string", "null"],
-      "description": "Breakpoint location where backtrace was captured (file:line format)",
-      "pattern": "^.+:\\d+$"
+      "description": "Breakpoint location (file:line)"
     },
     "context": {
       "type": "string",
-      "description": "Contextual description for AI analysis"
+      "description": "Analysis context"
     },
     "depth": {
       "type": "integer",
-      "minimum": 1,
-      "description": "Maximum stack depth requested"
+      "description": "Maximum stack depth"
     },
     "stack": {
       "type": "array",
-      "description": "Call stack frames from current position to entry point",
+      "description": "Call stack frames",
       "items": {
         "type": "object",
         "properties": {
-          "level": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Stack frame level (0 = current position)"
-          },
-          "function": {
-            "type": "string",
-            "description": "Function or method name"
-          },
-          "file": {
-            "type": "string",
-            "description": "Source file path"
-          },
-          "line": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Line number in source file"
-          },
-          "class": {
-            "type": ["string", "null"],
-            "description": "Class name if method call"
-          },
-          "type": {
-            "type": ["string", "null"],
-            "enum": ["->", "::", null],
-            "description": "Call type: -> for instance, :: for static"
-          }
+          "level": { "type": "integer" },
+          "function": { "type": "string" },
+          "file": { "type": "string" },
+          "line": { "type": "integer" },
+          "class": { "type": ["string", "null"] },
+          "type": { "type": ["string", "null"], "enum": ["->", "::", null] }
         },
         "required": ["level", "function", "file", "line"]
       }
     },
     "timestamp": {
       "type": "string",
-      "format": "date-time",
-      "description": "When the backtrace was captured"
+      "format": "date-time"
     }
   },
   "required": ["$schema", "script", "stack", "timestamp"],
-  "additionalProperties": false,
 
   "links": [
+    {
+      "rel": "specification",
+      "href": "https://xdebug.org/docs/stack_trace",
+      "title": "Xdebug Stack Trace Documentation"
+    },
     {
       "rel": "self",
       "href": "https://koriym.github.io/xdebug-mcp/schemas/xback.json",
       "title": "JSON Schema for Xdebug Backtrace Results"
-    },
-    {
-      "rel": "debug-guide",
-      "href": "https://koriym.github.io/xdebug-mcp/debug_guideline_for_ai.md",
-      "title": "PHP Xdebug Debugging Guidelines"
-    },
-    {
-      "rel": "command",
-      "href": "file:///bin/xback",
-      "title": "Command Line Tool"
     }
-  ],
-
-  "x-ai-usage": {
-    "purpose": "Understand 'how did execution reach this point?' questions",
-    "use_cases": [
-      "Debug unexpected function calls",
-      "Trace error origins through call hierarchy",
-      "Understand complex code flow",
-      "Analyze recursion depth"
-    ],
-    "analysis_tips": {
-      "read_bottom_up": "Stack is ordered current→entry, read from bottom to understand call sequence",
-      "check_file_line": "Each frame shows exact location for source code reference",
-      "identify_entry": "Last frame shows program entry point"
-    }
-  }
+  ]
 }
