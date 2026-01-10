@@ -9,5 +9,6 @@
   "homepage": "https://koriym.github.io/xdebug-mcp/",
   "repository": "https://github.com/koriym/xdebug-mcp",
   "license": "MIT",
-  "keywords": ["php", "xdebug", "debugging", "profiling", "coverage", "trace"]
+  "keywords": ["php", "xdebug", "debugging", "profiling", "coverage", "trace"],
+  "skills": "./skills/"
 }
