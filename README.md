@@ -179,17 +179,10 @@ Run `--help` on any tool for detailed options.
 /plugin marketplace https://github.com/koriym/xdebug-mcp
 ```
 
-### Manual Installation
+### Local Installation
 
-**Global (all projects):**
-```bash
-ln -s ~/.composer/vendor/koriym/xdebug-mcp ~/.claude/plugins/xdebug
 ```
-
-**Project-level:**
-```bash
-mkdir -p .claude/plugins
-ln -s ~/.composer/vendor/koriym/xdebug-mcp .claude/plugins/xdebug
+/plugin marketplace add ~/.composer/vendor/koriym/xdebug-mcp
 ```
 
 ## MCP Configuration
