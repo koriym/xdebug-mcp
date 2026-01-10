@@ -91,25 +91,7 @@ Or use the skill directly:
 /xdebug
 ```
 
-## Try It Out
-
-### 1. Check Xdebug Installation
-
-**Recommended Setup:** Xdebug installed but disabled in php.ini (loaded on-demand for zero performance impact)
-
-```bash
-./bin/check-env
-```
-
-Expected output:
-```text
-✅ PHP 8.4.15
-✅ Xdebug 3.5.0 (on-demand)
-```
-
-> ⚠️ If you see `(always loaded)`, disable Xdebug in php.ini. This tool loads it on-demand only when needed.
-
-### 2. Try CLI Tools
+## Try CLI Tools
 
 Run the demo examples to see each tool in action:
 
