@@ -125,6 +125,8 @@ try {
 
     if ($jsonOutput) {
         $result = [
+            'specification' => 'https://xdebug.org/docs/trace',
+            'schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xtrace.json',
             'file' => $traceFile,
             'lines' => $stats->totalLines,
             'functions' => $stats->getUniqueFunctionCount(),

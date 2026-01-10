@@ -5,6 +5,16 @@
   "description": "Compact profiling data for PHP performance analysis. AI-optimized with short keys and numeric values.",
   "type": "object",
   "properties": {
+    "specification": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to Xdebug profiler documentation"
+    },
+    "schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to this JSON schema"
+    },
     "file": {
       "type": "string",
       "description": "Path to the Cachegrind profile file"
@@ -63,10 +73,12 @@
       "description": "Script output if any"
     }
   },
-  "required": ["file", "lines", "size", "functions", "calls", "bottlenecks"],
+  "required": ["specification", "schema", "file", "lines", "size", "functions", "calls", "bottlenecks"],
 
   "examples": [
     {
+      "specification": "https://xdebug.org/docs/profiler",
+      "schema": "https://koriym.github.io/xdebug-mcp/schemas/xprofile.json",
       "file": "/tmp/cachegrind.out.12345",
       "lines": 5000,
       "size": 125000,

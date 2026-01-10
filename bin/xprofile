@@ -162,6 +162,8 @@ function generateEnhancedProfileData(string $profileFile, bool $jsonOutput = fal
     if ($jsonOutput) {
         // Token-optimized compact JSON output
         $result = [
+            'specification' => 'https://xdebug.org/docs/profiler',
+            'schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xprofile.json',
             'file' => $profileFile,
             'lines' => $stats['total_lines'],
             'size' => $fileSize,

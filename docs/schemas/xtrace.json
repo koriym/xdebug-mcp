@@ -5,6 +5,16 @@
   "description": "Compact trace data for PHP debugging. File path and summary only - AI reads trace file directly if needed.",
   "type": "object",
   "properties": {
+    "specification": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to Xdebug trace documentation"
+    },
+    "schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to this JSON schema"
+    },
     "file": {
       "type": "string",
       "description": "Path to the Xdebug trace file (.xt format)"
@@ -34,10 +44,12 @@
       "description": "Script output if any"
     }
   },
-  "required": ["file", "lines", "functions", "max_depth", "db_queries"],
+  "required": ["specification", "schema", "file", "lines", "functions", "max_depth", "db_queries"],
 
   "examples": [
     {
+      "specification": "https://xdebug.org/docs/trace",
+      "schema": "https://koriym.github.io/xdebug-mcp/schemas/xtrace.json",
       "file": "/tmp/trace.1234567890.xt",
       "lines": 5000,
       "functions": 150,
