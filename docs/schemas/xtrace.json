@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://koriym.github.io/xdebug-mcp/schemas/xtrace.json",
-  "title": "Xdebug Trace Result (Token-Optimized)",
-  "description": "Compact trace data for PHP debugging. File path and summary only - AI reads trace file directly if needed.",
+  "title": "Xdebug Trace Result",
+  "description": "Trace data for PHP debugging. File path and summary - read trace file directly for details.",
   "type": "object",
   "properties": {
     "specification": {
@@ -85,5 +85,23 @@
       "9": "Line number",
       "10+": "Parameters/return"
     }
-  }
+  },
+
+  "links": [
+    {
+      "rel": "specification",
+      "href": "https://xdebug.org/docs/trace",
+      "title": "Xdebug Trace Format Documentation"
+    },
+    {
+      "rel": "debug-guide",
+      "href": "https://koriym.github.io/xdebug-mcp/debug_guideline_for_ai.md",
+      "title": "PHP Xdebug Trace Analysis Guidelines"
+    },
+    {
+      "rel": "self",
+      "href": "https://koriym.github.io/xdebug-mcp/schemas/xtrace.json",
+      "title": "JSON Schema for Xdebug Trace Results"
+    }
+  ]
 }

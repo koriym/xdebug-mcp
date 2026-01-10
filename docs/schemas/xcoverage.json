@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json",
-  "title": "Xdebug Coverage Result (Token-Optimized)",
-  "description": "Compact code coverage data showing only uncovered lines. AI-optimized format with summary statistics and range-based line grouping.",
+  "title": "Xdebug Coverage Result",
+  "description": "Code coverage data showing only uncovered lines with summary statistics and range-based line grouping.",
   "type": "object",
   "properties": {
     "$schema": {
@@ -84,5 +84,23 @@
       "focus_areas": "Look at uncovered ranges to identify untested code blocks",
       "file_reading": "Use Read tool on specific files to understand uncovered lines"
     }
-  }
+  },
+
+  "links": [
+    {
+      "rel": "specification",
+      "href": "https://xdebug.org/docs/code_coverage",
+      "title": "Xdebug Code Coverage Documentation"
+    },
+    {
+      "rel": "function-reference",
+      "href": "https://xdebug.org/docs/code_coverage#xdebug_get_code_coverage",
+      "title": "xdebug_get_code_coverage() Documentation"
+    },
+    {
+      "rel": "self",
+      "href": "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json",
+      "title": "JSON Schema for Xdebug Coverage Results"
+    }
+  ]
 }

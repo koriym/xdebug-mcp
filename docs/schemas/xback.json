@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://koriym.github.io/xdebug-mcp/schemas/xback.json",
-  "title": "Xdebug Backtrace Result (Token-Optimized)",
+  "title": "Xdebug Backtrace Result",
   "description": "Stack trace at breakpoint or execution point. Shows call hierarchy.",
   "type": "object",
   "properties": {
@@ -46,5 +46,18 @@
       "format": "date-time"
     }
   },
-  "required": ["$schema", "script", "stack", "timestamp"]
+  "required": ["$schema", "script", "stack", "timestamp"],
+
+  "links": [
+    {
+      "rel": "specification",
+      "href": "https://xdebug.org/docs/stack_trace",
+      "title": "Xdebug Stack Trace Documentation"
+    },
+    {
+      "rel": "self",
+      "href": "https://koriym.github.io/xdebug-mcp/schemas/xback.json",
+      "title": "JSON Schema for Xdebug Backtrace Results"
+    }
+  ]
 }
