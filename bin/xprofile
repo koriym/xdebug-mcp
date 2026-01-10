@@ -167,13 +167,13 @@ function generateEnhancedProfileData(string $profileFile, bool $jsonOutput = fal
             'lines' => $stats['total_lines'],
             'size' => $fileSize,
             'functions' => $stats['functions_count'],
-            'user_fn' => $stats['user_functions'],
-            'internal_fn' => $stats['internal_functions'],
+            'user_functions' => $stats['user_functions'],
+            'internal_functions' => $stats['internal_functions'],
             'calls' => $stats['total_calls'],
             'time_ms' => $stats['execution_time_ms'],
             'memory_mb' => $stats['peak_memory_mb'],
             'file_io' => $stats['file_io_operations'],
-            'db_ops' => $stats['database_operations'],
+            'db_queries' => $stats['database_operations'],
             'bottlenecks' => $stats['bottleneck_functions'],
         ];
 

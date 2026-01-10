@@ -31,11 +31,11 @@
       "type": "integer",
       "description": "Number of unique functions profiled"
     },
-    "user_fn": {
+    "user_functions": {
       "type": "integer",
       "description": "Number of user-defined functions"
     },
-    "internal_fn": {
+    "internal_functions": {
       "type": "integer",
       "description": "Number of internal/built-in functions"
     },
@@ -55,7 +55,7 @@
       "type": "integer",
       "description": "Number of file I/O operations"
     },
-    "db_ops": {
+    "db_queries": {
       "type": "integer",
       "description": "Number of database operations"
     },
@@ -83,13 +83,13 @@
       "lines": 5000,
       "size": 125000,
       "functions": 150,
-      "user_fn": 80,
-      "internal_fn": 70,
+      "user_functions": 80,
+      "internal_functions": 70,
       "calls": 3500,
       "time_ms": 45.2,
       "memory_mb": 12.5,
       "file_io": 15,
-      "db_ops": 8,
+      "db_queries": 8,
       "bottlenecks": [
         "App\\Repository::findAll (25.3%)",
         "PDO::query (18.7%)",
