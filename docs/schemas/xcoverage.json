@@ -29,15 +29,15 @@
     },
     "uncovered": {
       "type": "object",
-      "description": "Uncovered lines per file, grouped as ranges",
+      "description": "Uncovered lines per file, grouped as ranges. Range semantics (start < end) validated by application.",
       "patternProperties": {
-        "^/.+\\.php$": {
+        "^(?:/|[A-Za-z]:\\\\).+\\.php$": {
           "type": "array",
           "description": "Array of line numbers or ranges (e.g., [10, \"15-20\", 25])",
           "items": {
             "oneOf": [
               { "type": "integer", "description": "Single uncovered line" },
-              { "type": "string", "pattern": "^[0-9]+-[0-9]+$", "description": "Range of uncovered lines" }
+              { "type": "string", "pattern": "^[0-9]+-[0-9]+$", "description": "Range of uncovered lines (start-end, validated by app)" }
             ]
           }
         }
