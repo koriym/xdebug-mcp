@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-01-11
+
+### Added
+- **Plugin Marketplace**: Full plugin marketplace support with `marketplace.json`
+  - Install via: `/plugin marketplace add koriym/xdebug-mcp` then `/plugin install xdebug@xdebug-mcp`
+
+### Fixed
+- **Plugin Discovery**: Add `skills` field to `plugin.json` for skill registration
+- **README**: Add complete installation and usage instructions
+
 ## [0.6.0] - 2026-01-11
 
 ### Added
