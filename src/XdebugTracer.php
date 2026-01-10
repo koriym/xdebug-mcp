@@ -8,12 +8,10 @@ use Koriym\XdebugMcp\DTO\TraceStatistics;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use RuntimeException;
 
-use function array_filter;
 use function array_keys;
 use function array_map;
 use function array_merge;
 use function array_unshift;
-use function array_values;
 use function count;
 use function dirname;
 use function escapeshellarg;
@@ -21,14 +19,12 @@ use function explode;
 use function fclose;
 use function fgets;
 use function file_exists;
-use function file_get_contents;
 use function filemtime;
 use function filesize;
 use function fopen;
 use function getenv;
 use function glob;
 use function gzclose;
-use function gzdecode;
 use function gzgets;
 use function gzopen;
 use function implode;
@@ -310,7 +306,7 @@ class XdebugTracer
             'file' => $traceFile,
             'lines' => $stats->totalLines,
             'functions' => $stats->getUniqueFunctionCount(),
-            'max_depth' => $stats->maxCallDepth,
+            'max_depth' => $stats->maxDepth,
             'db_queries' => $this->countDatabaseQueries($stats),
         ];
     }

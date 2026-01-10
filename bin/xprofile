@@ -43,11 +43,11 @@ function showHelp(string $scriptName): void
     echo "  $scriptName -- docker compose exec -T php php /app/script.php\n";
     echo "\n";
     echo "  # JSON output for tooling\n";
-    echo "  $scriptName --json -- php script.php | jq '.\"🎯 bottleneck_functions\"'\n";
+    echo "  $scriptName --json -- php script.php | jq '.bottlenecks'\n";
     echo "\n";
     echo "OUTPUT:\n";
     echo "  Default: Human-readable with KCachegrind suggestions\n";
-    echo "  --json: AI-optimized JSON with emoji keys and metrics\n";
+    echo "  --json: Compact JSON with short keys (file, lines, bottlenecks, etc.)\n";
     echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xprofile.json\n";
     echo "\n";
 }
@@ -158,15 +158,6 @@ function generateEnhancedProfileData(string $profileFile, bool $jsonOutput = fal
 
     // Comprehensive analysis
     $stats = analyzeCachegrindFile($profileFile);
-
-    // Add context to result if provided
-    if ($context !== null) {
-        if ($jsonOutput) {
-            $contextKey = '🎯 analysis_context';
-        } else {
-            $contextKey = 'analysis_context';
-        }
-    }
 
     if ($jsonOutput) {
         // Token-optimized compact JSON output
