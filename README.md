@@ -42,16 +42,6 @@ The AI automatically selects the appropriate tool, executes it, and analyzes the
 
 > **💡 Performance Tip:** Keep Xdebug disabled in php.ini for daily use. This tool loads Xdebug on-demand only when needed.
 
-## Quick Demo (Try Before Install)
-
-```bash
-git clone https://github.com/koriym/xdebug-mcp.git
-cd xdebug-mcp
-rm ./CLAUDE.md  # Remove to test fresh AI tool discovery
-claude
-> Read tests/ai/demo.md and follow the instructions.
-```
-
 ## Quick Start
 
 ### 1. Install
