@@ -220,6 +220,7 @@ The CLI tools (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`) work indepen
 
 - [Troubleshooting](https://koriym.github.io/xdebug-mcp/TROUBLESHOOTING) - Setup issues
 - [Forward Trace Guide](https://koriym.github.io/xdebug-mcp/debug-guidelines/) - AI debugging methodology
+- [llms.txt](https://koriym.github.io/xdebug-mcp/llms.txt) - LLM-readable documentation
 - [Motivation](MOTIVATION.md) - Why we built this
 - [Xdebug Docs](https://xdebug.org/docs/) - Official documentation
 
