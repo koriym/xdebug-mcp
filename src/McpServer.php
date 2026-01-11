@@ -91,17 +91,22 @@ final class McpServer
         $this->tools = [
             'xtrace' => new McpTool(
                 'xtrace',
-                'Trace PHP execution flow | ex) ./xtrace "php test.php" "Debug login flow" | PHPUnit: ./xtrace "php vendor/bin/phpunit --filter testMethod TestClass.php" "Testing user auth"',
+                'Trace PHP execution flow. Returns JSON with $schema URL for semantic details and AI analysis strategies. Key fields: {lines, functions, max_depth, db_queries}. Vendor excluded by default.',
                 [
                     'type' => 'object',
                     'properties' => [
                         'script' => [
                             'type' => 'string',
-                            'description' => 'PHP script to trace (e.g., "tests/fixtures/debug_test.php")',
+                            'description' => 'PHP script to trace (e.g., "vendor/bin/phpunit --filter testMethod")',
                         ],
                         'context' => [
                             'type' => 'string',
-                            'description' => 'Context description for AI analysis (e.g., "Testing user authentication flow")',
+                            'description' => 'Context description for AI analysis (e.g., "Debug login failure")',
+                            'default' => '',
+                        ],
+                        'include_vendor' => [
+                            'type' => 'string',
+                            'description' => 'Include vendor packages in trace (e.g., "bear/*,ray/di" or "*/*" for all)',
                             'default' => '',
                         ],
                     ],
@@ -110,17 +115,22 @@ final class McpServer
             ),
             'xprofile' => new McpTool(
                 'xprofile',
-                'Profile performance bottlenecks | ex) ./xprofile "php slow-app.php" "API performance"',
+                'Profile performance bottlenecks. Returns JSON with $schema URL for semantic details and AI analysis strategies. Key fields: {time_ms, memory_mb, bottlenecks}. Vendor excluded by default.',
                 [
                     'type' => 'object',
                     'properties' => [
                         'script' => [
                             'type' => 'string',
-                            'description' => 'PHP script to profile (e.g., "tests/fixtures/performance_test.php")',
+                            'description' => 'PHP script to profile (e.g., "vendor/bin/phpunit --filter testMethod")',
                         ],
                         'context' => [
                             'type' => 'string',
                             'description' => 'Context description for performance analysis',
+                            'default' => '',
+                        ],
+                        'include_vendor' => [
+                            'type' => 'string',
+                            'description' => 'Include vendor packages in profile (e.g., "bear/*,ray/di" or "*/*" for all)',
                             'default' => '',
                         ],
                     ],
@@ -129,22 +139,22 @@ final class McpServer
             ),
             'xstep' => new McpTool(
                 'xstep',
-                'Step debugging with breakpoints | ex) /xstep --script="php test.php" --break="test.php:15:$user==null" --steps=100 --context="debug context"',
+                'Step debugging with breakpoints. Returns JSON with $schema URL for semantic details. Key fields: {breaks: [{step, location, variables}]}. Variables show diff only. Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
                 [
                     'type' => 'object',
                     'properties' => [
                         'script' => [
                             'type' => 'string',
-                            'description' => 'PHP script to debug (e.g., "tests/fixtures/debug_test.php")',
+                            'description' => 'PHP script to debug (e.g., "vendor/bin/phpunit --filter testMethod")',
                         ],
                         'breakpoints' => [
                             'type' => 'string',
-                            'description' => 'Comma-separated breakpoint locations (e.g., "file.php:15,file.php:25")',
+                            'description' => 'Breakpoints: "file.php:line" or "file.php:line:$var==null" (conditional). Multiple: "a.php:10,b.php:20"',
                             'default' => '',
                         ],
                         'steps' => [
                             'type' => 'string',
-                            'description' => 'Maximum debugging steps to execute',
+                            'description' => 'Max steps to record after breakpoint (default: 100)',
                             'default' => '100',
                         ],
                         'context' => [
@@ -154,7 +164,7 @@ final class McpServer
                         ],
                         'include_vendor' => [
                             'type' => 'string',
-                            'description' => 'Vendor packages to include in trace (e.g., "bear/resource,ray/di", "bear/*", "*/*")',
+                            'description' => 'Include vendor packages in trace (e.g., "bear/*,ray/di" or "*/*" for all)',
                             'default' => '',
                         ],
                     ],
@@ -163,23 +173,23 @@ final class McpServer
             ),
             'xcoverage' => new McpTool(
                 'xcoverage',
-                'Analyze test coverage | ex) ./xcoverage "php vendor/bin/phpunit UserTest.php"',
+                'Analyze test coverage. Returns JSON with $schema URL for semantic details. Key fields: {summary: {coverage_percent}, uncovered: {file: [lines]}}. Shows only uncovered lines. Vendor excluded by default.',
                 [
                     'type' => 'object',
                     'properties' => [
                         'script' => [
                             'type' => 'string',
-                            'description' => 'PHP script to analyze coverage (e.g., "vendor/bin/phpunit UserTest.php")',
+                            'description' => 'PHP script to analyze (e.g., "vendor/bin/phpunit" or "vendor/bin/phpunit --filter testMethod")',
                         ],
                         'context' => [
                             'type' => 'string',
                             'description' => 'Context description for coverage analysis',
                             'default' => '',
                         ],
-                        'format' => [
+                        'include_vendor' => [
                             'type' => 'string',
-                            'description' => 'Output format: html, xml, json, text',
-                            'default' => 'html',
+                            'description' => 'Include vendor packages in coverage (e.g., "bear/*,ray/di" or "*/*" for all)',
+                            'default' => '',
                         ],
                     ],
                     'required' => ['script'],
@@ -187,22 +197,22 @@ final class McpServer
             ),
             'xback' => new McpTool(
                 'xback',
-                'Capture call stack (backtrace) at specific line - Lightweight, non-interactive stack trace collection | Use when: Need backtrace/stack trace at specific location | ex) ./xback --break="app.php:50" "php app.php"',
+                'Capture call stack at specific line. Returns JSON with $schema URL for semantic details. Key fields: {backtrace: [{file, line, function, args}]}. Lightweight alternative to xstep.',
                 [
                     'type' => 'object',
                     'properties' => [
                         'script' => [
                             'type' => 'string',
-                            'description' => 'PHP script to get backtrace from (e.g., "tests/fixtures/debug_test.php")',
+                            'description' => 'PHP script to get backtrace from (e.g., "vendor/bin/phpunit --filter testMethod")',
                         ],
                         'breakpoint' => [
                             'type' => 'string',
-                            'description' => 'Line location to capture backtrace (e.g., "file.php:15")',
+                            'description' => 'Line to capture backtrace (e.g., "file.php:50")',
                             'default' => '',
                         ],
                         'depth' => [
                             'type' => 'integer',
-                            'description' => 'Maximum stack depth to return',
+                            'description' => 'Max stack depth (default: 10)',
                             'default' => 10,
                         ],
                         'context' => [
@@ -379,16 +389,21 @@ final class McpServer
             'prompts' => [
                 [
                     'name' => 'xtrace',
-                    'description' => 'Trace PHP execution flow | ex) /xtrace --script=test.php --context="Debug login flow" | PHPUnit: /xtrace --script="vendor/bin/phpunit --filter testMethod TestClass.php" --context="Testing user auth"',
+                    'description' => 'Trace PHP execution flow. Returns JSON with $schema URL for semantic details and AI analysis strategies. Key fields: {lines, functions, max_depth, db_queries}. Vendor excluded by default.',
                     'arguments' => [
                         [
                             'name' => 'script',
-                            'description' => 'PHP script to trace (e.g., "tests/fixtures/debug_test.php") | PHPUnit: "vendor/bin/phpunit --filter testMethod TestClass.php"',
+                            'description' => 'PHP script to trace (e.g., "vendor/bin/phpunit --filter testMethod")',
                             'required' => true,
                         ],
                         [
                             'name' => 'context',
-                            'description' => 'Context description for AI analysis (e.g., "Testing user authentication flow")',
+                            'description' => 'Context description for AI analysis (e.g., "Debug login failure")',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'include_vendor',
+                            'description' => 'Include vendor packages in trace (e.g., "bear/*,ray/di" or "*/*" for all)',
                             'required' => false,
                         ],
                         [
@@ -400,26 +415,31 @@ final class McpServer
                 ],
                 [
                     'name' => 'xstep',
-                    'description' => 'Step debugging with breakpoints | ex) /xstep --script="php test.php" --break="test.php:15:$user==null" --steps=100 --context="debug context"',
+                    'description' => 'Step debugging with breakpoints. Returns JSON with $schema URL for semantic details. Key fields: {breaks: [{step, location, variables}]}. Variables show diff only. Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
                     'arguments' => [
                         [
                             'name' => 'script',
-                            'description' => 'PHP script to debug (e.g., "tests/fixtures/debug_test.php")',
+                            'description' => 'PHP script to debug (e.g., "vendor/bin/phpunit --filter testMethod")',
                             'required' => true,
                         ],
                         [
                             'name' => 'breakpoints',
-                            'description' => 'Comma-separated breakpoint locations (e.g., "file.php:15,file.php:25")',
+                            'description' => 'Breakpoints: "file.php:line" or "file.php:line:$var==null" (conditional). Multiple: "a.php:10,b.php:20"',
                             'required' => false,
                         ],
                         [
                             'name' => 'steps',
-                            'description' => 'Maximum debugging steps to execute',
+                            'description' => 'Max steps to record after breakpoint (default: 100)',
                             'required' => false,
                         ],
                         [
                             'name' => 'context',
                             'description' => 'Context description for debugging session',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'include_vendor',
+                            'description' => 'Include vendor packages in trace (e.g., "bear/*,ray/di" or "*/*" for all)',
                             'required' => false,
                         ],
                         [
@@ -431,16 +451,21 @@ final class McpServer
                 ],
                 [
                     'name' => 'xprofile',
-                    'description' => 'Profile performance bottlenecks | ex) /xprofile --script=slow-app.php --context="API performance"',
+                    'description' => 'Profile performance bottlenecks. Returns JSON with $schema URL for semantic details and AI analysis strategies. Key fields: {time_ms, memory_mb, bottlenecks}. Vendor excluded by default.',
                     'arguments' => [
                         [
                             'name' => 'script',
-                            'description' => 'PHP script to profile (e.g., "tests/fixtures/performance_test.php")',
+                            'description' => 'PHP script to profile (e.g., "vendor/bin/phpunit --filter testMethod")',
                             'required' => true,
                         ],
                         [
                             'name' => 'context',
                             'description' => 'Context description for performance analysis',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'include_vendor',
+                            'description' => 'Include vendor packages in profile (e.g., "bear/*,ray/di" or "*/*" for all)',
                             'required' => false,
                         ],
                         [
@@ -452,11 +477,11 @@ final class McpServer
                 ],
                 [
                     'name' => 'xcoverage',
-                    'description' => 'Analyze test coverage | ex) /xcoverage --script="vendor/bin/phpunit UserTest.php"',
+                    'description' => 'Analyze test coverage. Returns JSON with $schema URL for semantic details. Key fields: {summary: {coverage_percent}, uncovered: {file: [lines]}}. Shows only uncovered lines. Vendor excluded by default.',
                     'arguments' => [
                         [
                             'name' => 'script',
-                            'description' => 'PHP script to analyze coverage (e.g., "vendor/bin/phpunit")',
+                            'description' => 'PHP script to analyze (e.g., "vendor/bin/phpunit" or "vendor/bin/phpunit --filter testMethod")',
                             'required' => true,
                         ],
                         [
@@ -465,8 +490,8 @@ final class McpServer
                             'required' => false,
                         ],
                         [
-                            'name' => 'format',
-                            'description' => 'Output format: json, html, xml, text (default: json)',
+                            'name' => 'include_vendor',
+                            'description' => 'Include vendor packages in coverage (e.g., "bear/*,ray/di" or "*/*" for all)',
                             'required' => false,
                         ],
                         [
@@ -478,21 +503,21 @@ final class McpServer
                 ],
                 [
                     'name' => 'xback',
-                    'description' => 'Capture call stack (backtrace) at specific line - Lightweight, non-interactive stack trace collection | Use when: Need backtrace/stack trace at specific location | ex) /xback --script="app.php" --break="app.php:50"',
+                    'description' => 'Capture call stack at specific line. Returns JSON with $schema URL for semantic details. Key fields: {backtrace: [{file, line, function, args}]}. Lightweight alternative to xstep.',
                     'arguments' => [
                         [
                             'name' => 'script',
-                            'description' => 'PHP script to get backtrace from (e.g., "tests/fixtures/debug_test.php")',
+                            'description' => 'PHP script to get backtrace from (e.g., "vendor/bin/phpunit --filter testMethod")',
                             'required' => true,
                         ],
                         [
                             'name' => 'breakpoint',
-                            'description' => 'Line location to capture backtrace (e.g., "file.php:15")',
+                            'description' => 'Line to capture backtrace (e.g., "file.php:50")',
                             'required' => false,
                         ],
                         [
                             'name' => 'depth',
-                            'description' => 'Maximum stack depth to return (default: 10)',
+                            'description' => 'Max stack depth (default: 10)',
                             'required' => false,
                         ],
                         [
@@ -552,9 +577,9 @@ final class McpServer
         }
 
         $mapping = match ($promptName) {
-            'xtrace', 'xprofile' => ['script', 'context'],
-            'xstep' => ['script', 'breakpoints', 'steps', 'context'],
-            'xcoverage' => ['script', 'context', 'format'],
+            'xtrace', 'xprofile' => ['script', 'context', 'include_vendor'],
+            'xstep' => ['script', 'breakpoints', 'steps', 'context', 'include_vendor'],
+            'xcoverage' => ['script', 'context', 'include_vendor'],
             'xback' => ['script', 'breakpoint', 'depth', 'context'],
             default => [],
         };
@@ -790,9 +815,17 @@ final class McpServer
             $script = $this->processScriptArgument($originalScript);
             $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
+            $includeVendor = $args['include_vendor'] ?? '';
 
             // Build command - user must specify PHP binary explicitly
-            $cmd = $this->binDir . '/xtrace --json -- ' . $script;
+            $cmd = $this->binDir . '/xtrace --json';
+
+            // Add include_vendor option if specified
+            if ($includeVendor !== '') {
+                $cmd .= ' --include-vendor=' . escapeshellarg($includeVendor);
+            }
+
+            $cmd .= ' -- ' . $script;
 
             // Execute command
             $output = [];
@@ -965,9 +998,17 @@ final class McpServer
             $script = $this->processScriptArgument($script);
             $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
+            $includeVendor = $args['include_vendor'] ?? '';
 
             // Build command - user must specify PHP binary explicitly
-            $cmd = $this->binDir . '/xprofile --json -- ' . $script;
+            $cmd = $this->binDir . '/xprofile --json';
+
+            // Add include_vendor option if specified
+            if ($includeVendor !== '') {
+                $cmd .= ' --include-vendor=' . escapeshellarg($includeVendor);
+            }
+
+            $cmd .= ' -- ' . $script;
 
             // Execute command
             $output = [];
@@ -1018,10 +1059,17 @@ final class McpServer
             $script = $this->processScriptArgument($script);
             $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
-            $format = $args['format'] ?? 'json';
+            $includeVendor = $args['include_vendor'] ?? '';
 
             // Build command - user must specify PHP binary explicitly
-            $cmd = $this->binDir . '/xcoverage -- ' . $script;
+            $cmd = $this->binDir . '/xcoverage';
+
+            // Add include_vendor option if specified
+            if ($includeVendor !== '') {
+                $cmd .= ' --include-vendor=' . escapeshellarg($includeVendor);
+            }
+
+            $cmd .= ' -- ' . $script;
 
             // Execute command
             $output = [];
@@ -1044,7 +1092,7 @@ final class McpServer
                         'role' => 'assistant',
                         'content' => [
                             'type' => 'text',
-                            'text' => 'Code coverage analysis ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Format**: {$format}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Coverage Report**:\n```\n" . $outputText . "\n```",
+                            'text' => 'Code coverage analysis ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Format**: json\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Coverage Report**:\n```\n" . $outputText . "\n```",
                         ],
                     ],
                 ],
@@ -1054,7 +1102,6 @@ final class McpServer
                     'output' => $outputText,
                     'context' => $context,
                     'script' => $script,
-                    'format' => $format,
                     'timestamp' => date('Y-m-d H:i:s'),
                 ],
             ]));
