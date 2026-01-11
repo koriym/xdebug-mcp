@@ -165,7 +165,7 @@ Collect code coverage data for PHPUnit or any PHP script. Shows only uncovered l
 
 ## xback - Backtrace Capture
 
-Get call stack (backtrace) at specific line. Shows "who called this?" - the chain of function calls that led to this point.
+Get call stack (backtrace) at a specific line. Shows "who called this?" - the chain of function calls that led to this point.
 
 **Output**: JSON with `$schema` URL for semantic details.
 **Key fields**: `{backtrace: [{file, line, function, args}]}`
