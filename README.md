@@ -214,7 +214,7 @@ See [tests/ai/README.md](tests/ai/README.md) for tool discoverability testing.
 
 This tool is designed specifically for AI consumption, not adapted from human interfaces.
 
-| Traditional Debugger | AI Native (this tool) |
+| Debugger for Humans | AI Native (this tool) |
 |---------------------|----------------------|
 | Step-by-step interaction | One-shot batch execution |
 | Session management required | Stateless CLI |
