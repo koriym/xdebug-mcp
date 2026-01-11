@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-01-11
+
+### Changed
+- **xcoverage**: PHPUnit mode is now the default
+  - Uses `--coverage-clover` for stable PHPUnit version compatibility
+  - Respects `@codeCoverageIgnore` annotations and `phpunit.xml` settings
+  - No php-code-coverage dependency (parses clover XML directly)
+
+### Added
+- **xcoverage**: `--raw` option for original Xdebug direct coverage behavior
+  - Use for non-PHPUnit projects or when annotation support is not needed
+  - `--branch-coverage` and `--include-vendor` work in raw mode only
+
 ## [0.6.1] - 2026-01-11
 
 ### Added
