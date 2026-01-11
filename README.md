@@ -210,6 +210,26 @@ See [tests/docker/README.md](tests/docker/README.md) for details.
 
 See [tests/ai/README.md](tests/ai/README.md) for tool discoverability testing.
 
+## AI Native Design
+
+This tool is designed specifically for AI consumption, not adapted from human interfaces.
+
+| Traditional Debugger | AI Native (this tool) |
+|---------------------|----------------------|
+| Step-by-step interaction | One-shot batch execution |
+| Session management required | Stateless CLI |
+| Multiple tool calls | Single command, complete data |
+| Manual log placement | Automatic full trace |
+
+**Why it matters:**
+- **Fewer tokens**: One command returns all data vs. many back-and-forth calls
+- **No session errors**: Stateless design eliminates timeout/connection issues
+- **Comprehensive data**: `xtrace` captures everything; AI filters what it needs
+
+## See Also
+
+Looking for a different approach? [kpanuragh/xdebug-mcp](https://github.com/kpanuragh/xdebug-mcp) offers 41 MCP tools with session-based interactive debugging — ideal if you prefer step-by-step control.
+
 ## Why "xdebug-mcp"?
 
 This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. While MCP remains supported for tools like Cursor and Windsurf, we now recommend the **plugin approach** for Claude Code users — it's simpler and requires no MCP configuration.
