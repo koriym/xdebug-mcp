@@ -5,6 +5,9 @@
 require_once __DIR__ . '/autoload.php';
 use Koriym\XdebugMcp\XdebugFinder;
 
+// Xdebug's sentinel value for "exit" branch target in branch coverage data
+const XDEBUG_BRANCH_EXIT_SENTINEL = 2147483645;
+
 // Show help if requested
 if (in_array('--help', $argv) || in_array('-h', $argv)) {
     echo "Usage: " . $argv[0] . " [OPTIONS] [--] [php script.php [args...]]\n";
@@ -277,8 +280,7 @@ register_shutdown_function(function() use ($tempDir, $branchCoverage) {
                             $dotContent .= "  \"$function-$branchId\" [label=\"$label\", style=\"$style\", fillcolor=\"$color\"];\n";
 
                             foreach ($branch["out"] as $i => $targetBranch) {
-                                // 2147483645 is Xdebug's sentinel value for "exit" branch target
-                                if ($targetBranch !== 2147483645) {
+                                if ($targetBranch !== ' . XDEBUG_BRANCH_EXIT_SENTINEL . ') {
                                     $edgeStyle = ($branch["out_hit"][$i] ?? 0) > 0 ? "solid" : "dashed";
                                     $dotContent .= "  \"$function-$branchId\" -> \"$function-$targetBranch\" [style=\"$edgeStyle\"];\n";
                                 }
