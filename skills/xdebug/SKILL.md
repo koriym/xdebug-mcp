@@ -203,9 +203,9 @@ Get call stack (backtrace) at a specific line. Shows "who called this?" - the ch
 By default, vendor code is excluded to focus on your code. Use `--include-vendor` when needed:
 
 ```bash
---include-vendor=bear/*           # Include specific framework
---include-vendor=bear/*,ray/di    # Multiple packages
---include-vendor=*/*              # Include all vendor (framework debugging)
+--include-vendor="bear/*"           # Include specific framework
+--include-vendor="bear/*,ray/di"    # Multiple packages
+--include-vendor="*/*"              # Include all vendor (framework debugging)
 ```
 
 ## JSON Schemas
