@@ -527,4 +527,112 @@ final class XdebugRunnerTest extends TestCase
         unlink($profileFile);
         rmdir($tempDir);
     }
+
+    #[Test]
+    #[DataProvider('phpBinaryProvider')]
+    public function isPhpBinaryDetectsVariousPhpPaths(string $path, bool $expected): void
+    {
+        $this->assertSame($expected, XdebugRunner::isPhpBinary($path));
+    }
+
+    /** @return array<string, array{string, bool}> */
+    public static function phpBinaryProvider(): array
+    {
+        return [
+            // Valid PHP binaries
+            'simple php' => ['php', true],
+            'php with major version' => ['php8', true],
+            'php with version' => ['php8.3', true],
+            'php with full version' => ['php8.3.12', true],
+            'php with dash version' => ['php-8.3', true],
+            'php with at version' => ['php@8.3', true],
+            'php with double digit version' => ['php83', true],
+            'absolute path php' => ['/usr/bin/php', true],
+            'absolute path versioned php' => ['/usr/bin/php8.3', true],
+            'homebrew php path' => ['/opt/homebrew/opt/php@8.3/bin/php', true],
+            'custom path php' => ['/custom/path/to/php', true],
+            'versioned in path' => ['/usr/local/bin/php8', true],
+
+            // Invalid - not PHP binaries
+            'phpunit' => ['phpunit', false],
+            'phpcbf' => ['phpcbf', false],
+            'phpcs' => ['phpcs', false],
+            'phpstan' => ['phpstan', false],
+            'php script file' => ['script.php', false],
+            'path to php script' => ['/path/to/script.php', false],
+            'vendor phpunit' => ['vendor/bin/phpunit', false],
+            'not php at all' => ['python', false],
+            'empty string' => ['', false],
+        ];
+    }
+
+    #[Test]
+    public function buildsCommandWithFullPathPhpBinary(): void
+    {
+        $runner = new XdebugRunner(['script', '--', '/usr/bin/php', __FILE__]);
+        $runner->setMode('trace');
+
+        $command = $runner->buildCommand();
+
+        // Should use the specified PHP binary path
+        $this->assertStringContainsString('/usr/bin/php', $command);
+        $this->assertStringContainsString('-dxdebug.mode=trace', $command);
+        $this->assertStringContainsString(__FILE__, $command);
+    }
+
+    #[Test]
+    public function buildsCommandWithVersionedPhpBinary(): void
+    {
+        $runner = new XdebugRunner(['script', '--', 'php8.3', __FILE__]);
+        $runner->setMode('profile');
+
+        $command = $runner->buildCommand();
+
+        // Should use the specified versioned PHP binary
+        $this->assertStringContainsString('php8.3', $command);
+        $this->assertStringContainsString('-dxdebug.mode=profile', $command);
+    }
+
+    #[Test]
+    public function buildsCommandWithHomebrewPhpPath(): void
+    {
+        $runner = new XdebugRunner([
+            'script',
+            '--',
+            '/opt/homebrew/opt/php@8.3/bin/php',
+            __FILE__,
+        ]);
+        $runner->setMode('trace');
+
+        $command = $runner->buildCommand();
+
+        // Should use the Homebrew PHP path, properly escaped
+        $this->assertStringContainsString('/opt/homebrew/opt/php@8.3/bin/php', $command);
+        $this->assertStringContainsString('-dxdebug.mode=trace', $command);
+        // Should NOT have 'php' prepended
+        $this->assertStringNotContainsString("'php' ", $command);
+    }
+
+    #[Test]
+    public function buildsCommandWithPhpAtVersionPath(): void
+    {
+        $runner = new XdebugRunner(['script', '--', 'php@8.3', __FILE__]);
+        $runner->setMode('coverage');
+
+        $command = $runner->buildCommand();
+
+        $this->assertStringContainsString('php@8.3', $command);
+        $this->assertStringContainsString('-dxdebug.mode=coverage', $command);
+    }
+
+    #[Test]
+    public function validateLocalFileWithFullPathPhpBinary(): void
+    {
+        // Should not throw when using full path PHP binary
+        $runner = new XdebugRunner(['script', '--', '/usr/bin/php', __FILE__]);
+
+        $command = $runner->buildCommand();
+
+        $this->assertStringContainsString(__FILE__, $command);
+    }
 }

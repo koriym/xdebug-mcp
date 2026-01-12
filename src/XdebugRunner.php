@@ -21,6 +21,7 @@ use function getenv;
 use function glob;
 use function implode;
 use function passthru;
+use function preg_match;
 use function trim;
 use function usort;
 
@@ -193,6 +194,23 @@ class XdebugRunner
     }
 
     /**
+     * Check if the given path is a PHP binary
+     *
+     * Matches:
+     * - php
+     * - php8.3, php8, php83
+     * - php-8.3, php@8.3
+     * - /usr/bin/php
+     * - /opt/homebrew/opt/php@8.3/bin/php
+     */
+    public static function isPhpBinary(string $path): bool
+    {
+        // Match 'php' optionally followed by version (with optional separator)
+        // e.g., php, php8.3, php-8.3, php@8.3, /usr/bin/php, /path/to/php83
+        return preg_match('#(?:^|/)php(?:[-@]?\d+(?:\.\d+)*)?$#', $path) === 1;
+    }
+
+    /**
      * Get the command parts after parsing
      *
      * @return string[]
@@ -230,8 +248,8 @@ class XdebugRunner
     {
         $workingParts = $parts;
 
-        // Skip 'php' if present
-        if (isset($workingParts[0]) && $workingParts[0] === 'php') {
+        // Skip PHP binary if present (handles full paths like /usr/bin/php or php8.3)
+        if (isset($workingParts[0]) && self::isPhpBinary($workingParts[0])) {
             array_shift($workingParts);
         }
 
@@ -246,15 +264,16 @@ class XdebugRunner
     private function buildLocalCommand(array $parts): string
     {
         $workingParts = $parts;
+        $phpBinary = 'php';
 
-        // Skip 'php' if present
-        if (isset($workingParts[0]) && $workingParts[0] === 'php') {
-            array_shift($workingParts);
+        // Use specified PHP binary if present (handles full paths like /usr/bin/php or php8.3)
+        if (isset($workingParts[0]) && self::isPhpBinary($workingParts[0])) {
+            $phpBinary = array_shift($workingParts);
         }
 
         $xdebugArgs = $this->generateXdebugArguments();
 
-        return 'php ' . implode(' ', $xdebugArgs) . ' ' . implode(' ', array_map(escapeshellarg(...), $workingParts));
+        return escapeshellarg($phpBinary) . ' ' . implode(' ', $xdebugArgs) . ' ' . implode(' ', array_map(escapeshellarg(...), $workingParts));
     }
 
     /**
