@@ -21,6 +21,7 @@ use function getenv;
 use function glob;
 use function implode;
 use function passthru;
+use function preg_match;
 use function trim;
 use function usort;
 
@@ -41,6 +42,17 @@ use const STDERR;
  */
 class XdebugRunner
 {
+    /**
+     * Regex pattern to match PHP binary executables
+     *
+     * Matches 'php' optionally followed by version number, with optional .exe suffix.
+     * Supports both Unix (/) and Windows (\) path separators.
+     *
+     * Note: This intentionally does NOT match php-fpm, php-cgi, or other PHP SAPI binaries,
+     * as those are server processes not suitable for CLI script execution.
+     */
+    private const PHP_BINARY_PATTERN = '#(?:^|[\\\\/])php(?:[-@]?\d+(?:\.\d+)*)?(?:\.exe)?$#i';
+
     private string $mode = 'trace';
 
     /** @var string[] */
@@ -193,6 +205,31 @@ class XdebugRunner
     }
 
     /**
+     * Check if the given path is a PHP binary
+     *
+     * Matches (Unix):
+     * - php, php.exe
+     * - php8.3, php8, php83
+     * - php-8.3, php@8.3
+     * - /usr/bin/php
+     * - /opt/homebrew/opt/php@8.3/bin/php
+     *
+     * Matches (Windows):
+     * - php.exe
+     * - C:\php\php.exe
+     * - C:\Program Files\php8.3\php.exe
+     *
+     * Does NOT match (intentionally excluded):
+     * - php-fpm, php-cgi (server SAPIs, not CLI binaries)
+     * - phpunit, phpcs, phpstan (PHP tools, not interpreters)
+     * - script.php (PHP source files)
+     */
+    public static function isPhpBinary(string $path): bool
+    {
+        return preg_match(self::PHP_BINARY_PATTERN, $path) === 1;
+    }
+
+    /**
      * Get the command parts after parsing
      *
      * @return string[]
@@ -230,8 +267,8 @@ class XdebugRunner
     {
         $workingParts = $parts;
 
-        // Skip 'php' if present
-        if (isset($workingParts[0]) && $workingParts[0] === 'php') {
+        // Skip PHP binary if present (handles full paths like /usr/bin/php or php8.3)
+        if (isset($workingParts[0]) && self::isPhpBinary($workingParts[0])) {
             array_shift($workingParts);
         }
 
@@ -246,15 +283,16 @@ class XdebugRunner
     private function buildLocalCommand(array $parts): string
     {
         $workingParts = $parts;
+        $phpBinary = 'php';
 
-        // Skip 'php' if present
-        if (isset($workingParts[0]) && $workingParts[0] === 'php') {
-            array_shift($workingParts);
+        // Use specified PHP binary if present (handles full paths like /usr/bin/php or php8.3)
+        if (isset($workingParts[0]) && self::isPhpBinary($workingParts[0])) {
+            $phpBinary = array_shift($workingParts);
         }
 
         $xdebugArgs = $this->generateXdebugArguments();
 
-        return 'php ' . implode(' ', $xdebugArgs) . ' ' . implode(' ', array_map(escapeshellarg(...), $workingParts));
+        return escapeshellarg($phpBinary) . ' ' . implode(' ', $xdebugArgs) . ' ' . implode(' ', array_map(escapeshellarg(...), $workingParts));
     }
 
     /**
