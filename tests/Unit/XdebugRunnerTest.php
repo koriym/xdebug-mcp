@@ -539,7 +539,7 @@ final class XdebugRunnerTest extends TestCase
     public static function phpBinaryProvider(): array
     {
         return [
-            // Valid PHP binaries
+            // Valid PHP binaries (Unix)
             'simple php' => ['php', true],
             'php with major version' => ['php8', true],
             'php with version' => ['php8.3', true],
@@ -553,6 +553,15 @@ final class XdebugRunnerTest extends TestCase
             'custom path php' => ['/custom/path/to/php', true],
             'versioned in path' => ['/usr/local/bin/php8', true],
 
+            // Valid PHP binaries (Windows)
+            'windows php.exe' => ['php.exe', true],
+            'windows path php.exe' => ['C:\\php\\php.exe', true],
+            'windows program files php' => ['C:\\Program Files\\php\\php.exe', true],
+            'windows versioned php' => ['C:\\php8.3\\php.exe', true],
+            'windows php8.exe' => ['php8.exe', true],
+            'windows php83.exe' => ['php83.exe', true],
+            'unix php.exe' => ['/usr/bin/php.exe', true],
+
             // Invalid - not PHP binaries
             'phpunit' => ['phpunit', false],
             'phpcbf' => ['phpcbf', false],
@@ -563,6 +572,13 @@ final class XdebugRunnerTest extends TestCase
             'vendor phpunit' => ['vendor/bin/phpunit', false],
             'not php at all' => ['python', false],
             'empty string' => ['', false],
+
+            // Invalid - server SAPIs (intentionally excluded)
+            'php-fpm' => ['php-fpm', false],
+            'php-cgi' => ['php-cgi', false],
+            'php-fpm with path' => ['/usr/sbin/php-fpm', false],
+            'php-cgi with path' => ['/usr/bin/php-cgi', false],
+            'php8.3-fpm' => ['php8.3-fpm', false],
         ];
     }
 

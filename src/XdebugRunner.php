@@ -42,6 +42,17 @@ use const STDERR;
  */
 class XdebugRunner
 {
+    /**
+     * Regex pattern to match PHP binary executables
+     *
+     * Matches 'php' optionally followed by version number, with optional .exe suffix.
+     * Supports both Unix (/) and Windows (\) path separators.
+     *
+     * Note: This intentionally does NOT match php-fpm, php-cgi, or other PHP SAPI binaries,
+     * as those are server processes not suitable for CLI script execution.
+     */
+    private const PHP_BINARY_PATTERN = '#(?:^|[\\\\/])php(?:[-@]?\d+(?:\.\d+)*)?(?:\.exe)?$#i';
+
     private string $mode = 'trace';
 
     /** @var string[] */
@@ -196,18 +207,26 @@ class XdebugRunner
     /**
      * Check if the given path is a PHP binary
      *
-     * Matches:
-     * - php
+     * Matches (Unix):
+     * - php, php.exe
      * - php8.3, php8, php83
      * - php-8.3, php@8.3
      * - /usr/bin/php
      * - /opt/homebrew/opt/php@8.3/bin/php
+     *
+     * Matches (Windows):
+     * - php.exe
+     * - C:\php\php.exe
+     * - C:\Program Files\php8.3\php.exe
+     *
+     * Does NOT match (intentionally excluded):
+     * - php-fpm, php-cgi (server SAPIs, not CLI binaries)
+     * - phpunit, phpcs, phpstan (PHP tools, not interpreters)
+     * - script.php (PHP source files)
      */
     public static function isPhpBinary(string $path): bool
     {
-        // Match 'php' optionally followed by version (with optional separator)
-        // e.g., php, php8.3, php-8.3, php@8.3, /usr/bin/php, /path/to/php83
-        return preg_match('#(?:^|/)php(?:[-@]?\d+(?:\.\d+)*)?$#', $path) === 1;
+        return preg_match(self::PHP_BINARY_PATTERN, $path) === 1;
     }
 
     /**
