@@ -42,6 +42,9 @@ The word "trace" can mean different things:
 
 Trace execution forward from start to finish. Captures complete execution flow, function calls, parameters, and timing data.
 
+**Output**: JSON with `$schema` URL for semantic details and AI analysis strategies.
+**Key fields**: `{lines, functions, max_depth, db_queries}`
+
 ```bash
 ~/.composer/vendor/bin/xtrace [--json] [--context=TEXT] [--include-vendor=PATTERNS] -- command
 ```
@@ -67,8 +70,11 @@ Trace execution forward from start to finish. Captures complete execution flow, 
 
 Stop at breakpoint, step forward N times, record variable changes at each step. See how variable values affect branching ("this variable was X, so it went into this branch").
 
+**Output**: JSON with `$schema` URL for semantic details.
+**Key fields**: `{breaks: [{step, location, variables}]}` - Variables show diff only (changed values).
+
 ```bash
-~/.composer/vendor/bin/xstep --break=file.php:line --steps=N [--context=TEXT] -- command
+~/.composer/vendor/bin/xstep --break=file.php:line --steps=N [--context=TEXT] [--include-vendor=PATTERNS] -- command
 ```
 
 ### Options
@@ -104,6 +110,9 @@ Stop at breakpoint, step forward N times, record variable changes at each step. 
 
 Identify performance bottlenecks with precision data.
 
+**Output**: JSON with `$schema` URL for semantic details and AI analysis strategies.
+**Key fields**: `{time_ms, memory_mb, bottlenecks}` - Bottlenecks auto-identified.
+
 ```bash
 ~/.composer/vendor/bin/xprofile [--json] [--context=TEXT] [--include-vendor=PATTERNS] -- command
 ```
@@ -127,20 +136,23 @@ Identify performance bottlenecks with precision data.
 
 ## xcoverage - Code Coverage
 
-Collect code coverage data for PHPUnit or any PHP script.
+Collect code coverage data for PHPUnit or any PHP script. Shows only uncovered lines (compact output).
+
+**Output**: JSON with `$schema` URL for semantic details.
+**Key fields**: `{summary: {coverage_percent, covered_lines, uncovered_lines}, uncovered: {file: [lines]}}`
 
 ```bash
-~/.composer/vendor/bin/xcoverage                              # Auto-detect PHPUnit
+~/.composer/vendor/bin/xcoverage [--include-vendor=PATTERNS] -- command
+~/.composer/vendor/bin/xcoverage -- vendor/bin/phpunit        # PHPUnit
 ~/.composer/vendor/bin/xcoverage -- php script.php            # Any PHP script
-~/.composer/vendor/bin/xcoverage --branch-coverage -- php app.php  # Branch coverage
 ```
 
 ### Examples
 
 ```bash
-~/.composer/vendor/bin/xcoverage
-~/.composer/vendor/bin/xcoverage --include-vendor=bear/resource,ray/di
-~/.composer/vendor/bin/xcoverage --branch-coverage -- php app.php
+~/.composer/vendor/bin/xcoverage -- vendor/bin/phpunit
+~/.composer/vendor/bin/xcoverage --include-vendor="bear/*,ray/di" -- vendor/bin/phpunit
+~/.composer/vendor/bin/xcoverage -- vendor/bin/phpunit --filter testMethod
 ```
 
 ### When to Use
@@ -153,7 +165,10 @@ Collect code coverage data for PHPUnit or any PHP script.
 
 ## xback - Backtrace Capture
 
-Get stack trace at specific line without interactive debugging.
+Get call stack (backtrace) at a specific line. Shows "who called this?" - the chain of function calls that led to this point.
+
+**Output**: JSON with `$schema` URL for semantic details.
+**Key fields**: `{backtrace: [{file, line, function, args}]}`
 
 ```bash
 ~/.composer/vendor/bin/xback [--break=SPEC] [--depth=N] [--context=TEXT] -- command
@@ -188,9 +203,9 @@ Get stack trace at specific line without interactive debugging.
 By default, vendor code is excluded to focus on your code. Use `--include-vendor` when needed:
 
 ```bash
---include-vendor=bear/*           # Include specific framework
---include-vendor=bear/*,ray/di    # Multiple packages
---include-vendor=*/*              # Include all vendor (framework debugging)
+--include-vendor="bear/*"           # Include specific framework
+--include-vendor="bear/*,ray/di"    # Multiple packages
+--include-vendor="*/*"              # Include all vendor (framework debugging)
 ```
 
 ## JSON Schemas
