@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-01-16
+
+### Added
+- **MCP Tool Search Optimization**: Add server-level `instructions` field to initialize response
+  - Helps Claude Code's Tool Search feature find Xdebug tools when dynamically loading
+  - Keywords: PHP debugging, profiling, coverage, tracing
+- **Documentation**: Add "Skills vs MCP Tools: Dual Interface Design" section to CLAUDE.md
+  - Explains difference between user-initiated Skills (`/xtrace`) and AI-initiated MCP Tools
+  - Documents Tool Search optimization behavior
+
 ## [0.7.0] - 2026-01-11
 
 ### Changed
