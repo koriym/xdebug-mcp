@@ -358,6 +358,7 @@ final class McpServer
                 'name' => 'xdebug-mcp-server',
                 'version' => '2.0.0',
             ],
+            'instructions' => 'PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, or analyze coverage of PHP code. Tools: xtrace (execution flow), xstep (breakpoint debugging), xprofile (performance), xcoverage (test coverage), xback (stack traces).',
         ]));
     }
 
