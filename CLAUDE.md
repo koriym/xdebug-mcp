@@ -442,6 +442,22 @@ This project prioritizes **execution-time trace analysis** over traditional code
 
 These slash commands provide direct access to Xdebug functionality within Claude Code, making PHP debugging more efficient and accessible.
 
+#### Skills vs MCP Tools: Dual Interface Design
+
+This server provides **two complementary interfaces** for accessing Xdebug functionality:
+
+| Interface | Invocation | Use Case |
+|-----------|------------|----------|
+| **Skills (Prompts)** | User explicitly types `/xtrace` | When you want to explicitly debug |
+| **MCP Tools** | AI automatically calls based on context | Seamless AI-driven analysis |
+
+**How they work together:**
+- **Skills**: User-initiated. Type `/xtrace` when you want to trace PHP execution explicitly
+- **MCP Tools**: AI-initiated. When you say "this PHP code is slow", AI can automatically call `xprofile` without explicit command
+
+**Tool Search Optimization (Claude Code):**
+When MCP tools exceed 10% of context, Claude Code's Tool Search feature dynamically loads tools. This server includes optimized `instructions` in the initialize response to help Tool Search find relevant tools when users discuss PHP debugging, profiling, or coverage analysis.
+
 #### Automatic Tool Selection:
 
 **For Performance Analysis:**
