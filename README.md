@@ -208,7 +208,7 @@ See [tests/docker/README.md](tests/docker/README.md) for details.
 
 ## Debugging Legacy PHP (7.x / 5.x)
 
-While xdebug-mcp itself requires PHP 8.1+, it can debug **any PHP version** that has Xdebug 3.x installed. Simply specify the target PHP binary after `--`:
+While xdebug-mcp itself requires PHP 8.1+, it can debug older PHP versions as long as a compatible Xdebug 3.x release is installed on the target PHP. Simply specify the target PHP binary after `--`:
 
 ```bash
 # Debug PHP 7.2 code
@@ -217,7 +217,7 @@ xprofile -- /opt/homebrew/opt/php@7.2/bin/php legacy_app.php
 xstep --break="legacy_app.php:30" -- /opt/homebrew/opt/php@7.2/bin/php legacy_app.php
 ```
 
-The tool runs on your modern PHP while the target script executes on the specified PHP binary. No Docker required.
+The tool runs on your modern PHP while the target script executes on the specified PHP binary — provided the specified PHP has a compatible Xdebug 3.x installed. No Docker required. Check the compatibility table below before trying older PHP binaries.
 
 ### Xdebug 3.x Compatibility
 
