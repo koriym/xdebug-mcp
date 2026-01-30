@@ -41,6 +41,33 @@
         "variables": {
           "type": "object",
           "description": "Variable values at breakpoint"
+        },
+        "watches": {
+          "type": "array",
+          "description": "Watch expression evaluation results (present when --watch is used)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "expression": {
+                "type": "string",
+                "description": "The watched PHP expression"
+              },
+              "value": {
+                "type": "string",
+                "description": "Current evaluated value"
+              },
+              "previous": {
+                "type": ["string", "null"],
+                "description": "Previous value (null for initial step)"
+              },
+              "reason": {
+                "type": "string",
+                "enum": ["initial", "changed", "out_of_scope"],
+                "description": "Why this watch was recorded"
+              }
+            },
+            "required": ["expression", "value", "reason"]
+          }
         }
       },
       "required": ["location", "variables"]
