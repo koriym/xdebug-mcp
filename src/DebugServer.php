@@ -69,6 +69,7 @@ use function libxml_clear_errors;
 use function libxml_get_errors;
 use function libxml_use_internal_errors;
 use function ltrim;
+use function md5;
 use function microtime;
 use function parse_str;
 use function preg_match;
@@ -497,6 +498,7 @@ final class DebugServer
     private function performStepTrace(): array
     {
         $stepCount = 0;
+        $recordedCount = 0;
         $maxSteps = $this->options['maxSteps'] ?? self::MAX_STEPS;
         $steps = [];
         $previousVariables = []; // Store previous state for diff comparison
@@ -506,6 +508,10 @@ final class DebugServer
         $hasWatches = $watches !== [];
         /** @var array<string, string> $previousWatchValues */
         $previousWatchValues = [];
+
+        // When watches are active, maxSteps limits recorded steps (not executed steps)
+        // Use a separate safety cap for executed steps to prevent infinite loops
+        $maxExecutedSteps = $hasWatches ? $maxSteps * 10 : $maxSteps;
 
         $watchInfo = $hasWatches ? ' with watch filtering (' . count($watches) . ' expressions)' : '';
         $this->log("🚶 Starting step-by-step execution trace with differential recording (max {$maxSteps} steps){$watchInfo}");
@@ -652,9 +658,9 @@ final class DebugServer
                     break;
                 }
 
-                // Check step limit even for skipped steps
-                if ($stepCount >= $maxSteps) {
-                    $this->log("⚠️ Maximum steps ({$maxSteps}) reached, stopping execution");
+                // Safety cap for executed steps (prevents infinite loops)
+                if ($stepCount >= $maxExecutedSteps) {
+                    $this->log("⚠️ Maximum executed steps ({$maxExecutedSteps}) reached, stopping execution");
                     if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
                         array_push($this->breaks, ...$steps);
                         $this->outputStepRecordingResults();
@@ -679,10 +685,11 @@ final class DebugServer
             }
 
             $steps[] = $step;
+            $recordedCount++;
 
-            // Check if we've reached the step limit AFTER recording the step
-            if ($stepCount >= $maxSteps) {
-                $this->log("⚠️ Maximum steps ({$maxSteps}) reached, stopping execution");
+            // Check if we've reached the recorded step limit AFTER recording the step
+            if ($recordedCount >= $maxSteps) {
+                $this->log("⚠️ Maximum recorded steps ({$maxSteps}) reached, stopping execution");
 
                 // Output JSON results immediately when step limit is reached
                 if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
@@ -1073,13 +1080,28 @@ final class DebugServer
                 return $value === '1' || strtolower($value) === 'true' ? 'true' : 'false';
             }
 
-            if ($type === 'array') {
-                $numChildren = (string) ($prop['numchildren'] ?? '0');
+            if ($type === 'array' || $type === 'object') {
+                // Use content hash to detect internal mutations
+                $contentHash = $this->getWatchContentHash($expression);
+                if ($contentHash !== null) {
+                    if ($type === 'array') {
+                        $numChildren = (string) ($prop['numchildren'] ?? '0');
 
-                return 'array(' . $numChildren . ')';
-            }
+                        return 'array(' . $numChildren . ')#' . $contentHash;
+                    }
 
-            if ($type === 'object') {
+                    $className = (string) ($prop['classname'] ?? 'object');
+
+                    return 'object: ' . $className . '#' . $contentHash;
+                }
+
+                // Fallback without hash
+                if ($type === 'array') {
+                    $numChildren = (string) ($prop['numchildren'] ?? '0');
+
+                    return 'array(' . $numChildren . ')';
+                }
+
                 $className = (string) ($prop['classname'] ?? 'object');
 
                 return 'object: ' . $className;
@@ -1089,6 +1111,55 @@ final class DebugServer
             return $value !== '' ? $value : '<unavailable>';
         } catch (Throwable) {
             return '<unavailable>';
+        }
+    }
+
+    /**
+     * Get a content-based hash for array/object watch expressions
+     *
+     * Uses json_encode via eval to detect internal mutations.
+     *
+     * @return string|null Short hash string, or null if unavailable
+     */
+    private function getWatchContentHash(string $expression): string|null
+    {
+        try {
+            // Use property_get to retrieve child elements (depth 0 = current frame)
+            $response = $this->sendCommand('property_get', ['n' => $expression, 'd' => '0']);
+            if ($response === '' || str_contains($response, '<error')) {
+                return null;
+            }
+
+            $xml = $this->parseXmlResponse($response);
+            if (! $xml) {
+                return null;
+            }
+
+            $prop = $xml->property ?? ($xml->children()[0] ?? null);
+            if ($prop === null) {
+                return null;
+            }
+
+            // Build a content signature from child properties
+            $signature = '';
+            foreach ($prop->property as $child) {
+                $childName = (string) ($child['name'] ?? '');
+                $childValue = (string) $child;
+                if ((string) ($child['encoding'] ?? '') === 'base64') {
+                    $childValue = base64_decode($childValue);
+                }
+
+                $signature .= $childName . '=' . $childValue . ';';
+            }
+
+            if ($signature === '') {
+                return null;
+            }
+
+            // Short hash (8 chars) for compact output
+            return substr(md5($signature), 0, 8);
+        } catch (Throwable) {
+            return null;
         }
     }
 
