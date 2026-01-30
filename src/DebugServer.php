@@ -136,6 +136,7 @@ final class DebugServer
     /** @var list<array{step: int, location: array{file: string, line: int}, variables: array<string, string>, recording_type: string}> */
     private array $breaks = [];
     private bool $isDockerCommand = false;
+    private bool $stepRecordingOutputDone = false;
 
     /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>} $options */
     public function __construct(
@@ -2306,6 +2307,12 @@ final class DebugServer
      */
     private function outputStepRecordingResults(): void
     {
+        if ($this->stepRecordingOutputDone) {
+            return;
+        }
+
+        $this->stepRecordingOutputDone = true;
+
         $result = [
             '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xstep.json',
             'breaks' => $this->breaks,
