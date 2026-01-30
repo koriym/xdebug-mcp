@@ -206,6 +206,30 @@ The tools automatically detect container runtime and configure Xdebug networking
 
 See [tests/docker/README.md](tests/docker/README.md) for details.
 
+## Debugging Legacy PHP (7.x / 5.x)
+
+While xdebug-mcp itself requires PHP 8.1+, it can debug **any PHP version** that has Xdebug 3.x installed. Simply specify the target PHP binary after `--`:
+
+```bash
+# Debug PHP 7.2 code
+xtrace -- /opt/homebrew/opt/php@7.2/bin/php legacy_app.php
+xprofile -- /opt/homebrew/opt/php@7.2/bin/php legacy_app.php
+xstep --break="legacy_app.php:30" -- /opt/homebrew/opt/php@7.2/bin/php legacy_app.php
+```
+
+The tool runs on your modern PHP while the target script executes on the specified PHP binary. No Docker required.
+
+### Xdebug 3.x Compatibility
+
+| Xdebug | Supported PHP |
+| -------- | --------------- |
+| 3.0-3.1 | PHP 5.4 - 8.0 |
+| 3.2 | PHP 5.6 - 8.3 |
+| 3.3 | PHP 7.0 - 8.4 |
+| 3.4 | PHP 7.4 - 8.5 |
+
+See [Xdebug compatibility](https://xdebug.org/docs/compat) for details.
+
 ## For Developers
 
 See [tests/ai/README.md](tests/ai/README.md) for tool discoverability testing.
