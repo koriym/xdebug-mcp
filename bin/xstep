@@ -57,6 +57,8 @@ function showHelp(string $commandName = 'xstep'): void
         echo "CORE OPTIONS:\n";
         echo "  --break=SPEC            Set breakpoints (file.php:line or file.php:line:condition)\n";
         echo "  --steps=N               Record N steps of variable evolution (JSON output)\n";
+        echo "  --watch=EXPR            Watch expression, only record steps when value changes\n";
+        echo "                          (can be specified multiple times)\n";
         echo "  --context=TEXT          Add contextual description for AI analysis (JSON output)\n";
         echo "  --include-vendor=PATTERNS Include vendor packages in trace\n";
         echo "  --help, -h              Show this help\n";
@@ -252,6 +254,7 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
     $replMode = $isRepl;  // Default to REPL mode if called as xrepl
     $context = null;
     $maxSteps = null;
+    $watches = [];
 
     for ($i = 1; $i < count($argv); $i++) {
         $arg = $argv[$i];
@@ -293,6 +296,11 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             if ($maxSteps <= 0) {
                 throw new RuntimeException("Invalid steps value: $maxSteps (must be positive integer)");
             }
+            continue;
+        }
+
+        if ($parseOptions && str_starts_with($arg, '--watch=')) {
+            $watches[] = substr($arg, 8);
             continue;
         }
 
@@ -389,11 +397,12 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             'traceOnly' => $traceOnly,
             'jsonOutput' => $jsonOutput,
             'context' => $context,
-            'maxSteps' => $maxSteps
+            'maxSteps' => $maxSteps,
+            'watches' => $watches,
         ], $jsonOutput);
     } else {
         // For legacy format, only pass command if it's not just the target script
-        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps];
+        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches];
         if (count($command) > 1 || ($command[0] !== $targetScript)) {
             $options['command'] = $command;
         }

@@ -300,6 +300,61 @@ echo "Result: $result\n";
         $this->assertEquals(30, $serverOptions['timeout']);
     }
 
+    public function testConstructorWithWatches(): void
+    {
+        $options = [
+            'watches' => ['$i', '$user->getStatus()'],
+            'maxSteps' => 50,
+        ];
+
+        $server = new DebugServer($this->testScript, 9004, null, $options, true);
+
+        $reflection = new ReflectionClass($server);
+        $optionsProperty = $reflection->getProperty('options');
+        $serverOptions = $optionsProperty->getValue($server);
+
+        $this->assertArrayHasKey('watches', $serverOptions);
+        $this->assertCount(2, $serverOptions['watches']);
+        $this->assertEquals('$i', $serverOptions['watches'][0]);
+        $this->assertEquals('$user->getStatus()', $serverOptions['watches'][1]);
+    }
+
+    public function testConstructorWithEmptyWatches(): void
+    {
+        $options = [
+            'watches' => [],
+        ];
+
+        $server = new DebugServer($this->testScript, 9004, null, $options, true);
+
+        $reflection = new ReflectionClass($server);
+        $optionsProperty = $reflection->getProperty('options');
+        $serverOptions = $optionsProperty->getValue($server);
+
+        $this->assertArrayHasKey('watches', $serverOptions);
+        $this->assertEmpty($serverOptions['watches']);
+    }
+
+    public function testEvaluateWatchExpressionMethodExists(): void
+    {
+        $server = new DebugServer($this->testScript, 9004);
+
+        $reflection = new ReflectionClass($server);
+        $this->assertTrue($reflection->hasMethod('evaluateWatchExpression'));
+
+        $method = $reflection->getMethod('evaluateWatchExpression');
+        $this->assertTrue($method->isPrivate());
+
+        // Verify method signature: takes string, returns string
+        $params = $method->getParameters();
+        $this->assertCount(1, $params);
+        $this->assertEquals('expression', $params[0]->getName());
+
+        $returnType = $method->getReturnType();
+        $this->assertNotNull($returnType);
+        $this->assertEquals('string', $returnType->getName());
+    }
+
     /**
      * Test that DebugServer creates proper Xdebug arguments for different configurations
      */

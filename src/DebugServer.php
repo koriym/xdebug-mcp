@@ -137,7 +137,7 @@ final class DebugServer
     private array $breaks = [];
     private bool $isDockerCommand = false;
 
-    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float} $options */
+    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>} $options */
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
@@ -500,7 +500,14 @@ final class DebugServer
         $steps = [];
         $previousVariables = []; // Store previous state for diff comparison
 
-        $this->log("🚶 Starting step-by-step execution trace with differential recording (max {$maxSteps} steps)");
+        /** @var list<string> $watches */
+        $watches = $this->options['watches'] ?? [];
+        $hasWatches = $watches !== [];
+        /** @var array<string, string> $previousWatchValues */
+        $previousWatchValues = [];
+
+        $watchInfo = $hasWatches ? ' with watch filtering (' . count($watches) . ' expressions)' : '';
+        $this->log("🚶 Starting step-by-step execution trace with differential recording (max {$maxSteps} steps){$watchInfo}");
 
         while (true) {
             $stepCount++;
@@ -540,6 +547,64 @@ final class DebugServer
             // Get current variables
             $currentVariables = $this->getCurrentVariables();
 
+            // Evaluate watch expressions if active
+            $watchData = [];
+            $watchChanged = false;
+            if ($hasWatches) {
+                $currentWatchValues = [];
+                foreach ($watches as $expr) {
+                    $currentWatchValues[$expr] = $this->evaluateWatchExpression($expr);
+                }
+
+                if ($stepCount === 1) {
+                    // First step: always record with "initial" reason
+                    $watchChanged = true;
+                    foreach ($currentWatchValues as $expr => $value) {
+                        $watchData[] = [
+                            'expression' => $expr,
+                            'value' => $value,
+                            'previous' => null,
+                            'reason' => 'initial',
+                        ];
+                    }
+                } else {
+                    // Subsequent steps: compare with previous values
+                    foreach ($currentWatchValues as $expr => $value) {
+                        $previous = $previousWatchValues[$expr] ?? '<unavailable>';
+
+                        // Transition from available to unavailable → out_of_scope
+                        if ($value === '<unavailable>' && $previous !== '<unavailable>') {
+                            $watchChanged = true;
+                            $watchData[] = [
+                                'expression' => $expr,
+                                'value' => $value,
+                                'previous' => $previous,
+                                'reason' => 'out_of_scope',
+                            ];
+                            continue;
+                        }
+
+                        // Skip if both unavailable
+                        if ($value === '<unavailable>') {
+                            continue;
+                        }
+
+                        // Value changed
+                        if ($value !== $previous) {
+                            $watchChanged = true;
+                            $watchData[] = [
+                                'expression' => $expr,
+                                'value' => $value,
+                                'previous' => $previous !== '<unavailable>' ? $previous : null,
+                                'reason' => 'changed',
+                            ];
+                        }
+                    }
+                }
+
+                $previousWatchValues = $currentWatchValues;
+            }
+
             // Implement differential recording (like video compression)
             if ($stepCount === 1) {
                 // First frame: record all variables (full state)
@@ -568,13 +633,49 @@ final class DebugServer
                 $previousVariables = $currentVariables;
             }
 
-            // Record every step (not just variable changes)
+            // When watches are active, only record steps where watched values changed
+            if ($hasWatches && ! $watchChanged) {
+                $this->log("Step {$stepCount}: {$location['file']}:{$location['line']} (watch unchanged, skipped)");
+
+                // Still step into next instruction even when skipping recording
+                $this->log('👣 Step into...');
+                $stepResponse = $this->stepInto();
+
+                if ($this->isExecutionComplete($stepResponse)) {
+                    $this->log("✅ Execution completed after {$stepCount} steps");
+                    if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
+                        array_push($this->breaks, ...$steps);
+                        $this->outputStepRecordingResults();
+                    }
+
+                    break;
+                }
+
+                // Check step limit even for skipped steps
+                if ($stepCount >= $maxSteps) {
+                    $this->log("⚠️ Maximum steps ({$maxSteps}) reached, stopping execution");
+                    if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
+                        array_push($this->breaks, ...$steps);
+                        $this->outputStepRecordingResults();
+                    }
+
+                    break;
+                }
+
+                continue;
+            }
+
+            // Record the step
             $step = [
                 'step' => $stepCount,
                 'location' => $location,
                 'variables' => $variablesToRecord,
-                'recording_type' => $recordingType, // Indicate full vs diff recording
+                'recording_type' => $recordingType,
             ];
+
+            if ($hasWatches && $watchData !== []) {
+                $step['watches'] = $watchData;
+            }
 
             $steps[] = $step;
 
@@ -594,7 +695,8 @@ final class DebugServer
             if ($this->jsonMode) {
                 $changeCount = count($variablesToRecord);
                 $type = $recordingType === 'full' ? 'full state' : 'changes only';
-                $this->log("Step {$stepCount}: {$location['file']}:{$location['line']} ({$changeCount} variables, {$type})");
+                $watchNote = $hasWatches ? ', watch changed' : '';
+                $this->log("Step {$stepCount}: {$location['file']}:{$location['line']} ({$changeCount} variables, {$type}{$watchNote})");
             } else {
                 $this->displayStackInfo($stackResponse);
                 $title = $recordingType === 'full'
@@ -922,6 +1024,71 @@ final class DebugServer
         $encoded = base64_encode($expression);
 
         return $this->sendCommand('eval', ['--' => $encoded]);
+    }
+
+    /**
+     * Evaluate a watch expression and return its string value
+     *
+     * @return string The evaluated value as a string, or '<unavailable>' on error
+     */
+    private function evaluateWatchExpression(string $expression): string
+    {
+        try {
+            $response = $this->evaluateExpression($expression);
+            if ($response === '' || str_contains($response, '<error')) {
+                return '<unavailable>';
+            }
+
+            $xml = $this->parseXmlResponse($response);
+            if (! $xml) {
+                return '<unavailable>';
+            }
+
+            // Handle property_get response
+            $prop = $xml->property ?? ($xml->children()[0] ?? null);
+            if ($prop === null) {
+                return '<unavailable>';
+            }
+
+            $encoding = (string) ($prop['encoding'] ?? '');
+            $value = (string) $prop;
+
+            if ($encoding === 'base64') {
+                $value = base64_decode($value);
+            }
+
+            $type = (string) ($prop['type'] ?? 'string');
+
+            // Format the value with type context
+            if ($type === 'string') {
+                return "'" . $value . "'";
+            }
+
+            if ($type === 'null') {
+                return 'null';
+            }
+
+            if ($type === 'bool') {
+                return $value === '1' || strtolower($value) === 'true' ? 'true' : 'false';
+            }
+
+            if ($type === 'array') {
+                $numChildren = (string) ($prop['numchildren'] ?? '0');
+
+                return 'array(' . $numChildren . ')';
+            }
+
+            if ($type === 'object') {
+                $className = (string) ($prop['classname'] ?? 'object');
+
+                return 'object: ' . $className;
+            }
+
+            // int, float, or other types
+            return $value !== '' ? $value : '<unavailable>';
+        } catch (Throwable) {
+            return '<unavailable>';
+        }
     }
 
     /**
