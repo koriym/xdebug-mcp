@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-01-30
+
+### Added
+- **xstep --watch**: Expression-based step filtering for efficient loop debugging
+  - `--watch=EXPR` evaluates PHP expressions at each step, records only when value changes
+  - Multiple watches supported: `--watch="$i" --watch="count($items)"`
+  - Detects array/object internal mutations via content hashing
+  - Handles scope transitions (`initial`, `changed`, `out_of_scope`)
+  - JSON schema updated (`docs/schemas/xstep.json`) with `watches` field
+
+### Changed
+- **Coding Standards**: Enforce Doctrine Coding Standard 13 strict rules
+  - Enable `EarlyExit` rule: all `else` blocks converted to early return pattern
+  - Enable `PropertyTypeHint.MissingNativeTypeHint`
+  - Enable `ReturnTypeHint.MissingNativeTypeHint`
+  - Enable `PropertyTypeHint.MissingAnyTypeHint`
+
+### Fixed
+- Prevent duplicate JSON output in step recording
+
 ## [0.7.1] - 2026-01-16
 
 ### Added
@@ -231,6 +251,11 @@ This initial release introduces revolutionary AI-powered PHP debugging capabilit
 - Enhance AI analysis capabilities based on real-world usage
 - Build community around modern PHP debugging practices
 
+[0.8.0]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.8.0
+[0.7.1]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.7.1
+[0.7.0]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.7.0
+[0.6.1]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.6.1
+[0.6.0]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.6.0
 [0.3.2]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.3.2
 [0.3.1]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.3.1
 [0.3.0]: https://github.com/koriym/xdebug-mcp/releases/tag/v0.3.0

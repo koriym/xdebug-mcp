@@ -82,6 +82,7 @@ Stop at breakpoint, step forward N times, record variable changes at each step. 
 - `--break=file.php:line` - Single breakpoint location
 - `--break=file.php:line:condition` - Conditional (e.g., `$user==null`)
 - `--steps=N` - Step forward N times from breakpoint
+- `--watch=EXPR` - Only record steps when expression value changes (can specify multiple times)
 
 ### Examples
 
@@ -91,6 +92,12 @@ Stop at breakpoint, step forward N times, record variable changes at each step. 
 
 # Conditional breakpoint
 ~/.composer/vendor/bin/xstep --break="user.php:15:\$id==null" --steps=10 -- php user.php
+
+# Watch variable changes in loop
+~/.composer/vendor/bin/xstep --break="loop.php:10" --watch="\$i" --steps=100 -- php loop.php
+
+# Multiple watches
+~/.composer/vendor/bin/xstep --break="app.php:25" --watch="\$user->getStatus()" --watch="count(\$items)" --steps=50 -- php app.php
 ```
 
 ### Workflow Tips
