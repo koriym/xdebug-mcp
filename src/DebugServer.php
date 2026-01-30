@@ -597,15 +597,17 @@ final class DebugServer
                         }
 
                         // Value changed
-                        if ($value !== $previous) {
-                            $watchChanged = true;
-                            $watchData[] = [
-                                'expression' => $expr,
-                                'value' => $value,
-                                'previous' => $previous !== '<unavailable>' ? $previous : null,
-                                'reason' => 'changed',
-                            ];
+                        if ($value === $previous) {
+                            continue;
                         }
+
+                        $watchChanged = true;
+                        $watchData[] = [
+                            'expression' => $expr,
+                            'value' => $value,
+                            'previous' => $previous !== '<unavailable>' ? $previous : null,
+                            'reason' => 'changed',
+                        ];
                     }
                 }
 
@@ -624,16 +626,20 @@ final class DebugServer
 
                 // Find new or changed variables
                 foreach ($currentVariables as $name => $value) {
-                    if (! isset($previousVariables[$name]) || $previousVariables[$name] !== $value) {
-                        $variablesToRecord[$name] = $value;
+                    if (isset($previousVariables[$name]) && $previousVariables[$name] === $value) {
+                        continue;
                     }
+
+                    $variablesToRecord[$name] = $value;
                 }
 
                 // Find deleted variables
                 foreach (array_keys($previousVariables) as $name) {
-                    if (! isset($currentVariables[$name])) {
-                        $variablesToRecord[$name] = '[DELETED]';
+                    if (isset($currentVariables[$name])) {
+                        continue;
                     }
+
+                    $variablesToRecord[$name] = '[DELETED]';
                 }
 
                 $recordingType = 'diff';
@@ -731,9 +737,11 @@ final class DebugServer
             }
 
             // Small delay for readability in interactive mode
-            if (! $this->jsonMode) {
-                delay(0.1);
+            if ($this->jsonMode) {
+                continue;
             }
+
+            delay(0.1);
         }
 
         return $steps;
@@ -935,9 +943,11 @@ final class DebugServer
             // Set the breakpoint with condition
             $breakpointId = $this->setBreakpoint($file, $line, $condition);
 
-            if ($breakpointId === 'error') {
-                $this->log("❌ Failed to set breakpoint: {$file}:{$line}");
+            if ($breakpointId !== 'error') {
+                continue;
             }
+
+            $this->log("❌ Failed to set breakpoint: {$file}:{$line}");
         }
     }
 
@@ -1551,9 +1561,11 @@ final class DebugServer
         $allTraceFiles = [];
         foreach ($patterns as $pattern) {
             $files = glob($pattern);
-            if ($files) {
-                array_push($allTraceFiles, ...$files);
+            if (! $files) {
+                continue;
             }
+
+            array_push($allTraceFiles, ...$files);
         }
 
         if ($allTraceFiles !== []) {
@@ -1928,38 +1940,40 @@ final class DebugServer
         }
 
         // Handle property response
-        if (property_exists($xml, 'property') && $xml->property !== null) {
-            $property = $xml->property;
-            $type = (string) $property['type'];
-            $encoding = (string) ($property['encoding'] ?? '');
-            $rawValue = (string) $property;
+        if (! property_exists($xml, 'property') || $xml->property === null) {
+            return;
+        }
 
-            $value = $encoding === 'base64' ? base64_decode($rawValue) : $rawValue;
+        $property = $xml->property;
+        $type = (string) $property['type'];
+        $encoding = (string) ($property['encoding'] ?? '');
+        $rawValue = (string) $property;
 
-            if ($type === 'array' || $type === 'object') {
-                $childCount = count($property->property ?? []);
-                $this->log("📋 {$variable} ({$type}[{$childCount}]):");
+        $value = $encoding === 'base64' ? base64_decode($rawValue) : $rawValue;
 
-                // Show ALL elements for AI client - no pagination needed
-                if ($childCount > 0) {
-                    foreach ($property->property as $child) {
-                        $childName = (string) $child['name'];
-                        $childType = (string) $child['type'];
-                        $childEncoding = (string) ($child['encoding'] ?? '');
-                        $childRawValue = (string) $child;
-                        $childValue = $childEncoding === 'base64' ? base64_decode($childRawValue) : $childRawValue;
+        if ($type === 'array' || $type === 'object') {
+            $childCount = count($property->property ?? []);
+            $this->log("📋 {$variable} ({$type}[{$childCount}]):");
 
-                        if ($childType === 'string') {
-                            $childValue = '"' . $childValue . '"';
-                        }
+            // Show ALL elements for AI client - no pagination needed
+            if ($childCount > 0) {
+                foreach ($property->property as $child) {
+                    $childName = (string) $child['name'];
+                    $childType = (string) $child['type'];
+                    $childEncoding = (string) ($child['encoding'] ?? '');
+                    $childRawValue = (string) $child;
+                    $childValue = $childEncoding === 'base64' ? base64_decode($childRawValue) : $childRawValue;
 
-                        $this->log("  [{$childName}] ({$childType}): {$childValue}");
+                    if ($childType === 'string') {
+                        $childValue = '"' . $childValue . '"';
                     }
+
+                    $this->log("  [{$childName}] ({$childType}): {$childValue}");
                 }
-            } else {
-                $displayValue = $this->formatVariableValue($value, $type);
-                $this->log("📋 {$variable} ({$type}): {$displayValue}");
             }
+        } else {
+            $displayValue = $this->formatVariableValue($value, $type);
+            $this->log("📋 {$variable} ({$type}): {$displayValue}");
         }
     }
 
@@ -2284,14 +2298,18 @@ final class DebugServer
         $command = sprintf('lsof -ti :%d 2>/dev/null', $this->debugPort);
         $pids = shell_exec($command);
 
-        if ($pids) {
-            $pidList = array_filter(explode("\n", trim($pids)));
-            if ($pidList !== []) {
-                $this->log(sprintf('🔌 Port %d shared with other sessions: %s', $this->debugPort, implode(', ', $pidList)));
-                $this->log('🎯 Using session key "xdebug-mcp" for isolation');
-                $this->log('💡 IDEs can use different session keys (PHPSTORM, vscode, etc.)');
-            }
+        if (! $pids) {
+            return;
         }
+
+        $pidList = array_filter(explode("\n", trim($pids)));
+        if ($pidList === []) {
+            return;
+        }
+
+        $this->log(sprintf('🔌 Port %d shared with other sessions: %s', $this->debugPort, implode(', ', $pidList)));
+        $this->log('🎯 Using session key "xdebug-mcp" for isolation');
+        $this->log('💡 IDEs can use different session keys (PHPSTORM, vscode, etc.)');
     }
 
     /**
@@ -2471,9 +2489,11 @@ final class DebugServer
                 $this->log('📊 Claude Analysis Result:');
                 $lines = explode("\n", trim($output));
                 foreach ($lines as $line) {
-                    if (! in_array(trim($line), ['', '0'], true)) {
-                        $this->log('   ' . $line);
+                    if (in_array(trim($line), ['', '0'], true)) {
+                        continue;
                     }
+
+                    $this->log('   ' . $line);
                 }
             } else {
                 $this->log('❌ Claude analysis failed or produced no output');
@@ -2687,14 +2707,16 @@ final class DebugServer
                 }
 
                 // Limit number of items shown
-                if (count($items) >= $maxItems) {
-                    $totalCount = (int) ($prop['numchildren'] ?? 0);
-                    if ($totalCount > $maxItems) {
-                        $items[] = "... ({$totalCount} total)";
-                    }
-
-                    break;
+                if (count($items) < $maxItems) {
+                    continue;
                 }
+
+                $totalCount = (int) ($prop['numchildren'] ?? 0);
+                if ($totalCount > $maxItems) {
+                    $items[] = "... ({$totalCount} total)";
+                }
+
+                break;
             }
 
             if ($items === []) {
@@ -2816,9 +2838,11 @@ final class DebugServer
         $allTraceFiles = [];
         foreach ($patterns as $pattern) {
             $files = glob($pattern);
-            if ($files) {
-                array_push($allTraceFiles, ...$files);
+            if (! $files) {
+                continue;
             }
+
+            array_push($allTraceFiles, ...$files);
         }
 
         if ($allTraceFiles === []) {

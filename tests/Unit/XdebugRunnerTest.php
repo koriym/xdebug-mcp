@@ -470,9 +470,11 @@ final class XdebugRunnerTest extends TestCase
 
         $this->assertStringContainsString('-dxdebug.mode=trace', $command);
         // prepend_filter.php is loaded when includeVendor is set
-        if (file_exists(__DIR__ . '/../../src/prepend_filter.php')) {
-            $this->assertStringContainsString('-dauto_prepend_file=', $command);
+        if (! file_exists(__DIR__ . '/../../src/prepend_filter.php')) {
+            return;
         }
+
+        $this->assertStringContainsString('-dauto_prepend_file=', $command);
     }
 
     #[Test]

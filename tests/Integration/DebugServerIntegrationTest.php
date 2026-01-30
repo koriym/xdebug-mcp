@@ -33,9 +33,11 @@ exit(0);
 
     protected function tearDown(): void
     {
-        if (file_exists($this->testScript)) {
-            unlink($this->testScript);
+        if (! file_exists($this->testScript)) {
+            return;
         }
+
+        unlink($this->testScript);
     }
 
     public function testDebugServerInstantiation(): void
@@ -82,11 +84,13 @@ exit(0);
 
         $foundMethods = 0;
         foreach ($expectedMethods as $methodName) {
-            if ($reflection->hasMethod($methodName)) {
-                $method = $reflection->getMethod($methodName);
-                $this->assertTrue($method->isPrivate() || $method->isProtected());
-                $foundMethods++;
+            if (! $reflection->hasMethod($methodName)) {
+                continue;
             }
+
+            $method = $reflection->getMethod($methodName);
+            $this->assertTrue($method->isPrivate() || $method->isProtected());
+            $foundMethods++;
         }
 
         // Verify that at least some core methods exist
@@ -160,9 +164,11 @@ exit(0);
 
         $foundMethods = 0;
         foreach ($utilityMethods as $methodName) {
-            if ($reflection->hasMethod($methodName)) {
-                $foundMethods++;
+            if (! $reflection->hasMethod($methodName)) {
+                continue;
             }
+
+            $foundMethods++;
         }
 
         $this->assertGreaterThan(0, $foundMethods, 'Expected to find utility methods');
@@ -191,9 +197,11 @@ exit(0);
 
         $foundProperties = 0;
         foreach ($expectedProperties as $propertyName) {
-            if ($reflection->hasProperty($propertyName)) {
-                $foundProperties++;
+            if (! $reflection->hasProperty($propertyName)) {
+                continue;
             }
+
+            $foundProperties++;
         }
 
         $this->assertGreaterThanOrEqual(3, $foundProperties, 'Expected to find core properties');

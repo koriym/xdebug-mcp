@@ -40,9 +40,11 @@ function validateInput(mixed $input): array
     // Check required fields
     $requiredFields = ['name', 'email', 'age'];
     foreach ($requiredFields as $field) {
-        if (! isset($input[$field])) {
-            $errors[] = "Missing required field: $field";
+        if (isset($input[$field])) {
+            continue;
         }
+
+        $errors[] = "Missing required field: $field";
     }
 
     // Validate email format

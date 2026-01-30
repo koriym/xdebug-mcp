@@ -316,12 +316,14 @@ class XdebugTracer
         $dbQueryCount = 0;
         foreach (array_keys($stats->uniqueFunctions) as $function) {
             if (
-                str_contains(strtolower($function), 'query')
-                || str_contains(strtolower($function), 'execute')
-                || str_contains(strtolower($function), 'prepare')
+                ! str_contains(strtolower($function), 'query')
+                && ! str_contains(strtolower($function), 'execute')
+                && ! str_contains(strtolower($function), 'prepare')
             ) {
-                $dbQueryCount++;
+                continue;
             }
+
+            $dbQueryCount++;
         }
 
         return $dbQueryCount;

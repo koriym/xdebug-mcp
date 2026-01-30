@@ -40,9 +40,11 @@ echo "Result: $result\n";
 
     protected function tearDown(): void
     {
-        if (file_exists($this->testScript)) {
-            unlink($this->testScript);
+        if (! file_exists($this->testScript)) {
+            return;
         }
+
+        unlink($this->testScript);
     }
 
     public function testConstructorWithValidScript(): void
@@ -188,14 +190,16 @@ echo "Result: $result\n";
 
         $foundMethods = 0;
         foreach ($expectedMethods as $methodName) {
-            if ($reflection->hasMethod($methodName)) {
-                $method = $reflection->getMethod($methodName);
-                $this->assertTrue(
-                    $method->isPrivate() || $method->isProtected(),
-                    "Method {$methodName} should be private or protected",
-                );
-                $foundMethods++;
+            if (! $reflection->hasMethod($methodName)) {
+                continue;
             }
+
+            $method = $reflection->getMethod($methodName);
+            $this->assertTrue(
+                $method->isPrivate() || $method->isProtected(),
+                "Method {$methodName} should be private or protected",
+            );
+            $foundMethods++;
         }
 
         // At least assert that we checked something or that the class has methods

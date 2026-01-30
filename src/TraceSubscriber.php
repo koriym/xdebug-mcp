@@ -29,15 +29,19 @@ final class TraceSubscriber implements PreparedSubscriber, FinishedSubscriber
 
     private function handleTestStart(string $testName): void
     {
-        if (TraceHelper::shouldTrace($testName)) {
-            TraceHelper::startTrace($testName);
+        if (! TraceHelper::shouldTrace($testName)) {
+            return;
         }
+
+        TraceHelper::startTrace($testName);
     }
 
     private function handleTestEnd(string $testName): void
     {
-        if (TraceHelper::shouldTrace($testName)) {
-            TraceHelper::stopTrace($testName);
+        if (! TraceHelper::shouldTrace($testName)) {
+            return;
         }
+
+        TraceHelper::stopTrace($testName);
     }
 }

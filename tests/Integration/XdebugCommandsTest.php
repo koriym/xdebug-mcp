@@ -43,9 +43,11 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
 
     protected function tearDown(): void
     {
-        if (file_exists($this->testScript)) {
-            unlink($this->testScript);
+        if (! file_exists($this->testScript)) {
+            return;
         }
+
+        unlink($this->testScript);
     }
 
     public function testXdebugMcpCommandExists(): void

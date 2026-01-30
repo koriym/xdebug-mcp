@@ -76,14 +76,16 @@ final class McpServer
      */
     private function debugLog(string $message, array $data = []): void
     {
-        if ($this->debugMode) {
-            $logData = [
-                'timestamp' => date('Y-m-d H:i:s'),
-                'message' => $message,
-                'data' => $data,
-            ];
-            error_log('MCP Debug: ' . json_encode($logData, JSON_THROW_ON_ERROR));
+        if (! $this->debugMode) {
+            return;
         }
+
+        $logData = [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'message' => $message,
+            'data' => $data,
+        ];
+        error_log('MCP Debug: ' . json_encode($logData, JSON_THROW_ON_ERROR));
     }
 
     private function initializeTools(): void
@@ -240,65 +242,67 @@ final class McpServer
             while (($line = fgets(STDIN)) !== false) {
                 $input .= $line;
 
-                if ($this->isCompleteJsonRpc($input)) {
-                    error_log('DEBUG: Raw Claude CLI input = ' . trim($input));
-
-                    try {
-                        $request = json_decode(trim($input), true, 512, JSON_THROW_ON_ERROR);
-                    } catch (JsonException) {
-                        // @codeCoverageIgnoreStart - JSON parse error path rarely triggered in tests
-                        // Invalid JSON, send parse error
-                        $errorResponse = [
-                            'jsonrpc' => '2.0',
-                            'id' => null,
-                            'error' => [
-                                'code' => -32700,
-                                'message' => 'Parse error',
-                            ],
-                        ];
-                        echo json_encode($errorResponse, JSON_THROW_ON_ERROR) . "\n";
-                        fflush(STDOUT);
-                        $input = '';
-
-                        continue;
-                        // @codeCoverageIgnoreEnd
-                    }
-
-                    // Validate request is an array
-                    if (! is_array($request)) {
-                        $errorResponse = JsonRpcResponse::error(null, -32600, 'Invalid Request: expected object');
-                        echo json_encode($errorResponse, JSON_THROW_ON_ERROR) . "\n";
-                        fflush(STDOUT);
-                        $input = '';
-
-                        continue;
-                    }
-
-                    /** @var array{method?: string, params?: array<string, string|int|bool|array<string, string|int|bool>>, id?: string|int|null} $request */
-                    $requestMethod = $request['method'] ?? 'unknown';
-                    $requestId = $request['id'] ?? null;
-
-                    error_log('DEBUG: Processing request method = ' . $requestMethod);
-
-                    try {
-                        $response = $this->handleRequest($request);
-
-                        if ($response instanceof JsonRpcResponse) {
-                            $this->debugLog('Sending response', ['id' => $response->id]);
-                            echo json_encode($response, JSON_THROW_ON_ERROR) . "\n";
-                            fflush(STDOUT);
-                        }
-                    } catch (Throwable $e) {
-                        error_log('DEBUG: MCP Server Error for method ' . $requestMethod . ': ' . $e->getMessage());
-                        error_log('MCP Server Error: ' . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString());
-
-                        $errorResponse = JsonRpcResponse::error($requestId, -32603, 'Internal error: ' . $e->getMessage());
-                        echo json_encode($errorResponse, JSON_THROW_ON_ERROR) . "\n";
-                        fflush(STDOUT);
-                    }
-
-                    $input = '';
+                if (! $this->isCompleteJsonRpc($input)) {
+                    continue;
                 }
+
+                error_log('DEBUG: Raw Claude CLI input = ' . trim($input));
+
+                try {
+                    $request = json_decode(trim($input), true, 512, JSON_THROW_ON_ERROR);
+                } catch (JsonException) {
+                    // @codeCoverageIgnoreStart - JSON parse error path rarely triggered in tests
+                    // Invalid JSON, send parse error
+                    $errorResponse = [
+                        'jsonrpc' => '2.0',
+                        'id' => null,
+                        'error' => [
+                            'code' => -32700,
+                            'message' => 'Parse error',
+                        ],
+                    ];
+                    echo json_encode($errorResponse, JSON_THROW_ON_ERROR) . "\n";
+                    fflush(STDOUT);
+                    $input = '';
+
+                    continue;
+                    // @codeCoverageIgnoreEnd
+                }
+
+                // Validate request is an array
+                if (! is_array($request)) {
+                    $errorResponse = JsonRpcResponse::error(null, -32600, 'Invalid Request: expected object');
+                    echo json_encode($errorResponse, JSON_THROW_ON_ERROR) . "\n";
+                    fflush(STDOUT);
+                    $input = '';
+
+                    continue;
+                }
+
+                /** @var array{method?: string, params?: array<string, string|int|bool|array<string, string|int|bool>>, id?: string|int|null} $request */
+                $requestMethod = $request['method'] ?? 'unknown';
+                $requestId = $request['id'] ?? null;
+
+                error_log('DEBUG: Processing request method = ' . $requestMethod);
+
+                try {
+                    $response = $this->handleRequest($request);
+
+                    if ($response instanceof JsonRpcResponse) {
+                        $this->debugLog('Sending response', ['id' => $response->id]);
+                        echo json_encode($response, JSON_THROW_ON_ERROR) . "\n";
+                        fflush(STDOUT);
+                    }
+                } catch (Throwable $e) {
+                    error_log('DEBUG: MCP Server Error for method ' . $requestMethod . ': ' . $e->getMessage());
+                    error_log('MCP Server Error: ' . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString());
+
+                    $errorResponse = JsonRpcResponse::error($requestId, -32603, 'Internal error: ' . $e->getMessage());
+                    echo json_encode($errorResponse, JSON_THROW_ON_ERROR) . "\n";
+                    fflush(STDOUT);
+                }
+
+                $input = '';
             }
         } catch (Throwable $e) {
             error_log('MCP Server Fatal Error: ' . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString());
@@ -586,9 +590,11 @@ final class McpServer
         };
 
         foreach ($positionalArgs as $index => $value) {
-            if (isset($mapping[$index])) {
-                $args[$mapping[$index]] = $value;
+            if (! isset($mapping[$index])) {
+                continue;
             }
+
+            $args[$mapping[$index]] = $value;
         }
 
         return $args;

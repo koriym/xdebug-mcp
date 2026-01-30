@@ -71,23 +71,29 @@ final class TraceStatistics
 
     public function updateMaxDepth(int $depth): void
     {
-        if ($depth > $this->maxDepth) {
-            $this->maxDepth = $depth;
+        if ($depth <= $this->maxDepth) {
+            return;
         }
+
+        $this->maxDepth = $depth;
     }
 
     public function updatePeakMemory(int $memory): void
     {
-        if ($memory > $this->peakMemory) {
-            $this->peakMemory = $memory;
+        if ($memory <= $this->peakMemory) {
+            return;
         }
+
+        $this->peakMemory = $memory;
     }
 
     public function setStartTime(float $time): void
     {
-        if ($this->startTime === null) {
-            $this->startTime = $time;
+        if ($this->startTime !== null) {
+            return;
         }
+
+        $this->startTime = $time;
     }
 
     public function setEndTime(float $time): void
@@ -97,9 +103,11 @@ final class TraceStatistics
 
     public function calculateExecutionTime(): void
     {
-        if ($this->startTime !== null) {
-            $this->executionTime = $this->endTime - $this->startTime;
+        if ($this->startTime === null) {
+            return;
         }
+
+        $this->executionTime = $this->endTime - $this->startTime;
     }
 
     public function getUniqueFunctionCount(): int

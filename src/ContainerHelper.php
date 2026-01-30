@@ -40,9 +40,11 @@ final class ContainerHelper
         $lastPhpIndex = false;
 
         foreach ($parts as $index => $part) {
-            if ($part === 'php' || preg_match('/^php\d+\.\d+$/', $part)) {
-                $lastPhpIndex = (int) $index;
+            if ($part !== 'php' && ! preg_match('/^php\d+\.\d+$/', $part)) {
+                continue;
             }
+
+            $lastPhpIndex = (int) $index;
         }
 
         return $lastPhpIndex;
@@ -108,9 +110,11 @@ final class ContainerHelper
             $scriptIndex++;
 
             // If this option takes a value, skip the next argument too
-            if (in_array($currentOption, self::PHP_OPTIONS_WITH_VALUE, true) && isset($parts[$scriptIndex])) {
-                $scriptIndex++;
+            if (! in_array($currentOption, self::PHP_OPTIONS_WITH_VALUE, true) || ! isset($parts[$scriptIndex])) {
+                continue;
             }
+
+            $scriptIndex++;
         }
 
         return isset($parts[$scriptIndex]) ? $scriptIndex : false;
