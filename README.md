@@ -222,7 +222,7 @@ The tool runs on your modern PHP while the target script executes on the specifi
 ### Xdebug 3.x Compatibility
 
 | Xdebug | Supported PHP |
-|--------|---------------|
+| -------- | --------------- |
 | 3.0-3.1 | PHP 5.4 - 8.0 |
 | 3.2 | PHP 5.6 - 8.3 |
 | 3.3 | PHP 7.0 - 8.4 |
