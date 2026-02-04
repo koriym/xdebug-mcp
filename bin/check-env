@@ -151,7 +151,10 @@ if ($action === '--install-mcp') {
 }
 
 // Check for updates if running from global composer install
-$isGlobalInstall = str_contains($projectRoot, '.composer/vendor');
+$composerHome = getenv('COMPOSER_HOME') ?: ((getenv('HOME') ?: '') . '/.composer');
+$isGlobalInstall = str_contains($projectRoot, $composerHome . '/vendor')
+    || str_contains($projectRoot, '.composer/vendor')
+    || str_contains($projectRoot, '.config/composer/vendor');
 if ($isGlobalInstall) {
     checkForUpdates();
 }
@@ -168,8 +171,8 @@ function checkForUpdates(): void
     $output = [];
     exec('composer global show koriym/xdebug-mcp --format=json 2>/dev/null', $output);
     $json = implode('', $output);
-    $info = json_decode($json, true);
-    $currentVersion = $info['versions'][0] ?? null;
+    $info = json_decode($json, true) ?? [];
+    $currentVersion = ($info['versions'] ?? [])[0] ?? null;
 
     if (!$currentVersion) {
         return;
@@ -196,7 +199,7 @@ function checkForUpdates(): void
 
     // Check why upgrade is blocked
     $output = [];
-    exec("composer global why-not koriym/xdebug-mcp {$latestVersion} 2>&1", $output);
+    exec('composer global why-not koriym/xdebug-mcp ' . escapeshellarg($latestVersion) . ' 2>&1', $output);
 
     // Parse: "koriym/xdebug-mcp v0.8.0 requires psr/log (^3.0)"
     // Parse: "__root__ - does not require psr/log (but 1.1.4 is installed)"
@@ -229,7 +232,7 @@ function checkForUpdates(): void
 
         // Find what requires the old version
         $whyOutput = [];
-        exec("composer global why {$package} 2>&1", $whyOutput);
+        exec('composer global why ' . escapeshellarg($package) . ' 2>&1', $whyOutput);
         foreach ($whyOutput as $line) {
             if (preg_match('/^(\S+)\s+(\S+)\s+requires\s+\S+\s+\(([^)]+)\)/', $line, $m)) {
                 $depPackage = $m[1];
@@ -240,7 +243,7 @@ function checkForUpdates(): void
 
                     // Find root cause (what requires depPackage)
                     $rootOutput = [];
-                    exec("composer global why {$depPackage} 2>&1", $rootOutput);
+                    exec('composer global why ' . escapeshellarg($depPackage) . ' 2>&1', $rootOutput);
                     foreach ($rootOutput as $rootLine) {
                         if (preg_match('/^(\S+)\s+(\S+)\s+requires/', $rootLine, $rm)) {
                             if ($rm[1] !== '__root__' && $rm[1] !== $depPackage) {
