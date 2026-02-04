@@ -151,7 +151,17 @@ if ($action === '--install-mcp') {
 }
 
 // Check for updates if running from global composer install
-$composerHome = getenv('COMPOSER_HOME') ?: ((getenv('HOME') ?: '') . '/.composer');
+// Detect Composer home across platforms: COMPOSER_HOME, Windows AppData, XDG, ~/.composer
+$composerHome = getenv('COMPOSER_HOME');
+if (!$composerHome) {
+    if (PHP_OS_FAMILY === 'Windows') {
+        $composerHome = (getenv('APPDATA') ?: '') . '/Composer';
+    } elseif (getenv('XDG_CONFIG_HOME')) {
+        $composerHome = getenv('XDG_CONFIG_HOME') . '/composer';
+    } else {
+        $composerHome = (getenv('HOME') ?: '') . '/.composer';
+    }
+}
 $isGlobalInstall = str_contains($projectRoot, $composerHome . '/vendor')
     || str_contains($projectRoot, '.composer/vendor')
     || str_contains($projectRoot, '.config/composer/vendor');
