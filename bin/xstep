@@ -380,7 +380,7 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
     }
 
     // Validate breakpoint file if specified
-    if ($breakpointFile !== null) {
+    if ($breakpointFile !== null && empty($breakpoints)) {
         if (!file_exists($breakpointFile)) {
             throw new RuntimeException("Breakpoint file not found: $breakpointFile");
         }
