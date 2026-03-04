@@ -227,7 +227,7 @@ class XdebugTracer
         $entryExit = $parts[2]; // 0=Entry, 1=Exit, R=Return
         $time = (float) $parts[3];
         $memory = (int) $parts[4];
-        $function = $parts[5] ?? '';
+        $function = $parts[5];
 
         // Only count function entries (not exits or returns)
         if ($entryExit === '0') {
