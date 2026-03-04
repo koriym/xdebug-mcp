@@ -162,9 +162,11 @@ if (!$composerHome) {
         $composerHome = (getenv('HOME') ?: '') . '/.composer';
     }
 }
-$isGlobalInstall = str_contains($projectRoot, $composerHome . '/vendor')
-    || str_contains($projectRoot, '.composer/vendor')
-    || str_contains($projectRoot, '.config/composer/vendor');
+$projectRootNorm = str_replace('\\', '/', $projectRoot);
+$composerHomeNorm = rtrim(str_replace('\\', '/', $composerHome), '/');
+$isGlobalInstall = ($composerHomeNorm !== '' && str_contains($projectRootNorm, $composerHomeNorm . '/vendor'))
+    || str_contains($projectRootNorm, '/.composer/vendor')
+    || str_contains($projectRootNorm, '/.config/composer/vendor');
 if ($isGlobalInstall) {
     checkForUpdates();
 }
@@ -192,7 +194,7 @@ function checkForUpdates(): void
     $output = [];
     exec('composer global show koriym/xdebug-mcp --all --format=json 2>/dev/null', $output);
     $json = implode('', $output);
-    $info = json_decode($json, true);
+    $info = json_decode($json, true) ?? [];
     $allVersions = $info['versions'] ?? [];
 
     // Filter to stable versions only (vX.Y.Z format)
