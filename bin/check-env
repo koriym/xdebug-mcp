@@ -150,5 +150,123 @@ if ($action === '--install-mcp') {
     
 }
 
+// Check for updates if running from global composer install
+// Detect Composer home across platforms: COMPOSER_HOME, Windows AppData, XDG, ~/.composer
+$composerHome = getenv('COMPOSER_HOME');
+if (!$composerHome) {
+    if (PHP_OS_FAMILY === 'Windows') {
+        $composerHome = (getenv('APPDATA') ?: '') . '/Composer';
+    } elseif (getenv('XDG_CONFIG_HOME')) {
+        $composerHome = getenv('XDG_CONFIG_HOME') . '/composer';
+    } else {
+        $composerHome = (getenv('HOME') ?: '') . '/.composer';
+    }
+}
+$projectRootNorm = str_replace('\\', '/', $projectRoot);
+$composerHomeNorm = rtrim(str_replace('\\', '/', $composerHome), '/');
+$isGlobalInstall = ($composerHomeNorm !== '' && str_contains($projectRootNorm, $composerHomeNorm . '/vendor'))
+    || str_contains($projectRootNorm, '/.composer/vendor')
+    || str_contains($projectRootNorm, '/.config/composer/vendor');
+if ($isGlobalInstall) {
+    checkForUpdates();
+}
+
 $hasIssues = !$canLoadXdebug || $loaded || !extension_loaded('sockets') || !extension_loaded('xml');
 exit($hasIssues ? 1 : 0);
+
+/**
+ * Check if a newer version is available and explain upgrade blockers
+ */
+function checkForUpdates(): void
+{
+    // Get current version from composer
+    $output = [];
+    exec('composer global show koriym/xdebug-mcp --format=json 2>/dev/null', $output);
+    $json = implode('', $output);
+    $info = json_decode($json, true) ?? [];
+    $currentVersion = ($info['versions'] ?? [])[0] ?? null;
+
+    if (!$currentVersion) {
+        return;
+    }
+
+    // Get all available versions
+    $output = [];
+    exec('composer global show koriym/xdebug-mcp --all --format=json 2>/dev/null', $output);
+    $json = implode('', $output);
+    $info = json_decode($json, true) ?? [];
+    $allVersions = $info['versions'] ?? [];
+
+    // Filter to stable versions only (vX.Y.Z format)
+    $stableVersions = array_filter($allVersions, fn($v) => preg_match('/^v?\d+\.\d+\.\d+$/', $v));
+    usort($stableVersions, fn($a, $b) => version_compare(ltrim($a, 'v'), ltrim($b, 'v')));
+    $latestVersion = end($stableVersions) ?: null;
+
+    if (!$latestVersion || version_compare(ltrim($currentVersion, 'v'), ltrim($latestVersion, 'v'), '>=')) {
+        echo "✅ xdebug-mcp {$currentVersion} (latest)\n";
+        return;
+    }
+
+    echo "⚠️  xdebug-mcp {$currentVersion} installed, {$latestVersion} available\n";
+
+    // Check why upgrade is blocked
+    $output = [];
+    exec('composer global why-not koriym/xdebug-mcp ' . escapeshellarg($latestVersion) . ' 2>&1', $output);
+
+    // Parse: "koriym/xdebug-mcp v0.8.0 requires psr/log (^3.0)"
+    // Parse: "__root__ - does not require psr/log (but 1.1.4 is installed)"
+    $conflicts = [];
+    foreach ($output as $line) {
+        if (preg_match('/xdebug-mcp\s+\S+\s+requires\s+(\S+)\s+\(([^)]+)\)/', $line, $m)) {
+            $package = $m[1];
+            $needed = $m[2];
+            $conflicts[$package] = ['needed' => $needed];
+        }
+        if (preg_match('/does not require\s+(\S+)\s+\(but ([^\s)]+) is installed\)/', $line, $m)) {
+            $package = $m[1];
+            if (isset($conflicts[$package])) {
+                $conflicts[$package]['installed'] = $m[2];
+            }
+        }
+    }
+
+    if (empty($conflicts)) {
+        echo "   Run: composer global update koriym/xdebug-mcp\n";
+        return;
+    }
+
+    echo "   Upgrade blocked by:\n";
+
+    foreach ($conflicts as $package => $info) {
+        $needed = $info['needed'] ?? '?';
+        $installed = $info['installed'] ?? '?';
+        echo "   - {$package} {$installed} installed ({$latestVersion} needs {$needed})\n";
+
+        // Find what requires the old version
+        $whyOutput = [];
+        exec('composer global why ' . escapeshellarg($package) . ' 2>&1', $whyOutput);
+        foreach ($whyOutput as $line) {
+            if (preg_match('/^(\S+)\s+(\S+)\s+requires\s+\S+\s+\(([^)]+)\)/', $line, $m)) {
+                $depPackage = $m[1];
+                $depVersion = $m[2];
+                $depConstraint = $m[3];
+                if ($depPackage !== 'koriym/xdebug-mcp' && $depPackage !== '__root__') {
+                    echo "     └─ {$depPackage} {$depVersion} requires {$package} ({$depConstraint})\n";
+
+                    // Find root cause (what requires depPackage)
+                    $rootOutput = [];
+                    exec('composer global why ' . escapeshellarg($depPackage) . ' 2>&1', $rootOutput);
+                    foreach ($rootOutput as $rootLine) {
+                        if (preg_match('/^(\S+)\s+(\S+)\s+requires/', $rootLine, $rm)) {
+                            if ($rm[1] !== '__root__' && $rm[1] !== $depPackage) {
+                                echo "        └─ required by {$rm[1]}\n";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    echo "\n";
+}
