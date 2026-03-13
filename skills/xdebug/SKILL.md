@@ -1,6 +1,6 @@
 ---
 name: xdebug
-description: PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, or analyze coverage of PHP code.
+description: PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, or analyze coverage of PHP code. Trigger phrases include "trace this function", "profile this code", "check coverage", "debug PHP", "set breakpoint", "find the bottleneck", "why is this slow", "トレース", "プロファイル", "カバレッジ".
 ---
 
 # Xdebug MCP Tools
