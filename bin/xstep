@@ -338,7 +338,9 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
     }
 
     // Handle legacy format: script.php [breakpoint_file] [break_line]
-    if (count($command) >= 1 && !str_contains($command[0], ' ') && file_exists($command[0])) {
+    // Skip when --break= is used so positional args don't leak into $targetScript
+    // (e.g. `-- php main.php` with a `php/` directory in CWD would match file_exists).
+    if (empty($breakpoints) && count($command) >= 1 && !str_contains($command[0], ' ') && file_exists($command[0])) {
         $targetScript = $command[0];
         if (!isset($breakpointFile) && isset($command[1])) {
             $breakpointFile = $command[1];
@@ -380,7 +382,7 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
     }
 
     // Validate breakpoint file if specified
-    if ($breakpointFile !== null) {
+    if ($breakpointFile !== null && empty($breakpoints)) {
         if (!file_exists($breakpointFile)) {
             throw new RuntimeException("Breakpoint file not found: $breakpointFile");
         }
