@@ -82,6 +82,7 @@ use function strlen;
 use function strtolower;
 use function strtoupper;
 use function substr;
+use function time;
 use function trim;
 use function usort;
 
@@ -126,6 +127,7 @@ final class DebugServer
     private bool $shouldExit = false;
     private readonly DebugResultFormatter $resultFormatter;
     private readonly ClaudeTraceAnalyzer $claudeTraceAnalyzer;
+    private readonly int $sessionStartTime;
 
     /** @var list<array{step: int, location: array{file: string, line: int}, variables: array<string, string>, recording_type: string}> */
     private array $breaks = [];
@@ -149,6 +151,8 @@ final class DebugServer
         $this->isDockerCommand = ContainerHelper::isContainerCommand($command);
         $this->resultFormatter = new DebugResultFormatter();
         $this->claudeTraceAnalyzer = new ClaudeTraceAnalyzer();
+        // Capture session start so trace lookups can filter out stale files from prior runs.
+        $this->sessionStartTime = time();
 
         // Check for existing sessions (warning only)
         $this->checkExistingSessions();
@@ -2271,8 +2275,14 @@ final class DebugServer
 
         $this->stepRecordingOutputDone = true;
 
-        $patterns = ['/tmp/trace*.xt', '/var/tmp/trace*.xt', '/tmp/trace*.xt.gz', '/var/tmp/trace*.xt.gz'];
-        $allTraceFiles = $this->findTraceFiles($patterns);
+        $scriptName = basename($this->targetScript, '.php');
+        $patterns = [
+            '/tmp/trace-*-' . $scriptName . '.xt',
+            '/tmp/trace-*-' . $scriptName . '.xt.gz',
+            '/var/tmp/trace-*-' . $scriptName . '.xt',
+            '/var/tmp/trace-*-' . $scriptName . '.xt.gz',
+        ];
+        $allTraceFiles = $this->filterTraceFilesToSession($this->findTraceFiles($patterns));
 
         $payload = $this->resultFormatter->buildBreakpointPayload(
             $this->breaks,
@@ -2589,6 +2599,31 @@ final class DebugServer
         }
 
         return $allTraceFiles;
+    }
+
+    /**
+     * Keep only trace files written during the current debug session.
+     *
+     * Trace files are generated into a shared directory (e.g. /tmp), so a naive
+     * "latest match" lookup could pick up another concurrent session's trace.
+     *
+     * @param list<string> $traceFiles
+     *
+     * @return list<string>
+     */
+    private function filterTraceFilesToSession(array $traceFiles): array
+    {
+        $filtered = [];
+        foreach ($traceFiles as $file) {
+            $mtime = @filemtime($file);
+            if ($mtime === false || $mtime < $this->sessionStartTime) {
+                continue;
+            }
+
+            $filtered[] = $file;
+        }
+
+        return $filtered;
     }
 
     /**

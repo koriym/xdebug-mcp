@@ -67,12 +67,14 @@ composer global require koriym/xdebug-mcp
 
 #### Codex (Recommended: Local Skill)
 
-If you prefer a local skill or slash-command workflow, install the bundled skill from `skills/xdebug/SKILL.md`. For example on macOS/Linux:
+If you prefer a local skill or slash-command workflow, install the bundled skill from `skills/xdebug/SKILL.md`. For example on macOS/Linux (after `composer global require`):
 
 ```bash
 mkdir -p ~/.codex/skills
-ln -s "$(pwd)/skills/xdebug" ~/.codex/skills/xdebug
+ln -s ~/.composer/vendor/koriym/xdebug-mcp/skills/xdebug ~/.codex/skills/xdebug
 ```
+
+If you cloned the repository instead, link from your checkout (e.g. `ln -s "$(pwd)/skills/xdebug" ~/.codex/skills/xdebug`).
 
 Restart Codex after adding the skill.
 

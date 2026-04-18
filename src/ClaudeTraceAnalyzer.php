@@ -12,7 +12,6 @@ use function escapeshellarg;
 use function explode;
 use function file;
 use function implode;
-use function in_array;
 use function ini_get;
 use function is_file;
 use function is_readable;
@@ -71,7 +70,7 @@ final class ClaudeTraceAnalyzer
 
         $logger('📊 Claude Analysis Result:');
         foreach (explode("\n", trim($output)) as $line) {
-            if (in_array(trim($line), ['', '0'], true)) {
+            if (trim($line) === '') {
                 continue;
             }
 
@@ -113,7 +112,7 @@ final class ClaudeTraceAnalyzer
             $prompt .= "Stopped at line {$breakpointLine} in {$targetScript}\n\n";
         }
 
-        if ($userArgs !== '' && $userArgs !== '0') {
+        if ($userArgs !== '') {
             $prompt .= "## Specific Analysis Request\n";
             $prompt .= $userArgs . "\n\n";
         }

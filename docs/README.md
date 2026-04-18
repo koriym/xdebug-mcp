@@ -44,6 +44,7 @@ composer require koriym/xdebug-mcp
 echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
 
 # Codex: install the bundled local skill
+# (run from the consumer project root that contains vendor/)
 # mkdir -p ~/.codex/skills
 # ln -s "$(pwd)/vendor/koriym/xdebug-mcp/skills/xdebug" ~/.codex/skills/xdebug
 

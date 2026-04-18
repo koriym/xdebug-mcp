@@ -6,12 +6,14 @@ namespace Koriym\XdebugMcp;
 
 use JsonException;
 use Koriym\XdebugMcp\DTO\GenericResult;
+use Koriym\XdebugMcp\DTO\JsonRpcError;
 use Koriym\XdebugMcp\DTO\JsonRpcResponse;
 use Koriym\XdebugMcp\DTO\McpTool;
 use Koriym\XdebugMcp\DTO\ToolsListResult;
 use Koriym\XdebugMcp\Exceptions\FileNotFoundException;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\Exceptions\InvalidToolException;
+use RuntimeException;
 use Throwable;
 
 use function array_filter;
@@ -624,7 +626,12 @@ final class McpServer
             throw new InvalidToolException("Unknown tool: $toolName");
         }
 
-        return $this->extractResultText($this->invokeToolHandler($definition, null, $arguments));
+        $response = $this->invokeToolHandler($definition, null, $arguments);
+        if ($response->error instanceof JsonRpcError) {
+            throw new RuntimeException($response->error->message, $response->error->code);
+        }
+
+        return $this->extractResultText($response);
     }
 
     private function buildInstructions(): string

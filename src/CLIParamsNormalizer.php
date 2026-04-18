@@ -8,6 +8,7 @@ use JsonException;
 use Koriym\XdebugMcp\DTO\CliParams;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 
+use function array_is_list;
 use function array_slice;
 use function count;
 use function ctype_digit;
@@ -242,7 +243,7 @@ class CLIParamsNormalizer
             );
         }
 
-        if (! is_array($decoded)) {
+        if (! is_array($decoded) || ! array_is_list($decoded)) {
             throw new InvalidArgumentException(
                 "不正：--{$key}:json の値は配列である必要があります。",
             );

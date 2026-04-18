@@ -83,7 +83,7 @@ composer tests                   # cs + sa + phpunit (CI-equivalent)
 ./bin/xprofile  --json                     -- php script.php
 ./bin/xcoverage                            -- vendor/bin/phpunit
 ./bin/xback     --break="app.php:50"       -- php app.php
-./bin/xrepl     --break="script.php:42"    -- php script.php   # interactive mode of xstep
+./bin/xrepl     --break="script.php:42"    -- php script.php   # convenience wrapper (not an MCP tool)
 ```
 
 Demo targets live in `demo/` (`buggy.php`, `slow.php`, `coverage.php`).
