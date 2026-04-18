@@ -36,15 +36,17 @@ class CompareRunner
     ) {
     }
 
-    /** @return array{
-     *   $schema: string,
+    /**
+     * @return array{
+     *   '$schema': string,
      *   context?: string,
      *   breakpoint: array{file: string, line: int},
      *   run_a: array{label: string, command: string, status: string, location: array{file: string, line: int}, variables: array<string, string>},
      *   run_b: array{label: string, command: string, status: string, location: array{file: string, line: int}, variables: array<string, string>},
      *   diff: array{changed: array<string, array{a: string, b: string}>, unchanged: list<string>, only_in_a: list<string>, only_in_b: list<string>},
      *   analysis_hints: list<string>
-     * } */
+     * }
+     */
     public function run(): array
     {
         $resultA = $this->executeXstep($this->options['run_a']);
@@ -93,7 +95,7 @@ class CompareRunner
     /**
      * Execute xstep and return parsed JSON result
      *
-     * @return array<string, mixed>
+     * @return array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>}
      */
     protected function executeXstep(string $command): array
     {
@@ -120,7 +122,7 @@ class CompareRunner
             throw new RuntimeException("xstep returned no output for command: {$command}");
         }
 
-        /** @var array<string, mixed> $result */
+        /** @var array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result */
         $result = json_decode($jsonOutput, true, 512, JSON_THROW_ON_ERROR);
 
         return $result;
@@ -129,7 +131,7 @@ class CompareRunner
     /**
      * Extract variables from the first breakpoint in xstep result
      *
-     * @param array<string, mixed> $result
+     * @param array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result
      *
      * @return array<string, string>
      */
@@ -140,14 +142,13 @@ class CompareRunner
             return [];
         }
 
-        /** @var array<string, string> */
         return $breaks[0]['variables'] ?? [];
     }
 
     /**
      * Extract location from the first breakpoint in xstep result
      *
-     * @param array<string, mixed> $result
+     * @param array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result
      *
      * @return array{file: string, line: int}
      */
@@ -158,14 +159,13 @@ class CompareRunner
             return ['file' => '', 'line' => 0];
         }
 
-        /** @var array{file: string, line: int} */
         return $breaks[0]['location'] ?? ['file' => '', 'line' => 0];
     }
 
     /**
      * Extract execution status
      *
-     * @param array<string, mixed> $result
+     * @param array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result
      */
     private function extractStatus(array $result): string
     {
@@ -198,11 +198,11 @@ class CompareRunner
         }
 
         // Variables only in A
-        $onlyInA = array_values(array_keys(array_diff_key($varsA, $varsB)));
+        $onlyInA = array_keys(array_diff_key($varsA, $varsB));
         sort($onlyInA);
 
         // Variables only in B
-        $onlyInB = array_values(array_keys(array_diff_key($varsB, $varsA)));
+        $onlyInB = array_keys(array_diff_key($varsB, $varsA));
         sort($onlyInB);
 
         sort($unchanged);
