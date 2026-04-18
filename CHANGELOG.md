@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Provides analysis_hints for AI-readable summary
   - JSON schema: `docs/schemas/xcompare.json`
   - Use case: Debug edge cases by comparing normal vs problematic inputs
+  - **NEW**: `--compare-with=REF` mode to compare current code vs another git branch/commit
+    - `xcompare --break=file.php:25 --run="php test.php" --compare-with=main`
+    - Automatically creates temporary worktree, runs comparison, cleans up
+    - Perfect for "before vs after" debugging
 
 ## [0.8.0] - 2026-01-30
 

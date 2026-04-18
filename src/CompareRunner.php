@@ -9,14 +9,17 @@ use RuntimeException;
 use function array_diff_key;
 use function array_intersect_key;
 use function array_keys;
-use function array_values;
 use function escapeshellarg;
 use function exec;
+use function getcwd;
 use function implode;
 use function json_decode;
 use function json_encode;
 use function preg_match;
 use function sort;
+use function str_replace;
+use function sys_get_temp_dir;
+use function uniqid;
 
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
@@ -30,7 +33,9 @@ use const JSON_UNESCAPED_UNICODE;
  */
 class CompareRunner
 {
-    /** @param array{break: string, run_a: string, run_b: string, label_a?: string, label_b?: string, context?: string, steps?: int, include_vendor?: string} $options */
+    private string|null $worktreePath = null;
+
+    /** @param array{break: string, run_a?: string, run_b?: string, run?: string, compare_with?: string, label_a?: string, label_b?: string, context?: string, steps?: int, include_vendor?: string} $options */
     public function __construct(
         private readonly array $options,
     ) {
@@ -49,8 +54,14 @@ class CompareRunner
      */
     public function run(): array
     {
-        $resultA = $this->executeXstep($this->options['run_a']);
-        $resultB = $this->executeXstep($this->options['run_b']);
+        [$commandA, $commandB, $labelA, $labelB] = $this->resolveCommands();
+
+        try {
+            $resultA = $this->executeXstep($commandA);
+            $resultB = $this->executeXstep($commandB);
+        } finally {
+            $this->cleanupWorktree();
+        }
 
         $varsA = $this->extractVariables($resultA);
         $varsB = $this->extractVariables($resultB);
@@ -68,15 +79,15 @@ class CompareRunner
             '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xcompare.json',
             'breakpoint' => $breakSpec,
             'run_a' => [
-                'label' => $this->options['label_a'] ?? $this->options['run_a'],
-                'command' => $this->options['run_a'],
+                'label' => $labelA,
+                'command' => $commandA,
                 'status' => $statusA,
                 'location' => $locationA,
                 'variables' => $varsA,
             ],
             'run_b' => [
-                'label' => $this->options['label_b'] ?? $this->options['run_b'],
-                'command' => $this->options['run_b'],
+                'label' => $labelB,
+                'command' => $commandB,
                 'status' => $statusB,
                 'location' => $locationB,
                 'variables' => $varsB,
@@ -90,6 +101,96 @@ class CompareRunner
         }
 
         return $output;
+    }
+
+    /**
+     * Resolve commands and labels based on mode (run_a/run_b or compare_with)
+     *
+     * @return array{0: string, 1: string, 2: string, 3: string} [commandA, commandB, labelA, labelB]
+     */
+    private function resolveCommands(): array
+    {
+        if (isset($this->options['compare_with'])) {
+            return $this->resolveCompareWithMode();
+        }
+
+        return $this->resolveExplicitMode();
+    }
+
+    /**
+     * Resolve for --compare-with mode (same command, different git refs)
+     *
+     * @return array{0: string, 1: string, 2: string, 3: string}
+     */
+    private function resolveCompareWithMode(): array
+    {
+        $run = $this->options['run'] ?? '';
+        if ($run === '') {
+            throw new RuntimeException('--run is required when using --compare-with');
+        }
+
+        $ref = $this->options['compare_with'] ?? '';
+        $this->worktreePath = $this->createWorktree($ref);
+
+        $cwd = (string) getcwd();
+        $commandA = $run;
+        $commandB = str_replace($cwd, $this->worktreePath, $run);
+
+        $labelA = $this->options['label_a'] ?? 'HEAD (current)';
+        $labelB = $this->options['label_b'] ?? $ref;
+
+        return [$commandA, $commandB, $labelA, $labelB];
+    }
+
+    /**
+     * Resolve for explicit --run-a/--run-b mode
+     *
+     * @return array{0: string, 1: string, 2: string, 3: string}
+     */
+    private function resolveExplicitMode(): array
+    {
+        $commandA = $this->options['run_a'] ?? '';
+        $commandB = $this->options['run_b'] ?? '';
+
+        if ($commandA === '' || $commandB === '') {
+            throw new RuntimeException('--run-a and --run-b are required');
+        }
+
+        $labelA = $this->options['label_a'] ?? $commandA;
+        $labelB = $this->options['label_b'] ?? $commandB;
+
+        return [$commandA, $commandB, $labelA, $labelB];
+    }
+
+    /**
+     * Create a temporary git worktree for the specified ref
+     */
+    private function createWorktree(string $ref): string
+    {
+        $tempDir = sys_get_temp_dir() . '/xcompare-' . uniqid();
+
+        $output = [];
+        $exitCode = 0;
+        exec('git worktree add ' . escapeshellarg($tempDir) . ' ' . escapeshellarg($ref) . ' 2>&1', $output, $exitCode);
+
+        if ($exitCode !== 0) {
+            throw new RuntimeException('Failed to create worktree for ref: ' . $ref . "\n" . implode("\n", $output));
+        }
+
+        return $tempDir;
+    }
+
+    /**
+     * Clean up the temporary worktree if it was created
+     */
+    private function cleanupWorktree(): void
+    {
+        if ($this->worktreePath === null) {
+            return;
+        }
+
+        exec('git worktree remove ' . escapeshellarg($this->worktreePath) . ' --force 2>/dev/null');
+        $this->worktreePath = null;
     }
 
     /**
