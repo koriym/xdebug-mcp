@@ -10,6 +10,8 @@ Design principle: **no var_dump, no code modification.** AI assistants should dr
 
 ## Architecture
 
+For the full developer-facing architecture reference (component layout, DBGp lifecycle, coverage/trace formats, configuration), see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). The summary below is the minimum an AI harness needs.
+
 ### Execution model
 
 Each CLI tool is a thin wrapper that:

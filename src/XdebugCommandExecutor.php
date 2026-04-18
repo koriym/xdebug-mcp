@@ -34,9 +34,25 @@ final class XdebugCommandExecutor
 
     public static function findLatestArtifact(string $pattern, string $errorMessage): string
     {
+        $file = self::findLatestArtifactOrNull($pattern);
+        if ($file === null) {
+            throw new RuntimeException($errorMessage);
+        }
+
+        return $file;
+    }
+
+    /**
+     * Return the newest file matching $pattern, or null if nothing matches.
+     *
+     * Same scan as findLatestArtifact() but non-throwing, for callers that treat
+     * "no artifact yet" as a normal state (e.g. the CLI runner before a script produces output).
+     */
+    public static function findLatestArtifactOrNull(string $pattern): string|null
+    {
         $files = glob($pattern);
         if ($files === [] || $files === false) {
-            throw new RuntimeException($errorMessage);
+            return null;
         }
 
         usort($files, static fn (string $a, string $b): int => filemtime($b) <=> filemtime($a));

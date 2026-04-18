@@ -22,8 +22,21 @@ use function str_contains;
 use function strlen;
 use function trim;
 
+/**
+ * Wraps a connected DBGp socket and owns the transaction-id lifecycle.
+ *
+ * Socket ownership: the caller (typically DebugServer) retains ownership of the
+ * underlying Socket. This class will not close the socket; the caller is
+ * responsible for closing it after the debug session ends.
+ */
 final class DbgpClient
 {
+    /**
+     * @param Socket       $socket        Already-connected DBGp socket. The caller owns its lifetime.
+     * @param float        $readTimeout   Per-read timeout in seconds; 0.0 disables the timeout.
+     * @param Closure|null $logger        Optional logger invoked for protocol-level warnings.
+     * @param int          $transactionId Initial DBGp transaction id (incremented per command).
+     */
     public function __construct(
         private readonly Socket $socket,
         private readonly float $readTimeout = 0.0,

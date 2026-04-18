@@ -11,12 +11,20 @@ use function basename;
 use function escapeshellarg;
 use function explode;
 use function file;
-use function file_exists;
 use function implode;
 use function in_array;
+use function ini_get;
+use function is_file;
+use function is_readable;
 use function is_string;
+use function realpath;
+use function rtrim;
 use function shell_exec;
+use function str_starts_with;
+use function sys_get_temp_dir;
 use function trim;
+
+use const DIRECTORY_SEPARATOR;
 
 /**
  * Optional adapter for Claude-specific trace analysis.
@@ -32,6 +40,19 @@ use function trim;
  */
 final class ClaudeTraceAnalyzer
 {
+    /** @var Closure(string): (string|null) */
+    private readonly Closure $commandRunner;
+
+    /** @param (Closure(string): (string|null))|null $commandRunner Overridable for tests; defaults to shell_exec. */
+    public function __construct(Closure|null $commandRunner = null)
+    {
+        $this->commandRunner = $commandRunner ?? static function (string $command): string|null {
+            $result = shell_exec($command);
+
+            return is_string($result) ? $result : null;
+        };
+    }
+
     /** @param DebugContext $context */
     public function analyze(array $context, string $userArgs, Closure $logger): void
     {
@@ -41,7 +62,7 @@ final class ClaudeTraceAnalyzer
         $claudeCommand = 'claude --print ' . escapeshellarg($prompt);
         $logger('💭 Executing: ' . $claudeCommand);
 
-        $output = shell_exec($claudeCommand . ' 2>&1');
+        $output = ($this->commandRunner)($claudeCommand . ' 2>&1');
         if (! is_string($output) || trim($output) === '') {
             $logger('❌ Claude analysis failed or produced no output');
 
@@ -65,7 +86,7 @@ final class ClaudeTraceAnalyzer
         $prompt = "Analyze PHP debugging session for {$targetScript}:\n\n";
 
         $traceFile = $context['trace_file'];
-        if (is_string($traceFile) && $traceFile !== '' && file_exists($traceFile)) {
+        if (is_string($traceFile) && $traceFile !== '' && $this->isSafeTraceFile($traceFile)) {
             $prompt .= "## Trace Analysis\n";
             $prompt .= "Please analyze the execution trace: {$traceFile}\n\n";
 
@@ -105,5 +126,42 @@ final class ClaudeTraceAnalyzer
         $prompt .= "4. Performance insights from trace data\n";
 
         return $prompt . "5. Suggested next debugging steps or code fixes\n";
+    }
+
+    /**
+     * Accept only regular, readable files inside the Xdebug output directory or the system temp dir.
+     *
+     * Trace files are produced by DebugServer/XdebugTracer into xdebug.output_dir. Restricting
+     * reads to that directory prevents an attacker-controlled context from leaking arbitrary
+     * filesystem contents into the Claude prompt.
+     */
+    private function isSafeTraceFile(string $traceFile): bool
+    {
+        $resolved = realpath($traceFile);
+        if ($resolved === false || ! is_file($resolved) || ! is_readable($resolved)) {
+            return false;
+        }
+
+        $allowedRoots = [];
+        $xdebugOutputDir = ini_get('xdebug.output_dir');
+        if (is_string($xdebugOutputDir) && $xdebugOutputDir !== '') {
+            $allowedRoot = realpath($xdebugOutputDir);
+            if (is_string($allowedRoot)) {
+                $allowedRoots[] = $allowedRoot;
+            }
+        }
+
+        $tempRoot = realpath(sys_get_temp_dir());
+        if (is_string($tempRoot)) {
+            $allowedRoots[] = $tempRoot;
+        }
+
+        foreach ($allowedRoots as $root) {
+            if (str_starts_with($resolved, rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

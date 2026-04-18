@@ -15,15 +15,12 @@ use function array_slice;
 use function array_splice;
 use function escapeshellarg;
 use function file_exists;
-use function filemtime;
 use function fwrite;
 use function getenv;
-use function glob;
 use function implode;
 use function passthru;
 use function preg_match;
 use function trim;
-use function usort;
 
 use const STDERR;
 
@@ -169,14 +166,7 @@ class XdebugRunner
      */
     public function getLatestTraceFile(): string|null
     {
-        $traceFiles = glob($this->outputDir . '/trace.*.xt');
-        if ($traceFiles === [] || $traceFiles === false) {
-            return null;
-        }
-
-        usort($traceFiles, static fn ($a, $b): int => filemtime($b) - filemtime($a));
-
-        return $traceFiles[0];
+        return XdebugCommandExecutor::findLatestArtifactOrNull($this->outputDir . '/trace.*.xt');
     }
 
     /**
@@ -184,14 +174,7 @@ class XdebugRunner
      */
     public function getLatestProfileFile(): string|null
     {
-        $profileFiles = glob($this->outputDir . '/cachegrind.out.*');
-        if ($profileFiles === [] || $profileFiles === false) {
-            return null;
-        }
-
-        usort($profileFiles, static fn ($a, $b): int => filemtime($b) - filemtime($a));
-
-        return $profileFiles[0];
+        return XdebugCommandExecutor::findLatestArtifactOrNull($this->outputDir . '/cachegrind.out.*');
     }
 
     /**
