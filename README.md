@@ -103,6 +103,9 @@ Run the demo examples to see each tool in action:
 
 # Compare variable states with different inputs
 ./bin/xcompare --break="demo/buggy.php:22" --run-a="php demo/buggy.php 10" --run-b="php demo/buggy.php 0"
+
+# Compare current code vs another branch
+./bin/xcompare --break="src/calc.php:25" --run="php calc.php 10" --compare-with=main
 ```
 
 Each command outputs structured JSON data that AI can analyze to provide debugging insights.
@@ -130,7 +133,7 @@ flowchart LR
 | `xprofile` | Performance profiling | "Find what's making this endpoint slow" |
 | `xcoverage` | Code coverage analysis | "Which lines aren't covered by tests?" |
 | `xback` | Call stack at breakpoint | "Show me how we got to this error" |
-| `xcompare` | Compare variable states across two runs | "Compare what happens with input 10 vs 0" |
+| `xcompare` | Compare variable states across two runs | "Compare input 10 vs 0" or "Compare with main branch" |
 
 ## CLI Usage
 
@@ -154,6 +157,9 @@ xback --break='app.php:50' -- php app.php
 
 # Compare variables at breakpoint with different inputs
 xcompare --break='calc.php:25' --run-a='php calc.php 10' --run-b='php calc.php 0'
+
+# Compare current code vs main branch
+xcompare --break='calc.php:25' --run='php calc.php 10' --compare-with=main
 ```
 
 Run `--help` on any tool for detailed options.
