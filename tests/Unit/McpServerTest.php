@@ -235,7 +235,13 @@ class McpServerTest extends TestCase
             $toolArgumentNames = array_values(array_filter($argumentNames, static fn (string $name): bool => $name !== 'last'));
 
             $this->assertSame($toolsByName[$prompt['name']], $toolArgumentNames);
-            $this->assertContains('last', $argumentNames);
+
+            // xback doesn't expose the 'last' prompt argument; every other tool does.
+            if ($prompt['name'] === 'xback') {
+                $this->assertNotContains('last', $argumentNames);
+            } else {
+                $this->assertContains('last', $argumentNames);
+            }
         }
     }
 

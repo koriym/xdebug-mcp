@@ -29,6 +29,7 @@ final class ToolDefinition
         public readonly string $description,
         public readonly array $inputSchema,
         public readonly string $handlerMethod,
+        public readonly bool $supportsLast = true,
     ) {
     }
 
@@ -55,11 +56,13 @@ final class ToolDefinition
             ];
         }
 
-        $arguments[] = [
-            'name' => 'last',
-            'description' => 'Use settings from last execution (true/false)',
-            'required' => false,
-        ];
+        if ($this->supportsLast) {
+            $arguments[] = [
+                'name' => 'last',
+                'description' => 'Use settings from last execution (true/false)',
+                'required' => false,
+            ];
+        }
 
         return [
             'name' => $this->name,

@@ -120,7 +120,6 @@ final class DebugServer
     private DbgpClient|null $dbgpClient = null;
     private ServerSocket|null $server = null;
     private Process|null $process = null;
-    private int $transactionId = 1;
     private string|null $traceFile = null;
     private SocketHttpServer|null $httpServer = null;
     private bool $httpMode = false;
@@ -222,7 +221,6 @@ final class DebugServer
                 $socket,
                 (float) ($this->options['readTimeout'] ?? self::DEFAULT_STEP_TIMEOUT),
                 fn (string $message) => $this->log($message),
-                $this->transactionId,
             );
             $this->dbgpClient = $dbgpClient;
 
@@ -788,25 +786,13 @@ final class DebugServer
      *
      * @param array<string, string|int> $params
      */
-    private function sendCommand(string $command, array $params = []): string
+    private function sendCommand(string $command, array $params = [], string|null $data = null): string
     {
         if (! $this->dbgpClient instanceof DbgpClient) {
             throw new RuntimeException('No active Xdebug connection');
         }
 
-        return $this->dbgpClient->sendCommand($command, $params);
-    }
-
-    /**
-     * Get next transaction ID atomically
-     */
-    private function getNextTransactionId(): int
-    {
-        if ($this->dbgpClient instanceof DbgpClient) {
-            return $this->dbgpClient->getNextTransactionId();
-        }
-
-        return $this->transactionId++;
+        return $this->dbgpClient->sendCommand($command, $params, $data);
     }
 
     /**
@@ -814,13 +800,7 @@ final class DebugServer
      */
     public function isConnected(): bool
     {
-        if ($this->dbgpClient instanceof DbgpClient) {
-            return $this->dbgpClient->isConnected();
-        }
-
-        return $this->xdebugSocket instanceof Socket
-            && ! $this->xdebugSocket->isClosed()
-            && $this->xdebugSocket->isWritable();
+        return $this->dbgpClient instanceof DbgpClient && $this->dbgpClient->isConnected();
     }
 
     /**
@@ -1012,9 +992,7 @@ final class DebugServer
         }
 
         // For complex expressions, use eval with proper encoding
-        $encoded = base64_encode($expression);
-
-        return $this->sendCommand('eval', ['--' => $encoded]);
+        return $this->sendCommand('eval', [], base64_encode($expression));
     }
 
     /**
@@ -1162,7 +1140,7 @@ final class DebugServer
     {
         // いま開いているトレースを閉じて、ファイル名を返す
         $code = base64_encode('return function_exists("xdebug_stop_trace") ? xdebug_stop_trace() : null;');
-        $resp = $this->sendCommand('eval', ['--' => $code]);
+        $resp = $this->sendCommand('eval', [], $code);
         $xml  = $this->parseXmlResponse($resp);
         if (! $xml || (! property_exists($xml, 'property') || $xml->property === null)) {
             return null;
@@ -1175,7 +1153,7 @@ final class DebugServer
 
         // すぐ次の区間のために再開しておくと連続収集が楽
         $restart = base64_encode('return function_exists("xdebug_start_trace") ? xdebug_start_trace() : null;');
-        $this->sendCommand('eval', ['--' => $restart]);
+        $this->sendCommand('eval', [], $restart);
 
         return $path !== '' ? $path : null;
     }
@@ -2507,7 +2485,7 @@ final class DebugServer
 
         try {
             $expression = "json_encode({$varName}, JSON_UNESCAPED_UNICODE)";
-            $response = $this->sendCommand('eval', ['--' => base64_encode($expression)]);
+            $response = $this->sendCommand('eval', [], base64_encode($expression));
 
             if ($response === '' || $response === '0') {
                 return null;
@@ -2853,7 +2831,7 @@ final class DebugServer
             }
 
             // Send status command to get current location
-            $response = $this->sendCommand('status -i ' . $this->getNextTransactionId());
+            $response = $this->sendCommand('status');
 
             return $this->extractLocationFromBreakResponse($response);
         } catch (Throwable $e) {

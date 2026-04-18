@@ -233,6 +233,7 @@ final class McpServer
                     'required' => ['script'],
                 ],
                 'executeXBacktrace',
+                supportsLast: false,
             ),
         ];
 

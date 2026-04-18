@@ -44,7 +44,7 @@ final class DbgpClient
     }
 
     /** @param array<string, string|int> $params */
-    public function sendCommand(string $command, array $params = []): string
+    public function sendCommand(string $command, array $params = [], string|null $data = null): string
     {
         if (! $this->isConnected()) {
             throw new RuntimeException('No active Xdebug connection');
@@ -59,6 +59,10 @@ final class DbgpClient
 
         foreach ($params as $key => $value) {
             $fullCommand .= " -{$key} {$value}";
+        }
+
+        if ($data !== null) {
+            $fullCommand .= " -- {$data}";
         }
 
         $fullCommand .= "\0";
