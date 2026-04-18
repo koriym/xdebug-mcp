@@ -4,7 +4,7 @@
 
 **Debug PHP with Natural Language — No var_dump(), No Guesswork**
 
-AI-powered PHP debugging tools using Xdebug's runtime analysis. Works with Claude Code (plugin), Cursor, Windsurf (MCP), and CLI.
+AI-powered PHP debugging tools using Xdebug's runtime analysis. Works with Claude Code (plugin), Codex (MCP or local skill), and MCP-compatible clients.
 
 [![AI Native](https://img.shields.io/badge/AI_Native-YES-green)](https://github.com/koriym/xdebug-mcp)
 [![Runtime Data](https://img.shields.io/badge/Runtime_Data-YES-green)](https://github.com/koriym/xdebug-mcp)
@@ -38,7 +38,7 @@ The AI automatically selects the appropriate tool, executes it, and analyzes the
 
 - PHP 8.1+
 - [Xdebug 3.x](https://xdebug.org/docs/install) extension (installed, but **not** enabled by default)
-- AI assistant: Claude Code (plugin), Cursor/Windsurf (MCP), or CLI
+- AI assistant: Claude Code (plugin), Codex (MCP or local skill), or another MCP-compatible client
 
 > **💡 Performance Tip:** Keep Xdebug disabled in php.ini for daily use. This tool loads Xdebug on-demand only when needed.
 
@@ -56,15 +56,37 @@ composer global require koriym/xdebug-mcp
 ~/.composer/vendor/bin/check-env
 ```
 
-### 3. Setup AI Integration
+### 3. Choose Your Integration
 
-**Claude Code:**
+#### Claude Code
+
 ```text
 /plugin marketplace add koriym/xdebug-mcp
 /plugin install xdebug@xdebug-mcp
 ```
 
-**Cursor / Windsurf:** See [MCP Configuration](#mcp-configuration) below.
+#### Codex (Recommended: Local Skill)
+
+If you prefer a local skill or slash-command workflow, install the bundled skill from `skills/xdebug/SKILL.md`. For example on macOS/Linux:
+
+```bash
+mkdir -p ~/.codex/skills
+ln -s "$(pwd)/skills/xdebug" ~/.codex/skills/xdebug
+```
+
+Restart Codex after adding the skill.
+
+#### Codex (Alternative: MCP)
+
+```bash
+codex mcp add xdebug -- php ~/.composer/vendor/bin/xdebug-mcp
+```
+
+Restart Codex after adding the MCP server.
+
+#### MCP-Compatible Clients
+
+See [MCP Configuration](#mcp-configuration) below.
 
 ### 4. Restart your AI assistant and try it
 
@@ -72,14 +94,16 @@ composer global require koriym/xdebug-mcp
 # Download demo files
 git clone --depth 1 https://github.com/koriym/xdebug-mcp.git /tmp/xdebug-demo
 
-# Ask Claude to debug
+# Ask your AI assistant to debug
 "Debug /tmp/xdebug-demo/demo/buggy.php and find the bugs"
 ```
 
-Or use the skill directly:
+If your assistant supports slash commands and the `xdebug` skill is installed, you can invoke it directly:
 ```text
 /xdebug
 ```
+
+The bundled skill definition lives at `skills/xdebug/SKILL.md`.
 
 ## Try CLI Tools
 
@@ -153,7 +177,7 @@ Run `--help` on any tool for detailed options.
 
 ## MCP Configuration
 
-For Cursor, Windsurf, and other MCP-compatible tools.
+For generic MCP-compatible tools.
 
 Create `.mcp.json` in your project root:
 
@@ -256,7 +280,7 @@ Looking for a different approach? [kpanuragh/xdebug-mcp](https://github.com/kpan
 
 ## Why "xdebug-mcp"?
 
-This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. While MCP remains supported for tools like Cursor and Windsurf, we now recommend the **plugin approach** for Claude Code users — it's simpler and requires no MCP configuration.
+This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. MCP remains supported, but we now recommend the **plugin approach** for Claude Code users and the local skill workflow for Codex when available.
 
 The CLI tools (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`) work independently of both MCP and plugins.
 

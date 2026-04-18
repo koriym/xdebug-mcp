@@ -61,7 +61,7 @@
             "psalm --clear-cache"
         ],
         "sa": [
-            "phpstan"
+            "phpstan --memory-limit=1G"
         ],
         "test-json": "./bin/test-json",
         "install-mcp": "./bin/check-env --install-mcp",

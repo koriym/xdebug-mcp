@@ -10,7 +10,6 @@ use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use RuntimeException;
 
 use function array_column;
-use function array_map;
 use function array_merge;
 use function array_slice;
 use function array_sum;
@@ -21,9 +20,7 @@ use function escapeshellarg;
 use function explode;
 use function file_exists;
 use function file_get_contents;
-use function filemtime;
 use function filesize;
-use function glob;
 use function implode;
 use function ini_get;
 use function is_array;
@@ -43,7 +40,6 @@ use function substr;
 use function substr_count;
 use function trim;
 use function uasort;
-use function usort;
 
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
@@ -90,28 +86,14 @@ class XdebugProfiler
             array_unshift($xdebugOptions, trim($xdebugFlag));
         }
 
-        // Combine all arguments
         $allArgs = array_merge($xdebugOptions, [$targetFile], $phpArgs);
-        $cmd = 'php ' . implode(' ', array_map(escapeshellarg(...), $allArgs));
+        $cmd = XdebugCommandExecutor::buildPhpCommand($allArgs);
+        XdebugCommandExecutor::executeAndAssertSuccess($cmd);
 
-        // Execute with passthru to show output
-        $exitCode = 0;
-        passthru($cmd, $exitCode);
-
-        if ($exitCode !== 0) {
-            throw new RuntimeException("PHP execution failed with exit code: $exitCode");
-        }
-
-        // Find the created profile file (Xdebug generates its own filename)
-        $profileFiles = glob("{$xdebugOutputDir}/cachegrind.out.*");
-        if ($profileFiles === [] || $profileFiles === false) {
-            throw new RuntimeException('Profile file not created. Check Xdebug installation.');
-        }
-
-        // Get the most recent profile file
-        usort($profileFiles, static fn ($a, $b): int => filemtime($b) - filemtime($a));
-
-        return $profileFiles[0];
+        return XdebugCommandExecutor::findLatestArtifact(
+            "{$xdebugOutputDir}/cachegrind.out.*",
+            'Profile file not created. Check Xdebug installation.',
+        );
     }
 
     public function parseProfileFile(string $profileFile): DTO\ProfileStatistics

@@ -58,6 +58,9 @@ final class McpServer
 {
     /** @var array<string, McpTool> */
     protected array $tools = [];
+
+    /** @var array<string, ToolDefinition> */
+    private array $toolDefinitions = [];
     private bool $debugMode = false;
     private readonly string $binDir;
 
@@ -90,8 +93,8 @@ final class McpServer
 
     private function initializeTools(): void
     {
-        $this->tools = [
-            'xtrace' => new McpTool(
+        $this->toolDefinitions = [
+            'xtrace' => new ToolDefinition(
                 'xtrace',
                 'Trace PHP execution flow. Returns JSON with $schema URL for semantic details and AI analysis strategies. Key fields: {lines, functions, max_depth, db_queries}. Vendor excluded by default.',
                 [
@@ -114,8 +117,9 @@ final class McpServer
                     ],
                     'required' => ['script'],
                 ],
+                'executeXTrace',
             ),
-            'xprofile' => new McpTool(
+            'xprofile' => new ToolDefinition(
                 'xprofile',
                 'Profile performance bottlenecks. Returns JSON with $schema URL for semantic details and AI analysis strategies. Key fields: {time_ms, memory_mb, bottlenecks}. Vendor excluded by default.',
                 [
@@ -138,8 +142,9 @@ final class McpServer
                     ],
                     'required' => ['script'],
                 ],
+                'executeXProfile',
             ),
-            'xstep' => new McpTool(
+            'xstep' => new ToolDefinition(
                 'xstep',
                 'Step debugging with breakpoints. Returns JSON with $schema URL for semantic details. Key fields: {breaks: [{step, location, variables}]}. Variables show diff only. Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
                 [
@@ -172,8 +177,9 @@ final class McpServer
                     ],
                     'required' => ['script'],
                 ],
+                'executeXDebug',
             ),
-            'xcoverage' => new McpTool(
+            'xcoverage' => new ToolDefinition(
                 'xcoverage',
                 'Analyze test coverage. Returns JSON with $schema URL for semantic details. Key fields: {summary: {coverage_percent}, uncovered: {file: [lines]}}. Shows only uncovered lines. Vendor excluded by default.',
                 [
@@ -196,8 +202,9 @@ final class McpServer
                     ],
                     'required' => ['script'],
                 ],
+                'executeXCoverage',
             ),
-            'xback' => new McpTool(
+            'xback' => new ToolDefinition(
                 'xback',
                 'Capture call stack (backtrace) at specific line. Returns JSON with $schema URL for semantic details. Key fields: {backtrace: [{file, line, function, args}]}.',
                 [
@@ -225,8 +232,14 @@ final class McpServer
                     ],
                     'required' => ['script'],
                 ],
+                'executeXBacktrace',
             ),
         ];
+
+        $this->tools = array_map(
+            static fn (ToolDefinition $definition): McpTool => $definition->toMcpTool(),
+            $this->toolDefinitions,
+        );
     }
 
     /**
@@ -372,7 +385,7 @@ final class McpServer
                 'name' => 'xdebug-mcp-server',
                 'version' => '2.0.0',
             ],
-            'instructions' => 'PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, or analyze coverage of PHP code. Tools: xtrace (execution flow), xstep (breakpoint debugging), xprofile (performance), xcoverage (test coverage), xback (stack traces).',
+            'instructions' => $this->buildInstructions(),
         ]));
     }
 
@@ -391,148 +404,10 @@ final class McpServer
     private function handlePromptsList(string|int|null $id): JsonRpcResponse
     {
         return JsonRpcResponse::success($id, new GenericResult([
-            'prompts' => [
-                [
-                    'name' => 'xtrace',
-                    'description' => 'Trace PHP execution flow. Returns JSON with $schema URL for semantic details and AI analysis strategies. Key fields: {lines, functions, max_depth, db_queries}. Vendor excluded by default.',
-                    'arguments' => [
-                        [
-                            'name' => 'script',
-                            'description' => 'PHP script to trace (e.g., "vendor/bin/phpunit --filter testMethod")',
-                            'required' => true,
-                        ],
-                        [
-                            'name' => 'context',
-                            'description' => 'Context description for AI analysis (e.g., "Debug login failure")',
-                            'required' => false,
-                        ],
-                        [
-                            'name' => 'include_vendor',
-                            'description' => 'Include vendor packages in trace (e.g., "bear/*,ray/di" or "*/*" for all)',
-                            'required' => false,
-                        ],
-                        [
-                            'name' => 'last',
-                            'description' => 'Use settings from last execution (true/false)',
-                            'required' => false,
-                        ],
-                    ],
-                ],
-                [
-                    'name' => 'xstep',
-                    'description' => 'Step debugging with breakpoints. Returns JSON with $schema URL for semantic details. Key fields: {breaks: [{step, location, variables}]}. Variables show diff only. Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
-                    'arguments' => [
-                        [
-                            'name' => 'script',
-                            'description' => 'PHP script to debug (e.g., "vendor/bin/phpunit --filter testMethod")',
-                            'required' => true,
-                        ],
-                        [
-                            'name' => 'breakpoints',
-                            'description' => 'Breakpoints: "file.php:line" or "file.php:line:$var==null" (conditional). Multiple: "a.php:10,b.php:20"',
-                            'required' => false,
-                        ],
-                        [
-                            'name' => 'steps',
-                            'description' => 'Max steps to record after breakpoint (default: 100)',
-                            'required' => false,
-                        ],
-                        [
-                            'name' => 'context',
-                            'description' => 'Context description for debugging session',
-                            'required' => false,
-                        ],
-                        [
-                            'name' => 'include_vendor',
-                            'description' => 'Include vendor packages in trace (e.g., "bear/*,ray/di" or "*/*" for all)',
-                            'required' => false,
-                        ],
-                        [
-                            'name' => 'last',
-                            'description' => 'Use settings from last execution (true/false)',
-                            'required' => false,
-                        ],
-                    ],
-                ],
-                [
-                    'name' => 'xprofile',
-                    'description' => 'Profile performance bottlenecks. Returns JSON with $schema URL for semantic details and AI analysis strategies. Key fields: {time_ms, memory_mb, bottlenecks}. Vendor excluded by default.',
-                    'arguments' => [
-                        [
-                            'name' => 'script',
-                            'description' => 'PHP script to profile (e.g., "vendor/bin/phpunit --filter testMethod")',
-                            'required' => true,
-                        ],
-                        [
-                            'name' => 'context',
-                            'description' => 'Context description for performance analysis',
-                            'required' => false,
-                        ],
-                        [
-                            'name' => 'include_vendor',
-                            'description' => 'Include vendor packages in profile (e.g., "bear/*,ray/di" or "*/*" for all)',
-                            'required' => false,
-                        ],
-                        [
-                            'name' => 'last',
-                            'description' => 'Use settings from last execution (true/false)',
-                            'required' => false,
-                        ],
-                    ],
-                ],
-                [
-                    'name' => 'xcoverage',
-                    'description' => 'Analyze test coverage. Returns JSON with $schema URL for semantic details. Key fields: {summary: {coverage_percent}, uncovered: {file: [lines]}}. Shows only uncovered lines. Vendor excluded by default.',
-                    'arguments' => [
-                        [
-                            'name' => 'script',
-                            'description' => 'PHP script to analyze (e.g., "vendor/bin/phpunit" or "vendor/bin/phpunit --filter testMethod")',
-                            'required' => true,
-                        ],
-                        [
-                            'name' => 'context',
-                            'description' => 'Context description for coverage analysis',
-                            'required' => false,
-                        ],
-                        [
-                            'name' => 'include_vendor',
-                            'description' => 'Include vendor packages in coverage (e.g., "bear/*,ray/di" or "*/*" for all)',
-                            'required' => false,
-                        ],
-                        [
-                            'name' => 'last',
-                            'description' => 'Use settings from last execution (true/false)',
-                            'required' => false,
-                        ],
-                    ],
-                ],
-                [
-                    'name' => 'xback',
-                    'description' => 'Capture call stack (backtrace) at specific line. Returns JSON with $schema URL for semantic details. Key fields: {backtrace: [{file, line, function, args}]}.',
-                    'arguments' => [
-                        [
-                            'name' => 'script',
-                            'description' => 'PHP script to get backtrace from (e.g., "vendor/bin/phpunit --filter testMethod")',
-                            'required' => true,
-                        ],
-                        [
-                            'name' => 'breakpoint',
-                            'description' => 'Line to capture backtrace (e.g., "file.php:50")',
-                            'required' => false,
-                        ],
-                        [
-                            'name' => 'depth',
-                            'description' => 'Max stack depth (default: 10)',
-                            'required' => false,
-                        ],
-                        [
-                            'name' => 'context',
-                            'description' => 'Context description for backtrace analysis',
-                            'required' => false,
-                        ],
-                    ],
-                ],
-            ],
+            'prompts' => array_map(
+                static fn (ToolDefinition $definition): array => $definition->toPromptDefinition(),
+                array_values($this->toolDefinitions),
+            ),
         ]));
     }
 
@@ -542,6 +417,11 @@ final class McpServer
         $promptName = isset($params['name']) && is_string($params['name']) ? $params['name'] : '';
         /** @var array<string, string> $args */
         $args = isset($params['arguments']) && is_array($params['arguments']) ? $params['arguments'] : [];
+        $definition = $this->toolDefinitions[$promptName] ?? null;
+
+        if (! $definition instanceof ToolDefinition) {
+            return JsonRpcResponse::error($id, -32601, "Unknown prompt: {$promptName}");
+        }
 
         // Check if arguments contain CLI-style string that needs normalization
         if (isset($args['cli'])) {
@@ -557,14 +437,7 @@ final class McpServer
             }
         }
 
-        return match ($promptName) {
-            'xtrace' => $this->executeXTrace($id, $args),
-            'xstep' => $this->executeXDebug($id, $args),
-            'xprofile' => $this->executeXProfile($id, $args),
-            'xcoverage' => $this->executeXCoverage($id, $args),
-            'xback' => $this->executeXBacktrace($id, $args),
-            default => JsonRpcResponse::error($id, -32601, "Unknown prompt: {$promptName}"),
-        };
+        return $this->invokeToolHandler($definition, $id, $args);
     }
 
     /**
@@ -581,23 +454,12 @@ final class McpServer
             return $args;
         }
 
-        $mapping = match ($promptName) {
-            'xtrace', 'xprofile' => ['script', 'context', 'include_vendor'],
-            'xstep' => ['script', 'breakpoints', 'steps', 'context', 'include_vendor'],
-            'xcoverage' => ['script', 'context', 'include_vendor'],
-            'xback' => ['script', 'breakpoint', 'depth', 'context'],
-            default => [],
-        };
-
-        foreach ($positionalArgs as $index => $value) {
-            if (! isset($mapping[$index])) {
-                continue;
-            }
-
-            $args[$mapping[$index]] = $value;
+        $definition = $this->toolDefinitions[$promptName] ?? null;
+        if (! $definition instanceof ToolDefinition) {
+            return $args;
         }
 
-        return $args;
+        return $definition->mapPositionalArgs($args, $positionalArgs);
     }
 
     /**
@@ -756,35 +618,45 @@ final class McpServer
     /** @param array<string, string> $arguments */
     private function executeToolCall(string $toolName, array $arguments): string
     {
-        switch ($toolName) {
-            case 'xtrace':
-                $result = $this->executeXTrace(null, $arguments);
-
-                return $this->extractResultText($result);
-
-            case 'xprofile':
-                $result = $this->executeXProfile(null, $arguments);
-
-                return $this->extractResultText($result);
-
-            case 'xstep':
-                $result = $this->executeXDebug(null, $arguments);
-
-                return $this->extractResultText($result);
-
-            case 'xcoverage':
-                $result = $this->executeXCoverage(null, $arguments);
-
-                return $this->extractResultText($result);
-
-            case 'xback':
-                $result = $this->executeXBacktrace(null, $arguments);
-
-                return $this->extractResultText($result);
-
-            default:
-                throw new InvalidToolException("Unknown tool: $toolName");
+        $definition = $this->toolDefinitions[$toolName] ?? null;
+        if (! $definition instanceof ToolDefinition) {
+            throw new InvalidToolException("Unknown tool: $toolName");
         }
+
+        return $this->extractResultText($this->invokeToolHandler($definition, null, $arguments));
+    }
+
+    private function buildInstructions(): string
+    {
+        return 'PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, or analyze coverage of PHP code. Tools: '
+            . implode(
+                ', ',
+                array_map(
+                    static fn (ToolDefinition $definition): string => $definition->name . ' (' . match ($definition->name) {
+                        'xtrace' => 'execution flow',
+                        'xstep' => 'breakpoint debugging',
+                        'xprofile' => 'performance',
+                        'xcoverage' => 'test coverage',
+                        'xback' => 'stack traces',
+                        default => 'analysis',
+                    } . ')',
+                    array_values($this->toolDefinitions),
+                ),
+            )
+            . '.';
+    }
+
+    /** @param array<string, string> $args */
+    private function invokeToolHandler(ToolDefinition $definition, string|int|null $id, array $args): JsonRpcResponse
+    {
+        return match ($definition->handlerMethod) {
+            'executeXTrace' => $this->executeXTrace($id, $args),
+            'executeXProfile' => $this->executeXProfile($id, $args),
+            'executeXDebug' => $this->executeXDebug($id, $args),
+            'executeXCoverage' => $this->executeXCoverage($id, $args),
+            'executeXBacktrace' => $this->executeXBacktrace($id, $args),
+            default => throw new InvalidToolException('Unknown tool handler: ' . $definition->handlerMethod),
+        };
     }
 
     /**

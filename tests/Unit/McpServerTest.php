@@ -11,6 +11,9 @@ use ReflectionClass;
 use Throwable;
 
 use function array_column;
+use function array_filter;
+use function array_keys;
+use function array_values;
 use function putenv;
 
 class McpServerTest extends TestCase
@@ -199,6 +202,41 @@ class McpServerTest extends TestCase
         $this->assertContains('xprofile', $promptNames);
         $this->assertContains('xcoverage', $promptNames);
         $this->assertContains('xback', $promptNames);
+    }
+
+    public function testPromptDefinitionsStayInSyncWithTools(): void
+    {
+        $toolsResponse = $this->invokePrivateMethod($this->server, 'handleRequest', [
+            [
+                'jsonrpc' => '2.0',
+                'id' => 70,
+                'method' => 'tools/list',
+            ],
+        ])->toArray();
+
+        $promptsResponse = $this->invokePrivateMethod($this->server, 'handleRequest', [
+            [
+                'jsonrpc' => '2.0',
+                'id' => 71,
+                'method' => 'prompts/list',
+            ],
+        ])->toArray();
+
+        $toolsByName = [];
+        foreach ($toolsResponse['result']['tools'] as $tool) {
+            $toolsByName[$tool['name']] = array_keys($tool['inputSchema']['properties']);
+        }
+
+        $promptNames = array_column($promptsResponse['result']['prompts'], 'name');
+        $this->assertSame(array_keys($toolsByName), $promptNames);
+
+        foreach ($promptsResponse['result']['prompts'] as $prompt) {
+            $argumentNames = array_column($prompt['arguments'], 'name');
+            $toolArgumentNames = array_values(array_filter($argumentNames, static fn (string $name): bool => $name !== 'last'));
+
+            $this->assertSame($toolsByName[$prompt['name']], $toolArgumentNames);
+            $this->assertContains('last', $argumentNames);
+        }
     }
 
     public function testNotificationsInitialized(): void

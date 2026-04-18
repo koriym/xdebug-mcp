@@ -41,24 +41,6 @@ class CLIParamsNormalizer
 {
     private const ALLOWED_TYPES = ['str', 'int', 'float', 'bool', 'json'];
 
-    /** @var array<string, string> */
-    private array $stringParams = [];
-
-    /** @var array<string, int> */
-    private array $intParams = [];
-
-    /** @var array<string, float> */
-    private array $floatParams = [];
-
-    /** @var array<string, bool> */
-    private array $boolParams = [];
-
-    /** @var array<string, list<string>> */
-    private array $jsonParams = [];
-
-    /** @var list<string> */
-    private array $positionalArgs = [];
-
     /**
      * Normalize CLI string to CliParams DTO
      *
@@ -66,18 +48,22 @@ class CLIParamsNormalizer
      */
     public function normalize(string $cliString): CliParams
     {
-        // Reset state
-        $this->stringParams = [];
-        $this->intParams = [];
-        $this->floatParams = [];
-        $this->boolParams = [];
-        $this->jsonParams = [];
-        $this->positionalArgs = [];
+        /** @var array<string, string> $stringParams */
+        $stringParams = [];
+        /** @var array<string, int> $intParams */
+        $intParams = [];
+        /** @var array<string, float> $floatParams */
+        $floatParams = [];
+        /** @var array<string, bool> $boolParams */
+        $boolParams = [];
+        /** @var array<string, list<string>> $jsonParams */
+        $jsonParams = [];
+        /** @var list<string> $positionalArgs */
+        $positionalArgs = [];
 
         $tokens = $this->tokenize($cliString);
         $i = 0;
 
-        // Process options until we hit --
         while ($i < count($tokens) && $tokens[$i] !== '--') {
             if (! str_starts_with($tokens[$i], '--')) {
                 throw new InvalidArgumentException(
@@ -85,24 +71,23 @@ class CLIParamsNormalizer
                 );
             }
 
-            $option = substr($tokens[$i], 2); // Remove --
-            $this->parseOption($option);
+            $option = substr($tokens[$i], 2);
+            $this->parseOption($option, $stringParams, $intParams, $floatParams, $boolParams, $jsonParams);
             $i++;
         }
 
-        // Process positional args after --
         if ($i < count($tokens) && $tokens[$i] === '--') {
-            $i++; // Skip --
-            $this->positionalArgs = array_slice($tokens, $i);
+            $i++;
+            $positionalArgs = array_slice($tokens, $i);
         }
 
         return new CliParams(
-            stringParams: $this->stringParams,
-            intParams: $this->intParams,
-            floatParams: $this->floatParams,
-            boolParams: $this->boolParams,
-            jsonParams: $this->jsonParams,
-            positionalArgs: $this->positionalArgs,
+            stringParams: $stringParams,
+            intParams: $intParams,
+            floatParams: $floatParams,
+            boolParams: $boolParams,
+            jsonParams: $jsonParams,
+            positionalArgs: $positionalArgs,
         );
     }
 
@@ -125,13 +110,15 @@ class CLIParamsNormalizer
             if (! $inQuotes && ($char === '"' || $char === "'")) {
                 $inQuotes = true;
                 $quoteChar = $char;
-                continue; // Don't include opening quote
+
+                continue;
             }
 
             if ($inQuotes && $char === $quoteChar) {
                 $inQuotes = false;
                 $quoteChar = null;
-                continue; // Don't include closing quote
+
+                continue;
             }
 
             if (! $inQuotes && $char === ' ') {
@@ -154,11 +141,20 @@ class CLIParamsNormalizer
     }
 
     /**
-     * Parse single option: --key:type=value or --key=value
+     * @param array<string, string>       $stringParams
+     * @param array<string, int>          $intParams
+     * @param array<string, float>        $floatParams
+     * @param array<string, bool>         $boolParams
+     * @param array<string, list<string>> $jsonParams
      */
-    private function parseOption(string $option): void
-    {
-        // Check for = separator
+    private function parseOption(
+        string $option,
+        array &$stringParams,
+        array &$intParams,
+        array &$floatParams,
+        array &$boolParams,
+        array &$jsonParams,
+    ): void {
         if (! str_contains($option, '=')) {
             throw new InvalidArgumentException(
                 "不正：= が必要です。--{$option}:str=value を使用してください。",
@@ -167,8 +163,7 @@ class CLIParamsNormalizer
 
         [$keyPart, $value] = explode('=', $option, 2);
 
-        // Parse key:type or just key
-        $type = 'str'; // Default type
+        $type = 'str';
         if (str_contains($keyPart, ':')) {
             [$key, $typeStr] = explode(':', $keyPart, 2);
 
@@ -184,22 +179,17 @@ class CLIParamsNormalizer
         }
 
         if ($key === '') {
-            // @codeCoverageIgnoreStart
-            throw new InvalidArgumentException('不正：キー名が空です。'); // Empty key scenario is difficult to create through normal parsing flow
-
-            // @codeCoverageIgnoreEnd
+            throw new InvalidArgumentException('不正：キー名が空です。');
         }
 
-        // Convert hyphens to underscores for consistency with PHP array keys
         $key = str_replace('-', '_', $key);
 
-        // Store value in appropriate typed array
         match ($type) {
-            'str' => $this->stringParams[$key] = $value,
-            'int' => $this->intParams[$key] = $this->convertInt($value, $key),
-            'float' => $this->floatParams[$key] = $this->convertFloat($value, $key),
-            'bool' => $this->boolParams[$key] = $this->convertBool($value, $key),
-            'json' => $this->jsonParams[$key] = $this->convertJson($value, $key),
+            'str' => $stringParams[$key] = $value,
+            'int' => $intParams[$key] = $this->convertInt($value, $key),
+            'float' => $floatParams[$key] = $this->convertFloat($value, $key),
+            'bool' => $boolParams[$key] = $this->convertBool($value, $key),
+            'json' => $jsonParams[$key] = $this->convertJson($value, $key),
         };
     }
 
@@ -241,11 +231,7 @@ class CLIParamsNormalizer
         );
     }
 
-    /**
-     * Convert JSON string to list of strings
-     *
-     * @return list<string>
-     */
+    /** @return list<string> */
     private function convertJson(string $value, string $key): array
     {
         try {
@@ -258,22 +244,21 @@ class CLIParamsNormalizer
 
         if (! is_array($decoded)) {
             throw new InvalidArgumentException(
-                "不正：--{$key}:json の値は配列である必要があります。入力: '{$value}'",
+                "不正：--{$key}:json の値は配列である必要があります。",
             );
         }
 
-        // Ensure all values are strings
-        $result = [];
-        foreach ($decoded as $item) {
-            if (! is_string($item)) {
-                throw new InvalidArgumentException(
-                    "不正：--{$key}:json の配列要素は文字列である必要があります。",
-                );
+        foreach ($decoded as $element) {
+            if (is_string($element)) {
+                continue;
             }
 
-            $result[] = $item;
+            throw new InvalidArgumentException(
+                "不正：--{$key}:json の配列要素は文字列である必要があります。",
+            );
         }
 
-        return $result;
+        /** @var list<string> $decoded */
+        return $decoded;
     }
 }

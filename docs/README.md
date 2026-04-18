@@ -35,15 +35,22 @@ This folder contains documentation, guides, and presentation materials for the P
 ## 📋 File Usage
 
 ### For AI Setup (After Composer Installation)
-Enable AI debugging guide for your PHP project:
+Choose the integration style that matches your assistant:
 ```bash
 # Install via Composer (if not already done)
 composer require koriym/xdebug-mcp
 
-# Enable AI debugging guide for this project
+# Claude Code: include the project guide
 echo "@vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md" >> CLAUDE.md
 
-# Alternative: Global setup (affects ALL projects - use with caution)
+# Codex: install the bundled local skill
+# mkdir -p ~/.codex/skills
+# ln -s "$(pwd)/vendor/koriym/xdebug-mcp/skills/xdebug" ~/.codex/skills/xdebug
+
+# Generic MCP client: point your MCP config at the server entrypoint
+# php vendor/bin/xdebug-mcp
+
+# Alternative Claude global setup (affects ALL projects - use with caution)
 # mkdir -p ~/.claude
 # cp vendor/koriym/xdebug-mcp/docs/debug_guideline_for_ai.md ~/.claude/
 # echo "@debug_guideline_for_ai.md" >> ~/.claude/CLAUDE.md

@@ -9,7 +9,6 @@ use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use RuntimeException;
 
 use function array_keys;
-use function array_map;
 use function array_merge;
 use function array_unshift;
 use function count;
@@ -19,15 +18,12 @@ use function explode;
 use function fclose;
 use function fgets;
 use function file_exists;
-use function filemtime;
 use function filesize;
 use function fopen;
 use function getenv;
-use function glob;
 use function gzclose;
 use function gzgets;
 use function gzopen;
-use function implode;
 use function in_array;
 use function ini_get;
 use function is_readable;
@@ -41,7 +37,6 @@ use function str_contains;
 use function str_ends_with;
 use function strtolower;
 use function trim;
-use function usort;
 
 /**
  * AI-Native Xdebug trace data generator with comprehensive statistics
@@ -129,17 +124,9 @@ class XdebugTracer
             array_unshift($xdebugOptions, trim($xdebugFlag));
         }
 
-        // Combine all arguments
         $allArgs = array_merge($xdebugOptions, [$targetFile], $phpArgs);
-        $cmd = 'php ' . implode(' ', array_map(escapeshellarg(...), $allArgs));
-
-        // Execute with passthru to show output
-        $exitCode = 0;
-        passthru($cmd, $exitCode);
-
-        if ($exitCode !== 0) {
-            throw new RuntimeException("PHP execution failed with exit code: $exitCode");
-        }
+        $cmd = XdebugCommandExecutor::buildPhpCommand($allArgs);
+        XdebugCommandExecutor::executeAndAssertSuccess($cmd);
 
         // Find the created trace file using dynamic pattern detection
         // First escape special glob characters to prevent unintended matches
@@ -151,19 +138,14 @@ class XdebugTracer
         $filePattern = preg_replace('/%(c|p|r|s|t|u|H|R|U|S)/', '*', (string) $escapedTraceOutputName);
 
         // Find trace files using dynamic pattern
-        $traceFiles = glob("{$xdebugOutputDir}/{$filePattern}.xt");
-        if ($traceFiles === [] || $traceFiles === false) {
-            throw new RuntimeException(sprintf(
+        return XdebugCommandExecutor::findLatestArtifact(
+            "{$xdebugOutputDir}/{$filePattern}.xt",
+            sprintf(
                 'Trace file not found. Looked in "%s" with pattern based on trace_output_name "%s".',
                 $xdebugOutputDir,
                 $traceOutputName,
-            ));
-        }
-
-        // Get the most recent trace file
-        usort($traceFiles, static fn ($a, $b): int => filemtime($b) - filemtime($a));
-
-        return $traceFiles[0];
+            ),
+        );
     }
 
     public function parseTraceFile(string $traceFile): TraceStatistics
