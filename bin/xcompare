@@ -1,0 +1,172 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Koriym\XdebugMcp\CompareRunner;
+
+/**
+ * Display help information
+ */
+function showCompareHelp(): void
+{
+    echo "Usage: xcompare --break=FILE:LINE --run-a=\"CMD\" --run-b=\"CMD\" [options]\n";
+    echo "\n";
+    echo "Compare variable states at the same breakpoint across two different executions.\n";
+    echo "\n";
+    echo "REQUIRED OPTIONS:\n";
+    echo "  --break=FILE:LINE        Breakpoint location (e.g., src/Calculator.php:25)\n";
+    echo "  --run-a=\"CMD\"            First execution command (e.g., \"php calc.php 10\")\n";
+    echo "  --run-b=\"CMD\"            Second execution command (e.g., \"php calc.php 0\")\n";
+    echo "\n";
+    echo "OPTIONAL:\n";
+    echo "  --label-a=TEXT           Label for run A (default: command string)\n";
+    echo "  --label-b=TEXT           Label for run B (default: command string)\n";
+    echo "  --context=TEXT           AI analysis context description\n";
+    echo "  --steps=N               Steps to record after breakpoint (default: 1)\n";
+    echo "  --include-vendor=PATTERNS Include vendor packages in trace\n";
+    echo "  --help, -h              Show this help\n";
+    echo "\n";
+    echo "EXAMPLES:\n";
+    echo "\n";
+    echo "  # Compare normal vs edge case input\n";
+    echo "  xcompare --break=src/Calculator.php:25 \\\n";
+    echo "    --run-a=\"php calc.php 10\" \\\n";
+    echo "    --run-b=\"php calc.php 0\" \\\n";
+    echo "    --label-a=\"Normal input\" \\\n";
+    echo "    --label-b=\"Edge case (zero)\" \\\n";
+    echo "    --context=\"Compare division behavior with normal vs zero input\"\n";
+    echo "\n";
+    echo "  # Compare success vs failure authentication\n";
+    echo "  xcompare --break=src/Auth.php:42 \\\n";
+    echo "    --run-a=\"php login.php valid_user\" \\\n";
+    echo "    --run-b=\"php login.php invalid_user\" \\\n";
+    echo "    --context=\"Compare authentication flow\"\n";
+    echo "\n";
+    echo "OUTPUT:\n";
+    echo "  JSON with run_a/run_b variable states and computed diff.\n";
+    echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xcompare.json\n";
+    echo "\n";
+    echo "HOW IT WORKS:\n";
+    echo "  1. Executes xstep with run-a command (stops at breakpoint, captures variables)\n";
+    echo "  2. Executes xstep with run-b command (stops at breakpoint, captures variables)\n";
+    echo "  3. Computes diff: changed, unchanged, only_in_a, only_in_b\n";
+    echo "  4. Outputs JSON with comparison results and analysis hints\n";
+    echo "\n";
+    exit(0);
+}
+
+(function () use ($argv) {
+    require_once __DIR__ . '/autoload.php';
+
+    // Show help if no arguments
+    if (count($argv) === 1) {
+        showCompareHelp();
+    }
+
+    // Parse arguments
+    $breakSpec = null;
+    $runA = null;
+    $runB = null;
+    $labelA = null;
+    $labelB = null;
+    $context = null;
+    $steps = null;
+    $includeVendor = null;
+
+    for ($i = 1; $i < count($argv); $i++) {
+        $arg = $argv[$i];
+
+        if ($arg === '--help' || $arg === '-h') {
+            showCompareHelp();
+        }
+
+        if (str_starts_with($arg, '--break=')) {
+            $breakSpec = substr($arg, 8);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--run-a=')) {
+            $runA = substr($arg, 8);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--run-b=')) {
+            $runB = substr($arg, 8);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--label-a=')) {
+            $labelA = substr($arg, 10);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--label-b=')) {
+            $labelB = substr($arg, 10);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--context=')) {
+            $context = substr($arg, 10);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--steps=')) {
+            $steps = (int) substr($arg, 8);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--include-vendor=')) {
+            $includeVendor = substr($arg, 17);
+            continue;
+        }
+    }
+
+    // Validate required arguments
+    if ($breakSpec === null) {
+        fwrite(STDERR, "Error: --break=FILE:LINE is required\n");
+        fwrite(STDERR, "Run 'xcompare --help' for usage.\n");
+        exit(1);
+    }
+
+    if ($runA === null) {
+        fwrite(STDERR, "Error: --run-a=\"CMD\" is required\n");
+        fwrite(STDERR, "Run 'xcompare --help' for usage.\n");
+        exit(1);
+    }
+
+    if ($runB === null) {
+        fwrite(STDERR, "Error: --run-b=\"CMD\" is required\n");
+        fwrite(STDERR, "Run 'xcompare --help' for usage.\n");
+        exit(1);
+    }
+
+    $options = [
+        'break' => $breakSpec,
+        'run_a' => $runA,
+        'run_b' => $runB,
+    ];
+
+    if ($labelA !== null) {
+        $options['label_a'] = $labelA;
+    }
+
+    if ($labelB !== null) {
+        $options['label_b'] = $labelB;
+    }
+
+    if ($context !== null) {
+        $options['context'] = $context;
+    }
+
+    if ($steps !== null) {
+        $options['steps'] = $steps;
+    }
+
+    if ($includeVendor !== null) {
+        $options['include_vendor'] = $includeVendor;
+    }
+
+    $runner = new CompareRunner($options);
+    $runner->output();
+})();

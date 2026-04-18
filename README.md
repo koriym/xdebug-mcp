@@ -100,6 +100,9 @@ Run the demo examples to see each tool in action:
 
 # Get stack trace at breakpoint
 ./bin/xback --break="demo/buggy.php:44" -- php demo/buggy.php
+
+# Compare variable states with different inputs
+./bin/xcompare --break="demo/buggy.php:22" --run-a="php demo/buggy.php 10" --run-b="php demo/buggy.php 0"
 ```
 
 Each command outputs structured JSON data that AI can analyze to provide debugging insights.
@@ -127,6 +130,7 @@ flowchart LR
 | `xprofile` | Performance profiling | "Find what's making this endpoint slow" |
 | `xcoverage` | Code coverage analysis | "Which lines aren't covered by tests?" |
 | `xback` | Call stack at breakpoint | "Show me how we got to this error" |
+| `xcompare` | Compare variable states across two runs | "Compare what happens with input 10 vs 0" |
 
 ## CLI Usage
 
@@ -147,6 +151,9 @@ xcoverage -- vendor/bin/phpunit
 
 # Stack trace at breakpoint
 xback --break='app.php:50' -- php app.php
+
+# Compare variables at breakpoint with different inputs
+xcompare --break='calc.php:25' --run-a='php calc.php 10' --run-b='php calc.php 0'
 ```
 
 Run `--help` on any tool for detailed options.
@@ -258,7 +265,7 @@ Looking for a different approach? [kpanuragh/xdebug-mcp](https://github.com/kpan
 
 This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. While MCP remains supported for tools like Cursor and Windsurf, we now recommend the **plugin approach** for Claude Code users — it's simpler and requires no MCP configuration.
 
-The CLI tools (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`) work independently of both MCP and plugins.
+The CLI tools (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`, `xcompare`) work independently of both MCP and plugins.
 
 ## Resources
 

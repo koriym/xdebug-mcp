@@ -59,6 +59,23 @@ Code coverage analysis with multiple output formats.
 ./xcoverage --format=html --format=json -- php tests/suite.php
 ```
 
+### `./xcompare`
+Compare variable states at the same breakpoint across two different executions.
+```bash
+# Compare normal vs edge case input
+./xcompare --break='Calculator.php:25' \
+  --run-a='php calc.php 10' \
+  --run-b='php calc.php 0' \
+  --label-a='Normal input' \
+  --label-b='Edge case (zero)'
+
+# Compare success vs failure authentication
+./xcompare --break='Auth.php:42' \
+  --run-a='php login.php valid_user' \
+  --run-b='php login.php invalid_user' \
+  --context='Compare authentication flow'
+```
+
 ### `./xdebug-phpunit`
 PHPUnit integration with Xdebug profiling and coverage.
 ```bash
@@ -126,6 +143,7 @@ Legacy debugging server utility (development purposes).
 - `xtrace` - Complete execution flow analysis
 - `xprofile` - Performance bottleneck identification
 - `xcoverage` - Test coverage verification
+- `xcompare` - Compare variable states across two executions
 
 **Integration Tools:**
 - `xdebug-mcp` - AI assistant protocol handler
@@ -160,6 +178,15 @@ Legacy debugging server utility (development purposes).
 ```bash
 # Trace execution paths
 ./xtrace --context="Multi-step form submission workflow" -- php form-handler.php
+```
+
+### Comparative Debugging
+```bash
+# Compare behavior with different inputs
+./xcompare --break='Validator.php:30' \
+  --run-a='php validate.php valid@email.com' \
+  --run-b='php validate.php invalid-email' \
+  --context='Email validation comparison'
 ```
 
 All tools support `--help` option for detailed usage information.

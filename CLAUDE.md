@@ -421,6 +421,7 @@ This project prioritizes **execution-time trace analysis** over traditional code
 | Profile, performance analysis, find bottlenecks<br>プロファイル、パフォーマンス分析、ボトルネック検出 | `xprofile` | Execution time and memory analysis<br>実行時間・メモリ分析 |
 | Coverage, test coverage, code coverage<br>カバレッジ、テストカバレッジ、コードカバレッジ | `xcoverage` | Code coverage analysis<br>コードカバレッジ分析 |
 | Backtrace, stack trace, call stack<br>バックトレース、スタックトレース、コールスタック | `xback` | Get stack trace at current position<br>現在位置のスタックトレースを取得 |
+| Compare executions, diff variables, compare inputs<br>実行比較、変数差分、入力比較 | `xcompare` | Compare variable states at breakpoint across two runs<br>2つの実行でブレークポイントの変数状態を比較 |
 
 **Note on "Trace" ambiguity / 「トレース」の曖昧さについて:**
 - **Forward Trace (フォワードトレース)**: Records execution flow from start to end → Use `xtrace`
@@ -432,6 +433,7 @@ This project prioritizes **execution-time trace analysis** over traditional code
 - `./bin/xprofile` - Performance profiling
 - `./bin/xcoverage` - Code coverage analysis
 - `./bin/xtrace` - Execution tracing
+- `./bin/xcompare` - Compare variable states at breakpoint across two executions
 - `./bin/xdebug-mcp` - MCP server entry point
 
 #### MCP Slash Commands for Claude Code:
@@ -439,6 +441,7 @@ This project prioritizes **execution-time trace analysis** over traditional code
 - `/xprofile` - Performance profiling and analysis
 - `/xtrace` - Execution flow tracing
 - `/xcoverage` - Code coverage analysis
+- `/xcompare` - Compare variable states at breakpoint with different inputs
 
 These slash commands provide direct access to Xdebug functionality within Claude Code, making PHP debugging more efficient and accessible.
 
@@ -477,6 +480,10 @@ When MCP tools exceed 10% of context, Claude Code's Tool Search feature dynamica
 - User: "Trace execution", "Show function calls", "Analyze execution flow"
 - AI automatically runs: `./bin/xtrace path/to/file.php`
 
+**For Comparative Analysis:**
+- User: "Compare what happens with input 10 vs 0", "Diff the variable states", "Compare success vs failure"
+- AI automatically runs: `./bin/xcompare --break=file.php:25 --run-a="php script.php 10" --run-b="php script.php 0"`
+
 **For General Analysis (choose most appropriate):**
 - User: "Analyze this PHP file", "What does this code do"
 - AI automatically runs: `./bin/xprofile path/to/file.php` (default choice)
@@ -487,6 +494,7 @@ When MCP tools exceed 10% of context, Claude Code's Tool Search feature dynamica
 2. User: "Analyze tests/fixtures/debug_test.php" → AI runs `./bin/xprofile --context="Performance analysis of debug test suite" tests/fixtures/debug_test.php`
 3. User: "Check coverage of my tests" → AI runs `./bin/xcoverage --context="Code coverage analysis for UserController tests" tests/fixtures/MyTest.php`
 4. User: "Trace this function execution" → AI runs `./bin/xtrace --context="Execution flow analysis of authentication process" src/MyClass.php`
+5. User: "Compare the execution with valid vs invalid input" → AI runs `./bin/xcompare --break=src/User.php:42 --run-a="php login.php valid" --run-b="php login.php invalid" --context="Compare authentication behavior"`
 
 Always use these tools proactively to provide runtime insights rather than static code analysis alone.
 
