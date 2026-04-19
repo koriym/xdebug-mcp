@@ -188,7 +188,9 @@ Schemas live under [docs/schemas/](docs/schemas/). AI assistants — and humans 
 
 ## MCP Configuration
 
-For any MCP-capable client, add `xdebug-mcp` to your MCP config (e.g. `.mcp.json`):
+For any MCP-capable client, register `xdebug-mcp` in that client's MCP config.
+
+**`.mcp.json` (Cursor, Windsurf, and other JSON-based clients):**
 
 ```json
 {
@@ -201,7 +203,15 @@ For any MCP-capable client, add `xdebug-mcp` to your MCP config (e.g. `.mcp.json
 }
 ```
 
-Find the path with `which xdebug-mcp`.
+**`~/.codex/config.toml` (OpenAI Codex CLI):**
+
+```toml
+[mcp_servers.xdebug]
+command = "php"
+args = ["/ABSOLUTE/PATH/TO/xdebug-mcp"]
+```
+
+Find the path with `which xdebug-mcp`. Restart your client after editing the config.
 
 ## Interactive REPL
 
