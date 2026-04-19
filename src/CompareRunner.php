@@ -9,15 +9,19 @@ use RuntimeException;
 use function array_diff_key;
 use function array_intersect_key;
 use function array_keys;
+use function count;
 use function escapeshellarg;
 use function exec;
-use function getcwd;
+use function fclose;
 use function implode;
+use function is_resource;
 use function json_decode;
 use function json_encode;
 use function preg_match;
+use function proc_close;
+use function proc_open;
 use function sort;
-use function str_replace;
+use function stream_get_contents;
 use function sys_get_temp_dir;
 use function uniqid;
 
@@ -132,9 +136,8 @@ class CompareRunner
         $ref = $this->options['compare_with'] ?? '';
         $this->worktreePath = $this->createWorktree($ref);
 
-        $cwd = (string) getcwd();
         $commandA = $run;
-        $commandB = str_replace($cwd, $this->worktreePath, $run);
+        $commandB = 'cd ' . escapeshellarg($this->worktreePath) . ' && ' . $run;
 
         $labelA = $this->options['label_a'] ?? 'HEAD (current)';
         $labelB = $this->options['label_b'] ?? $ref;
@@ -196,6 +199,10 @@ class CompareRunner
     /**
      * Execute xstep and return parsed JSON result
      *
+     * $command is the user-supplied shell command (the target under debug) and is
+     * executed via the shell by design. Surrounding arguments (bin path, break spec,
+     * vendor filter) are escaped so they cannot alter the outer invocation.
+     *
      * @return array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>}
      */
     protected function executeXstep(string $command): array
@@ -212,19 +219,38 @@ class CompareRunner
             $vendorArg = ' --include-vendor=' . escapeshellarg($this->options['include_vendor']);
         }
 
-        $fullCommand = "php {$xstepBin} {$breakArg}{$stepsArg}{$vendorArg} -- {$command} 2>/dev/null";
+        $fullCommand = 'php ' . escapeshellarg($xstepBin)
+            . " {$breakArg}{$stepsArg}{$vendorArg} -- {$command}";
 
-        $output = [];
-        $exitCode = 0;
-        exec($fullCommand, $output, $exitCode);
+        $descriptors = [
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
 
-        $jsonOutput = implode("\n", $output);
-        if ($jsonOutput === '') {
+        $pipes = [];
+        $process = proc_open($fullCommand, $descriptors, $pipes);
+        if (! is_resource($process)) {
+            throw new RuntimeException("Failed to start xstep for command: {$command}");
+        }
+
+        $stdout = (string) stream_get_contents($pipes[1]);
+        $stderr = (string) stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $exitCode = proc_close($process);
+
+        if ($exitCode !== 0) {
+            $suffix = $stderr !== '' ? "\n{$stderr}" : '';
+
+            throw new RuntimeException("xstep failed (exit {$exitCode}) for command: {$command}{$suffix}");
+        }
+
+        if ($stdout === '') {
             throw new RuntimeException("xstep returned no output for command: {$command}");
         }
 
         /** @var array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result */
-        $result = json_decode($jsonOutput, true, 512, JSON_THROW_ON_ERROR);
+        $result = json_decode($stdout, true, 512, JSON_THROW_ON_ERROR);
 
         return $result;
     }
@@ -320,8 +346,8 @@ class CompareRunner
      * Generate human/AI-readable analysis hints
      *
      * @param array{changed: array<string, array{a: string, b: string}>, unchanged: list<string>, only_in_a: list<string>, only_in_b: list<string>} $diff
-     * @param array<string, string> $varsA
-     * @param array<string, string> $varsB
+     * @param array<string, string>                                                                                                                 $varsA
+     * @param array<string, string>                                                                                                                 $varsB
      *
      * @return list<string>
      */
