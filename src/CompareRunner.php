@@ -262,6 +262,7 @@ class CompareRunner
         }
 
         $descriptors = [
+            0 => ['file', '/dev/null', 'r'],
             1 => ['pipe', 'w'],
             2 => ['file', $stderrPath, 'w'],
         ];
