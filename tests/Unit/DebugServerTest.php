@@ -9,13 +9,19 @@ use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
+use function array_filter;
+use function array_values;
 use function basename;
 use function chdir;
 use function count;
 use function dirname;
+use function explode;
 use function file_exists;
 use function file_put_contents;
 use function getcwd;
+use function json_decode;
+use function ob_get_clean;
+use function ob_start;
 use function sys_get_temp_dir;
 use function tempnam;
 use function uniqid;
@@ -357,6 +363,49 @@ echo "Result: $result\n";
         $returnType = $method->getReturnType();
         $this->assertNotNull($returnType);
         $this->assertEquals('string', $returnType->getName());
+    }
+
+    /**
+     * Regression test for #67: xstep emits two JSON documents when --steps is omitted.
+     *
+     * When the multiple-breakpoint path (maxSteps unset) outputs its JSON, the
+     * subsequent cleanup phase must not emit a second, empty
+     * {"breaks":[]} JSON document.
+     */
+    public function testMultipleBreakResultsDoesNotDoubleEmitJson(): void
+    {
+        $server = new DebugServer($this->testScript, 9004, null, [], true);
+
+        $reflection = new ReflectionClass($server);
+
+        $breaks = [
+            [
+                'step' => 1,
+                'location' => ['file' => basename($this->testScript), 'line' => 3],
+                'variables' => ['$x' => '10'],
+            ],
+        ];
+
+        $outputMultiple = $reflection->getMethod('outputMultipleBreakResults');
+        $outputStepRec = $reflection->getMethod('outputStepRecordingResults');
+
+        ob_start();
+        $outputMultiple->invoke($server, $breaks);
+        // Simulate the cleanup-phase call that previously double-emitted.
+        $outputStepRec->invoke($server);
+        $stdout = ob_get_clean();
+
+        $documents = array_values(array_filter(
+            explode("\n", $stdout),
+            static fn (string $line): bool => $line !== '',
+        ));
+
+        $this->assertCount(1, $documents, 'Expected exactly one JSON document on stdout');
+
+        $decoded = json_decode($documents[0], true);
+        $this->assertIsArray($decoded);
+        $this->assertSame('https://koriym.github.io/xdebug-mcp/schemas/xstep.json', $decoded['$schema']);
+        $this->assertCount(1, $decoded['breaks']);
     }
 
     /**

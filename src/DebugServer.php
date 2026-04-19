@@ -3026,6 +3026,9 @@ final class DebugServer
 
         // Output format based on jsonMode or jsonOutput option
         if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
+            // Mark step-recording output as done so the cleanup phase does not
+            // emit a second (empty) JSON document. See issue #67.
+            $this->stepRecordingOutputDone = true;
             echo json_encode($debugState, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
         } else {
             // Human-readable format
