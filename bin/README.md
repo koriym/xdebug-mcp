@@ -77,6 +77,8 @@ Compare variable states at the same breakpoint across two different executions.
 ```
 
 > **Security note:** `--run`, `--run-a`, and `--run-b` values are executed through the shell so quoting and redirection behave as expected. Only pass trusted input to these options.
+>
+> **Steps default:** `xcompare` defaults to `--steps=1` because the comparison only needs the variable snapshot at the breakpoint. Use `--steps=N` (e.g. `--steps=100`) to also capture how execution diverges after the break.
 
 ### `./xdebug-phpunit`
 PHPUnit integration with Xdebug profiling and coverage.

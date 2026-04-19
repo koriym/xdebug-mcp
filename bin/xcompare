@@ -30,6 +30,8 @@ function showCompareHelp(): void
     echo "  --label-b=TEXT           Label for run B (default: command or ref name)\n";
     echo "  --context=TEXT           AI analysis context description\n";
     echo "  --steps=N                Steps to record after breakpoint (default: 1)\n";
+    echo "                           xcompare only reads the break-point snapshot; raise this\n";
+    echo "                           when you want to inspect how execution diverges after the break.\n";
     echo "  --include-vendor=PATTERNS Include vendor packages in trace\n";
     echo "  --help, -h               Show this help\n";
     echo "\n";

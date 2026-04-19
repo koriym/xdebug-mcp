@@ -176,6 +176,8 @@ xcompare --break='calc.php:25' --run='php calc.php 10' --compare-with=main
 Run `--help` on any tool for detailed options.
 
 > **Note on `xcompare` commands:** the `--run-a`, `--run-b`, and `--run` values are executed through the shell so that quoting, redirection, and environment variables behave as users expect. Only pass trusted input to these options.
+>
+> **Note on `--steps`:** `xcompare` defaults to `--steps=1`, since the comparison only needs the variable snapshot at the breakpoint. Pass `--steps=N` explicitly (e.g. `--steps=100`) if you want to see how execution diverges between the two runs after the break.
 
 ## Schema-Backed JSON Output
 
