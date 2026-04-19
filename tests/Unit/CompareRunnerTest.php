@@ -9,37 +9,16 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use RuntimeException;
 
-/**
- * Testable subclass that overrides executeXstep to avoid external process calls
- */
-class FakeCompareRunner extends CompareRunner
-{
-    /** @var array<string, array<string, mixed>> */
-    private array $fakeResults = [];
-
-    /** @param array<string, array<string, mixed>> $fakeResults Map of command => xstep result */
-    public function setFakeResults(array $fakeResults): void
-    {
-        $this->fakeResults = $fakeResults;
-    }
-
-    /** @return array<string, mixed> */
-    protected function executeXstep(string $command): array
-    {
-        if (!isset($this->fakeResults[$command])) {
-            throw new RuntimeException("xstep returned no output for command: {$command}");
-        }
-
-        return $this->fakeResults[$command];
-    }
-}
+use function array_merge;
+use function exec;
+use function implode;
+use function json_decode;
+use function ob_get_clean;
+use function ob_start;
 
 class CompareRunnerTest extends TestCase
 {
-    /**
-     * @return mixed
-     */
-    private function invokeMethod(CompareRunner $runner, string $method, array $args = [])
+    private function invokeMethod(CompareRunner $runner, string $method, array $args = []): mixed
     {
         $ref = new ReflectionClass($runner);
         $m = $ref->getMethod($method);
@@ -65,10 +44,6 @@ class CompareRunnerTest extends TestCase
             'run_b' => 'php test.php 2',
         ], $options));
     }
-
-    // ========================================
-    // computeDiff tests
-    // ========================================
 
     public function testComputeDiffWithChangedVariables(): void
     {
@@ -157,10 +132,6 @@ class CompareRunnerTest extends TestCase
         $this->assertSame([], $diff['only_in_b']);
     }
 
-    // ========================================
-    // generateHints tests
-    // ========================================
-
     public function testGenerateHints(): void
     {
         $runner = $this->createRunner();
@@ -217,10 +188,6 @@ class CompareRunnerTest extends TestCase
         $this->assertSame('0 variable(s) unchanged, 0 variable(s) changed, 0 total', $hints[0]);
     }
 
-    // ========================================
-    // parseBreakSpec tests
-    // ========================================
-
     public function testParseBreakSpec(): void
     {
         $runner = $this->createRunner();
@@ -252,10 +219,6 @@ class CompareRunnerTest extends TestCase
         $result = $this->invokeMethod($runner, 'parseBreakSpec', ['noformat']);
         $this->assertSame(['file' => 'noformat', 'line' => 0], $result);
     }
-
-    // ========================================
-    // extractVariables / extractLocation / extractStatus tests
-    // ========================================
 
     public function testExtractVariablesFromResult(): void
     {
@@ -353,30 +316,30 @@ class CompareRunnerTest extends TestCase
         $this->assertSame('no_break', $status);
     }
 
-    // ========================================
-    // run() integration tests via FakeCompareRunner
-    // ========================================
-
     public function testRunProducesCorrectOutputStructure(): void
     {
         $runner = $this->createFakeRunner();
         $runner->setFakeResults([
             'php test.php 1' => [
-                'breaks' => [[
-                    'step' => 1,
-                    'location' => ['file' => 'test.php', 'line' => 10],
-                    'variables' => ['$x' => 'int: 1', '$sum' => 'int: 0'],
-                    'recording_type' => 'full',
-                ]],
+                'breaks' => [
+                    [
+                        'step' => 1,
+                        'location' => ['file' => 'test.php', 'line' => 10],
+                        'variables' => ['$x' => 'int: 1', '$sum' => 'int: 0'],
+                        'recording_type' => 'full',
+                    ],
+                ],
                 'trace' => ['file' => '', 'lines' => 0, 'functions' => 0, 'max_depth' => 0, 'db_queries' => 0],
             ],
             'php test.php 2' => [
-                'breaks' => [[
-                    'step' => 1,
-                    'location' => ['file' => 'test.php', 'line' => 10],
-                    'variables' => ['$x' => 'int: 2', '$sum' => 'int: 0'],
-                    'recording_type' => 'full',
-                ]],
+                'breaks' => [
+                    [
+                        'step' => 1,
+                        'location' => ['file' => 'test.php', 'line' => 10],
+                        'variables' => ['$x' => 'int: 2', '$sum' => 'int: 0'],
+                        'recording_type' => 'full',
+                    ],
+                ],
                 'trace' => ['file' => '', 'lines' => 0, 'functions' => 0, 'max_depth' => 0, 'db_queries' => 0],
             ],
         ]);
@@ -491,14 +454,22 @@ class CompareRunnerTest extends TestCase
     {
         $runner = $this->createFakeRunner();
         $runner->setFakeResults([
-            'php test.php 1' => ['breaks' => [[
-                'location' => ['file' => 'f.php', 'line' => 10],
-                'variables' => ['$a' => 'int: 1', '$shared' => 'int: 0'],
-            ]]],
-            'php test.php 2' => ['breaks' => [[
-                'location' => ['file' => 'f.php', 'line' => 10],
-                'variables' => ['$b' => 'int: 2', '$shared' => 'int: 0'],
-            ]]],
+            'php test.php 1' => [
+                'breaks' => [
+                    [
+                        'location' => ['file' => 'f.php', 'line' => 10],
+                        'variables' => ['$a' => 'int: 1', '$shared' => 'int: 0'],
+                    ],
+                ],
+            ],
+            'php test.php 2' => [
+                'breaks' => [
+                    [
+                        'location' => ['file' => 'f.php', 'line' => 10],
+                        'variables' => ['$b' => 'int: 2', '$shared' => 'int: 0'],
+                    ],
+                ],
+            ],
         ]);
 
         $result = $runner->run();
@@ -507,10 +478,6 @@ class CompareRunnerTest extends TestCase
         $this->assertSame(['$a'], $result['diff']['only_in_a']);
         $this->assertSame(['$b'], $result['diff']['only_in_b']);
     }
-
-    // ========================================
-    // executeXstep error handling
-    // ========================================
 
     public function testRunThrowsWhenXstepReturnsNoOutput(): void
     {
@@ -525,10 +492,6 @@ class CompareRunnerTest extends TestCase
 
         $runner->run();
     }
-
-    // ========================================
-    // CLI argument validation tests (bin/xcompare)
-    // ========================================
 
     public function testCliShowsHelpWithNoArgs(): void
     {
@@ -629,10 +592,6 @@ class CompareRunnerTest extends TestCase
         $this->assertStringContainsString('--run=', $joined);
         $this->assertStringContainsString('MODE 2:', $joined);
     }
-
-    // ========================================
-    // output() method test
-    // ========================================
 
     public function testOutputProducesValidJson(): void
     {
