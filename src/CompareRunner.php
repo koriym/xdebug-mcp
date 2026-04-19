@@ -12,6 +12,7 @@ use function array_keys;
 use function count;
 use function escapeshellarg;
 use function exec;
+use function fwrite;
 use function getcwd;
 use function implode;
 use function json_decode;
@@ -20,11 +21,13 @@ use function preg_match;
 use function sort;
 use function str_replace;
 use function sys_get_temp_dir;
+use function trim;
 use function uniqid;
 
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
+use const STDERR;
 
 /**
  * Compare variable states at the same breakpoint across two different executions
@@ -46,7 +49,7 @@ class CompareRunner
      * @return array{
      *   '$schema': string,
      *   context?: string,
-     *   breakpoint: array{file: string, line: int},
+     *   breakpoint: array{file: string, line: int, condition?: string},
      *   run_a: array{label: string, command: string, status: string, location: array{file: string, line: int}, variables: array<string, string>},
      *   run_b: array{label: string, command: string, status: string, location: array{file: string, line: int}, variables: array<string, string>},
      *   diff: array{changed: array<string, array{a: string, b: string}>, unchanged: list<string>, only_in_a: list<string>, only_in_b: list<string>},
@@ -72,7 +75,7 @@ class CompareRunner
         $statusB = $this->extractStatus($resultB);
 
         $diff = $this->computeDiff($varsA, $varsB);
-        $hints = $this->generateHints($diff, $varsA, $varsB);
+        $hints = $this->generateHints($diff, $varsA, $varsB, $statusA, $statusB);
 
         $breakSpec = $this->parseBreakSpec($this->options['break']);
 
@@ -165,10 +168,21 @@ class CompareRunner
 
     /**
      * Create a temporary git worktree for the specified ref
+     *
+     * The git-repo pre-check surfaces a clear error for non-git
+     * directories; the high-entropy uniqid avoids path collisions
+     * between parallel runs.
      */
     private function createWorktree(string $ref): string
     {
-        $tempDir = sys_get_temp_dir() . '/xcompare-' . uniqid();
+        $checkOutput = [];
+        $checkExit = 0;
+        exec('git rev-parse --is-inside-work-tree 2>/dev/null', $checkOutput, $checkExit);
+        if ($checkExit !== 0 || trim(implode('', $checkOutput)) !== 'true') {
+            throw new RuntimeException('--compare-with requires the current directory to be inside a git repository');
+        }
+
+        $tempDir = sys_get_temp_dir() . '/xcompare-' . uniqid('', true);
 
         $output = [];
         $exitCode = 0;
@@ -183,6 +197,10 @@ class CompareRunner
 
     /**
      * Clean up the temporary worktree if it was created
+     *
+     * A failed cleanup is not fatal (the primary result has already been
+     * produced), but we surface a warning to stderr so the leaked worktree
+     * is visible to the caller instead of silently lingering.
      */
     private function cleanupWorktree(): void
     {
@@ -190,8 +208,19 @@ class CompareRunner
             return;
         }
 
-        exec('git worktree remove ' . escapeshellarg($this->worktreePath) . ' --force 2>/dev/null');
+        $path = $this->worktreePath;
         $this->worktreePath = null;
+
+        $output = [];
+        $exitCode = 0;
+        exec('git worktree remove ' . escapeshellarg($path) . ' --force 2>&1', $output, $exitCode);
+
+        if ($exitCode === 0) {
+            return;
+        }
+
+        $detail = implode("\n", $output);
+        fwrite(STDERR, "xcompare: warning: failed to remove worktree {$path}\n{$detail}\n");
     }
 
     /**
@@ -326,9 +355,17 @@ class CompareRunner
      *
      * @return list<string>
      */
-    private function generateHints(array $diff, array $varsA, array $varsB): array
+    private function generateHints(array $diff, array $varsA, array $varsB, string $statusA = 'break', string $statusB = 'break'): array
     {
         $hints = [];
+
+        if ($statusA === 'no_break') {
+            $hints[] = 'run_a did not hit the breakpoint (status: no_break)';
+        }
+
+        if ($statusB === 'no_break') {
+            $hints[] = 'run_b did not hit the breakpoint (status: no_break)';
+        }
 
         foreach ($diff['changed'] as $name => $values) {
             $hints[] = "{$name}: {$values['a']} → {$values['b']} (changed)";
@@ -351,15 +388,22 @@ class CompareRunner
     }
 
     /**
-     * Parse breakpoint spec string into file/line
+     * Parse breakpoint spec string into file/line[/condition]
      *
-     * @return array{file: string, line: int}
+     * The condition is preserved in the result so callers can tell the
+     * comparison was run against a conditional breakpoint.
+     *
+     * @return array{file: string, line: int, condition?: string}
      */
     private function parseBreakSpec(string $spec): array
     {
-        // Remove condition part if present (file:line:condition)
-        if (preg_match('/^(.*):(\d+)/', $spec, $m)) {
-            return ['file' => $m[1], 'line' => (int) $m[2]];
+        if (preg_match('/^(.*):(\d+)(?::(.*))?$/', $spec, $m)) {
+            $result = ['file' => $m[1], 'line' => (int) $m[2]];
+            if (isset($m[3]) && $m[3] !== '') {
+                $result['condition'] = $m[3];
+            }
+
+            return $result;
         }
 
         return ['file' => $spec, 'line' => 0];

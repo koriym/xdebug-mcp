@@ -175,6 +175,8 @@ xcompare --break='calc.php:25' --run='php calc.php 10' --compare-with=main
 
 Run `--help` on any tool for detailed options.
 
+> **Note on `xcompare` commands:** the `--run-a`, `--run-b`, and `--run` values are executed through the shell so that quoting, redirection, and environment variables behave as users expect. Only pass trusted input to these options.
+
 ## Schema-Backed JSON Output
 
 Every tool emits JSON with a `$schema` URL, so the output is machine-verifiable and self-describing — no log-string parsing needed:

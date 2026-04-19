@@ -10,7 +10,11 @@
       "description": "The breakpoint location being compared",
       "properties": {
         "file": { "type": "string" },
-        "line": { "type": "integer" }
+        "line": { "type": "integer" },
+        "condition": {
+          "type": "string",
+          "description": "Optional xstep condition expression (when the breakpoint was conditional)"
+        }
       },
       "required": ["file", "line"]
     },

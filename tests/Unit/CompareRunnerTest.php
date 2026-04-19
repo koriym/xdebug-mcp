@@ -188,6 +188,53 @@ class CompareRunnerTest extends TestCase
         $this->assertSame('0 variable(s) unchanged, 0 variable(s) changed, 0 total', $hints[0]);
     }
 
+    public function testGenerateHintsFlagsNoBreakStatus(): void
+    {
+        $runner = $this->createRunner();
+
+        $diff = [
+            'changed' => [],
+            'unchanged' => [],
+            'only_in_a' => [],
+            'only_in_b' => [],
+        ];
+
+        $hints = $this->invokeMethod($runner, 'generateHints', [$diff, [], [], 'no_break', 'break']);
+
+        $this->assertContains('run_a did not hit the breakpoint (status: no_break)', $hints);
+        $this->assertNotContains('run_b did not hit the breakpoint (status: no_break)', $hints);
+    }
+
+    public function testRunEmitsNoBreakHintsForMissedBreakpoints(): void
+    {
+        $runner = $this->createFakeRunner();
+        $runner->setFakeResults([
+            'php test.php 1' => ['breaks' => []],
+            'php test.php 2' => ['breaks' => []],
+        ]);
+
+        $result = $runner->run();
+
+        $this->assertContains('run_a did not hit the breakpoint (status: no_break)', $result['analysis_hints']);
+        $this->assertContains('run_b did not hit the breakpoint (status: no_break)', $result['analysis_hints']);
+    }
+
+    public function testRunIncludesConditionInBreakpoint(): void
+    {
+        $runner = $this->createFakeRunner(['break' => 'calc.php:25:$x>0']);
+        $runner->setFakeResults([
+            'php test.php 1' => ['breaks' => [['location' => ['file' => 'calc.php', 'line' => 25], 'variables' => ['$x' => 'int: 5']]]],
+            'php test.php 2' => ['breaks' => [['location' => ['file' => 'calc.php', 'line' => 25], 'variables' => ['$x' => 'int: 5']]]],
+        ]);
+
+        $result = $runner->run();
+
+        $this->assertSame('calc.php', $result['breakpoint']['file']);
+        $this->assertSame(25, $result['breakpoint']['line']);
+        $this->assertArrayHasKey('condition', $result['breakpoint']);
+        $this->assertSame('$x>0', $result['breakpoint']['condition']);
+    }
+
     public function testParseBreakSpec(): void
     {
         $runner = $this->createRunner();
@@ -201,7 +248,10 @@ class CompareRunnerTest extends TestCase
         $runner = $this->createRunner();
 
         $result = $this->invokeMethod($runner, 'parseBreakSpec', ['src/Calculator.php:25:$x>0']);
-        $this->assertSame(['file' => 'src/Calculator.php', 'line' => 25], $result);
+        $this->assertSame(
+            ['file' => 'src/Calculator.php', 'line' => 25, 'condition' => '$x>0'],
+            $result,
+        );
     }
 
     public function testParseBreakSpecWithAbsolutePath(): void
