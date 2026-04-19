@@ -12,17 +12,23 @@ use function array_keys;
 use function count;
 use function escapeshellarg;
 use function exec;
+use function fclose;
+use function file_get_contents;
 use function fwrite;
-use function getcwd;
 use function implode;
+use function is_resource;
 use function json_decode;
 use function json_encode;
 use function preg_match;
+use function proc_close;
+use function proc_open;
 use function sort;
-use function str_replace;
+use function stream_get_contents;
 use function sys_get_temp_dir;
+use function tempnam;
 use function trim;
 use function uniqid;
+use function unlink;
 
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
@@ -59,10 +65,11 @@ class CompareRunner
     public function run(): array
     {
         [$commandA, $commandB, $labelA, $labelB] = $this->resolveCommands();
+        $cwdB = $this->worktreePath;
 
         try {
             $resultA = $this->executeXstep($commandA);
-            $resultB = $this->executeXstep($commandB);
+            $resultB = $this->executeXstep($commandB, $cwdB);
         } finally {
             $this->cleanupWorktree();
         }
@@ -136,9 +143,8 @@ class CompareRunner
         $ref = $this->options['compare_with'] ?? '';
         $this->worktreePath = $this->createWorktree($ref);
 
-        $cwd = (string) getcwd();
         $commandA = $run;
-        $commandB = str_replace($cwd, $this->worktreePath, $run);
+        $commandB = $run;
 
         $labelA = $this->options['label_a'] ?? 'HEAD (current)';
         $labelB = $this->options['label_b'] ?? $ref;
@@ -226,9 +232,14 @@ class CompareRunner
     /**
      * Execute xstep and return parsed JSON result
      *
+     * `$command` is intentionally shell-interpreted so users can pass
+     * quoting/redirection as with `xstep` itself. Stderr goes to a temp
+     * file to avoid a stdout/stderr pipe-fill deadlock, and `$cwd` sets
+     * the process working directory (worktree for --compare-with).
+     *
      * @return array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>}
      */
-    protected function executeXstep(string $command): array
+    protected function executeXstep(string $command, string|null $cwd = null): array
     {
         $xstepBin = __DIR__ . '/../bin/xstep';
         $breakArg = escapeshellarg('--break=' . $this->options['break']);
@@ -242,19 +253,48 @@ class CompareRunner
             $vendorArg = ' --include-vendor=' . escapeshellarg($this->options['include_vendor']);
         }
 
-        $fullCommand = "php {$xstepBin} {$breakArg}{$stepsArg}{$vendorArg} -- {$command} 2>/dev/null";
+        $fullCommand = 'php ' . escapeshellarg($xstepBin)
+            . " {$breakArg}{$stepsArg}{$vendorArg} -- {$command}";
 
-        $output = [];
-        $exitCode = 0;
-        exec($fullCommand, $output, $exitCode);
+        $stderrPath = tempnam(sys_get_temp_dir(), 'xcompare-stderr-');
+        if ($stderrPath === false) {
+            throw new RuntimeException('Failed to create temporary stderr file for xstep');
+        }
 
-        $jsonOutput = implode("\n", $output);
-        if ($jsonOutput === '') {
+        $descriptors = [
+            1 => ['pipe', 'w'],
+            2 => ['file', $stderrPath, 'w'],
+        ];
+
+        $pipes = [];
+        $process = proc_open($fullCommand, $descriptors, $pipes, $cwd);
+        if (! is_resource($process)) {
+            unlink($stderrPath);
+
+            throw new RuntimeException("Failed to start xstep for command: {$command}");
+        }
+
+        try {
+            $stdout = (string) stream_get_contents($pipes[1]);
+            fclose($pipes[1]);
+            $exitCode = proc_close($process);
+            $stderr = (string) file_get_contents($stderrPath);
+        } finally {
+            unlink($stderrPath);
+        }
+
+        if ($exitCode !== 0) {
+            $suffix = $stderr !== '' ? "\n{$stderr}" : '';
+
+            throw new RuntimeException("xstep failed (exit {$exitCode}) for command: {$command}{$suffix}");
+        }
+
+        if ($stdout === '') {
             throw new RuntimeException("xstep returned no output for command: {$command}");
         }
 
         /** @var array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result */
-        $result = json_decode($jsonOutput, true, 512, JSON_THROW_ON_ERROR);
+        $result = json_decode($stdout, true, 512, JSON_THROW_ON_ERROR);
 
         return $result;
     }

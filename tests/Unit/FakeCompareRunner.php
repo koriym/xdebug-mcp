@@ -22,7 +22,7 @@ class FakeCompareRunner extends CompareRunner
     }
 
     /** @return array<string, mixed> */
-    protected function executeXstep(string $command): array
+    protected function executeXstep(string $command, string|null $cwd = null): array
     {
         if (! isset($this->fakeResults[$command])) {
             throw new RuntimeException("xstep returned no output for command: {$command}");
