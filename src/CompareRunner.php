@@ -9,6 +9,7 @@ use RuntimeException;
 use function array_diff_key;
 use function array_intersect_key;
 use function array_keys;
+use function count;
 use function escapeshellarg;
 use function exec;
 use function getcwd;
@@ -320,8 +321,8 @@ class CompareRunner
      * Generate human/AI-readable analysis hints
      *
      * @param array{changed: array<string, array{a: string, b: string}>, unchanged: list<string>, only_in_a: list<string>, only_in_b: list<string>} $diff
-     * @param array<string, string> $varsA
-     * @param array<string, string> $varsB
+     * @param array<string, string>                                                                                                                 $varsA
+     * @param array<string, string>                                                                                                                 $varsB
      *
      * @return list<string>
      */
