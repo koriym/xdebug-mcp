@@ -116,7 +116,7 @@ Run the demo examples to see each tool in action:
 ./bin/xcompare --break="demo/buggy.php:22" --run-a="php demo/buggy.php 10" --run-b="php demo/buggy.php 0"
 
 # Compare current code vs another branch
-./bin/xcompare --break="src/calc.php:25" --run="php calc.php 10" --compare-with=main
+./bin/xcompare --break="src/calc.php:25" --run="php src/calc.php 10" --compare-with=main
 ```
 
 Each command outputs structured JSON data that AI can analyze to provide debugging insights.

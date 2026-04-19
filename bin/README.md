@@ -76,6 +76,8 @@ Compare variable states at the same breakpoint across two different executions.
   --context='Compare authentication flow'
 ```
 
+> **Security note:** `--run`, `--run-a`, and `--run-b` values are executed through the shell so quoting and redirection behave as expected. Only pass trusted input to these options.
+
 ### `./xdebug-phpunit`
 PHPUnit integration with Xdebug profiling and coverage.
 ```bash

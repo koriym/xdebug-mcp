@@ -18,10 +18,11 @@ function showCompareHelp(): void
     echo "  --break=FILE:LINE        Breakpoint location (e.g., src/Calculator.php:25)\n";
     echo "  --run-a=\"CMD\"            First execution command (e.g., \"php calc.php 10\")\n";
     echo "  --run-b=\"CMD\"            Second execution command (e.g., \"php calc.php 0\")\n";
+    echo "                           NOTE: executed via the shell; pass trusted input only.\n";
     echo "\n";
     echo "MODE 2: Compare with another git ref (--run / --compare-with)\n";
     echo "  --break=FILE:LINE        Breakpoint location\n";
-    echo "  --run=\"CMD\"              Command to run on both refs\n";
+    echo "  --run=\"CMD\"              Command to run on both refs (shell-executed)\n";
     echo "  --compare-with=REF       Git ref to compare against (branch, tag, commit)\n";
     echo "\n";
     echo "OPTIONAL:\n";
