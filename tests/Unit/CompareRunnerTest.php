@@ -270,6 +270,27 @@ class CompareRunnerTest extends TestCase
         $this->assertSame(['file' => 'noformat', 'line' => 0], $result);
     }
 
+    public function testBuildXstepCommandDefaultsStepsToOne(): void
+    {
+        $runner = $this->createRunner();
+
+        $command = $this->invokeMethod($runner, 'buildXstepCommand', ['php test.php 1']);
+        $this->assertStringContainsString(' --steps=1 ', $command);
+    }
+
+    public function testBuildXstepCommandRespectsExplicitSteps(): void
+    {
+        $runner = new CompareRunner([
+            'break' => 'test.php:10',
+            'run_a' => 'php test.php 1',
+            'run_b' => 'php test.php 2',
+            'steps' => 25,
+        ]);
+
+        $command = $this->invokeMethod($runner, 'buildXstepCommand', ['php test.php 1']);
+        $this->assertStringContainsString(' --steps=25 ', $command);
+    }
+
     public function testExtractVariablesFromResult(): void
     {
         $runner = $this->createRunner();

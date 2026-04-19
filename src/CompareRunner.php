@@ -241,20 +241,7 @@ class CompareRunner
      */
     protected function executeXstep(string $command, string|null $cwd = null): array
     {
-        $xstepBin = __DIR__ . '/../bin/xstep';
-        $breakArg = escapeshellarg('--break=' . $this->options['break']);
-        $stepsArg = '';
-        if (isset($this->options['steps'])) {
-            $stepsArg = ' --steps=' . (int) $this->options['steps'];
-        }
-
-        $vendorArg = '';
-        if (isset($this->options['include_vendor'])) {
-            $vendorArg = ' --include-vendor=' . escapeshellarg($this->options['include_vendor']);
-        }
-
-        $fullCommand = 'php ' . escapeshellarg($xstepBin)
-            . " {$breakArg}{$stepsArg}{$vendorArg} -- {$command}";
+        $fullCommand = $this->buildXstepCommand($command);
 
         $stderrPath = tempnam(sys_get_temp_dir(), 'xcompare-stderr-');
         if ($stderrPath === false) {
@@ -298,6 +285,28 @@ class CompareRunner
         $result = json_decode($stdout, true, 512, JSON_THROW_ON_ERROR);
 
         return $result;
+    }
+
+    /**
+     * Build the shell command for invoking xstep.
+     *
+     * Always passes --steps: xstep emits two JSON documents on stdout when
+     * --steps is omitted, which breaks json_decode.
+     */
+    private function buildXstepCommand(string $command): string
+    {
+        $xstepBin = __DIR__ . '/../bin/xstep';
+        $breakArg = escapeshellarg('--break=' . $this->options['break']);
+        $steps = isset($this->options['steps']) ? (int) $this->options['steps'] : 1;
+        $stepsArg = ' --steps=' . $steps;
+
+        $vendorArg = '';
+        if (isset($this->options['include_vendor'])) {
+            $vendorArg = ' --include-vendor=' . escapeshellarg($this->options['include_vendor']);
+        }
+
+        return 'php ' . escapeshellarg($xstepBin)
+            . " {$breakArg}{$stepsArg}{$vendorArg} -- {$command}";
     }
 
     /**
