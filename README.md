@@ -2,9 +2,9 @@
 
 <img width="256" alt="xdebug-mcp" src="docs/images/logo.jpeg" />
 
-**Debug PHP with Natural Language — No var_dump(), No Guesswork**
+**Debug PHP with Runtime Data — No var_dump(), No Guesswork**
 
-AI-powered PHP debugging tools using Xdebug's runtime analysis. Works with Claude Code (plugin), Cursor, Windsurf (MCP), and CLI.
+Trace-based debugging for PHP, built on Xdebug. Drive the tools from the CLI, or let an AI assistant run them for you.
 
 [![AI Native](https://img.shields.io/badge/AI_Native-YES-green)](https://github.com/koriym/xdebug-mcp)
 [![Runtime Data](https://img.shields.io/badge/Runtime_Data-YES-green)](https://github.com/koriym/xdebug-mcp)
@@ -38,7 +38,7 @@ The AI automatically selects the appropriate tool, executes it, and analyzes the
 
 - PHP 8.1+
 - [Xdebug 3.x](https://xdebug.org/docs/install) extension (installed, but **not** enabled by default)
-- AI assistant: Claude Code (plugin), Cursor/Windsurf (MCP), or CLI
+- Optional: an AI assistant (Claude Code plugin, or any MCP-capable client)
 
 > **💡 Performance Tip:** Keep Xdebug disabled in php.ini for daily use. This tool loads Xdebug on-demand only when needed.
 
@@ -56,17 +56,20 @@ composer global require koriym/xdebug-mcp
 ~/.composer/vendor/bin/check-env
 ```
 
-### 3. Setup AI Integration
+### 3. (Optional) Wire up an AI assistant
 
-**Claude Code:**
+Claude Code users — install the plugin:
+
 ```text
 /plugin marketplace add koriym/xdebug-mcp
 /plugin install xdebug@xdebug-mcp
 ```
 
-**Cursor / Windsurf:** See [MCP Configuration](#mcp-configuration) below.
+Cursor / Windsurf / other MCP clients: see [MCP Configuration](#mcp-configuration) below.
 
-### 4. Restart your AI assistant and try it
+You can skip this step entirely and use the CLI tools directly.
+
+### 4. Try it
 
 ```text
 # Download demo files
@@ -164,24 +167,41 @@ xcompare --break='calc.php:25' --run='php calc.php 10' --compare-with=main
 
 Run `--help` on any tool for detailed options.
 
+## Schema-Backed JSON Output
+
+Every tool emits JSON with a `$schema` URL, so the output is machine-verifiable and self-describing — no log-string parsing needed:
+
+```json
+{
+  "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xstep.json",
+  "breaks": [
+    {
+      "location": {"file": "demo/buggy.php", "line": 22},
+      "variables": {"$user": "NULL", "$id": "42"}
+    }
+  ],
+  "trace": { "...": "..." }
+}
+```
+
+Schemas live under [docs/schemas/](docs/schemas/). AI assistants — and humans — can verify exactly what each tool captured.
+
 ## MCP Configuration
 
-For Cursor, Windsurf, and other MCP-compatible tools.
-
-Create `.mcp.json` in your project root:
+For Cursor, Windsurf, or any MCP client, add `xdebug-mcp` to `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "xdebug": {
       "command": "php",
-      "args": ["/Users/YOUR_USERNAME/.composer/vendor/bin/xdebug-mcp"]
+      "args": ["/ABSOLUTE/PATH/TO/xdebug-mcp"]
     }
   }
 }
 ```
 
-Find the correct path: `which xdebug-mcp`
+Find the path with `which xdebug-mcp`.
 
 ## Interactive REPL
 
@@ -266,12 +286,6 @@ This tool is designed specifically for AI consumption, not adapted from human in
 ## See Also
 
 Looking for a different approach? [kpanuragh/xdebug-mcp](https://github.com/kpanuragh/xdebug-mcp) offers 41 MCP tools with session-based interactive debugging — ideal if you prefer step-by-step control.
-
-## Why "xdebug-mcp"?
-
-This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. While MCP remains supported for tools like Cursor and Windsurf, we now recommend the **plugin approach** for Claude Code users — it's simpler and requires no MCP configuration.
-
-The CLI tools (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`, `xcompare`) work independently of both MCP and plugins.
 
 ## Resources
 
