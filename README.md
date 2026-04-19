@@ -58,14 +58,22 @@ composer global require koriym/xdebug-mcp
 
 ### 3. (Optional) Wire up an AI assistant
 
-Claude Code users — install the plugin:
+**Claude Code** — install the plugin:
 
 ```text
 /plugin marketplace add koriym/xdebug-mcp
 /plugin install xdebug@xdebug-mcp
 ```
 
-Any MCP-capable client: see [MCP Configuration](#mcp-configuration) below.
+**Codex CLI** — install the Skill:
+
+```bash
+git clone --depth 1 https://github.com/koriym/xdebug-mcp.git /tmp/xdebug-mcp
+mkdir -p ~/.codex/skills
+cp -r /tmp/xdebug-mcp/skills/xdebug ~/.codex/skills/
+```
+
+**Any MCP-capable client** — see [MCP Configuration](#mcp-configuration) below.
 
 You can skip this step entirely and use the CLI tools directly.
 
@@ -188,9 +196,7 @@ Schemas live under [docs/schemas/](docs/schemas/). AI assistants — and humans 
 
 ## MCP Configuration
 
-For any MCP-capable client, register `xdebug-mcp` in that client's MCP config.
-
-**`.mcp.json` (Cursor, Windsurf, and other JSON-based clients):**
+For any MCP-capable client, register `xdebug-mcp` in that client's MCP config (e.g. `.mcp.json`):
 
 ```json
 {
@@ -201,14 +207,6 @@ For any MCP-capable client, register `xdebug-mcp` in that client's MCP config.
     }
   }
 }
-```
-
-**`~/.codex/config.toml` (OpenAI Codex CLI):**
-
-```toml
-[mcp_servers.xdebug]
-command = "php"
-args = ["/ABSOLUTE/PATH/TO/xdebug-mcp"]
 ```
 
 Find the path with `which xdebug-mcp`. Restart your client after editing the config.
