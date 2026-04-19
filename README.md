@@ -65,7 +65,7 @@ Claude Code users — install the plugin:
 /plugin install xdebug@xdebug-mcp
 ```
 
-Cursor / Windsurf / other MCP clients: see [MCP Configuration](#mcp-configuration) below.
+Any MCP-capable client: see [MCP Configuration](#mcp-configuration) below.
 
 You can skip this step entirely and use the CLI tools directly.
 
@@ -188,7 +188,7 @@ Schemas live under [docs/schemas/](docs/schemas/). AI assistants — and humans 
 
 ## MCP Configuration
 
-For Cursor, Windsurf, or any MCP client, add `xdebug-mcp` to `.mcp.json`:
+For any MCP-capable client, add `xdebug-mcp` to your MCP config (e.g. `.mcp.json`):
 
 ```json
 {
