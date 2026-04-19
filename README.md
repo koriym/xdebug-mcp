@@ -287,6 +287,10 @@ This tool is designed specifically for AI consumption, not adapted from human in
 
 Looking for a different approach? [kpanuragh/xdebug-mcp](https://github.com/kpanuragh/xdebug-mcp) offers 41 MCP tools with session-based interactive debugging — ideal if you prefer step-by-step control.
 
+## Why "xdebug-mcp"?
+
+This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. MCP is still supported for any MCP-capable client, but the CLI is now the primary interface — the tools (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`, `xcompare`) work on their own, with or without MCP.
+
 ## Resources
 
 - [Troubleshooting](https://koriym.github.io/xdebug-mcp/TROUBLESHOOTING) - Setup issues
