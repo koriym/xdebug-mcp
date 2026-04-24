@@ -353,16 +353,33 @@ class CompareRunnerTest extends TestCase
             ],
         ];
 
-        $location = $this->invokeMethod($runner, 'extractLocation', [$result]);
+        $fallback = ['file' => 'requested.php', 'line' => 10];
+        $location = $this->invokeMethod($runner, 'extractLocation', [$result, $fallback]);
         $this->assertSame(['file' => 'src/test.php', 'line' => 42], $location);
     }
 
-    public function testExtractLocationFromEmptyBreaks(): void
+    public function testExtractLocationFromEmptyBreaksReturnsRequested(): void
     {
         $runner = $this->createRunner();
 
-        $location = $this->invokeMethod($runner, 'extractLocation', [['breaks' => []]]);
-        $this->assertSame(['file' => '', 'line' => 0], $location);
+        $fallback = ['file' => 'requested.php', 'line' => 10];
+        $location = $this->invokeMethod($runner, 'extractLocation', [['breaks' => []], $fallback]);
+        $this->assertSame($fallback, $location);
+    }
+
+    public function testRunNoBreakFallsBackToRequestedLocation(): void
+    {
+        $runner = $this->createFakeRunner(['break' => 'src/app.php:42']);
+        $runner->setFakeResults([
+            'php test.php 1' => ['breaks' => []],
+            'php test.php 2' => ['breaks' => []],
+        ]);
+
+        $result = $runner->run();
+
+        $this->assertSame('no_break', $result['run_a']['status']);
+        $this->assertSame(['file' => 'src/app.php', 'line' => 42], $result['run_a']['location']);
+        $this->assertSame(['file' => 'src/app.php', 'line' => 42], $result['run_b']['location']);
     }
 
     public function testExtractStatusBreak(): void

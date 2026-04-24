@@ -74,17 +74,18 @@ class CompareRunner
             $this->cleanupWorktree();
         }
 
+        $breakSpec = $this->parseBreakSpec($this->options['break']);
+        $requestedLocation = ['file' => $breakSpec['file'], 'line' => $breakSpec['line']];
+
         $varsA = $this->extractVariables($resultA);
         $varsB = $this->extractVariables($resultB);
-        $locationA = $this->extractLocation($resultA);
-        $locationB = $this->extractLocation($resultB);
+        $locationA = $this->extractLocation($resultA, $requestedLocation);
+        $locationB = $this->extractLocation($resultB, $requestedLocation);
         $statusA = $this->extractStatus($resultA);
         $statusB = $this->extractStatus($resultB);
 
         $diff = $this->computeDiff($varsA, $varsB);
         $hints = $this->generateHints($diff, $varsA, $varsB, $statusA, $statusB);
-
-        $breakSpec = $this->parseBreakSpec($this->options['break']);
 
         $output = [
             '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xcompare.json',
@@ -327,20 +328,24 @@ class CompareRunner
     }
 
     /**
-     * Extract location from the first breakpoint in xstep result
+     * Extract location from the first breakpoint in xstep result.
+     *
+     * When the breakpoint was not hit, fall back to the requested location so
+     * consumers see where xcompare was looking rather than an empty sentinel.
      *
      * @param array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result
+     * @param array{file: string, line: int}                                                                            $fallback
      *
      * @return array{file: string, line: int}
      */
-    private function extractLocation(array $result): array
+    private function extractLocation(array $result, array $fallback): array
     {
         $breaks = $result['breaks'] ?? [];
         if ($breaks === []) {
-            return ['file' => '', 'line' => 0];
+            return $fallback;
         }
 
-        return $breaks[0]['location'] ?? ['file' => '', 'line' => 0];
+        return $breaks[0]['location'] ?? $fallback;
     }
 
     /**
