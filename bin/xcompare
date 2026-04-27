@@ -1,0 +1,222 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Koriym\XdebugMcp\CompareRunner;
+
+/**
+ * Display help information
+ */
+function showCompareHelp(): void
+{
+    echo "Usage: xcompare --break=FILE:LINE [--run-a=\"CMD\" --run-b=\"CMD\" | --run=\"CMD\" --compare-with=REF]\n";
+    echo "\n";
+    echo "Compare variable states at the same breakpoint across two different executions.\n";
+    echo "\n";
+    echo "MODE 1: Compare different commands (--run-a / --run-b)\n";
+    echo "  --break=FILE:LINE        Breakpoint location (e.g., src/Calculator.php:25)\n";
+    echo "  --run-a=\"CMD\"            First execution command (e.g., \"php calc.php 10\")\n";
+    echo "  --run-b=\"CMD\"            Second execution command (e.g., \"php calc.php 0\")\n";
+    echo "                           NOTE: executed via the shell; pass trusted input only.\n";
+    echo "\n";
+    echo "MODE 2: Compare with another git ref (--run / --compare-with)\n";
+    echo "  --break=FILE:LINE        Breakpoint location\n";
+    echo "  --run=\"CMD\"              Command to run on both refs (shell-executed)\n";
+    echo "  --compare-with=REF       Git ref to compare against (branch, tag, commit)\n";
+    echo "\n";
+    echo "OPTIONAL:\n";
+    echo "  --label-a=TEXT           Label for run A (default: command or 'HEAD (current)')\n";
+    echo "  --label-b=TEXT           Label for run B (default: command or ref name)\n";
+    echo "  --context=TEXT           AI analysis context description\n";
+    echo "  --steps=N                Steps to record after breakpoint (default: 1)\n";
+    echo "                           xcompare only reads the break-point snapshot; raise this\n";
+    echo "                           when you want to inspect how execution diverges after the break.\n";
+    echo "  --include-vendor=PATTERNS Include vendor packages in trace\n";
+    echo "  --help, -h               Show this help\n";
+    echo "\n";
+    echo "EXAMPLES:\n";
+    echo "\n";
+    echo "  # Compare normal vs edge case input\n";
+    echo "  xcompare --break=src/Calculator.php:25 \\\n";
+    echo "    --run-a=\"php calc.php 10\" \\\n";
+    echo "    --run-b=\"php calc.php 0\" \\\n";
+    echo "    --context=\"Compare division behavior with normal vs zero input\"\n";
+    echo "\n";
+    echo "  # Compare current code vs main branch\n";
+    echo "  xcompare --break=src/Calculator.php:25 \\\n";
+    echo "    --run=\"php calc.php 10\" \\\n";
+    echo "    --compare-with=main \\\n";
+    echo "    --context=\"Compare current implementation vs main\"\n";
+    echo "\n";
+    echo "  # Compare with a specific commit\n";
+    echo "  xcompare --break=src/Auth.php:42 \\\n";
+    echo "    --run=\"php login.php user\" \\\n";
+    echo "    --compare-with=abc123 \\\n";
+    echo "    --context=\"Compare before/after fix\"\n";
+    echo "\n";
+    echo "OUTPUT:\n";
+    echo "  JSON with run_a/run_b variable states and computed diff.\n";
+    echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xcompare.json\n";
+    echo "\n";
+    echo "HOW IT WORKS:\n";
+    echo "  Mode 1: Runs xstep with both commands sequentially\n";
+    echo "  Mode 2: Creates temp worktree for ref, runs same command on both, cleans up\n";
+    echo "\n";
+    exit(0);
+}
+
+(function () use ($argv) {
+    require_once __DIR__ . '/autoload.php';
+
+    // Show help if no arguments
+    if (count($argv) === 1) {
+        showCompareHelp();
+    }
+
+    // Parse arguments
+    $breakSpec = null;
+    $runA = null;
+    $runB = null;
+    $run = null;
+    $compareWith = null;
+    $labelA = null;
+    $labelB = null;
+    $context = null;
+    $steps = null;
+    $includeVendor = null;
+
+    for ($i = 1; $i < count($argv); $i++) {
+        $arg = $argv[$i];
+
+        if ($arg === '--help' || $arg === '-h') {
+            showCompareHelp();
+        }
+
+        if (str_starts_with($arg, '--break=')) {
+            $breakSpec = substr($arg, 8);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--run-a=')) {
+            $runA = substr($arg, 8);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--run-b=')) {
+            $runB = substr($arg, 8);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--run=')) {
+            $run = substr($arg, 6);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--compare-with=')) {
+            $compareWith = substr($arg, 15);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--label-a=')) {
+            $labelA = substr($arg, 10);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--label-b=')) {
+            $labelB = substr($arg, 10);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--context=')) {
+            $context = substr($arg, 10);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--steps=')) {
+            $steps = (int) substr($arg, 8);
+            continue;
+        }
+
+        if (str_starts_with($arg, '--include-vendor=')) {
+            $includeVendor = substr($arg, 17);
+            continue;
+        }
+    }
+
+    // Validate required arguments
+    if ($breakSpec === null) {
+        fwrite(STDERR, "Error: --break=FILE:LINE is required\n");
+        fwrite(STDERR, "Run 'xcompare --help' for usage.\n");
+        exit(1);
+    }
+
+    // Determine mode: compare-with or explicit run-a/run-b
+    $isCompareWithMode = $compareWith !== null || $run !== null;
+    $isExplicitMode = $runA !== null || $runB !== null;
+
+    if ($isCompareWithMode && $isExplicitMode) {
+        fwrite(STDERR, "Error: Cannot mix --run/--compare-with with --run-a/--run-b\n");
+        fwrite(STDERR, "Run 'xcompare --help' for usage.\n");
+        exit(1);
+    }
+
+    if ($isCompareWithMode) {
+        if ($run === null) {
+            fwrite(STDERR, "Error: --run=\"CMD\" is required when using --compare-with\n");
+            fwrite(STDERR, "Run 'xcompare --help' for usage.\n");
+            exit(1);
+        }
+
+        if ($compareWith === null) {
+            fwrite(STDERR, "Error: --compare-with=REF is required when using --run\n");
+            fwrite(STDERR, "Run 'xcompare --help' for usage.\n");
+            exit(1);
+        }
+    } else {
+        if ($runA === null) {
+            fwrite(STDERR, "Error: --run-a=\"CMD\" is required\n");
+            fwrite(STDERR, "Run 'xcompare --help' for usage.\n");
+            exit(1);
+        }
+
+        if ($runB === null) {
+            fwrite(STDERR, "Error: --run-b=\"CMD\" is required\n");
+            fwrite(STDERR, "Run 'xcompare --help' for usage.\n");
+            exit(1);
+        }
+    }
+
+    $options = ['break' => $breakSpec];
+
+    if ($isCompareWithMode) {
+        $options['run'] = $run;
+        $options['compare_with'] = $compareWith;
+    } else {
+        $options['run_a'] = $runA;
+        $options['run_b'] = $runB;
+    }
+
+    if ($labelA !== null) {
+        $options['label_a'] = $labelA;
+    }
+
+    if ($labelB !== null) {
+        $options['label_b'] = $labelB;
+    }
+
+    if ($context !== null) {
+        $options['context'] = $context;
+    }
+
+    if ($steps !== null) {
+        $options['steps'] = $steps;
+    }
+
+    if ($includeVendor !== null) {
+        $options['include_vendor'] = $includeVendor;
+    }
+
+    $runner = new CompareRunner($options);
+    $runner->output();
+})();

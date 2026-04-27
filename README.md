@@ -2,9 +2,9 @@
 
 <img width="256" alt="xdebug-mcp" src="docs/images/logo.jpeg" />
 
-**Debug PHP with Natural Language — No var_dump(), No Guesswork**
+**Debug PHP with Runtime Data — No var_dump(), No Guesswork**
 
-AI-powered PHP debugging tools using Xdebug's runtime analysis. Works with Claude Code (plugin), Cursor, Windsurf (MCP), and CLI.
+Trace-based debugging for PHP, built on Xdebug. Drive the tools from the CLI, or let an AI assistant run them for you.
 
 [![AI Native](https://img.shields.io/badge/AI_Native-YES-green)](https://github.com/koriym/xdebug-mcp)
 [![Runtime Data](https://img.shields.io/badge/Runtime_Data-YES-green)](https://github.com/koriym/xdebug-mcp)
@@ -38,7 +38,7 @@ The AI automatically selects the appropriate tool, executes it, and analyzes the
 
 - PHP 8.1+
 - [Xdebug 3.x](https://xdebug.org/docs/install) extension (installed, but **not** enabled by default)
-- AI assistant: Claude Code (plugin), Cursor/Windsurf (MCP), or CLI
+- Optional: an AI assistant (Claude Code plugin, or any MCP-capable client)
 
 > **💡 Performance Tip:** Keep Xdebug disabled in php.ini for daily use. This tool loads Xdebug on-demand only when needed.
 
@@ -56,17 +56,28 @@ composer global require koriym/xdebug-mcp
 ~/.composer/vendor/bin/check-env
 ```
 
-### 3. Setup AI Integration
+### 3. (Optional) Wire up an AI assistant
 
-**Claude Code:**
+**Claude Code** — install the plugin:
+
 ```text
 /plugin marketplace add koriym/xdebug-mcp
 /plugin install xdebug@xdebug-mcp
 ```
 
-**Cursor / Windsurf:** See [MCP Configuration](#mcp-configuration) below.
+**Codex CLI** — install the Skill:
 
-### 4. Restart your AI assistant and try it
+```bash
+git clone --depth 1 https://github.com/koriym/xdebug-mcp.git /tmp/xdebug-mcp
+mkdir -p ~/.codex/skills
+cp -r /tmp/xdebug-mcp/skills/xdebug ~/.codex/skills/
+```
+
+**Any MCP-capable client** — see [MCP Configuration](#mcp-configuration) below.
+
+You can skip this step entirely and use the CLI tools directly.
+
+### 4. Try it
 
 ```text
 # Download demo files
@@ -100,6 +111,12 @@ Run the demo examples to see each tool in action:
 
 # Get stack trace at breakpoint
 ./bin/xback --break="demo/buggy.php:44" -- php demo/buggy.php
+
+# Compare variable states with different inputs
+./bin/xcompare --break="demo/buggy.php:22" --run-a="php demo/buggy.php 10" --run-b="php demo/buggy.php 0"
+
+# Compare current code vs another branch
+./bin/xcompare --break="src/calc.php:25" --run="php src/calc.php 10" --compare-with=main
 ```
 
 Each command outputs structured JSON data that AI can analyze to provide debugging insights.
@@ -127,6 +144,7 @@ flowchart LR
 | `xprofile` | Performance profiling | "Find what's making this endpoint slow" |
 | `xcoverage` | Code coverage analysis | "Which lines aren't covered by tests?" |
 | `xback` | Call stack at breakpoint | "Show me how we got to this error" |
+| `xcompare` | Compare variable states across two runs | "Compare input 10 vs 0" or "Compare with main branch" |
 
 ## CLI Usage
 
@@ -147,28 +165,55 @@ xcoverage -- vendor/bin/phpunit
 
 # Stack trace at breakpoint
 xback --break='app.php:50' -- php app.php
+
+# Compare variables at breakpoint with different inputs
+xcompare --break='calc.php:25' --run-a='php calc.php 10' --run-b='php calc.php 0'
+
+# Compare current code vs main branch
+xcompare --break='calc.php:25' --run='php calc.php 10' --compare-with=main
 ```
 
 Run `--help` on any tool for detailed options.
 
+> **Note on `xcompare` commands:** the `--run-a`, `--run-b`, and `--run` values are executed through the shell so that quoting, redirection, and environment variables behave as users expect. Only pass trusted input to these options.
+>
+> **Note on `--steps`:** `xcompare` defaults to `--steps=1`, since the comparison only needs the variable snapshot at the breakpoint. Pass `--steps=N` explicitly (e.g. `--steps=100`) if you want to see how execution diverges between the two runs after the break.
+
+## Schema-Backed JSON Output
+
+Every tool emits JSON with a `$schema` URL, so the output is machine-verifiable and self-describing — no log-string parsing needed:
+
+```json
+{
+  "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xstep.json",
+  "breaks": [
+    {
+      "location": {"file": "demo/buggy.php", "line": 22},
+      "variables": {"$user": "NULL", "$id": "42"}
+    }
+  ],
+  "trace": { "...": "..." }
+}
+```
+
+Schemas live under [docs/schemas/](docs/schemas/). AI assistants — and humans — can verify exactly what each tool captured.
+
 ## MCP Configuration
 
-For Cursor, Windsurf, and other MCP-compatible tools.
-
-Create `.mcp.json` in your project root:
+For any MCP-capable client, register `xdebug-mcp` in that client's MCP config (e.g. `.mcp.json`):
 
 ```json
 {
   "mcpServers": {
     "xdebug": {
       "command": "php",
-      "args": ["/Users/YOUR_USERNAME/.composer/vendor/bin/xdebug-mcp"]
+      "args": ["/ABSOLUTE/PATH/TO/xdebug-mcp"]
     }
   }
 }
 ```
 
-Find the correct path: `which xdebug-mcp`
+Find the path with `which xdebug-mcp`. Restart your client after editing the config.
 
 ## Interactive REPL
 
@@ -256,9 +301,7 @@ Looking for a different approach? [kpanuragh/xdebug-mcp](https://github.com/kpan
 
 ## Why "xdebug-mcp"?
 
-This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. While MCP remains supported for tools like Cursor and Windsurf, we now recommend the **plugin approach** for Claude Code users — it's simpler and requires no MCP configuration.
-
-The CLI tools (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`) work independently of both MCP and plugins.
+This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. MCP is still supported for any MCP-capable client, but the CLI is now the primary interface — the tools (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`, `xcompare`) work on their own, with or without MCP.
 
 ## Resources
 

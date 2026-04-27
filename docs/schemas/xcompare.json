@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://koriym.github.io/xdebug-mcp/schemas/xcompare.json",
+  "title": "Xdebug Breakpoint Comparison Result",
+  "description": "Comparison of variable states at the same breakpoint across two different executions. Shows what changed, what stayed the same, and what exists only in one run.",
+  "type": "object",
+  "properties": {
+    "breakpoint": {
+      "type": "object",
+      "description": "The breakpoint location being compared",
+      "properties": {
+        "file": { "type": "string" },
+        "line": { "type": "integer" },
+        "condition": {
+          "type": "string",
+          "description": "Optional xstep condition expression (when the breakpoint was conditional)"
+        }
+      },
+      "required": ["file", "line"]
+    },
+    "run_a": {
+      "$ref": "#/definitions/run_result",
+      "description": "First execution result"
+    },
+    "run_b": {
+      "$ref": "#/definitions/run_result",
+      "description": "Second execution result"
+    },
+    "diff": {
+      "$ref": "#/definitions/variable_diff",
+      "description": "Computed difference between run_a and run_b variables"
+    },
+    "context": {
+      "type": "string",
+      "description": "Optional analysis context for AI"
+    },
+    "analysis_hints": {
+      "type": "array",
+      "description": "Human/AI-readable summary of differences",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["breakpoint", "run_a", "run_b", "diff", "analysis_hints"],
+
+  "definitions": {
+    "run_result": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Human-readable label for this run"
+        },
+        "command": {
+          "type": "string",
+          "description": "The command that was executed"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["break", "no_break"],
+          "description": "Whether the breakpoint was hit"
+        },
+        "location": {
+          "type": "object",
+          "description": "File/line the interpreter was stopped at. When status is 'no_break', this mirrors the requested breakpoint so consumers can see where xcompare was looking.",
+          "properties": {
+            "file": { "type": "string" },
+            "line": { "type": "integer" }
+          },
+          "required": ["file", "line"]
+        },
+        "variables": {
+          "type": "object",
+          "description": "Variable values captured at breakpoint",
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "required": ["label", "command", "status", "location", "variables"]
+    },
+    "variable_diff": {
+      "type": "object",
+      "properties": {
+        "changed": {
+          "type": "object",
+          "description": "Variables present in both runs with different values",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "a": { "type": "string", "description": "Value in run_a" },
+              "b": { "type": "string", "description": "Value in run_b" }
+            },
+            "required": ["a", "b"]
+          }
+        },
+        "unchanged": {
+          "type": "array",
+          "description": "Variable names with identical values in both runs",
+          "items": { "type": "string" }
+        },
+        "only_in_a": {
+          "type": "array",
+          "description": "Variables only present in run_a",
+          "items": { "type": "string" }
+        },
+        "only_in_b": {
+          "type": "array",
+          "description": "Variables only present in run_b",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["changed", "unchanged", "only_in_a", "only_in_b"]
+    }
+  },
+
+  "links": [
+    {
+      "rel": "self",
+      "href": "https://koriym.github.io/xdebug-mcp/schemas/xcompare.json",
+      "title": "JSON Schema for Xdebug Breakpoint Comparison"
+    },
+    {
+      "rel": "related",
+      "href": "https://koriym.github.io/xdebug-mcp/schemas/xstep.json",
+      "title": "Xdebug Step Debugging Schema (used internally)"
+    }
+  ]
+}
