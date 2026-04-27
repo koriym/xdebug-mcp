@@ -152,7 +152,7 @@ The server exposes multiple tools via MCP across main categories:
 - Environment variables: MCP_DEBUG for debug logging
 
 ## PHP Requirements
-- PHP >= 8.0
+- PHP >= 8.2
 - ext-sockets extension for Xdebug communication
 - ext-xml extension for parsing Xdebug responses
 - Xdebug extension (with debug, profile, and coverage modes enabled)

@@ -58,7 +58,7 @@ php -dzend_extension=xdebug -r "echo 'Xdebug version: ' . phpversion('xdebug');"
 
 **Check PHP Version**:
 ```bash
-php -v  # Must be PHP 8.0+
+php -v  # Must be PHP 8.2+
 which php
 ```
 
@@ -68,7 +68,7 @@ which php
 export PATH="/usr/local/bin:$PATH"
 
 # Ubuntu: Install PHP 8.x
-sudo apt-get install php8.1-cli php8.1-xdebug
+sudo apt-get install php8.2-cli php8.2-xdebug
 ```
 
 ### 3. Port Conflicts
