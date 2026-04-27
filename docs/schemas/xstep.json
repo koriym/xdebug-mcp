@@ -40,7 +40,12 @@
         },
         "variables": {
           "type": "object",
-          "description": "Variable values at breakpoint"
+          "description": "Variable values at breakpoint. In step-recording mode (--break + --steps) the contents depend on recording_type: a 'full' frame carries every variable, while a 'diff' frame carries only variables that were added, changed, or removed since the previous step (deleted variables appear with the value '[DELETED]')."
+        },
+        "recording_type": {
+          "type": "string",
+          "enum": ["full", "diff"],
+          "description": "Present only in step-recording mode (--break + --steps). 'full' marks the first recorded step and contains the complete variable snapshot; 'diff' marks subsequent steps and contains only the changes from the previous step (added, modified, or deleted entries — deletions are encoded as '[DELETED]')."
         },
         "watches": {
           "type": "array",
