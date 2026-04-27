@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp\Tests\Integration;
 
+use Koriym\XdebugMcp\XdebugFinder;
 use PHPUnit\Framework\TestCase;
 
 use function dirname;
@@ -11,16 +12,23 @@ use function escapeshellarg;
 use function explode;
 use function file_exists;
 use function file_put_contents;
+use function is_dir;
 use function is_executable;
 use function json_decode;
 use function json_encode;
+use function mkdir;
+use function rmdir;
 use function shell_exec;
 use function sprintf;
 use function str_starts_with;
+use function strrpos;
+use function substr;
 use function sys_get_temp_dir;
 use function tempnam;
 use function trim;
 use function unlink;
+
+use const JSON_THROW_ON_ERROR;
 
 class XdebugCommandsTest extends TestCase
 {
@@ -114,6 +122,102 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
     {
         $this->assertTrue(file_exists(__DIR__ . '/../../bin/xcoverage'));
         $this->assertTrue(is_executable(__DIR__ . '/../../bin/xcoverage'));
+    }
+
+    public function testXcoverageFormatsPhpUnitCoverageAndIgnoresNoCoverageFlag(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $root = dirname(__DIR__, 2);
+        $buildDir = $root . '/build';
+        if (! is_dir($buildDir)) {
+            mkdir($buildDir);
+        }
+
+        $fixtureDir = tempnam($buildDir, 'xcoverage_phpunit_');
+        $this->assertIsString($fixtureDir);
+        unlink($fixtureDir);
+
+        $sourceDir = $fixtureDir . '/src';
+        $testDir = $fixtureDir . '/tests';
+        mkdir($sourceDir, 0777, true);
+        mkdir($testDir, 0777, true);
+
+        $sourceFile = $sourceDir . '/IgnoredSubject.php';
+        $testFile = $testDir . '/IgnoredSubjectTest.php';
+
+        file_put_contents($sourceFile, <<<'PHP'
+<?php
+final class IgnoredSubject
+{
+    public function value(bool $flag): string
+    {
+        if ($flag) {
+            return 'covered';
+        }
+
+        return 'ignored'; // @codeCoverageIgnore
+    }
+}
+PHP);
+
+        file_put_contents($testFile, <<<'PHP'
+<?php
+
+use PHPUnit\Framework\TestCase;
+
+require_once __DIR__ . '/../src/IgnoredSubject.php';
+
+final class IgnoredSubjectTest extends TestCase
+{
+    public function testCoveredBranch(): void
+    {
+        self::assertSame('covered', (new IgnoredSubject())->value(true));
+    }
+}
+PHP);
+
+        try {
+            $command = sprintf(
+                'cd %s && ./bin/xcoverage -- php ./vendor/bin/phpunit --no-coverage --no-configuration --coverage-filter %s %s 2>&1',
+                escapeshellarg($root),
+                escapeshellarg($sourceDir),
+                escapeshellarg($testFile),
+            );
+            $output = shell_exec($command);
+
+            $this->assertNotNull($output);
+            $jsonStart = strrpos($output, "{\n    \"\$schema\"");
+            $this->assertNotFalse($jsonStart, $output);
+
+            $coverage = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+
+            $this->assertSame('phpunit', $coverage['mode']);
+            $this->assertSame(100.0, (float) $coverage['summary']['coverage_percent']);
+            $this->assertSame([], $coverage['uncovered']);
+        } finally {
+            if (file_exists($testFile)) {
+                unlink($testFile);
+            }
+
+            if (file_exists($sourceFile)) {
+                unlink($sourceFile);
+            }
+
+            if (is_dir($testDir)) {
+                rmdir($testDir);
+            }
+
+            if (is_dir($sourceDir)) {
+                rmdir($sourceDir);
+            }
+
+            if (is_dir($fixtureDir)) {
+                rmdir($fixtureDir);
+            }
+        }
     }
 
     public function testXstepCommandExists(): void

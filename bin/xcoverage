@@ -10,7 +10,7 @@ const XDEBUG_BRANCH_EXIT_SENTINEL = 2147483645;
 
 // Show help if requested
 if (in_array('--help', $argv) || in_array('-h', $argv)) {
-    echo "Usage: " . $argv[0] . " [OPTIONS] [--] [php script.php [args...]]\n";
+    echo "Usage: " . $argv[0] . " [OPTIONS] [--] [phpunit args | php vendor/bin/phpunit [args...]]\n";
     echo "\n";
     echo "AI-Optimized PHP Code Coverage Collection Tool\n";
     echo "\n";
@@ -37,6 +37,7 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
     echo "COMMON USAGE PATTERNS:\n";
     echo "  # Default: PHPUnit mode with @codeCoverageIgnore support\n";
     echo "  " . $argv[0] . "\n";
+    echo "  " . $argv[0] . " -- php ./vendor/bin/phpunit --filter MyTest\n";
     echo "\n";
     echo "  # Raw mode: Xdebug direct coverage (any PHP script)\n";
     echo "  " . $argv[0] . " --raw -- php app.php\n";
@@ -63,8 +64,8 @@ $rawMode = isset($options['raw']);
 // Get remaining arguments
 $args = $optind !== null ? array_slice($argv, $optind) : [];
 
-// If first argument is 'php', remove it
-if (!empty($args) && $args[0] === 'php') {
+// Remove the option delimiter if present
+if (!empty($args) && $args[0] === '--') {
     $args = array_slice($args, 1);
 }
 
@@ -73,6 +74,65 @@ $debug = getenv('COVERAGE_DEBUG');
 if ($debug) {
     fwrite(STDERR, "[COVERAGE_DEBUG] Raw mode: " . ($rawMode ? 'true' : 'false') . "\n");
     fwrite(STDERR, "[COVERAGE_DEBUG] Args: " . json_encode($args) . "\n");
+}
+
+/**
+ * Normalize a user-provided PHPUnit command into arguments for the local PHPUnit binary.
+ *
+ * xcoverage asks PHPUnit for Clover output, so flags that disable coverage are removed.
+ *
+ * @param list<string> $args
+ *
+ * @return list<string>
+ */
+function normalizePhpUnitArguments(array $args): array
+{
+    if (! empty($args) && isPhpBinary($args[0])) {
+        $args = array_slice($args, 1);
+    }
+
+    if (! empty($args) && isPhpUnitCommand($args[0])) {
+        $args = array_slice($args, 1);
+    }
+
+    $normalized = [];
+    foreach ($args as $arg) {
+        if ($arg === '--no-coverage') {
+            continue;
+        }
+
+        $normalized[] = $arg;
+    }
+
+    return $normalized;
+}
+
+/**
+ * @param list<string> $args
+ *
+ * @return list<string>
+ */
+function normalizeRawArguments(array $args): array
+{
+    if (! empty($args) && isPhpBinary($args[0])) {
+        return array_slice($args, 1);
+    }
+
+    return $args;
+}
+
+function isPhpBinary(string $arg): bool
+{
+    $binary = basename(str_replace('\\', '/', $arg));
+
+    return preg_match('/^php(?:[0-9.]+)?(?:\.exe)?$/i', $binary) === 1;
+}
+
+function isPhpUnitCommand(string $arg): bool
+{
+    $binary = basename(str_replace('\\', '/', $arg));
+
+    return $binary === 'phpunit' || $binary === 'phpunit.phar';
 }
 
 // PHPUnit mode (default) - uses PHPUnit's coverage with @codeCoverageIgnore support
@@ -92,18 +152,16 @@ if (!$rawMode) {
     $phpPath = PHP_BINARY;
 
     // Build PHPUnit command with coverage-clover (stable XML format)
-    $phpunitArgs = ['--coverage-clover=' . $coverageFile, '--testdox', '--no-progress', '--colors=never'];
-
-    // Add any additional args
-    if (!empty($args)) {
-        $phpunitArgs = array_merge($phpunitArgs, $args);
-    }
+    $phpunitArgs = array_merge(
+        ['--coverage-clover=' . $coverageFile, '--testdox', '--no-progress', '--colors=never'],
+        normalizePhpUnitArguments($args),
+    );
 
     echo "# Running PHPUnit with coverage (respects @codeCoverageIgnore)\n";
 
     $escapedArgs = array_map('escapeshellarg', $phpunitArgs);
     // Run PHPUnit via PHP with Xdebug enabled
-    $cmd = escapeshellarg($phpPath) . $xdebugFlag . ' -dxdebug.mode=coverage ' . escapeshellarg('./vendor/bin/phpunit') . ' ' . implode(' ', $escapedArgs);
+    $cmd = escapeshellarg($phpPath) . $xdebugFlag . ' -dxdebug.mode=coverage -dpcov.enabled=0 ' . escapeshellarg('./vendor/bin/phpunit') . ' ' . implode(' ', $escapedArgs);
 
     if ($debug) {
         fwrite(STDERR, "[COVERAGE_DEBUG] PHPUnit command: $cmd\n");
@@ -238,6 +296,7 @@ if (!$rawMode) {
 }
 
 // Raw mode - uses Xdebug directly (original behavior)
+$args = normalizeRawArguments($args);
 $shutdownScript = tempnam(sys_get_temp_dir(), 'coverage_end_');
 $branchFlag = $branchCoverage ? 'true' : 'false';
 $includeVendorRequire = '';
