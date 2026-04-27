@@ -51,5 +51,6 @@ final class XstepSchemaTest extends TestCase
         $this->assertArrayHasKey('stack_frame', $schema['definitions']);
         $this->assertArrayHasKey('breakpoint_reference', $schema['definitions']);
         $this->assertArrayHasKey('variable_diff', $schema['definitions']);
+        $this->assertArrayHasKey('shallow_key_diff', $schema['definitions']);
     }
 }

@@ -72,6 +72,7 @@ use function libxml_clear_errors;
 use function libxml_get_errors;
 use function libxml_use_internal_errors;
 use function ltrim;
+use function mb_strcut;
 use function md5;
 use function microtime;
 use function parse_str;
@@ -137,6 +138,7 @@ final class DebugServer
     private const DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
     private const MAX_STEPS = 100;  // Default maximum steps for step recording
     private const DEFAULT_MAX_VALUE_BYTES = 200;
+    private const DEFAULT_CHILD_VALUE_BYTES = 20;
     private const STACK_CONTEXT_LIMIT = 5;
 
     /** @var DeferredFuture<bool>|null */
@@ -2570,7 +2572,7 @@ final class DebugServer
             return $value;
         }
 
-        return substr($value, 0, $maxBytes) . "... (truncated, {$maxBytes} bytes)";
+        return mb_strcut($value, 0, $maxBytes, 'UTF-8') . "... (truncated, {$maxBytes} bytes)";
     }
 
     private function truncateVariableDisplay(string $value, int|null $maxBytes = null): string
@@ -2876,7 +2878,7 @@ final class DebugServer
 
                 // Format key-value pairs
                 if ($childType === 'string') {
-                    $displayValue = $this->truncateStringValue($value, $this->getMaxValueBytes() ?? 20);
+                    $displayValue = $this->truncateStringValue($value, $this->getMaxValueBytes() ?? self::DEFAULT_CHILD_VALUE_BYTES);
                     $items[] = "{$key}: \"{$displayValue}\"";
                 } elseif ($childType === 'int' || $childType === 'float') {
                     $items[] = "{$key}: {$value}";
