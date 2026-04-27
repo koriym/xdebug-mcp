@@ -114,6 +114,19 @@ use const STDERR;
  *                     Integration tests exist but require specific Xdebug runtime setup.
  *                     Coverage: 1.39% (1/72 methods), 0.71% (9/1266 lines) - remaining
  *                     uncovered code paths require actual debugging sessions.
+ * @phpstan-type DebugLocation array{file: string, line: int}
+ * @phpstan-type StackFrame array{function: string, file: string, line: int}
+ * @phpstan-type BreakpointRef array{id: string, label: string}
+ * @phpstan-type ShallowKeyDiff array{added: array<string, string>, removed: array<string, string>, changed: array<string, array{before: string, after: string}>}
+ * @phpstan-type VariableDiffEntry array{change: string, type: string, before?: string, after?: string, keys?: ShallowKeyDiff}
+ * @phpstan-type VariableDiff array<string, VariableDiffEntry>
+ * @phpstan-type WatchChange array{expression: string, value: string, previous: string|null, reason: string}
+ * @phpstan-type DebugBreak array{step: int, location: DebugLocation, function: string, stack: list<StackFrame>, breakpoint: BreakpointRef, variables: array<string, string>, recording_type?: string, diff?: VariableDiff, watches?: list<WatchChange>}
+ * @phpstan-type TraceInfo array{file: string, lines: int, functions: int, max_depth: int, db_queries: int, error?: string}
+ * @phpstan-type OutputDebugInfo array{trace_files_found: int, search_patterns: list<string>, latest_file: string|null}
+ * @phpstan-type XstepJsonOutput array{'$schema': string, breaks: list<DebugBreak>, trace?: TraceInfo, context?: string, debug?: OutputDebugInfo}
+ * @phpstan-type ShallowJsonValue string|int|float|bool|array<array-key, string|int|float|bool|array<array-key, string|int|float|bool|null>|null>|null
+ * @phpstan-type ShallowJsonMap array<array-key, ShallowJsonValue>
  * @see https://xdebug.org/docs/step_debug
  * @see https://xdebug.org/docs/dbgp
  */
@@ -140,7 +153,7 @@ final class DebugServer
     private bool $httpMode = false;
     private bool $shouldExit = false;
 
-    /** @var list<array<string, mixed>> */
+    /** @var list<DebugBreak> */
     private array $breaks = [];
     private bool $isDockerCommand = false;
     private bool $stepRecordingOutputDone = false;
@@ -505,7 +518,7 @@ final class DebugServer
      * Perform step-by-step tracing with variable inspection for Step Recording
      * Records variable state at each step for AI analysis
      *
-     * @return list<array<string, mixed>>
+     * @return list<DebugBreak>
      */
     private function performStepTrace(): array
     {
@@ -570,12 +583,7 @@ final class DebugServer
                     // First step: always record with "initial" reason
                     $watchChanged = true;
                     foreach ($currentWatchValues as $expr => $value) {
-                        $watchData[] = [
-                            'expression' => $expr,
-                            'value' => $value,
-                            'previous' => null,
-                            'reason' => 'initial',
-                        ];
+                        $watchData[] = $this->createWatchChange($expr, $value, null, 'initial');
                     }
                 } else {
                     // Subsequent steps: compare with previous values
@@ -585,12 +593,7 @@ final class DebugServer
                         // Transition from available to unavailable → out_of_scope
                         if ($value === '<unavailable>' && $previous !== '<unavailable>') {
                             $watchChanged = true;
-                            $watchData[] = [
-                                'expression' => $expr,
-                                'value' => $value,
-                                'previous' => $previous,
-                                'reason' => 'out_of_scope',
-                            ];
+                            $watchData[] = $this->createWatchChange($expr, $value, $previous, 'out_of_scope');
                             continue;
                         }
 
@@ -605,12 +608,12 @@ final class DebugServer
                         }
 
                         $watchChanged = true;
-                        $watchData[] = [
-                            'expression' => $expr,
-                            'value' => $value,
-                            'previous' => $previous !== '<unavailable>' ? $previous : null,
-                            'reason' => 'changed',
-                        ];
+                        $watchData[] = $this->createWatchChange(
+                            $expr,
+                            $value,
+                            $previous !== '<unavailable>' ? $previous : null,
+                            'changed',
+                        );
                     }
                 }
 
@@ -684,24 +687,17 @@ final class DebugServer
             }
 
             // Record the step
-            $step = [
-                'step' => $stepCount,
-                'location' => $location,
-                'function' => $topFrame['function'],
-                'stack' => array_slice($stackFrames, 0, self::STACK_CONTEXT_LIMIT),
-                'breakpoint' => $breakpoint,
-                'variables' => $variablesToRecord,
-                'recording_type' => $recordingType,
-            ];
-
-            if ($variableDiff !== []) {
-                $step['diff'] = $variableDiff;
-            }
-
-            if ($hasWatches && $watchData !== []) {
-                $step['watches'] = $watchData;
-            }
-
+            $step = $this->createRecordedBreak(
+                $stepCount,
+                $location,
+                $topFrame,
+                $stackFrames,
+                $breakpoint,
+                $variablesToRecord,
+                $recordingType,
+                $variableDiff,
+                $hasWatches ? $watchData : [],
+            );
             $steps[] = $step;
             $recordedCount++;
 
@@ -757,6 +753,60 @@ final class DebugServer
         }
 
         return $steps;
+    }
+
+    /** @return WatchChange */
+    private function createWatchChange(string $expression, string $value, string|null $previous, string $reason): array
+    {
+        return [
+            'expression' => $expression,
+            'value' => $value,
+            'previous' => $previous,
+            'reason' => $reason,
+        ];
+    }
+
+    /**
+     * @param DebugLocation         $location
+     * @param StackFrame            $topFrame
+     * @param list<StackFrame>      $stackFrames
+     * @param BreakpointRef         $breakpoint
+     * @param array<string, string> $variables
+     * @param VariableDiff          $variableDiff
+     * @param list<WatchChange>     $watchData
+     *
+     * @return DebugBreak
+     */
+    private function createRecordedBreak(
+        int $step,
+        array $location,
+        array $topFrame,
+        array $stackFrames,
+        array $breakpoint,
+        array $variables,
+        string $recordingType,
+        array $variableDiff,
+        array $watchData,
+    ): array {
+        $debugBreak = [
+            'step' => $step,
+            'location' => $location,
+            'function' => $topFrame['function'],
+            'stack' => array_slice($stackFrames, 0, self::STACK_CONTEXT_LIMIT),
+            'breakpoint' => $breakpoint,
+            'variables' => $variables,
+            'recording_type' => $recordingType,
+        ];
+
+        if ($variableDiff !== []) {
+            $debugBreak['diff'] = $variableDiff;
+        }
+
+        if ($watchData !== []) {
+            $debugBreak['watches'] = $watchData;
+        }
+
+        return $debugBreak;
     }
 
     /**
@@ -2478,7 +2528,7 @@ final class DebugServer
     /**
      * Encode xstep JSON output with user-selected formatting.
      *
-     * @param array<string, mixed> $result
+     * @param XstepJsonOutput $result
      */
     private function encodeJsonOutput(array $result): string
     {
@@ -2958,7 +3008,7 @@ final class DebugServer
      * @param array<string, string> $previousVariables
      * @param array<string, string> $currentVariables
      *
-     * @return array<string, array<string, mixed>>
+     * @return VariableDiff
      */
     private function buildVariableDiff(array $previousVariables, array $currentVariables): array
     {
@@ -2989,7 +3039,7 @@ final class DebugServer
         return $diff;
     }
 
-    /** @return array<string, mixed> */
+    /** @return VariableDiffEntry */
     private function createVariableDiffEntry(string $change, string|null $before, string|null $after): array
     {
         $display = $after ?? $before ?? '';
@@ -3069,8 +3119,8 @@ final class DebugServer
             return null;
         }
 
-        $beforeMap = $this->buildShallowValueMap($beforeParsed['value']);
-        $afterMap = $this->buildShallowValueMap($afterParsed['value']);
+        $beforeMap = $this->buildShallowValueMap($this->normalizeShallowValueMap($beforeParsed['value']));
+        $afterMap = $this->buildShallowValueMap($this->normalizeShallowValueMap($afterParsed['value']));
         $added = [];
         $removed = [];
         $changed = [];
@@ -3112,7 +3162,7 @@ final class DebugServer
     }
 
     /**
-     * @param array<array-key, mixed> $value
+     * @param ShallowJsonMap $value
      *
      * @return array<string, string>
      */
@@ -3124,6 +3174,42 @@ final class DebugServer
         }
 
         return $map;
+    }
+
+    /** @return ShallowJsonMap */
+    private function normalizeShallowValueMap(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($value as $key => $item) {
+            if (is_array($item)) {
+                $normalized[$key] = $this->normalizeShallowChildMap($item);
+
+                continue;
+            }
+
+            $normalized[$key] = is_scalar($item) || $item === null ? $item : $this->stringifyShallowValue($item);
+        }
+
+        return $normalized;
+    }
+
+    /** @return array<array-key, string|int|float|bool|null> */
+    private function normalizeShallowChildMap(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($value as $key => $item) {
+            $normalized[$key] = is_scalar($item) || $item === null ? $item : $this->stringifyShallowValue($item);
+        }
+
+        return $normalized;
     }
 
     private function stringifyShallowValue(mixed $value): string
@@ -3386,31 +3472,9 @@ final class DebugServer
     }
 
     /**
-     * Parse stack XML response to extract current location
-     *
-     * @return array{file: string, line: int}
-     */
-    private function parseStackLocation(string $stackXml): array
-    {
-        $frames = $this->parseStackFrames($stackXml);
-        if ($frames !== []) {
-            return [
-                'file' => $frames[0]['file'],
-                'line' => $frames[0]['line'],
-            ];
-        }
-
-        // Fallback
-        return [
-            'file' => basename($this->targetScript),
-            'line' => 1,
-        ];
-    }
-
-    /**
      * Output results for multiple breakpoints
      *
-     * @param list<array<string, mixed>> $breaks
+     * @param list<DebugBreak> $breaks
      */
     private function outputMultipleBreakResults(array $breaks): void
     {
