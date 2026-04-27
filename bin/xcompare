@@ -134,7 +134,8 @@ function showCompareHelp(): void
         }
 
         if (str_starts_with($arg, '--steps=')) {
-            $steps = (int) substr($arg, 8);
+            // xstep requires at least one recorded step; clamp to avoid xstep complaining about --steps=0.
+            $steps = max(1, (int) substr($arg, 8));
             continue;
         }
 

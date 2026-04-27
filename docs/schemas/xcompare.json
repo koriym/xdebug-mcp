@@ -5,6 +5,11 @@
   "description": "Comparison of variable states at the same breakpoint across two different executions. Shows what changed, what stayed the same, and what exists only in one run.",
   "type": "object",
   "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "URI of this JSON Schema document"
+    },
     "breakpoint": {
       "type": "object",
       "description": "The breakpoint location being compared",

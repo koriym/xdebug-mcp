@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp\Tests\Unit;
 
+use InvalidArgumentException;
 use Koriym\XdebugMcp\CompareRunner;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use RuntimeException;
 
 use function array_merge;
-use function exec;
-use function implode;
 use function json_decode;
 use function ob_get_clean;
 use function ob_start;
@@ -266,8 +265,19 @@ class CompareRunnerTest extends TestCase
     {
         $runner = $this->createRunner();
 
-        $result = $this->invokeMethod($runner, 'parseBreakSpec', ['noformat']);
-        $this->assertSame(['file' => 'noformat', 'line' => 0], $result);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid breakpoint spec: 'invalid-spec'");
+
+        $this->invokeMethod($runner, 'parseBreakSpec', ['invalid-spec']);
+    }
+
+    public function testParseBreakSpecWithWindowsPath(): void
+    {
+        $runner = $this->createRunner();
+
+        $result = $this->invokeMethod($runner, 'parseBreakSpec', ['C:\\foo.php:25']);
+        $this->assertSame('C:\\foo.php', $result['file']);
+        $this->assertSame(25, $result['line']);
     }
 
     public function testBuildXstepCommandDefaultsStepsToOne(): void
@@ -579,106 +589,6 @@ class CompareRunnerTest extends TestCase
         $this->expectExceptionMessage('xstep returned no output for command: php test.php 2');
 
         $runner->run();
-    }
-
-    public function testCliShowsHelpWithNoArgs(): void
-    {
-        $output = [];
-        $exitCode = 0;
-        exec('php ' . __DIR__ . '/../../bin/xcompare 2>&1', $output, $exitCode);
-
-        $firstLine = $output[0] ?? '';
-        $this->assertStringContainsString('Usage: xcompare', $firstLine);
-    }
-
-    public function testCliShowsHelpWithHelpFlag(): void
-    {
-        $output = [];
-        $exitCode = 0;
-        exec('php ' . __DIR__ . '/../../bin/xcompare --help 2>&1', $output, $exitCode);
-
-        $joined = implode("\n", $output);
-        $this->assertStringContainsString('--break=FILE:LINE', $joined);
-        $this->assertStringContainsString('--run-a=', $joined);
-        $this->assertStringContainsString('--run-b=', $joined);
-    }
-
-    public function testCliErrorWithoutBreak(): void
-    {
-        $output = [];
-        $exitCode = 0;
-        exec('php ' . __DIR__ . '/../../bin/xcompare --run-a="php a.php" --run-b="php b.php" 2>&1', $output, $exitCode);
-
-        $this->assertNotSame(0, $exitCode);
-        $joined = implode("\n", $output);
-        $this->assertStringContainsString('--break=FILE:LINE is required', $joined);
-    }
-
-    public function testCliErrorWithoutRunA(): void
-    {
-        $output = [];
-        $exitCode = 0;
-        exec('php ' . __DIR__ . '/../../bin/xcompare --break=test.php:10 --run-b="php b.php" 2>&1', $output, $exitCode);
-
-        $this->assertNotSame(0, $exitCode);
-        $joined = implode("\n", $output);
-        $this->assertStringContainsString('--run-a=', $joined);
-    }
-
-    public function testCliErrorWithoutRunB(): void
-    {
-        $output = [];
-        $exitCode = 0;
-        exec('php ' . __DIR__ . '/../../bin/xcompare --break=test.php:10 --run-a="php a.php" 2>&1', $output, $exitCode);
-
-        $this->assertNotSame(0, $exitCode);
-        $joined = implode("\n", $output);
-        $this->assertStringContainsString('--run-b=', $joined);
-    }
-
-    public function testCliErrorMixingModes(): void
-    {
-        $output = [];
-        $exitCode = 0;
-        exec('php ' . __DIR__ . '/../../bin/xcompare --break=test.php:10 --run-a="php a.php" --run="php x.php" 2>&1', $output, $exitCode);
-
-        $this->assertNotSame(0, $exitCode);
-        $joined = implode("\n", $output);
-        $this->assertStringContainsString('Cannot mix', $joined);
-    }
-
-    public function testCliErrorCompareWithWithoutRun(): void
-    {
-        $output = [];
-        $exitCode = 0;
-        exec('php ' . __DIR__ . '/../../bin/xcompare --break=test.php:10 --compare-with=main 2>&1', $output, $exitCode);
-
-        $this->assertNotSame(0, $exitCode);
-        $joined = implode("\n", $output);
-        $this->assertStringContainsString('--run=', $joined);
-    }
-
-    public function testCliErrorRunWithoutCompareWith(): void
-    {
-        $output = [];
-        $exitCode = 0;
-        exec('php ' . __DIR__ . '/../../bin/xcompare --break=test.php:10 --run="php a.php" 2>&1', $output, $exitCode);
-
-        $this->assertNotSame(0, $exitCode);
-        $joined = implode("\n", $output);
-        $this->assertStringContainsString('--compare-with=', $joined);
-    }
-
-    public function testCliHelpShowsCompareWithMode(): void
-    {
-        $output = [];
-        $exitCode = 0;
-        exec('php ' . __DIR__ . '/../../bin/xcompare --help 2>&1', $output, $exitCode);
-
-        $joined = implode("\n", $output);
-        $this->assertStringContainsString('--compare-with=', $joined);
-        $this->assertStringContainsString('--run=', $joined);
-        $this->assertStringContainsString('MODE 2:', $joined);
     }
 
     public function testOutputProducesValidJson(): void

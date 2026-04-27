@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp;
 
+use InvalidArgumentException;
 use RuntimeException;
 
 use function array_diff_key;
@@ -184,9 +185,15 @@ class CompareRunner
     {
         $checkOutput = [];
         $checkExit = 0;
-        exec('git rev-parse --is-inside-work-tree 2>/dev/null', $checkOutput, $checkExit);
+        exec('git rev-parse --is-inside-work-tree 2>&1', $checkOutput, $checkExit);
         if ($checkExit !== 0 || trim(implode('', $checkOutput)) !== 'true') {
-            throw new RuntimeException('--compare-with requires the current directory to be inside a git repository');
+            $message = '--compare-with requires the current directory to be inside a git repository';
+            $detail = trim(implode("\n", $checkOutput));
+            if ($detail !== '' && $detail !== 'true' && $detail !== 'false') {
+                $message .= "\n" . $detail;
+            }
+
+            throw new RuntimeException($message);
         }
 
         $tempDir = sys_get_temp_dir() . '/xcompare-' . uniqid('', true);
@@ -461,7 +468,7 @@ class CompareRunner
             return $result;
         }
 
-        return ['file' => $spec, 'line' => 0];
+        throw new InvalidArgumentException("Invalid breakpoint spec: '{$spec}' (expected FILE:LINE[:CONDITION])");
     }
 
     /**
