@@ -233,6 +233,9 @@ PHP);
         $this->assertNotNull($output);
         $this->assertStringContainsString('Usage:', $output);
         $this->assertStringContainsString('xstep', $output);
+        $this->assertStringContainsString('--pretty', $output);
+        $this->assertStringContainsString('--max-value-bytes=N', $output);
+        $this->assertStringContainsString('--max-depth=N', $output);
     }
 
     public function testXbackCommandExists(): void

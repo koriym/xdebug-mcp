@@ -30,6 +30,7 @@ use function Amp\async;
 use function Amp\delay;
 use function Amp\Socket\listen;
 use function array_filter;
+use function array_key_exists;
 use function array_keys;
 use function array_map;
 use function array_merge;
@@ -60,10 +61,12 @@ use function glob;
 use function implode;
 use function in_array;
 use function is_array;
+use function is_bool;
 use function is_float;
 use function is_int;
 use function is_scalar;
 use function is_string;
+use function json_decode;
 use function json_encode;
 use function libxml_clear_errors;
 use function libxml_get_errors;
@@ -74,6 +77,7 @@ use function microtime;
 use function parse_str;
 use function preg_match;
 use function preg_replace;
+use function preg_replace_callback;
 use function property_exists;
 use function rawurlencode;
 use function register_shutdown_function;
@@ -119,6 +123,8 @@ final class DebugServer
     private const DEFAULT_EXECUTION_TIMEOUT = 3600.0;  // 1 hour for long debugging sessions
     private const DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
     private const MAX_STEPS = 100;  // Default maximum steps for step recording
+    private const DEFAULT_MAX_VALUE_BYTES = 200;
+    private const STACK_CONTEXT_LIMIT = 5;
 
     /** @var DeferredFuture<bool>|null */
     private DeferredFuture|null $listenerReady = null;
@@ -134,12 +140,18 @@ final class DebugServer
     private bool $httpMode = false;
     private bool $shouldExit = false;
 
-    /** @var list<array{step: int, location: array{file: string, line: int}, variables: array<string, string>, recording_type: string}> */
+    /** @var list<array<string, mixed>> */
     private array $breaks = [];
     private bool $isDockerCommand = false;
     private bool $stepRecordingOutputDone = false;
 
-    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>} $options */
+    /** @var list<array{id: string, label: string, file: string, line: int, condition?: string}> */
+    private array $configuredBreakpoints = [];
+
+    /** @var array{id: string, label: string, file: string, line: int, condition?: string}|null */
+    private array|null $activeBreakpoint = null;
+
+    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null} $options */
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
@@ -493,7 +505,7 @@ final class DebugServer
      * Perform step-by-step tracing with variable inspection for Step Recording
      * Records variable state at each step for AI analysis
      *
-     * @return list<array{step: int, location: array{file: string, line: int}, variables: array<string, string>, recording_type: string}>
+     * @return list<array<string, mixed>>
      */
     private function performStepTrace(): array
     {
@@ -522,34 +534,25 @@ final class DebugServer
             // Get current position and variables
             $this->log("--- Step {$stepCount} ---");
 
-            $stackInfo = $this->getStackTrace();
-            if ($stackInfo === []) {
+            try {
+                $stackResponse = $this->getStack();
+            } catch (Throwable $e) {
+                $this->log('⚠️ Error getting stack: ' . $e->getMessage());
+                break;
+            }
+
+            $stackFrames = $this->parseStackFrames($stackResponse);
+            if ($stackFrames === []) {
                 $this->log('⚠️ No stack info available, execution may have completed');
                 break;
             }
 
-            // Get current location from stack info or XML response
-            $location = ['file' => 'unknown', 'line' => 0];
-            $stackResponse = '';
-            try {
-                $stackResponse = $this->sendCommand('stack_get');
-                if ($stackResponse !== '' && $stackResponse !== '0') {
-                    $xml = simplexml_load_string($stackResponse);
-                    if ($xml && isset($xml->stack[0])) {
-                        $topFrame = $xml->stack[0];
-                        $filename = (string) $topFrame['filename'];
-                        $lineno = (string) $topFrame['lineno'];
-                        if ($filename && $lineno) {
-                            $location = [
-                                'file' => basename($filename),
-                                'line' => (int) $lineno,
-                            ];
-                        }
-                    }
-                }
-            } catch (Throwable $e) {
-                $this->log('⚠️ Error getting location: ' . $e->getMessage());
-            }
+            $topFrame = $stackFrames[0];
+            $location = [
+                'file' => $topFrame['file'],
+                'line' => $topFrame['line'],
+            ];
+            $breakpoint = $this->breakpointReferenceForLocation($location);
 
             // Get current variables
             $currentVariables = $this->getCurrentVariables();
@@ -618,10 +621,12 @@ final class DebugServer
             if ($stepCount === 1) {
                 // First frame: record all variables (full state)
                 $variablesToRecord = $currentVariables;
+                $variableDiff = [];
                 $recordingType = 'full';
                 $previousVariables = $currentVariables;
             } else {
                 // Subsequent frames: record only differences (diff state)
+                $variableDiff = $this->buildVariableDiff($previousVariables, $currentVariables);
                 $variablesToRecord = [];
 
                 // Find new or changed variables
@@ -682,9 +687,16 @@ final class DebugServer
             $step = [
                 'step' => $stepCount,
                 'location' => $location,
+                'function' => $topFrame['function'],
+                'stack' => array_slice($stackFrames, 0, self::STACK_CONTEXT_LIMIT),
+                'breakpoint' => $breakpoint,
                 'variables' => $variablesToRecord,
                 'recording_type' => $recordingType,
             ];
+
+            if ($variableDiff !== []) {
+                $step['diff'] = $variableDiff;
+            }
 
             if ($hasWatches && $watchData !== []) {
                 $step['watches'] = $watchData;
@@ -762,6 +774,10 @@ final class DebugServer
 
             if ($this->didBreak($response)) {
                 $this->log('🎯 Breakpoint hit, starting Step Recording...');
+                $breakLocation = $this->extractLocationDataFromBreakResponse($response);
+                $this->activeBreakpoint = $breakLocation !== null
+                    ? $this->resolveBreakpointForLocation($breakLocation)
+                    : null;
 
                 // Perform step recording from the breakpoint
                 $steps = $this->performStepTrace();
@@ -935,7 +951,10 @@ final class DebugServer
             return;
         }
 
+        $this->configuredBreakpoints = [];
+        $index = 0;
         foreach ($this->options['breakpoints'] as $breakpoint) {
+            $index++;
             $file = $breakpoint['file'];
             $line = (int) $breakpoint['line'];
             $condition = $breakpoint['condition'] ?? null;
@@ -944,11 +963,76 @@ final class DebugServer
             $breakpointId = $this->setBreakpoint($file, $line, $condition);
 
             if ($breakpointId !== 'error') {
+                $breakpointMetadata = [
+                    'id' => $breakpointId,
+                    'label' => $this->makeBreakpointLabel($file, $line, $condition, $index),
+                    'file' => $file,
+                    'line' => $line,
+                ];
+                if ($condition !== null && $condition !== '') {
+                    $breakpointMetadata['condition'] = $condition;
+                }
+
+                $this->configuredBreakpoints[] = $breakpointMetadata;
+
                 continue;
             }
 
             $this->log("❌ Failed to set breakpoint: {$file}:{$line}");
         }
+    }
+
+    private function makeBreakpointLabel(string $file, int $line, string|null $condition, int $index): string
+    {
+        $label = "bp{$index} " . basename($file) . ":{$line}";
+        if ($condition !== null && $condition !== '') {
+            $label .= " if {$condition}";
+        }
+
+        return $label;
+    }
+
+    /**
+     * @param array{file: string, line: int} $location
+     *
+     * @return array{id: string, label: string}
+     */
+    private function breakpointReferenceForLocation(array $location): array
+    {
+        $breakpoint = $this->activeBreakpoint ?? $this->resolveBreakpointForLocation($location);
+        if ($breakpoint !== null) {
+            return [
+                'id' => $breakpoint['id'],
+                'label' => $breakpoint['label'],
+            ];
+        }
+
+        return [
+            'id' => 'unknown',
+            'label' => "{$location['file']}:{$location['line']}",
+        ];
+    }
+
+    /**
+     * @param array{file: string, line: int} $location
+     *
+     * @return array{id: string, label: string, file: string, line: int, condition?: string}|null
+     */
+    private function resolveBreakpointForLocation(array $location): array|null
+    {
+        foreach ($this->configuredBreakpoints as $breakpoint) {
+            if ((int) $breakpoint['line'] !== $location['line']) {
+                continue;
+            }
+
+            if (basename($breakpoint['file']) !== $location['file']) {
+                continue;
+            }
+
+            return $breakpoint;
+        }
+
+        return null;
     }
 
     /**
@@ -1079,7 +1163,7 @@ final class DebugServer
 
             // Format the value with type context
             if ($type === 'string') {
-                return "'" . $value . "'";
+                return $this->truncateVariableDisplay("'" . $value . "'");
             }
 
             if ($type === 'null') {
@@ -2392,6 +2476,59 @@ final class DebugServer
     }
 
     /**
+     * Encode xstep JSON output with user-selected formatting.
+     *
+     * @param array<string, mixed> $result
+     */
+    private function encodeJsonOutput(array $result): string
+    {
+        $flags = JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+        $pretty = ($this->options['pretty'] ?? false) === true;
+        if ($pretty) {
+            $flags |= JSON_PRETTY_PRINT;
+        }
+
+        $json = json_encode($result, $flags);
+        if (! $pretty) {
+            return $json;
+        }
+
+        return preg_replace_callback(
+            '/^( +)/m',
+            static fn (array $matches): string => str_repeat(' ', (int) (strlen($matches[1]) / 2)),
+            $json,
+        ) ?? $json;
+    }
+
+    private function getMaxValueBytes(): int|null
+    {
+        $maxValueBytes = $this->options['maxValueBytes'] ?? null;
+
+        return is_int($maxValueBytes) && $maxValueBytes > 0 ? $maxValueBytes : null;
+    }
+
+    private function getMaxDepth(): int|null
+    {
+        $maxDepth = $this->options['maxDepth'] ?? null;
+
+        return is_int($maxDepth) && $maxDepth > 0 ? $maxDepth : null;
+    }
+
+    private function truncateStringValue(string $value, int|null $maxBytes): string
+    {
+        if ($maxBytes === null || strlen($value) <= $maxBytes) {
+            return $value;
+        }
+
+        return substr($value, 0, $maxBytes) . "... (truncated, {$maxBytes} bytes)";
+    }
+
+    private function truncateVariableDisplay(string $value, int|null $maxBytes = null): string
+    {
+        return $this->truncateStringValue($value, $maxBytes ?? $this->getMaxValueBytes());
+    }
+
+    /**
      * Output Step Recording results in JSON format
      */
     private function outputStepRecordingResults(): void
@@ -2461,7 +2598,7 @@ final class DebugServer
             ];
         }
 
-        echo json_encode($result, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+        echo $this->encodeJsonOutput($result) . "\n";
     }
 
     /**
@@ -2652,7 +2789,7 @@ final class DebugServer
                         }
                     } else {
                         $value = $encoding === 'base64' ? base64_decode($raw) : $raw;
-                        $variables[$name] = "{$type}: {$value}";
+                        $variables[$name] = $this->truncateVariableDisplay("{$type}: {$value}");
                     }
                 }
             }
@@ -2689,7 +2826,7 @@ final class DebugServer
 
                 // Format key-value pairs
                 if ($childType === 'string') {
-                    $displayValue = strlen($value) > 20 ? substr($value, 0, 20) . '...' : $value;
+                    $displayValue = $this->truncateStringValue($value, $this->getMaxValueBytes() ?? 20);
                     $items[] = "{$key}: \"{$displayValue}\"";
                 } elseif ($childType === 'int' || $childType === 'float') {
                     $items[] = "{$key}: {$value}";
@@ -2744,8 +2881,7 @@ final class DebugServer
         }
 
         try {
-            // Use eval to execute json_encode($var, JSON_UNESCAPED_UNICODE)
-            $expression = "json_encode({$varName}, JSON_UNESCAPED_UNICODE)";
+            $expression = $this->buildJsonEncodeExpression($varName);
             // Use proper DBGp protocol format: eval -- base64_encoded_data
             $transactionId = $this->getNextTransactionId();
             $fullCommand = "eval -i {$transactionId} -- " . base64_encode($expression) . "\0";
@@ -2777,9 +2913,7 @@ final class DebugServer
 
             // Clean up and format JSON output
             $output = trim($output);
-            if (strlen($output) > 200) {
-                $output = substr($output, 0, 200) . '... (truncated)';
-            }
+            $output = $this->truncateStringValue($output, $this->getMaxValueBytes() ?? self::DEFAULT_MAX_VALUE_BYTES);
 
             // Make it more readable by adding spaces after colons and commas
             $output = preg_replace('/([,:])\s*/', '$1 ', $output);
@@ -2788,6 +2922,229 @@ final class DebugServer
         } catch (Throwable) {
             return null;
         }
+    }
+
+    private function buildJsonEncodeExpression(string $varName): string
+    {
+        $maxDepth = $this->getMaxDepth();
+        if ($maxDepth === null) {
+            return "json_encode({$varName}, JSON_UNESCAPED_UNICODE)";
+        }
+
+        $maxValueBytes = $this->getMaxValueBytes();
+        $maxValueBytesArg = $maxValueBytes === null ? 'null' : (string) $maxValueBytes;
+
+        return '(static function (mixed $value, int $maxDepth, int|null $maxValueBytes): string|false {'
+            . '$truncate = static function (string $text) use ($maxValueBytes): string {'
+            . 'if ($maxValueBytes === null || strlen($text) <= $maxValueBytes) { return $text; }'
+            . 'return substr($text, 0, $maxValueBytes) . "... (truncated, " . $maxValueBytes . " bytes)";'
+            . '};'
+            . '$normalize = static function (mixed $node, int $depth) use (&$normalize, $maxDepth, $truncate): mixed {'
+            . 'if (is_string($node)) { return $truncate($node); }'
+            . 'if ($depth >= $maxDepth) {'
+            . 'if (is_array($node)) { return "[MAX_DEPTH array(" . count($node) . ")]"; }'
+            . 'if (is_object($node)) { return "[MAX_DEPTH object:" . get_class($node) . "]"; }'
+            . 'return $node;'
+            . '}'
+            . 'if (is_array($node)) { $out = []; foreach ($node as $key => $child) { $out[$key] = $normalize($child, $depth + 1); } return $out; }'
+            . 'if (is_object($node)) { $out = ["__class" => get_class($node)]; foreach (get_object_vars($node) as $key => $child) { $out[$key] = $normalize($child, $depth + 1); } return $out; }'
+            . 'return $node;'
+            . '};'
+            . 'return json_encode($normalize($value, 0), JSON_UNESCAPED_UNICODE);'
+            . "})({$varName}, {$maxDepth}, {$maxValueBytesArg})";
+    }
+
+    /**
+     * @param array<string, string> $previousVariables
+     * @param array<string, string> $currentVariables
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function buildVariableDiff(array $previousVariables, array $currentVariables): array
+    {
+        $diff = [];
+        foreach ($currentVariables as $name => $after) {
+            if (! array_key_exists($name, $previousVariables)) {
+                $diff[$name] = $this->createVariableDiffEntry('added', null, $after);
+
+                continue;
+            }
+
+            $before = $previousVariables[$name];
+            if ($before === $after) {
+                continue;
+            }
+
+            $diff[$name] = $this->createVariableDiffEntry('changed', $before, $after);
+        }
+
+        foreach ($previousVariables as $name => $before) {
+            if (array_key_exists($name, $currentVariables)) {
+                continue;
+            }
+
+            $diff[$name] = $this->createVariableDiffEntry('removed', $before, null);
+        }
+
+        return $diff;
+    }
+
+    /** @return array<string, mixed> */
+    private function createVariableDiffEntry(string $change, string|null $before, string|null $after): array
+    {
+        $display = $after ?? $before ?? '';
+        $parsed = $this->parseVariableDisplay($display);
+        $entry = [
+            'change' => $change,
+            'type' => $parsed['type'],
+        ];
+
+        if ($before !== null) {
+            $entry['before'] = $before;
+        }
+
+        if ($after !== null) {
+            $entry['after'] = $after;
+        }
+
+        if ($before !== null && $after !== null) {
+            $keyDiff = $this->buildShallowKeyDiff($before, $after);
+            if ($keyDiff !== null) {
+                $entry['keys'] = $keyDiff;
+            }
+        }
+
+        return $entry;
+    }
+
+    /** @return array{type: string, value: mixed, structured: bool} */
+    private function parseVariableDisplay(string $display): array
+    {
+        if (preg_match('/^(array|object):\s*(.*)$/s', $display, $matches) === 1) {
+            try {
+                $value = json_decode($matches[2], true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($value)) {
+                    return [
+                        'type' => $matches[1],
+                        'value' => $value,
+                        'structured' => true,
+                    ];
+                }
+            } catch (Throwable) {
+                // Fall through to scalar-style diff when compact rendering is not JSON.
+            }
+
+            return [
+                'type' => $matches[1],
+                'value' => $display,
+                'structured' => false,
+            ];
+        }
+
+        if (preg_match('/^([a-zA-Z_][a-zA-Z0-9_]*):/', $display, $matches) === 1) {
+            return [
+                'type' => $matches[1],
+                'value' => $display,
+                'structured' => false,
+            ];
+        }
+
+        return [
+            'type' => 'scalar',
+            'value' => $display,
+            'structured' => false,
+        ];
+    }
+
+    /** @return array{added: array<string, string>, removed: array<string, string>, changed: array<string, array{before: string, after: string}>}|null */
+    private function buildShallowKeyDiff(string $before, string $after): array|null
+    {
+        $beforeParsed = $this->parseVariableDisplay($before);
+        $afterParsed = $this->parseVariableDisplay($after);
+        if (! $beforeParsed['structured'] || ! $afterParsed['structured']) {
+            return null;
+        }
+
+        if ($beforeParsed['type'] !== $afterParsed['type'] || ! is_array($beforeParsed['value']) || ! is_array($afterParsed['value'])) {
+            return null;
+        }
+
+        $beforeMap = $this->buildShallowValueMap($beforeParsed['value']);
+        $afterMap = $this->buildShallowValueMap($afterParsed['value']);
+        $added = [];
+        $removed = [];
+        $changed = [];
+
+        foreach ($afterMap as $key => $value) {
+            if (! array_key_exists($key, $beforeMap)) {
+                $added[$key] = $value;
+
+                continue;
+            }
+
+            if ($beforeMap[$key] === $value) {
+                continue;
+            }
+
+            $changed[$key] = [
+                'before' => $beforeMap[$key],
+                'after' => $value,
+            ];
+        }
+
+        foreach ($beforeMap as $key => $value) {
+            if (array_key_exists($key, $afterMap)) {
+                continue;
+            }
+
+            $removed[$key] = $value;
+        }
+
+        if ($added === [] && $removed === [] && $changed === []) {
+            return null;
+        }
+
+        return [
+            'added' => $added,
+            'removed' => $removed,
+            'changed' => $changed,
+        ];
+    }
+
+    /**
+     * @param array<array-key, mixed> $value
+     *
+     * @return array<string, string>
+     */
+    private function buildShallowValueMap(array $value): array
+    {
+        $map = [];
+        foreach ($value as $key => $item) {
+            $map[(string) $key] = $this->stringifyShallowValue($item);
+        }
+
+        return $map;
+    }
+
+    private function stringifyShallowValue(mixed $value): string
+    {
+        if (is_array($value)) {
+            return 'array(' . count($value) . ')';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if ($value === null) {
+            return 'null';
+        }
+
+        if (is_scalar($value)) {
+            return $this->truncateVariableDisplay((string) $value);
+        }
+
+        return 'unknown';
     }
 
     /**
@@ -2805,14 +3162,8 @@ final class DebugServer
             }
 
             $stack = [];
-            $xml = simplexml_load_string($response);
-            if ($xml && (property_exists($xml, 'stack') && $xml->stack !== null)) {
-                foreach ($xml->stack as $frame) {
-                    $function = (string) $frame['where'];
-                    $file = (string) $frame['filename'];
-                    $line = (string) $frame['lineno'];
-                    $stack[] = "{$function} at {$file}:{$line}";
-                }
+            foreach ($this->parseStackFrames($response) as $frame) {
+                $stack[] = "{$frame['function']} at {$frame['file']}:{$frame['line']}";
             }
 
             return $stack;
@@ -2880,6 +3231,8 @@ final class DebugServer
         $lastLocation = null;
         $sameLocationCount = 0;
         $breakCount = 0;
+        /** @var array<string, string>|null $previousVariables */
+        $previousVariables = null;
 
         try {
             // Start execution
@@ -2899,6 +3252,10 @@ final class DebugServer
                     // Get current location from break response
                     $this->log('📋 Break response: ' . substr($response, 0, 200) . '...');
                     $currentLocation = $this->extractLocationFromBreakResponse($response);
+                    $currentLocationData = $this->extractLocationDataFromBreakResponse($response);
+                    $this->activeBreakpoint = $currentLocationData !== null
+                        ? $this->resolveBreakpointForLocation($currentLocationData)
+                        : null;
 
                     // Check for infinite loop (same location repeatedly)
                     if ($currentLocation === $lastLocation) {
@@ -2915,8 +3272,16 @@ final class DebugServer
                     $this->log("📍 Current location: $currentLocation");
 
                     // Capture debug state at breakpoint (before step)
-                    $debugState = $this->captureCurrentDebugState($breakCount);
+                    $debugState = $this->captureCurrentDebugState($breakCount, $this->activeBreakpoint);
                     if ($debugState !== null) {
+                        if ($previousVariables !== null) {
+                            $diff = $this->buildVariableDiff($previousVariables, $debugState['variables']);
+                            if ($diff !== []) {
+                                $debugState['diff'] = $diff;
+                            }
+                        }
+
+                        $previousVariables = $debugState['variables'];
                         $breaks[] = $debugState;
                         $this->log("✅ Debug state captured for step $breakCount");
                     } else {
@@ -2945,9 +3310,11 @@ final class DebugServer
     /**
      * Capture current debug state for a breakpoint
      *
-     * @return array{step: int, location: array{file: string, line: int}, variables: array<string, string>}|null
+     * @param array{id: string, label: string, file: string, line: int, condition?: string}|null $breakpoint
+     *
+     * @return array{step: int, location: array{file: string, line: int}, function: string, stack: list<array{function: string, file: string, line: int}>, breakpoint: array{id: string, label: string}, variables: array<string, string>}|null
      */
-    private function captureCurrentDebugState(int $breakNumber): array|null
+    private function captureCurrentDebugState(int $breakNumber, array|null $breakpoint = null): array|null
     {
         try {
             $stackXml = $this->getStack();
@@ -2957,11 +3324,25 @@ final class DebugServer
             $this->log('📋 Variables: ' . json_encode($variables, JSON_THROW_ON_ERROR));
 
             // Parse stack XML to get current location
-            $location = $this->parseStackLocation($stackXml);
+            $stackFrames = $this->parseStackFrames($stackXml);
+            $topFrame = $stackFrames[0] ?? [
+                'function' => '{main}',
+                'file' => basename($this->targetScript),
+                'line' => 1,
+            ];
+            $location = [
+                'file' => $topFrame['file'],
+                'line' => $topFrame['line'],
+            ];
 
             return [
                 'step' => $breakNumber,
                 'location' => $location,
+                'function' => $topFrame['function'],
+                'stack' => array_slice($stackFrames, 0, self::STACK_CONTEXT_LIMIT),
+                'breakpoint' => $breakpoint !== null
+                    ? ['id' => $breakpoint['id'], 'label' => $breakpoint['label']]
+                    : $this->breakpointReferenceForLocation($location),
                 'variables' => $variables,
             ];
         } catch (Throwable $e) {
@@ -2972,31 +3353,51 @@ final class DebugServer
     }
 
     /**
+     * Parse stack XML response into compact frame data.
+     *
+     * @return list<array{function: string, file: string, line: int}>
+     */
+    private function parseStackFrames(string $stackXml): array
+    {
+        try {
+            $xml = simplexml_load_string($stackXml);
+            if (! $xml || (! property_exists($xml, 'stack') || $xml->stack === null)) {
+                return [];
+            }
+
+            $frames = [];
+            foreach ($xml->stack as $frame) {
+                $filename = (string) ($frame['filename'] ?? '');
+                $file = str_replace('file://', '', $filename);
+                $function = (string) ($frame['where'] ?? '');
+                $frames[] = [
+                    'function' => $function !== '' ? $function : '{main}',
+                    'file' => $file !== '' ? basename($file) : basename($this->targetScript),
+                    'line' => (int) ($frame['lineno'] ?? 0),
+                ];
+            }
+
+            return $frames;
+        } catch (Throwable $e) {
+            $this->log('❌ Error parsing stack frames: ' . $e->getMessage());
+
+            return [];
+        }
+    }
+
+    /**
      * Parse stack XML response to extract current location
      *
      * @return array{file: string, line: int}
      */
     private function parseStackLocation(string $stackXml): array
     {
-        try {
-            $xml = simplexml_load_string($stackXml);
-            if ($xml && (property_exists($xml, 'stack') && $xml->stack !== null) && count($xml->stack) > 0) {
-                $currentFrame = $xml->stack[0];
-                if ($currentFrame !== null) {
-                    $filename = (string) ($currentFrame['filename'] ?? '');
-                    $line = (int) ($currentFrame['lineno'] ?? 0);
-
-                    // Clean up file:// protocol from filename
-                    $file = str_replace('file://', '', $filename);
-
-                    return [
-                        'file' => basename($file),
-                        'line' => $line,
-                    ];
-                }
-            }
-        } catch (Throwable $e) {
-            $this->log('❌ Error parsing stack location: ' . $e->getMessage());
+        $frames = $this->parseStackFrames($stackXml);
+        if ($frames !== []) {
+            return [
+                'file' => $frames[0]['file'],
+                'line' => $frames[0]['line'],
+            ];
         }
 
         // Fallback
@@ -3009,7 +3410,7 @@ final class DebugServer
     /**
      * Output results for multiple breakpoints
      *
-     * @param list<array{step: int, location: array{file: string, line: int}, variables: array<string, string>}> $breaks
+     * @param list<array<string, mixed>> $breaks
      */
     private function outputMultipleBreakResults(array $breaks): void
     {
@@ -3026,7 +3427,7 @@ final class DebugServer
 
         // Output format based on jsonMode or jsonOutput option
         if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
-            echo json_encode($debugState, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+            echo $this->encodeJsonOutput($debugState) . "\n";
 
             // Mark step-recording output as done only after JSON was successfully
             // emitted so the cleanup phase can still fall back to its own output
@@ -3064,6 +3465,21 @@ final class DebugServer
      */
     private function extractLocationFromBreakResponse(string $response): string
     {
+        $location = $this->extractLocationDataFromBreakResponse($response);
+        if ($location !== null) {
+            return "{$location['file']}:{$location['line']}";
+        }
+
+        return 'unknown:0';
+    }
+
+    /**
+     * Extract structured location information from break response.
+     *
+     * @return array{file: string, line: int}|null
+     */
+    private function extractLocationDataFromBreakResponse(string $response): array|null
+    {
         try {
             $xml = simplexml_load_string($response);
             if ($xml) {
@@ -3078,14 +3494,17 @@ final class DebugServer
                     // Remove file:// prefix if present
                     $filename = str_replace('file://', '', $filename);
 
-                    return basename($filename) . ':' . $lineno;
+                    return [
+                        'file' => basename($filename),
+                        'line' => (int) $lineno,
+                    ];
                 }
             }
         } catch (Throwable $e) {
             $this->log('❌ Error parsing break response: ' . $e->getMessage());
         }
 
-        return 'unknown:0';
+        return null;
     }
 
     /**

@@ -38,9 +38,30 @@
           },
           "required": ["file", "line"]
         },
+        "function": {
+          "type": "string",
+          "description": "Current function or method name from the top stack frame"
+        },
+        "stack": {
+          "type": "array",
+          "description": "Short stack summary for the current stop",
+          "items": {
+            "$ref": "#/definitions/stack_frame"
+          }
+        },
+        "breakpoint": {
+          "$ref": "#/definitions/breakpoint_reference"
+        },
         "variables": {
           "type": "object",
-          "description": "Variable values at breakpoint. In step-recording mode (--break + --steps) the contents depend on recording_type: a 'full' frame carries every variable, while a 'diff' frame carries only variables that were added, changed, or removed since the previous step (deleted variables appear with the value '[DELETED]')."
+          "description": "Variable values at breakpoint. In step-recording mode (--break + --steps) the contents depend on recording_type: a 'full' frame carries every variable, while a 'diff' frame carries only variables that were added, changed, or removed since the previous step (deleted variables appear with the value '[DELETED]'). When present, diff adds before/after and shallow key-level details."
+        },
+        "diff": {
+          "type": "object",
+          "description": "Variable changes since the previous recorded stop. Scalar changes include before/after values; array/object changes may include shallow key diffs.",
+          "additionalProperties": {
+            "$ref": "#/definitions/variable_diff"
+          }
         },
         "recording_type": {
           "type": "string",
@@ -76,6 +97,80 @@
         }
       },
       "required": ["location", "variables"]
+    },
+    "breakpoint_reference": {
+      "type": "object",
+      "description": "Breakpoint attribution for the recorded stop",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "DBGp breakpoint id, or 'unknown' when no id is available"
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable breakpoint label"
+        }
+      },
+      "required": ["id", "label"]
+    },
+    "stack_frame": {
+      "type": "object",
+      "properties": {
+        "function": { "type": "string" },
+        "file": { "type": "string" },
+        "line": { "type": "integer" }
+      },
+      "required": ["function", "file", "line"]
+    },
+    "variable_diff": {
+      "type": "object",
+      "properties": {
+        "change": {
+          "type": "string",
+          "enum": ["added", "changed", "removed"]
+        },
+        "type": {
+          "type": "string",
+          "description": "Variable display type, such as int, string, array, or object"
+        },
+        "before": {
+          "type": "string",
+          "description": "Previous rendered value when available"
+        },
+        "after": {
+          "type": "string",
+          "description": "Current rendered value when available"
+        },
+        "keys": {
+          "$ref": "#/definitions/shallow_key_diff"
+        }
+      },
+      "required": ["change", "type"]
+    },
+    "shallow_key_diff": {
+      "type": "object",
+      "properties": {
+        "added": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "removed": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "changed": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "before": { "type": "string" },
+              "after": { "type": "string" }
+            },
+            "required": ["before", "after"]
+          }
+        }
+      },
+      "required": ["added", "removed", "changed"]
     }
   },
 

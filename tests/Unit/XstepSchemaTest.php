@@ -34,9 +34,22 @@ final class XstepSchemaTest extends TestCase
         $breakpoint = $schema['definitions']['breakpoint'];
         $properties = $breakpoint['properties'];
 
+        $this->assertArrayHasKey('location', $properties);
+        $this->assertArrayHasKey('function', $properties);
+        $this->assertArrayHasKey('stack', $properties);
+        $this->assertArrayHasKey('breakpoint', $properties);
+        $this->assertArrayHasKey('variables', $properties);
+        $this->assertArrayHasKey('diff', $properties);
+        $this->assertContains('location', $breakpoint['required']);
+        $this->assertContains('variables', $breakpoint['required']);
+
         $this->assertArrayHasKey('recording_type', $properties);
         $this->assertSame('string', $properties['recording_type']['type']);
         $this->assertSame(['full', 'diff'], $properties['recording_type']['enum']);
         $this->assertNotContains('recording_type', $breakpoint['required']);
+
+        $this->assertArrayHasKey('stack_frame', $schema['definitions']);
+        $this->assertArrayHasKey('breakpoint_reference', $schema['definitions']);
+        $this->assertArrayHasKey('variable_diff', $schema['definitions']);
     }
 }
