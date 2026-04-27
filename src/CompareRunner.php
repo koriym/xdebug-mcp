@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp;
 
+use InvalidArgumentException;
 use RuntimeException;
 
 use function array_diff_key;
@@ -461,7 +462,7 @@ class CompareRunner
             return $result;
         }
 
-        return ['file' => $spec, 'line' => 0];
+        throw new InvalidArgumentException("Invalid breakpoint spec: '{$spec}' (expected FILE:LINE[:CONDITION])");
     }
 
     /**

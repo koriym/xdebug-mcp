@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp\Tests\Unit;
 
+use InvalidArgumentException;
 use Koriym\XdebugMcp\CompareRunner;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -266,8 +267,19 @@ class CompareRunnerTest extends TestCase
     {
         $runner = $this->createRunner();
 
-        $result = $this->invokeMethod($runner, 'parseBreakSpec', ['noformat']);
-        $this->assertSame(['file' => 'noformat', 'line' => 0], $result);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid breakpoint spec: 'invalid-spec'");
+
+        $this->invokeMethod($runner, 'parseBreakSpec', ['invalid-spec']);
+    }
+
+    public function testParseBreakSpecWithWindowsPath(): void
+    {
+        $runner = $this->createRunner();
+
+        $result = $this->invokeMethod($runner, 'parseBreakSpec', ['C:\\foo.php:25']);
+        $this->assertSame('C:\\foo.php', $result['file']);
+        $this->assertSame(25, $result['line']);
     }
 
     public function testBuildXstepCommandDefaultsStepsToOne(): void
