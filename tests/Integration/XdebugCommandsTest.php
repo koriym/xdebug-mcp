@@ -7,6 +7,7 @@ namespace Koriym\XdebugMcp\Tests\Integration;
 use Koriym\XdebugMcp\XdebugFinder;
 use PHPUnit\Framework\TestCase;
 
+use function bin2hex;
 use function dirname;
 use function escapeshellarg;
 use function explode;
@@ -17,6 +18,7 @@ use function is_executable;
 use function json_decode;
 use function json_encode;
 use function mkdir;
+use function random_bytes;
 use function rmdir;
 use function shell_exec;
 use function sprintf;
@@ -136,10 +138,7 @@ echo "Memory usage: " . memory_get_usage() . " bytes\n";
             mkdir($buildDir);
         }
 
-        $fixtureDir = tempnam($buildDir, 'xcoverage_phpunit_');
-        $this->assertIsString($fixtureDir);
-        unlink($fixtureDir);
-
+        $fixtureDir = $buildDir . '/xcoverage_phpunit_' . bin2hex(random_bytes(6));
         $sourceDir = $fixtureDir . '/src';
         $testDir = $fixtureDir . '/tests';
         mkdir($sourceDir, 0777, true);
@@ -189,7 +188,9 @@ PHP);
             $output = shell_exec($command);
 
             $this->assertNotNull($output);
-            $jsonStart = strrpos($output, "{\n    \"\$schema\"");
+            $schemaPos = strrpos($output, '"$schema"');
+            $this->assertNotFalse($schemaPos, $output);
+            $jsonStart = strrpos(substr($output, 0, $schemaPos), '{');
             $this->assertNotFalse($jsonStart, $output);
 
             $coverage = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
