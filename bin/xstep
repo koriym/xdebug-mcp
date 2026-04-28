@@ -60,6 +60,9 @@ function showHelp(string $commandName = 'xstep'): void
         echo "  --watch=EXPR            Watch expression, only record steps when value changes\n";
         echo "                          (can be specified multiple times)\n";
         echo "  --context=TEXT          Add contextual description for AI analysis (JSON output)\n";
+        echo "  --pretty                Pretty-print JSON output with 2-space indentation\n";
+        echo "  --max-value-bytes=N     Truncate long string values to N bytes in JSON output\n";
+        echo "  --max-depth=N           Truncate nested array/object rendering after N levels\n";
         echo "  --include-vendor=PATTERNS Include vendor packages in trace\n";
         echo "  --help, -h              Show this help\n";
     }
@@ -133,6 +136,18 @@ function showHelp(string $commandName = 'xstep'): void
         echo "\n";
     }
     exit(0);
+}
+
+/**
+ * Parse a positive integer option value.
+ */
+function parsePositiveIntegerOption(string $name, string $value): int
+{
+    if (! preg_match('/^[1-9][0-9]*$/', $value)) {
+        throw new RuntimeException("Invalid {$name} value: {$value} (must be positive integer)");
+    }
+
+    return (int) $value;
 }
 
 /**
@@ -255,6 +270,9 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
     $context = null;
     $maxSteps = null;
     $watches = [];
+    $pretty = false;
+    $maxValueBytes = null;
+    $maxDepth = null;
 
     for ($i = 1; $i < count($argv); $i++) {
         $arg = $argv[$i];
@@ -296,6 +314,39 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             if ($maxSteps <= 0) {
                 throw new RuntimeException("Invalid steps value: $maxSteps (must be positive integer)");
             }
+            continue;
+        }
+
+        if ($parseOptions && $arg === '--pretty') {
+            $pretty = true;
+            continue;
+        }
+
+        if ($parseOptions && str_starts_with($arg, '--max-value-bytes=')) {
+            $maxValueBytes = parsePositiveIntegerOption('--max-value-bytes', substr($arg, 18));
+            continue;
+        }
+
+        if ($parseOptions && $arg === '--max-value-bytes') {
+            if (! isset($argv[$i + 1])) {
+                throw new RuntimeException('Missing value for --max-value-bytes');
+            }
+
+            $maxValueBytes = parsePositiveIntegerOption('--max-value-bytes', $argv[++$i]);
+            continue;
+        }
+
+        if ($parseOptions && str_starts_with($arg, '--max-depth=')) {
+            $maxDepth = parsePositiveIntegerOption('--max-depth', substr($arg, 12));
+            continue;
+        }
+
+        if ($parseOptions && $arg === '--max-depth') {
+            if (! isset($argv[$i + 1])) {
+                throw new RuntimeException('Missing value for --max-depth');
+            }
+
+            $maxDepth = parsePositiveIntegerOption('--max-depth', $argv[++$i]);
             continue;
         }
 
@@ -401,10 +452,13 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             'context' => $context,
             'maxSteps' => $maxSteps,
             'watches' => $watches,
+            'pretty' => $pretty,
+            'maxValueBytes' => $maxValueBytes,
+            'maxDepth' => $maxDepth,
         ], $jsonOutput);
     } else {
         // For legacy format, only pass command if it's not just the target script
-        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches];
+        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches, 'pretty' => $pretty, 'maxValueBytes' => $maxValueBytes, 'maxDepth' => $maxDepth];
         if (count($command) > 1 || ($command[0] !== $targetScript)) {
             $options['command'] = $command;
         }

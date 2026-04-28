@@ -408,6 +408,127 @@ echo "Result: $result\n";
         $this->assertCount(1, $decoded['breaks']);
     }
 
+    public function testJsonOutputCanBePrettyPrintedWithTwoSpaces(): void
+    {
+        $server = new DebugServer($this->testScript, 9004, null, ['pretty' => true], true);
+
+        $reflection = new ReflectionClass($server);
+        $breaks = [
+            [
+                'step' => 1,
+                'location' => ['file' => basename($this->testScript), 'line' => 3],
+                'variables' => ['$x' => '10'],
+            ],
+        ];
+
+        $outputMultiple = $reflection->getMethod('outputMultipleBreakResults');
+
+        ob_start();
+        $outputMultiple->invoke($server, $breaks);
+        $stdout = ob_get_clean();
+
+        $this->assertStringStartsWith("{\n  " . '"$schema"', $stdout);
+        $this->assertStringContainsString("\n  \"breaks\": [\n    {", $stdout);
+        $this->assertStringNotContainsString("\n    " . '"$schema"', $stdout);
+
+        $decoded = json_decode($stdout, true);
+        $this->assertIsArray($decoded);
+        $this->assertCount(1, $decoded['breaks']);
+    }
+
+    public function testVariableDisplayCanBeTruncatedByBytes(): void
+    {
+        $server = new DebugServer($this->testScript, 9004, null, [], true);
+
+        $reflection = new ReflectionClass($server);
+        $truncate = $reflection->getMethod('truncateStringValue');
+
+        $this->assertSame(
+            'abcdefgh... (truncated, 8 bytes)',
+            $truncate->invoke($server, 'abcdefghijklmnop', 8),
+        );
+    }
+
+    public function testVariableDiffShowsScalarBeforeAfterAndShallowKeys(): void
+    {
+        $server = new DebugServer($this->testScript, 9004, null, [], true);
+
+        $reflection = new ReflectionClass($server);
+        $buildDiff = $reflection->getMethod('buildVariableDiff');
+
+        $diff = $buildDiff->invoke(
+            $server,
+            [
+                '$count' => 'int: 1',
+                '$items' => 'array: {"a":1,"b":2,"nested":{"x":1}}',
+                '$gone' => 'string: old',
+            ],
+            [
+                '$count' => 'int: 2',
+                '$items' => 'array: {"b":3,"c":4,"nested":{"x":1,"y":2}}',
+                '$new' => 'string: fresh',
+            ],
+        );
+
+        $this->assertSame('changed', $diff['$count']['change']);
+        $this->assertSame('int: 1', $diff['$count']['before']);
+        $this->assertSame('int: 2', $diff['$count']['after']);
+
+        $this->assertSame('array', $diff['$items']['type']);
+        $this->assertSame(['c' => '4'], $diff['$items']['keys']['added']);
+        $this->assertSame(['a' => '1'], $diff['$items']['keys']['removed']);
+        $this->assertSame(['before' => '2', 'after' => '3'], $diff['$items']['keys']['changed']['b']);
+        $this->assertSame(['before' => 'array(1)', 'after' => 'array(2)'], $diff['$items']['keys']['changed']['nested']);
+
+        $this->assertSame('removed', $diff['$gone']['change']);
+        $this->assertSame('added', $diff['$new']['change']);
+    }
+
+    public function testStackFramesAreParsedForJsonContext(): void
+    {
+        $server = new DebugServer($this->testScript, 9004, null, [], true);
+
+        $reflection = new ReflectionClass($server);
+        $parseStackFrames = $reflection->getMethod('parseStackFrames');
+        $stackXml = '<response>'
+            . '<stack level="0" type="file" filename="file:///tmp/Foo.php" lineno="42" where="App\\Foo::bar"/>'
+            . '<stack level="1" type="file" filename="file:///tmp/run.php" lineno="5" where="{main}"/>'
+            . '</response>';
+
+        $frames = $parseStackFrames->invoke($server, $stackXml);
+
+        $this->assertSame(
+            [
+                ['function' => 'App\\Foo::bar', 'file' => 'Foo.php', 'line' => 42],
+                ['function' => '{main}', 'file' => 'run.php', 'line' => 5],
+            ],
+            $frames,
+        );
+    }
+
+    public function testBreakpointReferenceUsesConfiguredBreakpointMetadata(): void
+    {
+        $server = new DebugServer($this->testScript, 9004, null, [], true);
+
+        $reflection = new ReflectionClass($server);
+        $configuredBreakpoints = $reflection->getProperty('configuredBreakpoints');
+        $configuredBreakpoints->setValue($server, [
+            [
+                'id' => '12',
+                'label' => 'bp1 Foo.php:42',
+                'file' => '/tmp/Foo.php',
+                'line' => 42,
+            ],
+        ]);
+
+        $breakpointReference = $reflection->getMethod('breakpointReferenceForLocation');
+
+        $this->assertSame(
+            ['id' => '12', 'label' => 'bp1 Foo.php:42'],
+            $breakpointReference->invoke($server, ['file' => 'Foo.php', 'line' => 42]),
+        );
+    }
+
     /**
      * Test that DebugServer creates proper Xdebug arguments for different configurations
      */
