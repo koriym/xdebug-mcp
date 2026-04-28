@@ -5,7 +5,10 @@
 
 set -u
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || {
+    printf 'Failed to change directory to repository root\n' >&2
+    exit 1
+}
 
 PASS=0
 FAIL=0
@@ -56,6 +59,9 @@ run "xcompare: compare two runs" \
     ./bin/xcompare --break="demo/buggy.php:22" \
         --run-a="php demo/buggy.php" \
         --run-b="php demo/buggy.php"
+
+run "xrepl: CLI availability (--help smoke check)" \
+    ./bin/xrepl --help
 
 printf '\n=========================\n'
 printf 'PASS: %d  FAIL: %d\n' "$PASS" "$FAIL"
