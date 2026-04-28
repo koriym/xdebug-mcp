@@ -6,7 +6,7 @@
     "homepage": "https://koriym.github.io/xdebug-mcp/",
     "license": "MIT",
     "require": {
-        "php": "^8.1",
+        "php": "^8.2",
         "ext-sockets": "*",
         "ext-xml": "*",
         "symfony/polyfill-php83": "^1.33",
@@ -15,7 +15,7 @@
         "amphp/http-server": "^3.4"
     },
     "require-dev": {
-        "phpunit/phpunit": "^10.0",
+        "phpunit/phpunit": "^11.0",
         "doctrine/coding-standard": "^13.0",
         "justinrainbow/json-schema": "^6.4",
         "phpstan/phpstan": "^2.1",
@@ -82,12 +82,6 @@
     "config": {
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true
-        },
-        "audit": {
-            "ignore": {
-                "PKSA-5jz8-6tcw-pbk4": "phpunit is require-dev only; advisory blocks 10.x install on CI",
-                "PKSA-z3gr-8qht-p93v": "phpunit is require-dev only; advisory blocks 10.x install on CI"
-            }
         }
     }
 }

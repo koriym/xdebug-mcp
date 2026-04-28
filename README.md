@@ -36,7 +36,7 @@ The AI automatically selects the appropriate tool, executes it, and analyzes the
 
 ## Requirements
 
-- PHP 8.1+
+- PHP 8.2+
 - [Xdebug 3.x](https://xdebug.org/docs/install) extension (installed, but **not** enabled by default)
 - Optional: an AI assistant (Claude Code plugin, or any MCP-capable client)
 
@@ -253,7 +253,7 @@ See [tests/docker/README.md](tests/docker/README.md) for details.
 
 ## Debugging Legacy PHP (7.x / 5.x)
 
-While xdebug-mcp itself requires PHP 8.1+, it can debug older PHP versions as long as a compatible Xdebug 3.x release is installed on the target PHP. Simply specify the target PHP binary after `--`:
+While xdebug-mcp itself requires PHP 8.2+, it can debug older PHP versions as long as a compatible Xdebug 3.x release is installed on the target PHP. Simply specify the target PHP binary after `--`:
 
 ```bash
 # Debug PHP 7.2 code

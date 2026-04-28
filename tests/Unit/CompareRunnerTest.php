@@ -21,7 +21,6 @@ class CompareRunnerTest extends TestCase
     {
         $ref = new ReflectionClass($runner);
         $m = $ref->getMethod($method);
-        $m->setAccessible(true);
 
         return $m->invokeArgs($runner, $args);
     }

@@ -60,7 +60,7 @@ Create `.mcp.json` in your project root:
 
 ## Requirements
 
-- PHP 8.1+ with ext-sockets, ext-xml
+- PHP 8.2+ with ext-sockets, ext-xml
 - Xdebug 3.x extension (installed but not enabled by default)
 - AI assistant: Claude Code (plugin), Cursor/Windsurf (MCP), or CLI
 
