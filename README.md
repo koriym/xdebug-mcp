@@ -53,7 +53,7 @@ composer global require koriym/xdebug-mcp
 ### 2. Verify Xdebug
 
 ```bash
-~/.composer/vendor/bin/check-env
+"$(composer global config bin-dir --absolute --quiet)/check-env"
 ```
 
 ### 3. (Optional) Wire up an AI assistant
@@ -158,7 +158,10 @@ xtrace -- php script.php
 xprofile -- php api.php
 
 # Debug with conditional breakpoint
-xstep --break='script.php:42:$user==null' --exit-on-break -- php script.php
+xstep --break='script.php:42:$user==null' -- php script.php
+
+# Pretty-print JSON, truncate long values, limit nesting depth
+xstep --break='script.php:42' --pretty --max-value-bytes=200 --max-depth=3 -- php script.php
 
 # Code coverage
 xcoverage -- vendor/bin/phpunit
@@ -217,10 +220,10 @@ Find the path with `which xdebug-mcp`. Restart your client after editing the con
 
 ## Interactive REPL
 
-For hands-on debugging without AI, use the interactive debugger:
+For hands-on debugging without AI, use the interactive debugger (`xrepl`):
 
 ```bash
-xstep --break="script.php:42" -- php script.php
+xrepl --break="script.php:42" -- php script.php
 ```
 
 **Commands:**
@@ -241,7 +244,7 @@ xstep --break="script.php:42" -- php script.php
 All tools work with Docker, Podman, and Kubectl:
 
 ```bash
-xstep --break="/app/script.php:42" --exit-on-break -- \
+xstep --break="/app/script.php:42" -- \
   docker compose run --rm php php /app/script.php
 
 xtrace -- docker compose run --rm php php /app/script.php
