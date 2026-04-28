@@ -106,8 +106,8 @@ Run the demo examples to see each tool in action:
 # Profile performance bottlenecks
 ./bin/xprofile --json -- php demo/slow.php
 
-# Analyze code coverage
-./bin/xcoverage -- php demo/coverage.php
+# Analyze code coverage (raw mode for plain PHP scripts)
+./bin/xcoverage --raw -- php demo/coverage.php
 
 # Get stack trace at breakpoint
 ./bin/xback --break="demo/buggy.php:44" -- php demo/buggy.php
