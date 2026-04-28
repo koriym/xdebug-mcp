@@ -134,7 +134,7 @@ jobs:
       - name: Setup PHP with Xdebug
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.1
+          php-version: '8.2'
           extensions: xdebug
           
       - name: Run Performance Test
@@ -166,7 +166,7 @@ jobs:
 
 ```dockerfile
 # Dockerfile for analysis environment
-FROM php:8.1-cli
+FROM php:8.2-cli
 
 # Install Xdebug
 RUN pecl install xdebug && docker-php-ext-enable xdebug
