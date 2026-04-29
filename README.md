@@ -4,7 +4,7 @@
 
 **Debug PHP with Runtime Data — No var_dump(), No Guesswork**
 
-Trace-based debugging for PHP, built on Xdebug. Drive the tools from the CLI, or let an AI assistant run them for you.
+Trace-based debugging for PHP, built on Xdebug. Drive the tools from the CLI, or let an AI assistant run the core tools through plugin, Skill, or MCP integration.
 
 [![AI Native](https://img.shields.io/badge/AI_Native-YES-green)](https://github.com/koriym/xdebug-mcp)
 [![Runtime Data](https://img.shields.io/badge/Runtime_Data-YES-green)](https://github.com/koriym/xdebug-mcp)
@@ -32,13 +32,13 @@ Just tell your AI assistant what you want:
 "UserServiceのテストカバレッジを確認して"
 ```
 
-The AI automatically selects the appropriate tool, executes it, and analyzes the results.
+When connected through the plugin, Skill, or an MCP-capable client, the AI can select the appropriate tool, execute it, and analyze the results.
 
 ## Requirements
 
 - PHP 8.2+
 - [Xdebug 3.x](https://xdebug.org/docs/install) extension (installed, but **not** enabled by default)
-- Optional: an AI assistant (Claude Code plugin, or any MCP-capable client)
+- Optional: an AI assistant (Claude Code plugin, Codex Skill, or any MCP-capable client)
 
 > **💡 Performance Tip:** Keep Xdebug disabled in php.ini for daily use. This tool loads Xdebug on-demand only when needed.
 
@@ -146,6 +146,8 @@ flowchart LR
 | `xback` | Call stack at breakpoint | "Show me how we got to this error" |
 | `xcompare` | Compare variable states across two runs | "Compare input 10 vs 0" or "Compare with main branch" |
 
+All tools in this table are available as CLI commands. MCP currently exposes the core one-shot analysis tools: `xtrace`, `xprofile`, `xstep`, `xcoverage`, and `xback`. `xcompare` is CLI-only.
+
 ## CLI Usage
 
 For direct command-line usage without AI:
@@ -203,7 +205,7 @@ Schemas live under [docs/schemas/](docs/schemas/). AI assistants — and humans 
 
 ## MCP Configuration
 
-For any MCP-capable client, register `xdebug-mcp` in that client's MCP config (e.g. `.mcp.json`):
+For any MCP-capable client, register `xdebug-mcp` in that client's MCP config (e.g. `.mcp.json`). MCP exposes `xtrace`, `xprofile`, `xstep`, `xcoverage`, and `xback`:
 
 ```json
 {
@@ -304,7 +306,7 @@ Looking for a different approach? [kpanuragh/xdebug-mcp](https://github.com/kpan
 
 ## Why "xdebug-mcp"?
 
-This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. MCP is still supported for any MCP-capable client, but the CLI is now the primary interface — the tools (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`, `xcompare`) work on their own, with or without MCP.
+This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. MCP is still supported for any MCP-capable client, but the CLI is now the primary interface. The core MCP tools (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`) also work as standalone CLI commands; `xcompare` and `xrepl` are CLI-only tools.
 
 ## Resources
 
