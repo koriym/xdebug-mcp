@@ -34,10 +34,12 @@
     "bin": [
         "bin/xdebug-mcp",
         "bin/xstep",
+        "bin/xrepl",
         "bin/xtrace",
         "bin/xprofile",
         "bin/xcoverage",
         "bin/xback",
+        "bin/xcompare",
         "bin/check-env",
         "bin/test-json"
     ],
@@ -46,7 +48,8 @@
         "test-json": "Run comprehensive JSON test suite with all xdebug commands",
         "install-mcp": "Configure xdebug-mcp for Claude Code MCP integration",
         "install-desktop": "Configure xdebug-mcp for Claude Desktop integration",
-        "check-env": "Check Xdebug environment and configuration"
+        "check-env": "Check Xdebug environment and configuration",
+        "demo": "Run every CLI tool documented in README against the demo scripts"
     },
     "scripts": {
         "test": "phpunit",
@@ -64,6 +67,7 @@
             "phpstan"
         ],
         "test-json": "./bin/test-json",
+        "demo": "./demo/run-demo.sh",
         "install-mcp": "./bin/check-env --install-mcp",
         "install-desktop": "./bin/check-env --install-desktop",
         "check-env": "./bin/check-env",

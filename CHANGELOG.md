@@ -8,16 +8,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **xstep JSON ergonomics** (#74):
+  - `--pretty` for indented JSON output
+  - `--max-value-bytes=N` to truncate long string values (UTF-8 safe via `mb_strcut`)
+  - `--max-depth=N` to cap nested array/object rendering
+  - `function` and `stack` context attached to each break
+  - Scalar before/after `diff` and shallow key diffs between consecutive snapshots
+  - `breakpoint.id` / `breakpoint.label` attached to each break
+  - `recording_type` field (`full` | `diff`) documented in `docs/schemas/xstep.json`
 - **xcompare**: Compare variable states at breakpoint across two different executions
   - Runs xstep twice with different commands/inputs
   - Computes diff: changed, unchanged, only_in_a, only_in_b
   - Provides analysis_hints for AI-readable summary
   - JSON schema: `docs/schemas/xcompare.json`
   - Use case: Debug edge cases by comparing normal vs problematic inputs
-  - **NEW**: `--compare-with=REF` mode to compare current code vs another git branch/commit
+  - `--compare-with=REF` mode to compare current code vs another git branch/commit
     - `xcompare --break=file.php:25 --run="php test.php" --compare-with=main`
     - Automatically creates temporary worktree, runs comparison, cleans up
-    - Perfect for "before vs after" debugging
+- **`composer demo`** (#76): runs every CLI tool documented in the README against
+  the bundled `demo/` scripts and reports PASS/FAIL. Smoke test for users and CI.
+- **`bin/xrepl` and `bin/xcompare` exposed via `composer global require`** (#76):
+  both shipped in `bin/` but were missing from `composer.json`'s `bin` array.
+
+### Changed
+- **BREAKING — Drop PHP 8.1 support** (#75): minimum PHP version is now `^8.2`.
+  - Upgrade to PHPUnit 11 (`^11.0`), migrate test attributes (`#[DataProvider]`
+    static providers, removed `expectDeprecation*`, `assertObjectHasAttribute`).
+  - Remove `composer audit ignore` entries no longer needed under 8.2+.
+  - CI matrix runs on PHP 8.2 / 8.3 / 8.4 / 8.5.
+
+### Fixed
+- **README CLI examples** (#76):
+  - Drop the broken `--exit-on-break` flag from `xstep` examples (the parser
+    silently dropped it; default JSON mode already exits after recording).
+  - Interactive REPL section now invokes `xrepl` (not `xstep`).
+  - `xcoverage --raw` is required for plain PHP scripts; the previous example
+    failed with "Class coverage cannot be found" because the default PHPUnit
+    mode interpreted the script path as a test class.
+  - Replace hard-coded `~/.composer/vendor/bin/check-env` path with
+    `composer global config bin-dir`-based lookup so it works under XDG.
+- Document `--pretty` / `--max-value-bytes` / `--max-depth` in README CLI Usage.
+- Stale `php8.1` references in `profiler/examples/basic-usage.md` and
+  `src/McpServer.php` example messages updated to `php8.2`.
 
 ## [0.8.0] - 2026-01-30
 
