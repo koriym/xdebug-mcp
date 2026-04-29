@@ -67,7 +67,7 @@ run "xcompare: compare two runs" \
 run "xrepl: presence check (--help)" \
     ./bin/xrepl --help
 
-printf '\n=========================\n'
+printf '\n-------------------------\n'
 printf 'PASS: %d  FAIL: %d\n' "$PASS" "$FAIL"
 if [ "$FAIL" -gt 0 ]; then
     printf 'Failed:\n'
