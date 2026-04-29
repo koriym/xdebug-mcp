@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Run every CLI command documented in README.md against the demo scripts
-# and report PASS/FAIL for each. Used both as a developer smoke test
-# (`composer demo`) and as a hands-on tour of every tool.
+# Run the non-interactive CLI tools documented in README.md against the
+# demo scripts and report PASS/FAIL for each. Used both as a developer
+# smoke test (`composer demo`) and as a hands-on tour of the tools
+# exercised here. The interactive REPL (`xrepl`) and the long-running
+# MCP server (`xdebug-mcp`) are out of scope for this script — only
+# `xrepl --help` is invoked as a presence check.
 
 set -u
 
@@ -21,12 +24,13 @@ run() {
     shift
     printf '\n=== %s ===\n' "$label"
     printf '  $ %s\n' "$*"
-    if "$@" >"$LOG" 2>&1; then
+    "$@" >"$LOG" 2>&1
+    local code=$?
+    if [ "$code" -eq 0 ]; then
         printf '  PASS\n'
         PASS=$((PASS + 1))
         return 0
     fi
-    local code=$?
     printf '  FAIL (exit %d)\n' "$code"
     sed 's/^/    /' "$LOG" | tail -10
     FAIL=$((FAIL + 1))
@@ -60,10 +64,10 @@ run "xcompare: compare two runs" \
         --run-a="php demo/buggy.php" \
         --run-b="php demo/buggy.php"
 
-run "xrepl: CLI availability (--help smoke check)" \
+run "xrepl: presence check (--help)" \
     ./bin/xrepl --help
 
-printf '\n=========================\n'
+printf '\n-------------------------\n'
 printf 'PASS: %d  FAIL: %d\n' "$PASS" "$FAIL"
 if [ "$FAIL" -gt 0 ]; then
     printf 'Failed:\n'
