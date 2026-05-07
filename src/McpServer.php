@@ -193,6 +193,21 @@ final class McpServer
                             'description' => 'Include vendor packages in coverage (e.g., "bear/*,ray/di" or "*/*" for all)',
                             'default' => '',
                         ],
+                        'cwd' => [
+                            'type' => 'string',
+                            'description' => 'Run from this directory (target project root)',
+                            'default' => '',
+                        ],
+                        'php' => [
+                            'type' => 'string',
+                            'description' => 'Path to the PHP binary to use instead of the default',
+                            'default' => '',
+                        ],
+                        'source' => [
+                            'type' => 'string',
+                            'description' => 'Restrict raw-mode coverage to these source paths (comma-separated). Mutually exclusive with include_vendor.',
+                            'default' => '',
+                        ],
                     ],
                     'required' => ['script'],
                 ],
@@ -220,6 +235,16 @@ final class McpServer
                         'context' => [
                             'type' => 'string',
                             'description' => 'Context description for backtrace analysis',
+                            'default' => '',
+                        ],
+                        'cwd' => [
+                            'type' => 'string',
+                            'description' => 'Run from this directory (target project root)',
+                            'default' => '',
+                        ],
+                        'php' => [
+                            'type' => 'string',
+                            'description' => 'Path to the PHP binary to use instead of the default',
                             'default' => '',
                         ],
                     ],
@@ -584,8 +609,8 @@ final class McpServer
         $mapping = match ($promptName) {
             'xtrace', 'xprofile' => ['script', 'context', 'include_vendor'],
             'xstep' => ['script', 'breakpoints', 'steps', 'context', 'include_vendor'],
-            'xcoverage' => ['script', 'context', 'include_vendor'],
-            'xback' => ['script', 'breakpoint', 'depth', 'context'],
+            'xcoverage' => ['script', 'context', 'include_vendor', 'cwd', 'php', 'source'],
+            'xback' => ['script', 'breakpoint', 'depth', 'context', 'cwd', 'php'],
             default => [],
         };
 
@@ -1067,6 +1092,9 @@ final class McpServer
             $this->validatePhpBinaryScript($script);
             $context = $args['context'] ?? '';
             $includeVendor = $args['include_vendor'] ?? '';
+            $cwd = $args['cwd'] ?? '';
+            $phpBinary = $args['php'] ?? '';
+            $source = $args['source'] ?? '';
 
             // Build command - user must specify PHP binary explicitly
             $cmd = $this->binDir . '/xcoverage';
@@ -1074,6 +1102,18 @@ final class McpServer
             // Add include_vendor option if specified
             if ($includeVendor !== '') {
                 $cmd .= ' --include-vendor=' . escapeshellarg($includeVendor);
+            }
+
+            if ($cwd !== '') {
+                $cmd .= ' --cwd=' . escapeshellarg($cwd);
+            }
+
+            if ($phpBinary !== '') {
+                $cmd .= ' --php=' . escapeshellarg($phpBinary);
+            }
+
+            if ($source !== '') {
+                $cmd .= ' --source=' . escapeshellarg($source);
             }
 
             $cmd .= ' -- ' . $script;
@@ -1129,6 +1169,8 @@ final class McpServer
             $context = $args['context'] ?? '';
             $breakpoint = $args['breakpoint'] ?? '';
             $depth = $args['depth'] ?? '10';
+            $cwd = $args['cwd'] ?? '';
+            $phpBinary = $args['php'] ?? '';
 
             // Build command
             $cmd = $this->binDir . '/xback';
@@ -1144,6 +1186,14 @@ final class McpServer
 
             if ($depth !== '' && (int) $depth > 0 && (int) $depth <= 1000) {
                 $cmd .= ' --depth=' . escapeshellarg((string) (int) $depth);
+            }
+
+            if ($cwd !== '') {
+                $cmd .= ' --cwd=' . escapeshellarg($cwd);
+            }
+
+            if ($phpBinary !== '') {
+                $cmd .= ' --php=' . escapeshellarg($phpBinary);
             }
 
             // Build command - user must specify PHP binary explicitly

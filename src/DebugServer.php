@@ -2306,6 +2306,18 @@ final class DebugServer
     }
 
     /**
+     * Strip XML 1.0 illegal control characters from a DBGp byte stream.
+     *
+     * Xdebug emits raw bytes (e.g., NUL inside anonymous-class names from PHP 8.3+)
+     * that libxml's strict parser rejects. We delete every byte that is illegal in
+     * XML 1.0 while preserving tab/LF/CR and any high-bit bytes (UTF-8 sequences).
+     */
+    private static function sanitizeDbgpXml(string $xml): string
+    {
+        return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $xml) ?? $xml;
+    }
+
+    /**
      * Parse XML response safely without error suppression
      */
     private function parseXmlResponse(string $xmlString): SimpleXMLElement|null
@@ -2318,7 +2330,7 @@ final class DebugServer
         $useErrors = libxml_use_internal_errors(true);
         libxml_clear_errors();
 
-        $xml = simplexml_load_string($xmlString);
+        $xml = simplexml_load_string(self::sanitizeDbgpXml($xmlString));
 
         // Get any errors that occurred
         $errors = libxml_get_errors();
@@ -2805,7 +2817,11 @@ final class DebugServer
             }
 
             $variables = [];
-            $xml = simplexml_load_string($response);
+            $useErrors = libxml_use_internal_errors(true);
+            libxml_clear_errors();
+            $xml = simplexml_load_string(self::sanitizeDbgpXml($response));
+            libxml_clear_errors();
+            libxml_use_internal_errors($useErrors);
             if ($xml && (property_exists($xml, 'property') && $xml->property !== null)) {
                 foreach ($xml->property as $prop) {
                     $name = (string) $prop['name'];
@@ -2944,7 +2960,11 @@ final class DebugServer
                 return null;
             }
 
-            $xml = simplexml_load_string($response);
+            $useErrors = libxml_use_internal_errors(true);
+            libxml_clear_errors();
+            $xml = simplexml_load_string(self::sanitizeDbgpXml($response));
+            libxml_clear_errors();
+            libxml_use_internal_errors($useErrors);
             if (! $xml || (! property_exists($xml, 'property') || $xml->property === null)) {
                 return null;
             }
@@ -3448,7 +3468,11 @@ final class DebugServer
     private function parseStackFrames(string $stackXml): array
     {
         try {
-            $xml = simplexml_load_string($stackXml);
+            $useErrors = libxml_use_internal_errors(true);
+            libxml_clear_errors();
+            $xml = simplexml_load_string(self::sanitizeDbgpXml($stackXml));
+            libxml_clear_errors();
+            libxml_use_internal_errors($useErrors);
             if (! $xml || (! property_exists($xml, 'stack') || $xml->stack === null)) {
                 return [];
             }
@@ -3547,7 +3571,11 @@ final class DebugServer
     private function extractLocationDataFromBreakResponse(string $response): array|null
     {
         try {
-            $xml = simplexml_load_string($response);
+            $useErrors = libxml_use_internal_errors(true);
+            libxml_clear_errors();
+            $xml = simplexml_load_string(self::sanitizeDbgpXml($response));
+            libxml_clear_errors();
+            libxml_use_internal_errors($useErrors);
             if ($xml) {
                 // Register xdebug namespace
                 $xml->registerXPathNamespace('xdebug', 'https://xdebug.org/dbgp/xdebug');

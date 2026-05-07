@@ -19,6 +19,8 @@ function showHelp(): void
     echo "  --break=SPEC      Breakpoint (file.php:line)\n";
     echo "  --depth=N         Maximum stack depth to return (default: 10)\n";
     echo "  --context=TEXT    Context description for AI analysis\n";
+    echo "  --cwd=PATH        Run from PATH (target project root)\n";
+    echo "  --php=PATH        Use this PHP binary instead of the default 'php'\n";
     echo "  --help, -h        Show this help\n";
     echo "\n";
     echo "OUTPUT: Structured JSON (schema: xback.json)\n";
@@ -112,6 +114,8 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
     $breakpointStr = null;
     $depth = 10;
     $context = '';
+    $cwdOption = null;
+    $phpOverride = null;
     $command = [];
     $parseOptions = true;
 
@@ -140,6 +144,16 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
             continue;
         }
 
+        if ($parseOptions && str_starts_with($arg, '--cwd=')) {
+            $cwdOption = substr($arg, 6);
+            continue;
+        }
+
+        if ($parseOptions && str_starts_with($arg, '--php=')) {
+            $phpOverride = substr($arg, 6);
+            continue;
+        }
+
         if ($parseOptions && ($arg === '--help' || $arg === '-h')) {
             showHelp();
         }
@@ -153,8 +167,36 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
         showHelp();
     }
 
+    // Resolve --php against original cwd before chdir.
+    if ($phpOverride !== null && $phpOverride !== '') {
+        $resolved = realpath($phpOverride);
+        if ($resolved === false || !is_executable($resolved)) {
+            fwrite(STDERR, "Error: --php=$phpOverride not found or not executable\n");
+            exit(1);
+        }
+        $phpOverride = $resolved;
+    }
+
+    if ($cwdOption !== null && $cwdOption !== '') {
+        if (!is_dir($cwdOption) || !chdir($cwdOption)) {
+            fwrite(STDERR, "Error: --cwd=$cwdOption is not a directory or chdir failed\n");
+            exit(1);
+        }
+    }
+
     // Detect Docker/Podman/Kubectl commands
     $isDockerCommand = \Koriym\XdebugMcp\ContainerHelper::isContainerCommand($command);
+
+    // Apply --php override to local commands whose first token is a PHP binary.
+    if (
+        !$isDockerCommand
+        && $phpOverride !== null
+        && $phpOverride !== ''
+        && !empty($command)
+        && \Koriym\XdebugMcp\XdebugRunner::isPhpBinary($command[0])
+    ) {
+        $command[0] = $phpOverride;
+    }
 
     // Parse breakpoint now that we know if it's a Docker command
     if ($breakpointStr !== null) {
