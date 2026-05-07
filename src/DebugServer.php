@@ -354,8 +354,14 @@ final class DebugServer
                     $xdebugFlag = XdebugFinder::getXdebugFlag();
                     $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
 
+                    // Allow callers (e.g. xback --php=...) to override the spawned
+                    // PHP binary while keeping $command[0] as the literal 'php'.
+                    $phpBinary = ($this->options['phpBinary'] ?? '') !== ''
+                        ? (string) $this->options['phpBinary']
+                        : 'php';
+
                     $cmd = sprintf(
-                        'XDEBUG_SESSION=xdebug-mcp php %s'
+                        'XDEBUG_SESSION=xdebug-mcp %s %s'
                         . '-dxdebug.mode=debug,trace '
                         . '-dxdebug.start_with_request=yes '
                         . '-dxdebug.client_host=127.0.0.1 '
@@ -372,6 +378,7 @@ final class DebugServer
                         . '-derror_log=/tmp/php.log '
                         . '-dauto_prepend_file=%s '
                         . '%s',
+                        escapeshellarg($phpBinary),
                         $xdebugPart,
                         $this->debugPort,
                         escapeshellarg($prependFilter),
@@ -391,8 +398,13 @@ final class DebugServer
                 $xdebugFlag = XdebugFinder::getXdebugFlag();
                 $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
 
+                // Honor an optional PHP-binary override.
+                $phpBinary = ($this->options['phpBinary'] ?? '') !== ''
+                    ? (string) $this->options['phpBinary']
+                    : 'php';
+
                 $cmd = sprintf(
-                    'XDEBUG_SESSION=xdebug-mcp php %s'
+                    'XDEBUG_SESSION=xdebug-mcp %s %s'
                     . '-dxdebug.mode=debug,trace '
                     . '-dxdebug.start_with_request=yes '
                     . '-dxdebug.client_host=127.0.0.1 '
@@ -405,6 +417,7 @@ final class DebugServer
                     . '-dxdebug.connect_timeout_ms=5000 '
                     . '-dauto_prepend_file=%s '
                     . '%s',
+                    escapeshellarg($phpBinary),
                     $xdebugPart,
                     $this->debugPort,
                     escapeshellarg($prependFilter),

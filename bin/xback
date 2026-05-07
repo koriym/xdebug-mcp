@@ -187,16 +187,17 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
     // Detect Docker/Podman/Kubectl commands
     $isDockerCommand = \Koriym\XdebugMcp\ContainerHelper::isContainerCommand($command);
 
-    // Apply --php override to local commands whose first token is a PHP binary.
-    if (
+    // Decide whether the --php override should apply to the local command.
+    // Keep $command[0] as the literal 'php' so DebugServer's strict-equality
+    // check still selects the local-PHP execution branch; the actual override
+    // path is plumbed through DebugServer's `phpBinary` option below.
+    $applyPhpOverride = (
         !$isDockerCommand
         && $phpOverride !== null
         && $phpOverride !== ''
         && !empty($command)
         && \Koriym\XdebugMcp\XdebugRunner::isPhpBinary($command[0])
-    ) {
-        $command[0] = $phpOverride;
-    }
+    );
 
     // Parse breakpoint now that we know if it's a Docker command
     if ($breakpointStr !== null) {
@@ -247,6 +248,10 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
         'context' => $context,
         'maxSteps' => 1,
     ];
+
+    if ($applyPhpOverride) {
+        $options['phpBinary'] = $phpOverride;
+    }
 
     // Capture DebugServer output
     ob_start();

@@ -34,6 +34,7 @@ use function unlink;
 use function var_export;
 
 use const JSON_THROW_ON_ERROR;
+use const PHP_BINARY;
 
 class XdebugCommandsTest extends TestCase
 {
@@ -404,6 +405,48 @@ PHP);
         $this->assertNotNull($output);
 
         // xback emits a single JSON document; --cwd should not break execution
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertIsArray($payload);
+        $this->assertArrayHasKey('$schema', $payload);
+    }
+
+    public function testXbackPhpOption(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        // Resolve the current PHP binary as the override target. Using PHP_BINARY
+        // guarantees the path exists and is executable on the running system.
+        $phpBinary = realpath(PHP_BINARY);
+        if ($phpBinary === false || ! is_executable($phpBinary)) {
+            $this->markTestSkipped('Cannot resolve PHP_BINARY for --php override test');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/print_cwd.php';
+
+        // Run with --php pointing at an absolute PHP binary path. Without the
+        // fix this fails with "Custom command must start with 'php' or be a
+        // Docker/Podman/Kubectl command" because $command[0] becomes the
+        // absolute path and DebugServer's strict-equality check rejects it.
+        $command = sprintf(
+            'cd %s && ./bin/xback --php=%s -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($phpBinary),
+            escapeshellarg($fixture),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+        $this->assertStringNotContainsString(
+            "must start with 'php'",
+            $output,
+            '--php override should not fall through to the DebugServer error path',
+        );
+
         $jsonStart = strrpos($output, '{"$schema"');
         $this->assertNotFalse($jsonStart, $output);
 
