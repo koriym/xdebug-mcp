@@ -1096,6 +1096,10 @@ final class McpServer
             $phpBinary = $args['php'] ?? '';
             $source = $args['source'] ?? '';
 
+            if ($includeVendor !== '' && $source !== '') {
+                throw new InvalidArgumentException('Parameters "include_vendor" and "source" are mutually exclusive');
+            }
+
             // Build command - user must specify PHP binary explicitly
             $cmd = $this->binDir . '/xcoverage';
 

@@ -11,7 +11,6 @@ use ReflectionMethod;
 use function libxml_clear_errors;
 use function libxml_use_internal_errors;
 use function simplexml_load_string;
-use function strpos;
 
 class DebugServerXmlSanitizerTest extends TestCase
 {
@@ -31,7 +30,7 @@ class DebugServerXmlSanitizerTest extends TestCase
 
         $clean = $this->sanitize->invoke(null, $payload);
 
-        $this->assertFalse(strpos($clean, "\x00"));
+        $this->assertStringNotContainsString("\x00", $clean);
 
         $useErrors = libxml_use_internal_errors(true);
         $xml = simplexml_load_string($clean);
