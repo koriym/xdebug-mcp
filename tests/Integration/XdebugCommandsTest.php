@@ -7,6 +7,7 @@ namespace Koriym\XdebugMcp\Tests\Integration;
 use Koriym\XdebugMcp\XdebugFinder;
 use PHPUnit\Framework\TestCase;
 
+use function array_keys;
 use function bin2hex;
 use function dirname;
 use function escapeshellarg;
@@ -19,6 +20,7 @@ use function json_decode;
 use function json_encode;
 use function mkdir;
 use function random_bytes;
+use function realpath;
 use function rmdir;
 use function shell_exec;
 use function sprintf;
@@ -29,8 +31,10 @@ use function sys_get_temp_dir;
 use function tempnam;
 use function trim;
 use function unlink;
+use function var_export;
 
 use const JSON_THROW_ON_ERROR;
+use const PHP_BINARY;
 
 class XdebugCommandsTest extends TestCase
 {
@@ -221,6 +225,100 @@ PHP);
         }
     }
 
+    public function testXcoverageRawSourceFilterExcludesSiblingFiles(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $root = dirname(__DIR__, 2);
+        $buildDir = $root . '/build';
+        if (! is_dir($buildDir)) {
+            mkdir($buildDir);
+        }
+
+        $fixtureDir = $buildDir . '/xcoverage_source_' . bin2hex(random_bytes(6));
+        $sourceDir = $fixtureDir . '/src';
+        $extraDir = $fixtureDir . '/extra';
+        mkdir($sourceDir, 0777, true);
+        mkdir($extraDir, 0777, true);
+
+        $sourceFile = $sourceDir . '/InSrc.php';
+        $extraFile = $extraDir . '/Sibling.php';
+        $entryFile = $fixtureDir . '/entry.php';
+
+        file_put_contents($sourceFile, <<<'PHP'
+<?php
+function in_src_call(): string
+{
+    $touched = 'covered';
+    $alsoTouched = 'still covered';
+    if ($touched === 'never') {
+        return 'unreachable';
+    }
+
+    return $touched . $alsoTouched;
+}
+PHP);
+
+        file_put_contents($extraFile, <<<'PHP'
+<?php
+function sibling_uncalled(): string
+{
+    $never = 'reached';
+    $also = 'never';
+    return $never . $also;
+}
+PHP);
+
+        file_put_contents($entryFile, sprintf(
+            "<?php\nrequire %s;\nrequire %s;\nin_src_call();\n",
+            var_export($sourceFile, true),
+            var_export($extraFile, true),
+        ));
+
+        try {
+            $command = sprintf(
+                'cd %s && ./bin/xcoverage --raw --source=%s -- php %s 2>&1',
+                escapeshellarg($root),
+                escapeshellarg($sourceDir),
+                escapeshellarg($entryFile),
+            );
+
+            $output = shell_exec($command);
+            $this->assertNotNull($output);
+
+            $jsonStart = strrpos($output, '{"$schema"');
+            $this->assertNotFalse($jsonStart, $output);
+
+            $coverage = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+
+            $resolvedExtra = realpath($extraDir);
+            $this->assertNotFalse($resolvedExtra);
+
+            // The sibling file should NOT appear in uncovered when --source is used
+            foreach (array_keys($coverage['uncovered'] ?? []) as $file) {
+                $this->assertStringNotContainsString($resolvedExtra, $file, 'Sibling file leaked into filtered raw coverage');
+            }
+        } finally {
+            foreach ([$entryFile, $extraFile, $sourceFile] as $f) {
+                if (! file_exists($f)) {
+                    continue;
+                }
+
+                unlink($f);
+            }
+
+            foreach ([$extraDir, $sourceDir, $fixtureDir] as $d) {
+                if (! is_dir($d)) {
+                    continue;
+                }
+
+                rmdir($d);
+            }
+        }
+    }
+
     public function testXstepCommandExists(): void
     {
         $this->assertTrue(file_exists(__DIR__ . '/../../bin/xstep'));
@@ -250,6 +348,111 @@ PHP);
         $this->assertNotNull($output);
         $this->assertStringContainsString('Usage:', $output);
         $this->assertStringContainsString('xback', $output);
+        $this->assertStringContainsString('--cwd=', $output);
+        $this->assertStringContainsString('--php=', $output);
+    }
+
+    public function testXcoverageHelp(): void
+    {
+        $output = shell_exec('cd ' . dirname(__DIR__, 2) . ' && ./bin/xcoverage --help 2>&1');
+        $this->assertNotNull($output);
+        $this->assertStringContainsString('Usage:', $output);
+        $this->assertStringContainsString('xcoverage', $output);
+        $this->assertStringContainsString('--cwd=', $output);
+        $this->assertStringContainsString('--php=', $output);
+        $this->assertStringContainsString('--source=', $output);
+    }
+
+    public function testXcoverageCwdOption(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/print_cwd.php';
+        $tmpDir = sys_get_temp_dir();
+
+        $command = sprintf(
+            'cd %s && ./bin/xcoverage --raw --cwd=%s -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($tmpDir),
+            escapeshellarg($fixture),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+        // print_cwd.php prints the cwd; --cwd should have made it the temp dir
+        $this->assertStringContainsString($tmpDir, $output);
+    }
+
+    public function testXbackCwdOption(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/print_cwd.php';
+        $tmpDir = sys_get_temp_dir();
+
+        $command = sprintf(
+            'cd %s && ./bin/xback --cwd=%s -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($tmpDir),
+            escapeshellarg($fixture),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+
+        // xback emits a single JSON document; --cwd should not break execution
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertIsArray($payload);
+        $this->assertArrayHasKey('$schema', $payload);
+    }
+
+    public function testXbackPhpOption(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        // Resolve the current PHP binary as the override target. Using PHP_BINARY
+        // guarantees the path exists and is executable on the running system.
+        $phpBinary = realpath(PHP_BINARY);
+        if ($phpBinary === false || ! is_executable($phpBinary)) {
+            $this->markTestSkipped('Cannot resolve PHP_BINARY for --php override test');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/print_cwd.php';
+
+        // Run with --php pointing at an absolute PHP binary path. Without the
+        // fix this fails with "Custom command must start with 'php' or be a
+        // Docker/Podman/Kubectl command" because $command[0] becomes the
+        // absolute path and DebugServer's strict-equality check rejects it.
+        $command = sprintf(
+            'cd %s && ./bin/xback --php=%s -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($phpBinary),
+            escapeshellarg($fixture),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+        $this->assertStringNotContainsString(
+            "must start with 'php'",
+            $output,
+            '--php override should not fall through to the DebugServer error path',
+        );
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertIsArray($payload);
+        $this->assertArrayHasKey('$schema', $payload);
     }
 
     public function testAllCommandsAreExecutable(): void
