@@ -60,6 +60,7 @@ use function getenv;
 use function glob;
 use function implode;
 use function in_array;
+use function intval;
 use function is_array;
 use function is_bool;
 use function is_float;
@@ -2322,12 +2323,41 @@ final class DebugServer
      * Strip XML 1.0 illegal control characters from a DBGp byte stream.
      *
      * Xdebug emits raw bytes (e.g., NUL inside anonymous-class names from PHP 8.3+)
-     * that libxml's strict parser rejects. We delete every byte that is illegal in
-     * XML 1.0 while preserving tab/LF/CR and any high-bit bytes (UTF-8 sequences).
+     * and can also surface invalid numeric character references such as &#0;.
+     * Both forms make libxml's strict parser reject the response.
      */
     private static function sanitizeDbgpXml(string $xml): string
     {
+        $xml = preg_replace_callback(
+            '/&#(x[0-9A-Fa-f]+|\d+);/',
+            static function (array $matches): string {
+                $value = $matches[1];
+                $isHex = $value[0] === 'x';
+                $digits = $isHex ? ltrim(substr($value, 1), '0') : ltrim($value, '0');
+                $digits = $digits === '' ? '0' : $digits;
+
+                if (strlen($digits) > ($isHex ? 6 : 7)) {
+                    return '';
+                }
+
+                $codepoint = $isHex ? intval($digits, 16) : (int) $digits;
+
+                return self::isXmlCharacter($codepoint) ? $matches[0] : '';
+            },
+            $xml,
+        ) ?? $xml;
+
         return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $xml) ?? $xml;
+    }
+
+    private static function isXmlCharacter(int $codepoint): bool
+    {
+        return $codepoint === 0x09
+            || $codepoint === 0x0A
+            || $codepoint === 0x0D
+            || ($codepoint >= 0x20 && $codepoint <= 0xD7FF)
+            || ($codepoint >= 0xE000 && $codepoint <= 0xFFFD)
+            || ($codepoint >= 0x10000 && $codepoint <= 0x10FFFF);
     }
 
     /**
