@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-05-08
+
+### Added
+- xcoverage / xback: `--cwd`, `--php` to support running against external
+  projects without changing directory (#80).
+- xcoverage: `--source=PATH[,...]` to restrict raw-mode coverage; mutually
+  exclusive with `--include-vendor` (#80).
+
+### Fixed
+- DBGp XML sanitization: strip invalid numeric character references
+  (`&#0;`, `&#x0;`, surrogates, beyond `U+10FFFF`) (#81).
+- xback: `--php` override now reaches `DebugServer` (#80).
+
 ## [0.9.0] - 2026-04-30
 
 ### Added
