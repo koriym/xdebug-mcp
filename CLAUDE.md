@@ -231,6 +231,11 @@ Before creating a release:
 2. Commit the changelog update
 3. Create the GitHub release with `gh release create`
 
+**Note**: Minor release-prep commits (CHANGELOG bumps, last-minute review fixups,
+typo corrections) may be pushed directly to `1.x` without going through a PR.
+This is an exception to the general "no direct commits to main branches" rule
+and applies only to release prep on this project.
+
 ## Development Workflow
 
 ### MCP Server Development
