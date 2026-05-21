@@ -17,16 +17,24 @@ if (!extension_loaded('xdebug')) {
 }
 
 require_once __DIR__ . '/src/Utilities/PathNormalizer.php';
+require_once __DIR__ . '/src/Utilities/VendorFilter.php';
 
 use Koriym\XdebugMcp\Utilities\PathNormalizer;
+use Koriym\XdebugMcp\Utilities\VendorFilter;
 
 $normalisePath = static function (string $path): string {
     return PathNormalizer::normalise($path);
 };
 
-// Parse CLI arguments for vendor filtering options
+// Parse CLI/env arguments for vendor filtering options.
 $options = getopt('', ['include-vendor::']); // :: = optional value
-$includeVendor = $options['include-vendor'] ?? null;
+$includeVendor = getenv('XDEBUG_MCP_INCLUDE_VENDOR');
+if ($includeVendor === false) {
+    $includeVendor = getenv('COVERAGE_INCLUDE_VENDOR');
+}
+if ($includeVendor === false) {
+    $includeVendor = $options['include-vendor'] ?? null;
+}
 
 // Find vendor directory
 $vendorPath = null;
@@ -39,30 +47,11 @@ foreach ([__DIR__ . '/../../../vendor', __DIR__ . '/vendor'] as $path) {
 
 // Apply vendor filtering if vendor exists
 if ($vendorPath) {
-    $excludePaths = [$vendorPath];  // Default: exclude entire vendor
-
-    if ($includeVendor) {
-        // Pattern-based selective filtering
-        $patterns = array_map('trim', explode(',', $includeVendor));
-        $excludePaths = [$vendorPath . '/autoload.php', $vendorPath . '/composer'];
-
-        foreach (glob($vendorPath . '/*/*', GLOB_ONLYDIR) as $packageDir) {
-            $packageName = substr($packageDir, strlen($vendorPath) + 1);
-            $matches = false;
-            foreach ($patterns as $pattern) {
-                if (fnmatch($pattern, $packageName)) {
-                    $matches = true;
-                    break;
-                }
-            }
-            if (!$matches) {
-                $excludePaths[] = $normalisePath($packageDir);
-            }
-        }
+    $excludePaths = VendorFilter::excludePaths($vendorPath, $includeVendor);
+    if ($excludePaths !== []) {
+        xdebug_set_filter(XDEBUG_FILTER_TRACING, XDEBUG_PATH_EXCLUDE, $excludePaths);
+        xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, $excludePaths);
     }
-
-    xdebug_set_filter(XDEBUG_FILTER_TRACING, XDEBUG_PATH_EXCLUDE, $excludePaths);
-    xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, $excludePaths);
 }
 
 xdebug_start_trace();

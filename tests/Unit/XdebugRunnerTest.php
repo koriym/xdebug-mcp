@@ -469,7 +469,9 @@ final class XdebugRunnerTest extends TestCase
         $command = $runner->buildCommand();
 
         $this->assertStringContainsString('-dxdebug.mode=trace', $command);
-        // prepend_filter.php is loaded when includeVendor is set
+        $this->assertStringContainsString('XDEBUG_MCP_INCLUDE_VENDOR=', $command);
+        // prepend_filter.php is loaded for local traces so vendor filtering can
+        // exclude all vendor code by default or include selected packages.
         if (! file_exists(__DIR__ . '/../../src/prepend_filter.php')) {
             return;
         }
@@ -487,7 +489,8 @@ final class XdebugRunnerTest extends TestCase
         $command = $runner->buildCommand();
 
         $this->assertStringContainsString('-dxdebug.mode=trace', $command);
-        $this->assertStringNotContainsString('-dauto_prepend_file=', $command);
+        $this->assertStringContainsString('-dauto_prepend_file=', $command);
+        $this->assertStringNotContainsString('XDEBUG_MCP_INCLUDE_VENDOR=', $command);
     }
 
     #[Test]

@@ -167,7 +167,7 @@ final class DebugServer
     /** @var array{id: string, label: string, file: string, line: int, condition?: string}|null */
     private array|null $activeBreakpoint = null;
 
-    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, phpBinary?: string} $options */
+    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, phpBinary?: string, includeVendor?: string|null} $options */
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
@@ -360,9 +360,12 @@ final class DebugServer
                     $phpBinary = ($this->options['phpBinary'] ?? '') !== ''
                         ? (string) $this->options['phpBinary']
                         : 'php';
+                    $includeVendorEnv = ($this->options['includeVendor'] ?? null) !== null
+                        ? 'XDEBUG_MCP_INCLUDE_VENDOR=' . escapeshellarg((string) $this->options['includeVendor']) . ' '
+                        : '';
 
                     $cmd = sprintf(
-                        'XDEBUG_SESSION=xdebug-mcp %s %s'
+                        'XDEBUG_SESSION=xdebug-mcp %s%s %s'
                         . '-dxdebug.mode=debug,trace '
                         . '-dxdebug.start_with_request=yes '
                         . '-dxdebug.client_host=127.0.0.1 '
@@ -379,6 +382,7 @@ final class DebugServer
                         . '-derror_log=/tmp/php.log '
                         . '-dauto_prepend_file=%s '
                         . '%s',
+                        $includeVendorEnv,
                         escapeshellarg($phpBinary),
                         $xdebugPart,
                         $this->debugPort,
@@ -403,9 +407,12 @@ final class DebugServer
                 $phpBinary = ($this->options['phpBinary'] ?? '') !== ''
                     ? (string) $this->options['phpBinary']
                     : 'php';
+                $includeVendorEnv = ($this->options['includeVendor'] ?? null) !== null
+                    ? 'XDEBUG_MCP_INCLUDE_VENDOR=' . escapeshellarg((string) $this->options['includeVendor']) . ' '
+                    : '';
 
                 $cmd = sprintf(
-                    'XDEBUG_SESSION=xdebug-mcp %s %s'
+                    'XDEBUG_SESSION=xdebug-mcp %s%s %s'
                     . '-dxdebug.mode=debug,trace '
                     . '-dxdebug.start_with_request=yes '
                     . '-dxdebug.client_host=127.0.0.1 '
@@ -418,6 +425,7 @@ final class DebugServer
                     . '-dxdebug.connect_timeout_ms=5000 '
                     . '-dauto_prepend_file=%s '
                     . '%s',
+                    $includeVendorEnv,
                     escapeshellarg($phpBinary),
                     $xdebugPart,
                     $this->debugPort,

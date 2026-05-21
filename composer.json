@@ -40,12 +40,11 @@
         "bin/xcoverage",
         "bin/xback",
         "bin/xcompare",
-        "bin/check-env",
-        "bin/test-json"
+        "bin/check-env"
     ],
 
     "scripts-descriptions": {
-        "test-json": "Run comprehensive JSON test suite with all xdebug commands",
+        "test-json": "Run the internal JSON regression script",
         "install-mcp": "Configure xdebug-mcp for Claude Code MCP integration",
         "install-desktop": "Configure xdebug-mcp for Claude Desktop integration",
         "check-env": "Check Xdebug environment and configuration",

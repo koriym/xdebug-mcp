@@ -32,7 +32,7 @@ function showCompareHelp(): void
     echo "  --steps=N                Steps to record after breakpoint (default: 1)\n";
     echo "                           xcompare only reads the break-point snapshot; raise this\n";
     echo "                           when you want to inspect how execution diverges after the break.\n";
-    echo "  --include-vendor=PATTERNS Include vendor packages in trace\n";
+    echo "  --include-vendor=PATTERNS Include matching vendor packages in trace\n";
     echo "  --help, -h               Show this help\n";
     echo "\n";
     echo "EXAMPLES:\n";

@@ -11,7 +11,7 @@ use JsonSchema\Constraints\Constraint;
 if (count($argv) < 2) {
     echo "Usage: validate-profile-json <profile-json-file>\n";
     echo "\n";
-    echo "Validates a profile JSON file against the xdebug-profile.json schema.\n";
+    echo "Validates a profile JSON file against the xprofile.json schema.\n";
     echo "\n";
     echo "Examples:\n";
     echo "  validate-profile-json profile-output.json\n";
@@ -21,7 +21,7 @@ if (count($argv) < 2) {
 }
 
 $jsonFile = $argv[1];
-$schemaPath = __DIR__ . '/../docs/schemas/xdebug-profile.json';
+$schemaPath = __DIR__ . '/../docs/schemas/xprofile.json';
 
 if (!file_exists($jsonFile)) {
     echo "❌ Error: JSON file not found: $jsonFile\n";
@@ -54,7 +54,7 @@ try {
     if ($validator->isValid()) {
         echo "✅ Profile JSON is valid and conforms to schema!\n";
         echo "📁 File: $jsonFile\n";
-        echo "📋 Schema: xdebug-profile.json\n";
+        echo "📋 Schema: xprofile.json\n";
         exit(0);
     } else {
         echo "❌ Profile JSON validation failed:\n\n";

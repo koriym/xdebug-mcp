@@ -4,6 +4,7 @@
 // Load autoloader
 require_once __DIR__ . '/autoload.php';
 use Koriym\XdebugMcp\XdebugFinder;
+use Koriym\XdebugMcp\Utilities\VendorFilter;
 
 // Xdebug's sentinel value for "exit" branch target in branch coverage data
 const XDEBUG_BRANCH_EXIT_SENTINEL = 2147483645;
@@ -15,8 +16,8 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
     echo "AI-Optimized PHP Code Coverage Collection Tool\n";
     echo "\n";
     echo "PURPOSE:\n";
-    echo "  Superior alternative to PHPUnit's HTML/XML coverage reports for AI analysis.\n";
-    echo "  Provides streamlined JSON coverage data that AI can immediately analyze\n";
+    echo "  Collect compact coverage data for CLI and AI-assisted analysis.\n";
+    echo "  Provides streamlined JSON coverage data that can be analyzed\n";
     echo "  without browser interaction or file navigation overhead.\n";
     echo "\n";
     echo "MODES:\n";
@@ -31,7 +32,7 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
     echo "OPTIONS:\n";
     echo "  --raw                     Use raw Xdebug coverage (ignores @codeCoverageIgnore)\n";
     echo "  --branch-coverage         Enable branch/path coverage (--raw mode only)\n";
-    echo "  --include-vendor=PATTERNS Include vendor packages (--raw mode only)\n";
+    echo "  --include-vendor=PATTERNS Include matching vendor packages (--raw mode only)\n";
     echo "  --source=PATH[,PATH...]   Restrict raw coverage to these source paths\n";
     echo "                              (--raw mode only; takes precedence over --include-vendor)\n";
     echo "  --cwd=PATH                Run from PATH (target project root)\n";
@@ -332,13 +333,15 @@ if (!$rawMode) {
 $args = normalizeRawArguments($args);
 $shutdownScript = tempnam(sys_get_temp_dir(), 'coverage_end_');
 $branchFlag = $branchCoverage ? 'true' : 'false';
-$includeVendorRequire = '';
 $sourceFilterEnabled = $sourceOption !== null && $sourceOption !== '';
-if ($includeVendor !== null && !$sourceFilterEnabled) {
-    $filterPath = __DIR__ . '/../prepend_filter.php';
-    $includeVendorRequire = 'require_once ' . var_export($filterPath, true) . ';';
-    putenv('COVERAGE_INCLUDE_VENDOR=' . $includeVendor);
+$vendorExcludePaths = [];
+if (! $sourceFilterEnabled) {
+    $vendorPath = getcwd() . '/vendor';
+    if (is_dir($vendorPath)) {
+        $vendorExcludePaths = VendorFilter::excludePaths($vendorPath, $includeVendor);
+    }
 }
+$vendorExcludePathsLiteral = var_export($vendorExcludePaths, true);
 
 if ($sourceFilterEnabled) {
     $resolvedSources = [];
@@ -364,22 +367,26 @@ if ($sourceFilterEnabled) {
 }
 
 file_put_contents($shutdownScript, '<?php
-' . $includeVendorRequire . '
 $tempDir = sys_get_temp_dir();
 $branchCoverage = ' . $branchFlag . ';
 $sourcePaths = ' . $sourceLiteral . ';
+$vendorExcludePaths = ' . $vendorExcludePathsLiteral . ';
 if (is_array($sourcePaths) && $sourcePaths !== []) {
     xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_INCLUDE, $sourcePaths);
     $coverageFlags = $branchCoverage
         ? (XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE | XDEBUG_CC_BRANCH_CHECK)
         : (XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
     xdebug_start_code_coverage($coverageFlags);
-} elseif ($branchCoverage) {
-    xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, [getcwd() . "/vendor/", $tempDir]);
-    xdebug_start_code_coverage(XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE | XDEBUG_CC_BRANCH_CHECK);
 } else {
-    xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, [getcwd() . "/vendor/", getcwd() . "/tests/", $tempDir]);
-    xdebug_start_code_coverage(XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
+    $excludePaths = array_merge([$tempDir], $vendorExcludePaths);
+    if (! $branchCoverage) {
+        $excludePaths[] = getcwd() . "/tests/";
+    }
+    xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, $excludePaths);
+    $coverageFlags = $branchCoverage
+        ? (XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE | XDEBUG_CC_BRANCH_CHECK)
+        : (XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
+    xdebug_start_code_coverage($coverageFlags);
 }
 register_shutdown_function(function() use ($tempDir, $branchCoverage) {
     $coverage = xdebug_get_code_coverage();

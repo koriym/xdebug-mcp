@@ -22,6 +22,7 @@ use function glob;
 use function implode;
 use function passthru;
 use function preg_match;
+use function sprintf;
 use function trim;
 use function usort;
 
@@ -290,9 +291,12 @@ class XdebugRunner
             $phpBinary = array_shift($workingParts);
         }
 
-        $xdebugArgs = $this->generateXdebugArguments();
+        $xdebugArgs = $this->generateXdebugArguments(true);
+        $envPrefix = $this->includeVendor !== null
+            ? sprintf('XDEBUG_MCP_INCLUDE_VENDOR=%s ', escapeshellarg($this->includeVendor))
+            : '';
 
-        return escapeshellarg($phpBinary) . ' ' . implode(' ', $xdebugArgs) . ' ' . implode(' ', array_map(escapeshellarg(...), $workingParts));
+        return $envPrefix . escapeshellarg($phpBinary) . ' ' . implode(' ', $xdebugArgs) . ' ' . implode(' ', array_map(escapeshellarg(...), $workingParts));
     }
 
     /**
@@ -310,7 +314,9 @@ class XdebugRunner
             );
         }
 
-        $xdebugArgs = $this->generateXdebugArguments();
+        // Do not inject the local auto_prepend_file into containers. The host
+        // path is not guaranteed to exist inside the container.
+        $xdebugArgs = $this->generateXdebugArguments(false);
 
         // Insert Xdebug arguments right after 'php' command
         foreach (array_reverse($xdebugArgs) as $arg) {
@@ -333,7 +339,7 @@ class XdebugRunner
     }
 
     /** @return string[] */
-    private function generateXdebugArguments(): array
+    private function generateXdebugArguments(bool $enableLocalVendorFilter): array
     {
         // Add zend_extension flag if Xdebug is not already loaded
         $xdebugFlag = XdebugFinder::getXdebugFlag();
@@ -354,7 +360,7 @@ class XdebugRunner
         if ($this->mode === 'trace') {
             $args[] = '-dxdebug.trace_format=1';
 
-            if ($this->includeVendor !== null) {
+            if ($enableLocalVendorFilter) {
                 $prependFile = __DIR__ . '/prepend_filter.php';
                 if (file_exists($prependFile)) {
                     $args[] = '-dauto_prepend_file=' . $prependFile;
