@@ -31,7 +31,7 @@ function showHelp(string $commandName = 'xstep'): void
         echo "\n";
         echo "CORE OPTIONS:\n";
         echo "  --break=SPEC            Set breakpoints (file.php:line or file.php:line:condition)\n";
-        echo "  --include-vendor=PATTERNS Include vendor packages in trace\n";
+        echo "  --include-vendor=PATTERNS Include matching vendor packages in trace\n";
         echo "  --help, -h              Show this help\n";
     } else {
         echo "Usage: xstep [options] [--] command\n";
@@ -40,8 +40,8 @@ function showHelp(string $commandName = 'xstep'): void
         echo "🔍 AI-Optimized PHP Step Debugger\n";
         echo "\n";
         echo "PURPOSE:\n";
-        echo "  Revolutionary approach to PHP debugging - no var_dump(), no print_r(), no code modification.\n";
-        echo "  Provides runtime execution analysis through breakpoints and variable inspection.\n";
+        echo "  Debug PHP without var_dump(), print_r(), or source edits.\n";
+        echo "  Captures runtime state through breakpoints and variable inspection.\n";
         echo "\n";
         echo "COMMANDS:\n";
         echo "  xstep    JSON output mode (AI-optimized, default)\n";
@@ -63,7 +63,7 @@ function showHelp(string $commandName = 'xstep'): void
         echo "  --pretty                Pretty-print JSON output with 2-space indentation\n";
         echo "  --max-value-bytes=N     Truncate long string values to N bytes in JSON output\n";
         echo "  --max-depth=N           Truncate nested array/object rendering after N levels\n";
-        echo "  --include-vendor=PATTERNS Include vendor packages in trace\n";
+        echo "  --include-vendor=PATTERNS Include matching vendor packages in trace\n";
         echo "  --help, -h              Show this help\n";
     }
     echo "\n";
@@ -113,12 +113,11 @@ function showHelp(string $commandName = 'xstep'): void
         echo "  xrepl: Interactive REPL with step control (s, o, c, p, bt, q commands)\n";
         echo "  Benefits: AI can analyze exact variable values at breakpoints without guesswork\n";
         echo "\n";
-        echo "📋 JSON SCHEMA RESOURCES (Essential for AI):\n";
+        echo "📋 JSON SCHEMA RESOURCES:\n";
         echo "  Schema Definition: https://koriym.github.io/xdebug-mcp/schemas/xstep.json\n";
         echo "  Xdebug Trace Docs: https://xdebug.org/docs/trace\n";
         echo "  Debug Guidelines: https://koriym.github.io/xdebug-mcp/debug_guideline_for_ai.md\n";
         echo "  Forward Trace™ Guide: Complete methodology for AI-powered PHP debugging\n";
-        echo "  Schema Note: Combines 'crime scene photo' (breakpoints) + 'surveillance footage' (traces)\n";
         echo "\n";
         echo "AI WORKFLOW INTEGRATION:\n";
         echo "  1. Set contextual breakpoints based on error analysis\n";
@@ -129,10 +128,6 @@ function showHelp(string $commandName = 'xstep'): void
         echo "\n";
         echo "RECOMMENDED AI PROMPT:\n";
         echo "  'Run xstep --help first, then help me debug this PHP issue using breakpoints'\n";
-        echo "\n";
-        echo "VS. TRADITIONAL DEBUGGING:\n";
-        echo "  ❌ Traditional: Add var_dump(), run, analyze, remove debug code\n";
-        echo "  ✅ This tool: Set breakpoints, analyze runtime data, done\n";
         echo "\n";
     }
     exit(0);
@@ -273,6 +268,7 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
     $pretty = false;
     $maxValueBytes = null;
     $maxDepth = null;
+    $includeVendor = null;
 
     for ($i = 1; $i < count($argv); $i++) {
         $arg = $argv[$i];
@@ -356,7 +352,7 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
         }
 
         if ($parseOptions && str_starts_with($arg, '--include-vendor=')) {
-            // This flag is passed directly to prepend_filter.php via auto_prepend_file
+            $includeVendor = substr($arg, 17);
             continue;
         }
 
@@ -455,10 +451,11 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             'pretty' => $pretty,
             'maxValueBytes' => $maxValueBytes,
             'maxDepth' => $maxDepth,
+            'includeVendor' => $includeVendor,
         ], $jsonOutput);
     } else {
         // For legacy format, only pass command if it's not just the target script
-        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches, 'pretty' => $pretty, 'maxValueBytes' => $maxValueBytes, 'maxDepth' => $maxDepth];
+        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches, 'pretty' => $pretty, 'maxValueBytes' => $maxValueBytes, 'maxDepth' => $maxDepth, 'includeVendor' => $includeVendor];
         if (count($command) > 1 || ($command[0] !== $targetScript)) {
             $options['command'] = $command;
         }

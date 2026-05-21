@@ -1,6 +1,8 @@
 # Xdebug MCP Tools
 
-This directory contains executable tools for PHP debugging, profiling, and analysis using Xdebug and MCP (Model Context Protocol).
+This directory contains CLI tools for PHP debugging, profiling, and analysis using Xdebug and MCP (Model Context Protocol).
+
+Public debugging commands start with `x`. Helper scripts such as `check-env` and `test-json` are development or setup utilities, not debugging commands.
 
 ## Core Debugging Tools
 
@@ -8,23 +10,23 @@ This directory contains executable tools for PHP debugging, profiling, and analy
 Interactive step debugging with conditional breakpoints and Forward Trace™ capabilities.
 ```bash
 # Interactive debugging session
-./xstep script.php
+./xstep --break='script.php:10' -- php script.php
 
 # Conditional breakpoints (Forward Trace)
-./xstep --break='User.php:42:$id==null' --exit-on-break -- php script.php
+./xstep --break='User.php:42:$id==null' -- php script.php
 
 # Step recording with JSON output
-./xstep --break='loop.php:15' --steps=100 --json -- php script.php
+./xstep --break='loop.php:15' --steps=100 -- php script.php
 
 # Multiple conditions (first match triggers)
-./xstep --break='Auth.php:20:empty($token),User.php:85:$id==0' --exit-on-break -- php app.php
+./xstep --break='Auth.php:20:empty($token),User.php:85:$id==0' -- php app.php
 ```
 
 ### `./xprofile`
 Performance profiling with microsecond precision and AI analysis integration.
 ```bash
 # Basic profiling
-./xprofile script.php
+./xprofile -- php script.php
 
 # With context for AI analysis
 ./xprofile --context="API endpoint performance" -- php api.php
@@ -37,7 +39,7 @@ Performance profiling with microsecond precision and AI analysis integration.
 Execution flow tracing with complete function call analysis.
 ```bash
 # Basic execution tracing
-./xtrace script.php
+./xtrace -- php script.php
 
 # With context documentation
 ./xtrace --context="Authentication flow analysis" -- php login.php
@@ -50,13 +52,13 @@ Execution flow tracing with complete function call analysis.
 Code coverage analysis with multiple output formats.
 ```bash
 # Basic coverage analysis
-./xcoverage tests/MyTest.php
+./xcoverage -- php ./vendor/bin/phpunit tests/MyTest.php
 
-# With context
-./xcoverage --context="Unit test coverage verification" -- php vendor/bin/phpunit tests/
+# Raw coverage for any PHP script
+./xcoverage --raw -- php app.php
 
-# Multiple formats: HTML, XML, JSON, text
-./xcoverage --format=html --format=json -- php tests/suite.php
+# Limit raw coverage to source paths
+./xcoverage --raw --source=src -- php app.php
 ```
 
 ### `./xcompare`
@@ -80,16 +82,6 @@ Compare variable states at the same breakpoint across two different executions.
 >
 > **Steps default:** `xcompare` defaults to `--steps=1` because the comparison only needs the variable snapshot at the breakpoint. Use `--steps=N` (e.g. `--steps=100`) to also capture how execution diverges after the break.
 
-### `./xdebug-phpunit`
-PHPUnit integration with Xdebug profiling and coverage.
-```bash
-# Run PHPUnit with Xdebug integration
-./xdebug-phpunit tests/UserTest.php
-
-# With context for analysis
-./xdebug-phpunit --context="User authentication tests" tests/AuthTest.php
-```
-
 ## MCP Protocol Tools
 
 ### `./xdebug-mcp`
@@ -105,7 +97,7 @@ MCP_DEBUG=1 ./xdebug-mcp
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | ./xdebug-mcp
 ```
 
-## Utility Tools
+## Utility Scripts
 
 ### `./check-env`
 Environment verification script - checks Xdebug installation and configuration.
@@ -115,17 +107,16 @@ Environment verification script - checks Xdebug installation and configuration.
 ```
 
 ### `./test-json`
-JSON validation and testing utility for MCP protocol compliance.
+Internal JSON regression script for development.
 ```bash
 ./test-json
-# Tests: JSON schema validation, MCP tool responses, output format compliance
 ```
 
 ### `./validate-profile-json`
 Profile data validation utility for ensuring schema compliance.
 ```bash
 ./validate-profile-json profile-data.json
-# Validates against: https://koriym.github.io/xdebug-mcp/schemas/xdebug-profile.json
+# Validates against: https://koriym.github.io/xdebug-mcp/schemas/xprofile.json
 ```
 
 ### `./autoload.php`
@@ -149,13 +140,12 @@ Legacy debugging server utility (development purposes).
 - `xcoverage` - Test coverage verification
 - `xcompare` - Compare variable states across two executions
 
-**Integration Tools:**
+**Integration Command:**
 - `xdebug-mcp` - AI assistant protocol handler
-- `xdebug-phpunit` - Test framework integration
 
-**Support Tools:**
+**Support Scripts:**
 - `check-env` - Environment validation
-- `test-json` - Protocol compliance testing
+- `test-json` - Internal JSON regression script
 - `validate-profile-json` - Schema validation
 
 ## Common Usage Patterns
@@ -163,7 +153,7 @@ Legacy debugging server utility (development purposes).
 ### Bug Investigation
 ```bash
 # Catch specific problem conditions
-./xstep --break='ErrorHandler.php:45:$error_code>400' --exit-on-break -- php api.php
+./xstep --break='ErrorHandler.php:45:$error_code>400' -- php api.php
 ```
 
 ### Performance Analysis
@@ -175,7 +165,7 @@ Legacy debugging server utility (development purposes).
 ### Test Coverage Verification
 ```bash
 # Analyze test effectiveness
-./xcoverage --context="AuthController test coverage" -- php vendor/bin/phpunit tests/AuthTest.php
+./xcoverage -- php ./vendor/bin/phpunit tests/AuthTest.php
 ```
 
 ### Complex Flow Understanding
@@ -193,4 +183,4 @@ Legacy debugging server utility (development purposes).
   --context='Email validation comparison'
 ```
 
-All tools support `--help` option for detailed usage information.
+Run `--help` on any `x*` command for detailed usage information.

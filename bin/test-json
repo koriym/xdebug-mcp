@@ -4,9 +4,9 @@
 declare(strict_types=1);
 
 /**
- * JSON Test Runner - Execute various xdebug commands and display results
+ * Internal JSON regression script.
  * 
- * This script runs a comprehensive suite of xdebug commands demonstrating:
+ * This script runs a small suite of x* CLI tools demonstrating:
  * - Forward trace debugging
  * - Performance profiling  
  * - Code coverage analysis
@@ -14,14 +14,14 @@ declare(strict_types=1);
  */
 
 $commands = [
-    'Forward Trace - Loop Counter' => './bin/xdebug-trace --json -- php tests/fake/loop-counter.php',
-    'Forward Trace - Array Manipulation' => './bin/xdebug-debug --context=ArrayManipulationTest --break=tests/fake/array-manipulation.php:8,tests/fake/array-manipulation.php:14,tests/fake/array-manipulation.php:18 --json --exit-on-break -- php tests/fake/array-manipulation.php',
-    'Forward Trace - Object State' => './bin/xdebug-debug --context=ObjectStateTest --break=tests/fake/object-state.php:12,tests/fake/object-state.php:19,tests/fake/object-state.php:23 --json --exit-on-break -- php tests/fake/object-state.php',
-    'Forward Trace - Conditional Logic' => './bin/xdebug-debug --context=ConditionalLogicTest --break=tests/fake/conditional-logic.php:8,tests/fake/conditional-logic.php:18,tests/fake/conditional-logic.php:21 --json --exit-on-break -- php tests/fake/conditional-logic.php',
-    'Profile - Loop Counter' => './bin/xdebug-profile --json -- php tests/fake/loop-counter.php',
-    'Profile - Array Manipulation' => './bin/xdebug-profile --json -- php tests/fake/array-manipulation.php',
-    'Coverage - Loop Counter' => './bin/xdebug-coverage -- php tests/fake/loop-counter.php',
-    'Coverage - Array Manipulation' => './bin/xdebug-coverage -- php tests/fake/array-manipulation.php',
+    'Trace - Loop Counter' => './bin/xtrace --json -- php tests/fake/loop-counter.php',
+    'Step - Array Manipulation' => './bin/xstep --context=ArrayManipulationTest --break=tests/fake/array-manipulation.php:10,tests/fake/array-manipulation.php:16,tests/fake/array-manipulation.php:25 -- php tests/fake/array-manipulation.php',
+    'Step - Object State' => './bin/xstep --context=ObjectStateTest --break=tests/fake/object-state.php:16,tests/fake/object-state.php:28,tests/fake/object-state.php:48 -- php tests/fake/object-state.php',
+    'Step - Conditional Logic' => './bin/xstep --context=ConditionalLogicTest --break=tests/fake/conditional-logic.php:11,tests/fake/conditional-logic.php:21,tests/fake/conditional-logic.php:35 -- php tests/fake/conditional-logic.php',
+    'Profile - Loop Counter' => './bin/xprofile --json -- php tests/fake/loop-counter.php',
+    'Profile - Array Manipulation' => './bin/xprofile --json -- php tests/fake/array-manipulation.php',
+    'Coverage - Loop Counter' => './bin/xcoverage --raw -- php tests/fake/loop-counter.php',
+    'Coverage - Array Manipulation' => './bin/xcoverage --raw -- php tests/fake/array-manipulation.php',
 ];
 
 $results = [];

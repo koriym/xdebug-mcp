@@ -16,8 +16,7 @@ function showHelp(string $scriptName): void {
     echo "📊 AI-Optimized PHP Execution Flow Tracer with Docker Support\n";
     echo "\n";
     echo "PURPOSE:\n";
-    echo "  The ultimate alternative to static code analysis - understand what your PHP code\n";
-    echo "  ACTUALLY does at runtime. Captures complete execution flow, function calls,\n";
+    echo "  Understand what your PHP code does at runtime. Captures execution flow, function calls,\n";
     echo "  parameters, and timing data for AI analysis without any code modification.\n";
     echo "\n";
     echo "KEY BENEFITS FOR AI ANALYSIS:\n";
@@ -32,7 +31,7 @@ function showHelp(string $scriptName): void {
     echo "  --json                      Output structured JSON for AI consumption\n";
     echo "  --claude                    Auto-analyze trace data with Claude AI\n";
     echo "  --context=TEXT             Add contextual description for AI analysis\n";
-    echo "  --include-vendor=PATTERNS  Include vendor packages in trace analysis\n";
+    echo "  --include-vendor=PATTERNS  Include matching vendor packages in local traces\n";
     echo "  --help, -h                 Show this comprehensive help\n";
     echo "\n";
     echo "EXAMPLES:\n";
@@ -49,7 +48,7 @@ function showHelp(string $scriptName): void {
     echo "  # PHPUnit test analysis\n";
     echo "  $scriptName --context=\"Test analysis\" -- php vendor/bin/phpunit tests/UserTest.php\n";
     echo "\n";
-    echo "  # With vendor filtering\n";
+    echo "  # Include selected vendor packages in local traces\n";
     echo "  $scriptName --include-vendor=\"bear/*\" --context=\"BEAR DI\" -- php app.php\n";
     echo "\n";
     echo "OUTPUT FORMATS:\n";
@@ -69,7 +68,7 @@ if (isset($argv[1]) && ($argv[1] === '--help' || $argv[1] === '-h')) {
 $separatorIndex = array_search('--', $argv);
 if ($separatorIndex === false) {
     fwrite(STDERR, "❌ Error: Missing '--' separator\n");
-    fwrite(STDERR, "Usage: xdebug-trace [options] -- command\n");
+    fwrite(STDERR, "Usage: {$argv[0]} [options] -- command\n");
     exit(1);
 }
 

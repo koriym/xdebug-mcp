@@ -16,7 +16,7 @@ Run these commands first to identify the problem:
 
 ```bash
 ./bin/check-env          # Check Xdebug installation
-composer test-json       # Test MCP functionality
+composer test-json       # Run internal JSON regression script
 MCP_DEBUG=1 php bin/xdebug-mcp  # Enable debug logging
 ```
 
@@ -120,7 +120,7 @@ head -n 50 src/User.php | tail -n 10  # Check around line 42
 **Check Command Format**:
 ```bash
 # ✅ Correct format
-./bin/xstep --break="loop.php:15" --steps=100 --json -- php script.php
+./bin/xstep --break="loop.php:15" --steps=100 -- php script.php
 
 # ❌ Wrong format
 ./bin/xstep --break="loop.php:15" --steps 100  # Missing equals sign
@@ -129,7 +129,7 @@ head -n 50 src/User.php | tail -n 10  # Check around line 42
 **Verify Output**:
 ```bash
 # Check if JSON contains "breaks" array with step data
-./bin/xstep --break="test.php:1" --steps=5 --json -- php -r "echo 'test';" | jq '.breaks'
+./bin/xstep --break="tests/fixtures/simple.php:1" --steps=5 -- php tests/fixtures/simple.php | jq '.breaks'
 ```
 
 ### 3. Context Memory Problems
@@ -202,7 +202,7 @@ MCP_DEBUG=1 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | php bin/xdeb
 **Optimizations**:
 ```bash
 # Use specific conditions to limit scope
-./bin/xstep --break='file.php:42:$specific_condition' --exit-on-break
+./bin/xstep --break='file.php:42:$specific_condition' -- php script.php
 
 # Limit step recording
 ./bin/xstep --break='file.php:42' --steps=50  # Instead of 1000+
@@ -221,8 +221,8 @@ rm /tmp/trace.*.xt /tmp/cachegrind.out.*
 ./bin/xprofile --json -- php script.php | jq '.'
 # parse error: Invalid numeric literal at line 1, column 8
 
-# ✅ Now: Clean JSON output (script stdout/stderr automatically suppressed)
-./bin/xprofile --json -- php script.php | jq '.["🎯 bottleneck_functions"]'
+# ✅ Now: Clean JSON output with captured script output under the "output" key
+./bin/xprofile --json -- php script.php | jq '.bottlenecks'
 ```
 
 **Format Solutions**:
@@ -231,13 +231,13 @@ rm /tmp/trace.*.xt /tmp/cachegrind.out.*
 ./bin/xprofile --json -- php script.php
 
 # Pipe to jq for filtering
-./bin/xprofile --json -- php script.php | jq '.["⏱️ execution_time_ms"]'
+./bin/xprofile --json -- php script.php | jq '.time_ms'
 
 # Verify schema compliance
 ./bin/validate-profile-json profile-output.json
 
 # Check output structure
-./bin/xstep --json --break="test.php:1" --steps=1 -- php -r "echo 'test';" | jq '.'
+./bin/xstep --break="tests/fixtures/simple.php:1" --steps=1 -- php tests/fixtures/simple.php | jq '.'
 ```
 
 ### 3. File Path Issues
@@ -247,7 +247,7 @@ rm /tmp/trace.*.xt /tmp/cachegrind.out.*
 **Path Solutions**:
 ```bash
 # Use absolute paths
-./bin/xdebug-trace -- php /full/path/to/script.php
+./bin/xtrace -- php /full/path/to/script.php
 
 # Check working directory
 pwd
@@ -262,7 +262,7 @@ chmod 755 $(dirname script.php)
 
 ### 1. PHPUnit Integration Problems
 
-**Issue**: `./bin/xdebug-phpunit` not working with tests
+**Issue**: PHPUnit coverage or profiling commands do not work with tests
 
 **Solutions**:
 ```bash
@@ -273,7 +273,7 @@ vendor/bin/phpunit --version
 vendor/bin/phpunit tests/Unit/
 
 # Check Xdebug + PHPUnit integration
-./bin/xdebug-phpunit --context="Test integration" tests/Unit/McpServerTest.php
+./bin/xcoverage -- php ./vendor/bin/phpunit tests/Unit/McpServerTest.php
 ```
 
 ### 2. Fake Test Environment
@@ -309,7 +309,7 @@ composer test-json
 
 # 4. Test basic functionality
 echo '<?php echo "Reset test\n";' > reset-test.php
-./bin/xdebug-trace --context="Reset verification" -- php reset-test.php
+./bin/xtrace --context="Reset verification" -- php reset-test.php
 rm reset-test.php
 ```
 
@@ -357,7 +357,7 @@ rm reset-test.php
 2. **Create minimal reproduction**:
    ```bash
    echo '<?php echo "Test\n";' > minimal-test.php
-   ./bin/xdebug-trace --json --context="Minimal test" -- php minimal-test.php
+   ./bin/xtrace --json --context="Minimal test" -- php minimal-test.php
    ```
 
 3. **Include system information**:
