@@ -10,7 +10,7 @@ Public debugging commands start with `x`. Helper scripts such as `check-env` and
 Interactive step debugging with conditional breakpoints and Forward Trace™ capabilities.
 ```bash
 # Interactive debugging session
-./xrepl --break='script.php:10' -- php script.php
+./xstep --break='script.php:10' -- php script.php
 
 # Conditional breakpoints (Forward Trace)
 ./xstep --break='User.php:42:$id==null' -- php script.php

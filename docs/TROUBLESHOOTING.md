@@ -349,16 +349,16 @@ rm reset-test.php
 
 1. **Run diagnostics**:
    ```bash
-./bin/check-env > diagnostics.txt
-php -v >> diagnostics.txt
-php -m | grep xdebug >> diagnostics.txt
+   ./bin/check-env > diagnostics.txt
+   php -v >> diagnostics.txt
+   php -m | grep xdebug >> diagnostics.txt
    ```
 
 2. **Create minimal reproduction**:
    ```bash
-echo '<?php echo "Test\n";' > minimal-test.php
-./bin/xtrace --json --context="Minimal test" -- php minimal-test.php
-```
+   echo '<?php echo "Test\n";' > minimal-test.php
+   ./bin/xtrace --json --context="Minimal test" -- php minimal-test.php
+   ```
 
 3. **Include system information**:
    - Operating system and version

@@ -33,7 +33,8 @@ if ($includeVendor === false) {
     $includeVendor = getenv('COVERAGE_INCLUDE_VENDOR');
 }
 if ($includeVendor === false) {
-    $includeVendor = $options['include-vendor'] ?? null;
+    $cliIncludeVendor = is_array($options) ? ($options['include-vendor'] ?? null) : null;
+    $includeVendor = is_string($cliIncludeVendor) ? $cliIncludeVendor : null;
 }
 
 // Find vendor directory
