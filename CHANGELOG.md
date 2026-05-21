@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-05-21
+
+### Added
+- Add `AGENTS.md` contributor guidance, including public output hygiene for
+  PRs, issues, release notes, docs, and examples (#82).
+
+### Changed
+- Align CLI help, bin documentation, troubleshooting examples, and the internal
+  JSON regression script with the current `x*` command set (#82).
+- Stop publishing `bin/test-json` as a Composer bin command; it remains an
+  internal regression script (#82).
+
+### Fixed
+- Apply shared vendor filtering across trace, step, profile analysis, and raw
+  coverage paths so `--include-vendor` behavior matches the CLI help (#82).
+- Update profile schema validation references to the current `xprofile.json`
+  schema (#82).
+
 ## [0.10.0] - 2026-05-08
 
 ### Added
