@@ -319,6 +319,124 @@ PHP);
         }
     }
 
+    public function testXcoverageRawSupportsPhpRunOption(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $command = sprintf(
+            'cd %s && ./bin/xcoverage --raw -- php -r %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg('echo strlen("abc"), PHP_EOL;'),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+        $this->assertStringContainsString("3\n", $output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $coverage = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+
+        $this->assertSame('raw', $coverage['mode']);
+        $this->assertSame('line', $coverage['coverage_type']);
+        $this->assertGreaterThanOrEqual(1, $coverage['summary']['files']);
+        $this->assertGreaterThanOrEqual(1, $coverage['summary']['covered_lines']);
+    }
+
+    public function testXcoverageRawPhpRunPreservesLineConstant(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $command = sprintf(
+            'cd %s && ./bin/xcoverage --raw -- php -r %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg('echo __LINE__, PHP_EOL;'),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+        $this->assertStringStartsWith("1\n", $output);
+    }
+
+    public function testXcoverageRawPhpRunPreservesLeadingStrictTypesDeclare(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $command = sprintf(
+            'cd %s && ./bin/xcoverage --raw -- php -r %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg('declare(strict_types=1); echo __LINE__, PHP_EOL;'),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+        $this->assertStringStartsWith("1\n", $output);
+        $this->assertStringNotContainsString('strict_types declaration must be the very first statement', $output);
+    }
+
+    public function testXcoverageRawBranchPhpRunFiltersBootstrapClosure(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $command = sprintf(
+            'cd %s && ./bin/xcoverage --raw --branch-coverage -- php -r %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg('if (true) { echo "branch", PHP_EOL; }'),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+        $this->assertStringContainsString("branch\n", $output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $coverage = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $functions = $coverage['coverage']['Command line code']['functions'] ?? [];
+        $this->assertIsArray($functions);
+
+        foreach (array_keys($functions) as $function) {
+            $this->assertFalse(
+                str_starts_with((string) $function, '{closure:Command line code:'),
+                'Bootstrap shutdown closure leaked into branch coverage',
+            );
+        }
+    }
+
+    public function testXprofileSupportsPhpRunOption(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $command = sprintf(
+            'cd %s && ./bin/xprofile --json -- php -r %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg('echo strlen("abc"), PHP_EOL;'),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+
+        $jsonStart = strrpos($output, '{"specification"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $profile = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+
+        $this->assertArrayHasKey('file', $profile);
+        $this->assertArrayHasKey('bottlenecks', $profile);
+        $this->assertSame("3\n", $profile['output']);
+    }
+
     public function testXstepCommandExists(): void
     {
         $this->assertTrue(file_exists(__DIR__ . '/../../bin/xstep'));

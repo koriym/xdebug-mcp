@@ -248,6 +248,44 @@ final class XdebugRunnerTest extends TestCase
     }
 
     #[Test]
+    public function buildsProfileCommandWithPhpRunOption(): void
+    {
+        $runner = new XdebugRunner(['script', '--', 'php', '-r', 'echo strlen("abc"), PHP_EOL;']);
+        $runner->setMode('profile');
+
+        $command = $runner->buildCommand();
+
+        $this->assertStringContainsString('-dxdebug.mode=profile', $command);
+        $this->assertStringContainsString('-dxdebug.profiler_output_name=cachegrind.out.%p', $command);
+        $this->assertStringContainsString("'-r'", $command);
+        $this->assertStringContainsString('echo strlen("abc")', $command);
+    }
+
+    #[Test]
+    public function buildsProfileCommandWithAttachedPhpRunOption(): void
+    {
+        $runner = new XdebugRunner(['script', '--', 'php', '-recho strlen("abc"), PHP_EOL;']);
+        $runner->setMode('profile');
+
+        $command = $runner->buildCommand();
+
+        $this->assertStringContainsString('-dxdebug.mode=profile', $command);
+        $this->assertStringContainsString('-recho strlen("abc")', $command);
+    }
+
+    #[Test]
+    public function phpRunOptionRequiresCodeArgument(): void
+    {
+        $runner = new XdebugRunner(['script', '--', 'php', '-r']);
+        $runner->setMode('profile');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Code argument is required after -r');
+
+        $runner->buildCommand();
+    }
+
+    #[Test]
     public function buildsDockerCommandWithXdebugArgsInjected(): void
     {
         $runner = new XdebugRunner([
@@ -390,6 +428,17 @@ final class XdebugRunnerTest extends TestCase
 
         $command = $runner->buildCommand();
 
+        $this->assertStringContainsString(__FILE__, $command);
+    }
+
+    #[Test]
+    public function validateLocalFileAcceptsPhpOptionsBeforeExistingFile(): void
+    {
+        $runner = new XdebugRunner(['script', '--', 'php', '-d', 'memory_limit=512M', __FILE__]);
+
+        $command = $runner->buildCommand();
+
+        $this->assertStringContainsString('memory_limit=512M', $command);
         $this->assertStringContainsString(__FILE__, $command);
     }
 

@@ -51,6 +51,7 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
     echo "\n";
     echo "  # Raw mode: Xdebug direct coverage (any PHP script)\n";
     echo "  " . $argv[0] . " --raw -- php app.php\n";
+    echo "  " . $argv[0] . " --raw -- php -r 'echo strlen(\"abc\"), PHP_EOL;'\n";
     echo "\n";
     echo "  # Include specific vendor packages (raw mode)\n";
     echo "  " . $argv[0] . " --raw --include-vendor=bear/resource,ray/di -- php script.php\n";
@@ -167,6 +168,215 @@ function isPhpUnitCommand(string $arg): bool
     $binary = basename(str_replace('\\', '/', $arg));
 
     return $binary === 'phpunit' || $binary === 'phpunit.phar';
+}
+
+/**
+ * @param list<string> $args
+ *
+ * @return array{code_index: int, code_prefix: string, option: string}|null
+ */
+function findPhpRunCodeArgument(array $args): array|null
+{
+    foreach ($args as $index => $arg) {
+        if ($arg === '-r' || $arg === '--run') {
+            return ['code_index' => $index + 1, 'code_prefix' => '', 'option' => $arg];
+        }
+
+        if (str_starts_with($arg, '-r') && $arg !== '-r') {
+            return ['code_index' => $index, 'code_prefix' => '-r', 'option' => '-r'];
+        }
+
+        if (str_starts_with($arg, '--run=')) {
+            return ['code_index' => $index, 'code_prefix' => '--run=', 'option' => '--run'];
+        }
+    }
+
+    return null;
+}
+
+function buildRawCoverageBootstrap(
+    string $branchFlag,
+    string $sourceLiteral,
+    string $vendorExcludePathsLiteral,
+    int $commandLineCodeOffset = 0,
+    bool $filterCommandLineBootstrap = false,
+): string
+{
+    return '$tempDir = sys_get_temp_dir();
+$branchCoverage = ' . $branchFlag . ';
+$commandLineCodeOffset = ' . $commandLineCodeOffset . ';
+$filterCommandLineBootstrap = ' . ($filterCommandLineBootstrap ? 'true' : 'false') . ';
+$sourcePaths = ' . $sourceLiteral . ';
+$vendorExcludePaths = ' . $vendorExcludePathsLiteral . ';
+if (is_array($sourcePaths) && $sourcePaths !== []) {
+    xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_INCLUDE, $sourcePaths);
+} else {
+    $excludePaths = array_merge([$tempDir], $vendorExcludePaths);
+    if (! $branchCoverage) {
+        $excludePaths[] = getcwd() . "/tests/";
+    }
+    xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, $excludePaths);
+}
+$coverageFlags = $branchCoverage
+    ? (XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE | XDEBUG_CC_BRANCH_CHECK)
+    : (XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
+register_shutdown_function(function() use ($tempDir, $branchCoverage, $commandLineCodeOffset, $filterCommandLineBootstrap) {
+    $coverage = xdebug_get_code_coverage();
+    $filtered = array_filter($coverage, function($path) use ($tempDir) {
+        return strpos($path, $tempDir) === false;
+    }, ARRAY_FILTER_USE_KEY);
+
+    if (! $branchCoverage && $commandLineCodeOffset > 0 && isset($filtered["Command line code"]) && is_array($filtered["Command line code"])) {
+        $adjusted = [];
+        foreach ($filtered["Command line code"] as $line => $hitCount) {
+            if (! is_int($line) && ! ctype_digit((string) $line)) {
+                continue;
+            }
+
+            $adjustedLine = (int) $line - $commandLineCodeOffset;
+            if ($adjustedLine >= 1) {
+                $adjusted[$adjustedLine] = $hitCount;
+            }
+        }
+
+        if ($adjusted === []) {
+            unset($filtered["Command line code"]);
+        } else {
+            $filtered["Command line code"] = $adjusted;
+        }
+    }
+
+    if ($branchCoverage && $filterCommandLineBootstrap && isset($filtered["Command line code"]["functions"]) && is_array($filtered["Command line code"]["functions"])) {
+        foreach (array_keys($filtered["Command line code"]["functions"]) as $function) {
+            if (str_starts_with((string) $function, "{closure:Command line code:")) {
+                unset($filtered["Command line code"]["functions"][$function]);
+            }
+        }
+    }
+
+    if ($branchCoverage) {
+        $dotFilePath = tempnam(sys_get_temp_dir(), "xdebug_branch_coverage_") . ".dot";
+        $dotContent = "digraph coverage {\n  rankdir=TB;\n  node [shape=box];\n\n";
+
+        foreach ($filtered as $file => $data) {
+            if (isset($data["functions"])) {
+                foreach ($data["functions"] as $function => $funcData) {
+                    if (isset($funcData["branches"])) {
+                        $dotContent .= "  // Function: $function\n";
+                        foreach ($funcData["branches"] as $branchId => $branch) {
+                            $label = "Branch $branchId\\nLines {$branch["line_start"]}-{$branch["line_end"]}";
+                            $style = $branch["hit"] > 0 ? "filled,solid" : "filled,dashed";
+                            $color = $branch["hit"] > 0 ? "lightgreen" : "lightcoral";
+                            $dotContent .= "  \"$function-$branchId\" [label=\"$label\", style=\"$style\", fillcolor=\"$color\"];\n";
+
+                            foreach ($branch["out"] as $i => $targetBranch) {
+                                if ($targetBranch !== ' . XDEBUG_BRANCH_EXIT_SENTINEL . ') {
+                                    $edgeStyle = ($branch["out_hit"][$i] ?? 0) > 0 ? "solid" : "dashed";
+                                    $dotContent .= "  \"$function-$branchId\" -> \"$function-$targetBranch\" [style=\"$edgeStyle\"];\n";
+                                }
+                            }
+                        }
+                        $dotContent .= "\n";
+                    }
+                }
+            }
+        }
+
+        $dotContent .= "}\n";
+        file_put_contents($dotFilePath, $dotContent);
+        $outputPath = pathinfo($dotFilePath, PATHINFO_DIRNAME) . "/" . pathinfo($dotFilePath, PATHINFO_FILENAME) . ".png";
+
+        $result = [
+            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xcoverage-branch.json",
+            "coverage_type" => "branch",
+            "mode" => "raw",
+            "coverage" => $filtered,
+            "graphviz_dot_file" => $dotFilePath,
+            "visualization_command" => "dot -Tpng " . escapeshellarg($dotFilePath) . " -o " . escapeshellarg($outputPath)
+        ];
+    } else {
+        $uncoveredOnly = [];
+        $totalFiles = 0;
+        $totalLines = 0;
+        $coveredLines = 0;
+        $uncoveredLines = 0;
+
+        foreach ($filtered as $file => $lines) {
+            if (is_array($lines)) {
+                $totalFiles++;
+                $uncoveredLineNums = [];
+                foreach ($lines as $lineNum => $hitCount) {
+                    if (is_numeric($lineNum)) {
+                        $totalLines++;
+                        if ($hitCount > 0) {
+                            $coveredLines++;
+                        } else {
+                            $uncoveredLines++;
+                            $uncoveredLineNums[] = (int)$lineNum;
+                        }
+                    }
+                }
+                if (!empty($uncoveredLineNums)) {
+                    sort($uncoveredLineNums);
+                    $ranges = [];
+                    $start = $uncoveredLineNums[0];
+                    $end = $start;
+                    for ($i = 1; $i < count($uncoveredLineNums); $i++) {
+                        if ($uncoveredLineNums[$i] === $end + 1) {
+                            $end = $uncoveredLineNums[$i];
+                        } else {
+                            $ranges[] = ($start === $end) ? $start : "$start-$end";
+                            $start = $uncoveredLineNums[$i];
+                            $end = $start;
+                        }
+                    }
+                    $ranges[] = ($start === $end) ? $start : "$start-$end";
+                    $uncoveredOnly[$file] = $ranges;
+                }
+            }
+        }
+
+        $coveragePercent = $totalLines > 0 ? round(($coveredLines / $totalLines) * 100, 1) : 0;
+
+        $result = [
+            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json",
+            "coverage_type" => "line",
+            "mode" => "raw",
+            "summary" => [
+                "files" => $totalFiles,
+                "total_lines" => $totalLines,
+                "covered_lines" => $coveredLines,
+                "uncovered_lines" => $uncoveredLines,
+                "coverage_percent" => $coveragePercent
+            ],
+            "uncovered" => $uncoveredOnly
+        ];
+    }
+    echo(json_encode($result, JSON_UNESCAPED_SLASHES));
+});
+xdebug_start_code_coverage($coverageFlags);
+';
+}
+
+function compactPhpSnippet(string $php): string
+{
+    $compact = preg_replace('/\s*\R\s*/', ' ', trim($php));
+    if ($compact === null) {
+        throw new RuntimeException('Failed to compact PHP bootstrap');
+    }
+
+    return $compact . ' ';
+}
+
+function prefixPhpRunCode(string $inlineCode, string $inlineBootstrap): string
+{
+    if (preg_match('/^\s*declare\s*\(\s*strict_types\s*=\s*[01]\s*\)\s*;/', $inlineCode, $matches) !== 1) {
+        return $inlineBootstrap . $inlineCode;
+    }
+
+    $declare = $matches[0];
+
+    return $declare . $inlineBootstrap . substr($inlineCode, strlen($declare));
 }
 
 // PHPUnit mode (default) - uses PHPUnit's coverage with @codeCoverageIgnore support
@@ -331,7 +541,6 @@ if (!$rawMode) {
 
 // Raw mode - uses Xdebug directly (original behavior)
 $args = normalizeRawArguments($args);
-$shutdownScript = tempnam(sys_get_temp_dir(), 'coverage_end_');
 $branchFlag = $branchCoverage ? 'true' : 'false';
 $sourceFilterEnabled = $sourceOption !== null && $sourceOption !== '';
 $vendorExcludePaths = [];
@@ -366,139 +575,8 @@ if ($sourceFilterEnabled) {
     $sourceLiteral = 'null';
 }
 
-file_put_contents($shutdownScript, '<?php
-$tempDir = sys_get_temp_dir();
-$branchCoverage = ' . $branchFlag . ';
-$sourcePaths = ' . $sourceLiteral . ';
-$vendorExcludePaths = ' . $vendorExcludePathsLiteral . ';
-if (is_array($sourcePaths) && $sourcePaths !== []) {
-    xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_INCLUDE, $sourcePaths);
-    $coverageFlags = $branchCoverage
-        ? (XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE | XDEBUG_CC_BRANCH_CHECK)
-        : (XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
-    xdebug_start_code_coverage($coverageFlags);
-} else {
-    $excludePaths = array_merge([$tempDir], $vendorExcludePaths);
-    if (! $branchCoverage) {
-        $excludePaths[] = getcwd() . "/tests/";
-    }
-    xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, $excludePaths);
-    $coverageFlags = $branchCoverage
-        ? (XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE | XDEBUG_CC_BRANCH_CHECK)
-        : (XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
-    xdebug_start_code_coverage($coverageFlags);
-}
-register_shutdown_function(function() use ($tempDir, $branchCoverage) {
-    $coverage = xdebug_get_code_coverage();
-    $filtered = array_filter($coverage, function($path) use ($tempDir) {
-        return strpos($path, $tempDir) === false;
-    }, ARRAY_FILTER_USE_KEY);
-
-    if ($branchCoverage) {
-        $dotFilePath = tempnam(sys_get_temp_dir(), "xdebug_branch_coverage_") . ".dot";
-        $dotContent = "digraph coverage {\n  rankdir=TB;\n  node [shape=box];\n\n";
-
-        foreach ($filtered as $file => $data) {
-            if (isset($data["functions"])) {
-                foreach ($data["functions"] as $function => $funcData) {
-                    if (isset($funcData["branches"])) {
-                        $dotContent .= "  // Function: $function\n";
-                        foreach ($funcData["branches"] as $branchId => $branch) {
-                            $label = "Branch $branchId\\nLines {$branch["line_start"]}-{$branch["line_end"]}";
-                            $style = $branch["hit"] > 0 ? "filled,solid" : "filled,dashed";
-                            $color = $branch["hit"] > 0 ? "lightgreen" : "lightcoral";
-                            $dotContent .= "  \"$function-$branchId\" [label=\"$label\", style=\"$style\", fillcolor=\"$color\"];\n";
-
-                            foreach ($branch["out"] as $i => $targetBranch) {
-                                if ($targetBranch !== ' . XDEBUG_BRANCH_EXIT_SENTINEL . ') {
-                                    $edgeStyle = ($branch["out_hit"][$i] ?? 0) > 0 ? "solid" : "dashed";
-                                    $dotContent .= "  \"$function-$branchId\" -> \"$function-$targetBranch\" [style=\"$edgeStyle\"];\n";
-                                }
-                            }
-                        }
-                        $dotContent .= "\n";
-                    }
-                }
-            }
-        }
-
-        $dotContent .= "}\n";
-        file_put_contents($dotFilePath, $dotContent);
-        $outputPath = pathinfo($dotFilePath, PATHINFO_DIRNAME) . "/" . pathinfo($dotFilePath, PATHINFO_FILENAME) . ".png";
-
-        $result = [
-            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xcoverage-branch.json",
-            "coverage_type" => "branch",
-            "mode" => "raw",
-            "coverage" => $filtered,
-            "graphviz_dot_file" => $dotFilePath,
-            "visualization_command" => "dot -Tpng " . escapeshellarg($dotFilePath) . " -o " . escapeshellarg($outputPath)
-        ];
-    } else {
-        $uncoveredOnly = [];
-        $totalFiles = 0;
-        $totalLines = 0;
-        $coveredLines = 0;
-        $uncoveredLines = 0;
-
-        foreach ($filtered as $file => $lines) {
-            if (is_array($lines)) {
-                $totalFiles++;
-                $uncoveredLineNums = [];
-                foreach ($lines as $lineNum => $hitCount) {
-                    if (is_numeric($lineNum)) {
-                        $totalLines++;
-                        if ($hitCount > 0) {
-                            $coveredLines++;
-                        } else {
-                            $uncoveredLines++;
-                            $uncoveredLineNums[] = (int)$lineNum;
-                        }
-                    }
-                }
-                if (!empty($uncoveredLineNums)) {
-                    sort($uncoveredLineNums);
-                    $ranges = [];
-                    $start = $uncoveredLineNums[0];
-                    $end = $start;
-                    for ($i = 1; $i < count($uncoveredLineNums); $i++) {
-                        if ($uncoveredLineNums[$i] === $end + 1) {
-                            $end = $uncoveredLineNums[$i];
-                        } else {
-                            $ranges[] = ($start === $end) ? $start : "$start-$end";
-                            $start = $uncoveredLineNums[$i];
-                            $end = $start;
-                        }
-                    }
-                    $ranges[] = ($start === $end) ? $start : "$start-$end";
-                    $uncoveredOnly[$file] = $ranges;
-                }
-            }
-        }
-
-        $coveragePercent = $totalLines > 0 ? round(($coveredLines / $totalLines) * 100, 1) : 0;
-
-        $result = [
-            "\$schema" => "https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json",
-            "coverage_type" => "line",
-            "mode" => "raw",
-            "summary" => [
-                "files" => $totalFiles,
-                "total_lines" => $totalLines,
-                "covered_lines" => $coveredLines,
-                "uncovered_lines" => $uncoveredLines,
-                "coverage_percent" => $coveragePercent
-            ],
-            "uncovered" => $uncoveredOnly
-        ];
-    }
-    echo(json_encode($result, JSON_UNESCAPED_SLASHES));
-});
-');
-
 $phpPath = $phpOverride ?? PHP_BINARY;
 $xdebugFlag = XdebugFinder::getXdebugFlag();
-$escapedPrependFile = escapeshellarg($shutdownScript);
 
 // Default to PHPUnit for raw mode if no args
 if (empty($args)) {
@@ -512,13 +590,49 @@ if (empty($args)) {
     }
 }
 
+$shutdownScript = null;
+$runCodeArgument = findPhpRunCodeArgument($args);
+if ($runCodeArgument !== null) {
+    $codeIndex = $runCodeArgument['code_index'];
+    $codePrefix = $runCodeArgument['code_prefix'];
+    if (! isset($args[$codeIndex])) {
+        fwrite(STDERR, "Error: PHP inline code argument is required after {$runCodeArgument['option']}\n");
+        exit(1);
+    }
+
+    $inlineCode = $codePrefix === '' ? $args[$codeIndex] : substr($args[$codeIndex], strlen($codePrefix));
+    if ($inlineCode === '') {
+        fwrite(STDERR, "Error: PHP inline code argument is required after {$runCodeArgument['option']}\n");
+        exit(1);
+    }
+
+    $inlineBootstrap = compactPhpSnippet(
+        buildRawCoverageBootstrap(
+            $branchFlag,
+            $sourceLiteral,
+            $vendorExcludePathsLiteral,
+            filterCommandLineBootstrap: true,
+        ),
+    );
+    $args[$codeIndex] = $codePrefix . prefixPhpRunCode($inlineCode, $inlineBootstrap);
+} else {
+    $shutdownScript = tempnam(sys_get_temp_dir(), 'coverage_end_');
+    file_put_contents(
+        $shutdownScript,
+        "<?php\n" . buildRawCoverageBootstrap($branchFlag, $sourceLiteral, $vendorExcludePathsLiteral),
+    );
+}
+
 $escapedArgs = array_map('escapeshellarg', $args);
 $cmd = escapeshellarg($phpPath)
      . $xdebugFlag
-     . ' -dxdebug.mode=coverage -dauto_prepend_file='
-     . $escapedPrependFile
-     . ' '
-     . implode(' ', $escapedArgs);
+     . ' -dxdebug.mode=coverage ';
+
+if ($shutdownScript !== null) {
+    $cmd .= '-dauto_prepend_file=' . escapeshellarg($shutdownScript) . ' ';
+}
+
+$cmd .= implode(' ', $escapedArgs);
 
 if ($debug) {
     fwrite(STDERR, "[COVERAGE_DEBUG] Command: $cmd\n");
@@ -530,5 +644,7 @@ exec($cmd . ' 2>&1', $lines, $exitCode);
 $output = implode("\n", $lines);
 
 echo $output;
-unlink($shutdownScript);
+if ($shutdownScript !== null && file_exists($shutdownScript)) {
+    unlink($shutdownScript);
+}
 exit($exitCode);

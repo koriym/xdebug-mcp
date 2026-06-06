@@ -308,6 +308,14 @@ class McpServerTest extends TestCase
         $this->invokePrivateMethod($this->server, 'validatePhpBinaryScript', ['python script.py']);
     }
 
+    public function testIsPhpInlineCodeScriptDetectsRunForms(): void
+    {
+        $this->assertTrue($this->invokePrivateMethod($this->server, 'isPhpInlineCodeScript', ['php -r "echo 1;"']));
+        $this->assertTrue($this->invokePrivateMethod($this->server, 'isPhpInlineCodeScript', ['php -recho 1;']));
+        $this->assertTrue($this->invokePrivateMethod($this->server, 'isPhpInlineCodeScript', ['php --run=echo 1;']));
+        $this->assertFalse($this->invokePrivateMethod($this->server, 'isPhpInlineCodeScript', ['php script.php']));
+    }
+
     public function testExecuteToolCall(): void
     {
         // Test executeToolCall method directly - it should handle exceptions and return formatted result

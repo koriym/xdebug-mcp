@@ -676,6 +676,11 @@ final class McpServer
         }
     }
 
+    private function isPhpInlineCodeScript(string $script): bool
+    {
+        return preg_match('/^(\S*[\/\\\\])?php([0-9.]*)?(\.exe)?(?:\s+|$)(?:.*\s)?(?:-r\S*|--run(?:=\S*)?)(?:\s|$)/i', $script) === 1;
+    }
+
     /**
      * Validate breakpoint specifications
      * Format: "file.php:line" or "file.php:line:condition"
@@ -1102,6 +1107,10 @@ final class McpServer
 
             // Build command - user must specify PHP binary explicitly
             $cmd = $this->binDir . '/xcoverage';
+
+            if ($this->isPhpInlineCodeScript($script)) {
+                $cmd .= ' --raw';
+            }
 
             // Add include_vendor option if specified
             if ($includeVendor !== '') {
