@@ -316,6 +316,16 @@ class McpServerTest extends TestCase
         $this->assertFalse($this->invokePrivateMethod($this->server, 'isPhpInlineCodeScript', ['php script.php']));
     }
 
+    public function testIsPhpInlineCodeScriptIgnoresRunPastScriptBoundary(): void
+    {
+        // -r belongs to the script's own arguments, not the interpreter.
+        $this->assertFalse($this->invokePrivateMethod($this->server, 'isPhpInlineCodeScript', ['php app.php -r dry-run']));
+        $this->assertFalse($this->invokePrivateMethod($this->server, 'isPhpInlineCodeScript', ['php -- -r code']));
+        // Interpreter options before -r must not hide it (value of -d is skipped).
+        $this->assertTrue($this->invokePrivateMethod($this->server, 'isPhpInlineCodeScript', ['php -d memory_limit=512M -r "echo 1;"']));
+        $this->assertTrue($this->invokePrivateMethod($this->server, 'isPhpInlineCodeScript', ['php --define memory_limit=512M -r "echo 1;"']));
+    }
+
     public function testExecuteToolCall(): void
     {
         // Test executeToolCall method directly - it should handle exceptions and return formatted result

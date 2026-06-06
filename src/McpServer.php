@@ -40,6 +40,7 @@ use function is_string;
 use function json_decode;
 use function json_encode;
 use function preg_match;
+use function preg_split;
 use function str_contains;
 use function str_ends_with;
 use function str_starts_with;
@@ -678,7 +679,54 @@ final class McpServer
 
     private function isPhpInlineCodeScript(string $script): bool
     {
-        return preg_match('/^(\S*[\/\\\\])?php([0-9.]*)?(\.exe)?(?:\s+|$)(?:.*\s)?(?:-r\S*|--run(?:=\S*)?)(?:\s|$)/i', $script) === 1;
+        $parts = preg_split('/\s+/', trim($script)) ?: [];
+        if ($parts === [] || preg_match('/^(\S*[\/\\\\])?php([0-9.]*)?(\.exe)?$/i', $parts[0]) !== 1) {
+            return false;
+        }
+
+        // Only inspect PHP interpreter options before the script file. Stop at the
+        // first non-option token (the script) or "--" so that a script's own
+        // arguments (e.g. `php app.php -r foo`) are not mistaken for inline code.
+        $optionsWithValue = [
+            '-d',
+            '-c',
+            '-z',
+            '-B',
+            '-R',
+            '-F',
+            '-E',
+            '--define',
+            '--php-ini',
+            '--zend-extension',
+            '--process-begin',
+            '--process-code',
+            '--process-file',
+            '--process-end',
+        ];
+
+        for ($i = 1; isset($parts[$i]); $i++) {
+            $arg = $parts[$i];
+
+            if (
+                $arg === '-r' || $arg === '--run'
+                || str_starts_with($arg, '--run=')
+                || (str_starts_with($arg, '-r') && $arg !== '-r')
+            ) {
+                return true;
+            }
+
+            if ($arg === '--' || ! str_starts_with($arg, '-')) {
+                return false;
+            }
+
+            if (! in_array($arg, $optionsWithValue, true) || ! isset($parts[$i + 1])) {
+                continue;
+            }
+
+            $i++;
+        }
+
+        return false;
     }
 
     /**
