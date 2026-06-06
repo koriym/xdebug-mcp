@@ -381,12 +381,8 @@ PHP);
         $this->assertStringNotContainsString('strict_types declaration must be the very first statement', $output);
     }
 
-    public function testXcoverageRawBranchPhpRunFiltersBootstrapClosure(): void
+    public function testXcoverageRawBranchPhpRunFailsBeforeExecutingInlineCode(): void
     {
-        if (! XdebugFinder::isXdebugAvailable()) {
-            $this->markTestSkipped('Xdebug not available');
-        }
-
         $command = sprintf(
             'cd %s && ./bin/xcoverage --raw --branch-coverage -- php -r %s 2>&1',
             escapeshellarg(dirname(__DIR__, 2)),
@@ -395,21 +391,9 @@ PHP);
 
         $output = shell_exec($command);
         $this->assertNotNull($output);
-        $this->assertStringContainsString("branch\n", $output);
-
-        $jsonStart = strrpos($output, '{"$schema"');
-        $this->assertNotFalse($jsonStart, $output);
-
-        $coverage = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
-        $functions = $coverage['coverage']['Command line code']['functions'] ?? [];
-        $this->assertIsArray($functions);
-
-        foreach (array_keys($functions) as $function) {
-            $this->assertFalse(
-                str_starts_with((string) $function, '{closure:Command line code:'),
-                'Bootstrap shutdown closure leaked into branch coverage',
-            );
-        }
+        $this->assertStringContainsString('--branch-coverage is not supported with PHP inline code (-r)', $output);
+        $this->assertStringNotContainsString("branch\n", $output);
+        $this->assertStringNotContainsString('Segmentation fault', $output);
     }
 
     public function testXprofileSupportsPhpRunOption(): void

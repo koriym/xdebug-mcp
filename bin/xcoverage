@@ -606,6 +606,11 @@ if ($runCodeArgument !== null) {
         exit(1);
     }
 
+    if ($branchCoverage) {
+        fwrite(STDERR, "Error: --branch-coverage is not supported with PHP inline code ({$runCodeArgument['option']}). Use a script file for branch coverage.\n");
+        exit(1);
+    }
+
     $inlineBootstrap = compactPhpSnippet(
         buildRawCoverageBootstrap(
             $branchFlag,
