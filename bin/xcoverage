@@ -198,14 +198,10 @@ function buildRawCoverageBootstrap(
     string $branchFlag,
     string $sourceLiteral,
     string $vendorExcludePathsLiteral,
-    int $commandLineCodeOffset = 0,
-    bool $filterCommandLineBootstrap = false,
 ): string
 {
     return '$tempDir = sys_get_temp_dir();
 $branchCoverage = ' . $branchFlag . ';
-$commandLineCodeOffset = ' . $commandLineCodeOffset . ';
-$filterCommandLineBootstrap = ' . ($filterCommandLineBootstrap ? 'true' : 'false') . ';
 $sourcePaths = ' . $sourceLiteral . ';
 $vendorExcludePaths = ' . $vendorExcludePathsLiteral . ';
 if (is_array($sourcePaths) && $sourcePaths !== []) {
@@ -220,39 +216,11 @@ if (is_array($sourcePaths) && $sourcePaths !== []) {
 $coverageFlags = $branchCoverage
     ? (XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE | XDEBUG_CC_BRANCH_CHECK)
     : (XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
-register_shutdown_function(function() use ($tempDir, $branchCoverage, $commandLineCodeOffset, $filterCommandLineBootstrap) {
+register_shutdown_function(function() use ($tempDir, $branchCoverage) {
     $coverage = xdebug_get_code_coverage();
     $filtered = array_filter($coverage, function($path) use ($tempDir) {
         return strpos($path, $tempDir) === false;
     }, ARRAY_FILTER_USE_KEY);
-
-    if (! $branchCoverage && $commandLineCodeOffset > 0 && isset($filtered["Command line code"]) && is_array($filtered["Command line code"])) {
-        $adjusted = [];
-        foreach ($filtered["Command line code"] as $line => $hitCount) {
-            if (! is_int($line) && ! ctype_digit((string) $line)) {
-                continue;
-            }
-
-            $adjustedLine = (int) $line - $commandLineCodeOffset;
-            if ($adjustedLine >= 1) {
-                $adjusted[$adjustedLine] = $hitCount;
-            }
-        }
-
-        if ($adjusted === []) {
-            unset($filtered["Command line code"]);
-        } else {
-            $filtered["Command line code"] = $adjusted;
-        }
-    }
-
-    if ($branchCoverage && $filterCommandLineBootstrap && isset($filtered["Command line code"]["functions"]) && is_array($filtered["Command line code"]["functions"])) {
-        foreach (array_keys($filtered["Command line code"]["functions"]) as $function) {
-            if (str_starts_with((string) $function, "{closure:Command line code:")) {
-                unset($filtered["Command line code"]["functions"][$function]);
-            }
-        }
-    }
 
     if ($branchCoverage) {
         $dotFilePath = tempnam(sys_get_temp_dir(), "xdebug_branch_coverage_") . ".dot";
@@ -612,12 +580,7 @@ if ($runCodeArgument !== null) {
     }
 
     $inlineBootstrap = compactPhpSnippet(
-        buildRawCoverageBootstrap(
-            $branchFlag,
-            $sourceLiteral,
-            $vendorExcludePathsLiteral,
-            filterCommandLineBootstrap: true,
-        ),
+        buildRawCoverageBootstrap($branchFlag, $sourceLiteral, $vendorExcludePathsLiteral),
     );
     $args[$codeIndex] = $codePrefix . prefixPhpRunCode($inlineCode, $inlineBootstrap);
 } else {

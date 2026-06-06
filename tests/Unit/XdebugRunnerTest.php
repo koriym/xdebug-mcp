@@ -443,6 +443,28 @@ final class XdebugRunnerTest extends TestCase
     }
 
     #[Test]
+    public function validateLocalFileAcceptsLongFormPhpOptionBeforeExistingFile(): void
+    {
+        $runner = new XdebugRunner(['script', '--', 'php', '--define', 'memory_limit=512M', __FILE__]);
+
+        $command = $runner->buildCommand();
+
+        $this->assertStringContainsString('memory_limit=512M', $command);
+        $this->assertStringContainsString(__FILE__, $command);
+    }
+
+    #[Test]
+    public function validateLocalFileAcceptsAttachedLongFormPhpOptionBeforeExistingFile(): void
+    {
+        $runner = new XdebugRunner(['script', '--', 'php', '--define=memory_limit=512M', __FILE__]);
+
+        $command = $runner->buildCommand();
+
+        $this->assertStringContainsString('memory_limit=512M', $command);
+        $this->assertStringContainsString(__FILE__, $command);
+    }
+
+    #[Test]
     public function validateLocalFileWithoutPhpPrefix(): void
     {
         $runner = new XdebugRunner(['script', '--', __FILE__]);

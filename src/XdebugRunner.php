@@ -59,6 +59,22 @@ class XdebugRunner
     /** PHP CLI options that consume the following argument as their value. */
     private const PHP_OPTIONS_WITH_VALUE = ['-d', '-c', '-z', '-B', '-R', '-F', '-E'];
 
+    /**
+     * Long-form PHP CLI options that consume the following argument as their value.
+     * These are the long aliases of {@see PHP_OPTIONS_WITH_VALUE}. The attached form
+     * (e.g. "--define=foo=bar") needs no special handling; only the space-separated
+     * form (e.g. "--define foo=bar") must skip the following value argument.
+     */
+    private const PHP_LONG_OPTIONS_WITH_VALUE = [
+        '--define',
+        '--php-ini',
+        '--zend-extension',
+        '--process-begin',
+        '--process-code',
+        '--process-file',
+        '--process-end',
+    ];
+
     /** PHP CLI options that execute inline source code instead of a file. */
     private const PHP_INLINE_CODE_OPTIONS = ['-r', '--run'];
 
@@ -318,7 +334,9 @@ class XdebugRunner
                 return $arg;
             }
 
-            if (! in_array($arg, self::PHP_OPTIONS_WITH_VALUE, true) || ! isset($parts[$index + 1])) {
+            $takesValue = in_array($arg, self::PHP_OPTIONS_WITH_VALUE, true)
+                || in_array($arg, self::PHP_LONG_OPTIONS_WITH_VALUE, true);
+            if (! $takesValue || ! isset($parts[$index + 1])) {
                 continue;
             }
 
