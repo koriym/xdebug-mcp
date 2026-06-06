@@ -20,9 +20,11 @@ use function fwrite;
 use function getenv;
 use function glob;
 use function implode;
+use function in_array;
 use function passthru;
 use function preg_match;
 use function sprintf;
+use function str_starts_with;
 use function trim;
 use function usort;
 
@@ -53,6 +55,28 @@ class XdebugRunner
      * as those are server processes not suitable for CLI script execution.
      */
     private const PHP_BINARY_PATTERN = '#(?:^|[\\\\/])php(?:[-@]?\d+(?:\.\d+)*)?(?:\.exe)?$#i';
+
+    /** PHP CLI options that consume the following argument as their value. */
+    private const PHP_OPTIONS_WITH_VALUE = ['-d', '-c', '-z', '-B', '-R', '-F', '-E'];
+
+    /**
+     * Long-form PHP CLI options that consume the following argument as their value.
+     * These are the long aliases of {@see PHP_OPTIONS_WITH_VALUE}. The attached form
+     * (e.g. "--define=foo=bar") needs no special handling; only the space-separated
+     * form (e.g. "--define foo=bar") must skip the following value argument.
+     */
+    private const PHP_LONG_OPTIONS_WITH_VALUE = [
+        '--define',
+        '--php-ini',
+        '--zend-extension',
+        '--process-begin',
+        '--process-code',
+        '--process-file',
+        '--process-end',
+    ];
+
+    /** PHP CLI options that execute inline source code instead of a file. */
+    private const PHP_INLINE_CODE_OPTIONS = ['-r', '--run'];
 
     private string $mode = 'trace';
 
@@ -273,11 +297,53 @@ class XdebugRunner
             array_shift($workingParts);
         }
 
-        $targetFile = $workingParts[0] ?? '';
+        $targetFile = $this->findLocalFileArgument($workingParts);
 
-        if ($targetFile !== '' && ! file_exists($targetFile)) {
+        if ($targetFile !== null && $targetFile !== '' && ! file_exists($targetFile)) {
             throw new RuntimeException("File not found: '$targetFile'");
         }
+    }
+
+    /** @param string[] $parts Command parts after the PHP binary, if one was present. */
+    private function findLocalFileArgument(array $parts): string|null
+    {
+        for ($index = 0; isset($parts[$index]); $index++) {
+            $arg = $parts[$index];
+
+            if (in_array($arg, self::PHP_INLINE_CODE_OPTIONS, true)) {
+                if (! isset($parts[$index + 1])) {
+                    throw new RuntimeException("Code argument is required after {$arg}");
+                }
+
+                return null;
+            }
+
+            if (str_starts_with($arg, '-r') && $arg !== '-r') {
+                return null;
+            }
+
+            if (str_starts_with($arg, '--run=')) {
+                return null;
+            }
+
+            if ($arg === '--') {
+                return $parts[$index + 1] ?? '';
+            }
+
+            if (! str_starts_with($arg, '-')) {
+                return $arg;
+            }
+
+            $takesValue = in_array($arg, self::PHP_OPTIONS_WITH_VALUE, true)
+                || in_array($arg, self::PHP_LONG_OPTIONS_WITH_VALUE, true);
+            if (! $takesValue || ! isset($parts[$index + 1])) {
+                continue;
+            }
+
+            $index++;
+        }
+
+        return '';
     }
 
     /** @param string[] $parts */
