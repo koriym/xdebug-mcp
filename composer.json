@@ -63,7 +63,7 @@
             "psalm --clear-cache"
         ],
         "sa": [
-            "phpstan"
+            "php -d memory_limit=512M ./vendor/bin/phpstan"
         ],
         "test-json": "./bin/test-json",
         "demo": "./demo/run-demo.sh",
