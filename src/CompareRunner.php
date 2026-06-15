@@ -210,10 +210,20 @@ class CompareRunner
         exec('git worktree add --detach ' . escapeshellarg($tempDir) . ' ' . escapeshellarg($ref) . ' 2>&1', $output, $exitCode);
 
         if ($exitCode !== 0) {
-            exec('git worktree remove ' . escapeshellarg($tempDir) . ' --force >/dev/null 2>&1');
-            $this->worktreePath = null;
+            $cleanupOutput = [];
+            $cleanupExit = 0;
+            exec('git worktree remove ' . escapeshellarg($tempDir) . ' --force 2>&1', $cleanupOutput, $cleanupExit);
+            if ($cleanupExit === 0) {
+                $this->worktreePath = null;
+            }
 
-            throw new RuntimeException('Failed to create worktree for ref: ' . $ref . "\n" . implode("\n", $output));
+            $cleanupDetail = $cleanupExit !== 0
+                ? "\nFailed to cleanup partial worktree:\n" . implode("\n", $cleanupOutput)
+                : '';
+
+            throw new RuntimeException(
+                'Failed to create worktree for ref: ' . $ref . "\n" . implode("\n", $output) . $cleanupDetail,
+            );
         }
 
         return $tempDir;
