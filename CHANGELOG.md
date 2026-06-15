@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.2] - 2026-06-15
+
+### Added
+- xcoverage raw mode now supports collecting coverage for inline PHP passed via `-r`/`--run` (#83).
+- xprofile JSON mode supports profiling inline PHP via `-r`/`--run` (#83).
+
+### Fixed
+- Inline code handling preserves `__LINE__` and leading `declare(strict_types=1)` (#83).
+- `--branch-coverage` is rejected for PHP inline code with a clear error message (#83).
+- Safer git worktree creation and cleanup in xcompare with improved failure recovery (#84).
+- xcompare diff output is now deterministic with consistent ordering (#84).
+- CLI error messages on runtime failures are now concise without stack traces (#84).
+
 ## [0.10.1] - 2026-05-21
 
 ### Added
