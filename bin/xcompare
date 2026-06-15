@@ -218,6 +218,11 @@ function showCompareHelp(): void
         $options['include_vendor'] = $includeVendor;
     }
 
-    $runner = new CompareRunner($options);
-    $runner->output();
+    try {
+        $runner = new CompareRunner($options);
+        $runner->output();
+    } catch (\Throwable $e) {
+        fwrite(STDERR, 'Error: ' . $e->getMessage() . "\n");
+        exit(1);
+    }
 })();

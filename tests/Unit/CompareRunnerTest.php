@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use RuntimeException;
 
+use function array_keys;
 use function array_merge;
 use function json_decode;
 use function ob_get_clean;
@@ -57,6 +58,18 @@ class CompareRunnerTest extends TestCase
         $this->assertSame(['$y'], $diff['unchanged']);
         $this->assertSame([], $diff['only_in_a']);
         $this->assertSame([], $diff['only_in_b']);
+    }
+
+    public function testComputeDiffSortsChangedVariables(): void
+    {
+        $runner = $this->createRunner();
+
+        $varsA = ['$z' => 'int: 1', '$a' => 'int: 1'];
+        $varsB = ['$z' => 'int: 2', '$a' => 'int: 2'];
+
+        $diff = $this->invokeMethod($runner, 'computeDiff', [$varsA, $varsB]);
+
+        $this->assertSame(['$a', '$z'], array_keys($diff['changed']));
     }
 
     public function testComputeDiffWithOnlyInA(): void
@@ -607,5 +620,27 @@ class CompareRunnerTest extends TestCase
         $this->assertIsArray($decoded);
         $this->assertArrayHasKey('$schema', $decoded);
         $this->assertArrayHasKey('diff', $decoded);
+    }
+
+    public function testDecodeXstepOutputReportsInvalidJsonExcerpt(): void
+    {
+        $runner = $this->createRunner();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('xstep returned invalid JSON for command: php bad.php');
+        $this->expectExceptionMessage('stdout excerpt:');
+        $this->expectExceptionMessage('not-json');
+
+        $this->invokeMethod($runner, 'decodeXstepOutput', ['not-json', 'php bad.php']);
+    }
+
+    public function testDecodeXstepOutputRejectsNonArrayJson(): void
+    {
+        $runner = $this->createRunner();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('xstep returned non-array JSON for command: php bad.php');
+
+        $this->invokeMethod($runner, 'decodeXstepOutput', ['null', 'php bad.php']);
     }
 }

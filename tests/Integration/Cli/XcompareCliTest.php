@@ -110,4 +110,18 @@ class XcompareCliTest extends TestCase
         $this->assertStringContainsString('--run=', $joined);
         $this->assertStringContainsString('MODE 2:', $joined);
     }
+
+    public function testCliRuntimeErrorDoesNotEmitStackTrace(): void
+    {
+        $output = [];
+        $exitCode = 0;
+        exec('php ' . __DIR__ . '/../../../bin/xcompare --break=missing.php:1 --run-a="php missing.php" --run-b="php missing.php" 2>&1', $output, $exitCode);
+
+        $joined = implode("\n", $output);
+        $this->assertNotSame(0, $exitCode);
+        $this->assertStringContainsString('Error: xstep failed', $joined);
+        $this->assertStringContainsString('Breakpoint file not found: missing.php', $joined);
+        $this->assertStringNotContainsString('Stack trace:', $joined);
+        $this->assertStringNotContainsString('Fatal error:', $joined);
+    }
 }

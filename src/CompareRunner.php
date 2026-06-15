@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Koriym\XdebugMcp;
 
 use InvalidArgumentException;
+use JsonException;
 use RuntimeException;
 
 use function array_diff_key;
@@ -17,14 +18,19 @@ use function fclose;
 use function file_get_contents;
 use function fwrite;
 use function implode;
+use function is_array;
 use function is_resource;
 use function json_decode;
 use function json_encode;
+use function ksort;
 use function preg_match;
 use function proc_close;
 use function proc_open;
 use function sort;
 use function stream_get_contents;
+use function strlen;
+use function strpos;
+use function substr;
 use function sys_get_temp_dir;
 use function tempnam;
 use function trim;
@@ -65,10 +71,10 @@ class CompareRunner
      */
     public function run(): array
     {
-        [$commandA, $commandB, $labelA, $labelB] = $this->resolveCommands();
-        $cwdB = $this->worktreePath;
-
         try {
+            [$commandA, $commandB, $labelA, $labelB] = $this->resolveCommands();
+            $cwdB = $this->worktreePath;
+
             $resultA = $this->executeXstep($commandA);
             $resultB = $this->executeXstep($commandB, $cwdB);
         } finally {
@@ -197,13 +203,27 @@ class CompareRunner
         }
 
         $tempDir = sys_get_temp_dir() . '/xcompare-' . uniqid('', true);
+        $this->worktreePath = $tempDir;
 
         $output = [];
         $exitCode = 0;
-        exec('git worktree add ' . escapeshellarg($tempDir) . ' ' . escapeshellarg($ref) . ' 2>&1', $output, $exitCode);
+        exec('git worktree add --detach ' . escapeshellarg($tempDir) . ' ' . escapeshellarg($ref) . ' 2>&1', $output, $exitCode);
 
         if ($exitCode !== 0) {
-            throw new RuntimeException('Failed to create worktree for ref: ' . $ref . "\n" . implode("\n", $output));
+            $cleanupOutput = [];
+            $cleanupExit = 0;
+            exec('git worktree remove ' . escapeshellarg($tempDir) . ' --force 2>&1', $cleanupOutput, $cleanupExit);
+            if ($cleanupExit === 0) {
+                $this->worktreePath = null;
+            }
+
+            $cleanupDetail = $cleanupExit !== 0
+                ? "\nFailed to cleanup partial worktree:\n" . implode("\n", $cleanupOutput)
+                : '';
+
+            throw new RuntimeException(
+                'Failed to create worktree for ref: ' . $ref . "\n" . implode("\n", $output) . $cleanupDetail,
+            );
         }
 
         return $tempDir;
@@ -280,7 +300,8 @@ class CompareRunner
         }
 
         if ($exitCode !== 0) {
-            $suffix = $stderr !== '' ? "\n{$stderr}" : '';
+            $detail = $this->summarizeProcessError($stderr);
+            $suffix = $detail !== '' ? "\n{$detail}" : '';
 
             throw new RuntimeException("xstep failed (exit {$exitCode}) for command: {$command}{$suffix}");
         }
@@ -290,9 +311,74 @@ class CompareRunner
         }
 
         /** @var array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result */
-        $result = json_decode($stdout, true, 512, JSON_THROW_ON_ERROR);
+        $result = $this->decodeXstepOutput($stdout, $command);
 
         return $result;
+    }
+
+    /**
+     * Decode xstep JSON and include a stdout excerpt when parsing fails.
+     *
+     * @return array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>}
+     */
+    private function decodeXstepOutput(string $stdout, string $command): array
+    {
+        try {
+            $result = json_decode($stdout, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            $excerpt = $this->excerpt($stdout);
+
+            throw new RuntimeException(
+                "xstep returned invalid JSON for command: {$command}\n"
+                . $e->getMessage() . "\n"
+                . "stdout excerpt:\n{$excerpt}",
+                0,
+                $e,
+            );
+        }
+
+        if (! is_array($result)) {
+            $excerpt = $this->excerpt($stdout);
+
+            throw new RuntimeException(
+                "xstep returned non-array JSON for command: {$command}\n"
+                . "stdout excerpt:\n{$excerpt}",
+            );
+        }
+
+        /** @var array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result */
+        return $result;
+    }
+
+    private function summarizeProcessError(string $stderr): string
+    {
+        $stderr = trim($stderr);
+        if ($stderr === '') {
+            return '';
+        }
+
+        if (preg_match('/PHP Fatal error:\s+Uncaught [^:]+:\s+(.*?)(?:\s+in\s+[^\n]+)?\nStack trace:/s', $stderr, $m)) {
+            return $this->excerpt(trim($m[1]));
+        }
+
+        $stackTracePosition = strpos($stderr, "\nStack trace:");
+        if ($stackTracePosition !== false) {
+            $stderr = substr($stderr, 0, $stackTracePosition);
+        }
+
+        $fatalDuplicatePosition = strpos($stderr, "\nFatal error:");
+        if ($fatalDuplicatePosition !== false) {
+            $stderr = substr($stderr, 0, $fatalDuplicatePosition);
+        }
+
+        return $this->excerpt(trim($stderr));
+    }
+
+    private function excerpt(string $text): string
+    {
+        $maxBytes = 1000;
+
+        return strlen($text) > $maxBytes ? substr($text, 0, $maxBytes) . '...' : $text;
     }
 
     /**
@@ -399,6 +485,7 @@ class CompareRunner
         sort($onlyInB);
 
         sort($unchanged);
+        ksort($changed);
 
         return [
             'changed' => $changed,
