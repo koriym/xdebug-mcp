@@ -90,14 +90,15 @@ php -dxdebug.mode=debug tests/fixtures/debug_test.php    # Run PHP script with X
 
 ### Core Components
 
-- **McpServer.php**: Main MCP protocol handler that processes JSON-RPC requests and delegates to XdebugClient
+- **McpServer.php**: Main MCP protocol handler that processes JSON-RPC requests and delegates to the debug/trace/profile/coverage components
   - Implements multiple MCP tools across debugging, profiling, and coverage categories
   - Handles JSON-RPC 2.0 protocol validation and routing
   - Supports debug mode via MCP_DEBUG environment variable
-- **XdebugClient.php**: Xdebug protocol client that communicates directly with Xdebug via sockets
-  - Socket-based communication with Xdebug daemon
+- **DebugServer.php**: DBGp debug server that listens on a TCP socket and drives interactive step debugging with Xdebug
+  - Socket-based DBGp communication with Xdebug
   - XML response parsing and transaction management
-  - Connection lifecycle and error handling
+  - Connection lifecycle and session management (see "Interactive Step Debugging Workflow" below)
+- **XdebugRunner.php / XdebugTracer.php / XdebugProfiler.php**: Spawn PHP with the appropriate Xdebug mode (trace/profile/coverage) for the non-interactive CLI tools
 - **bin/xdebug-mcp**: Executable entry point that instantiates and runs McpServer
   - CLI interface with argument parsing
   - Standard input/output handling for MCP protocol
@@ -136,8 +137,8 @@ The server exposes multiple tools via MCP across main categories:
 
 ### Architecture Flow
 1. MCP client sends JSON-RPC requests to McpServer
-2. McpServer validates and routes tool calls to XdebugClient methods
-3. XdebugClient communicates with Xdebug via socket protocol
+2. McpServer validates and routes tool calls to the relevant component (DebugServer for interactive debugging, XdebugRunner/Tracer/Profiler for trace/profile/coverage)
+3. That component communicates with Xdebug (DBGp socket for debugging, or a spawned PHP process with Xdebug enabled for trace/profile/coverage)
 4. Results are returned through MCP protocol back to client
 
 ### Testing Infrastructure
@@ -283,12 +284,11 @@ The Xdebug trace functionality enables AI assistants to analyze detailed executi
 
 **Quick Trace Testing**
 ```bash
-# Run comprehensive trace tests
-./bin/xtrace
+# Trace any PHP script (vendor code excluded by default)
+./bin/xtrace tests/fixtures/debug_test.php
 
-# Individual trace testing methods
-php -dzend_extension=xdebug -dxdebug.mode=trace bin/simple-trace-test.php
-php -dzend_extension=xdebug -dxdebug.mode=trace bin/mcp-trace-test.php
+# Direct Xdebug invocation, equivalent to what xtrace runs under the hood
+php -dzend_extension=xdebug -dxdebug.mode=trace tests/fixtures/debug_test.php
 ```
 
 **MCP-based Trace Collection**
@@ -479,7 +479,7 @@ When MCP tools exceed 10% of context, Claude Code's Tool Search feature dynamica
 **For Interactive Step Debugging:**
 - User: "Debug this code", "Set breakpoints", "Step through execution", "Inspect variables"
 - AI automatically runs: `./bin/xstep path/to/file.php`
-- **IMPORTANT**: Requires XdebugClient to be listening first (see Step Debugging Workflow below)
+- **IMPORTANT**: Requires the debug server (`./bin/xstep`) to be listening first (see Step Debugging Workflow below)
 
 **For Execution Flow Analysis:**
 - User: "Trace execution", "Show function calls", "Analyze execution flow"
@@ -795,55 +795,41 @@ Follow these principles for all PHP debugging tasks to ensure consistent, profes
 
 **Required Sequence for Step Debugging:**
 
-1. **Start XdebugClient first** (must be listening before script execution)
-   ```bash
-   php test_new_xdebug_debug.php &
-   ```
+`./bin/xstep` is a single command. Internally it builds a `DebugServer` that
+both listens on port 9004 **and** spawns the target script with Xdebug
+configured to connect back to it, so you do not start a separate listener.
 
-2. **Verify port availability**
-   ```bash
-   lsof -i :9004  # Must show PHP process LISTENING
-   ```
+```bash
+# One command: DebugServer listens and launches the target script
+./bin/xstep target_script.php
 
-3. **Execute target script with Xdebug**
-   ```bash
-   ./bin/xstep target_script.php
-   ```
+# Run it in the background when an AI/MCP client will drive the session
+./bin/xstep target_script.php &
+```
+
+To control the session from MCP tools, run it in the background (`&`); see the
+"CRITICAL: AI Interactive Debugging Workflow" section above for the exact tool
+sequence (no `xdebug_connect` needed — the session is already established).
 
 ### Connection Architecture
 
 **Xdebug Connection Model:**
-- **Xdebug (script)**: Acts as **client** - connects to debugger
-- **XdebugClient**: Acts as **server** - listens on port 9004
+- **Xdebug (target script)**: Acts as **client** - connects back to the debugger
+- **DebugServer** (`./bin/xstep`): Acts as **server** - listens on port 9004
 - **Protocol**: DBGp over TCP socket
 - **Port**: 9004 (conflict-free with IDEs that use 9003)
-
-### Common Connection Failures
-
-**❌ Wrong Order:**
-```bash
-./bin/xstep script.php    # Script runs and exits
-php test_new_xdebug_debug.php &  # Too late - no connection
-```
-
-**✅ Correct Order:**
-```bash
-php test_new_xdebug_debug.php &  # XdebugClient listening
-lsof -i :9004                    # Verify LISTEN state  
-./bin/xstep script.php    # Script connects to waiting client
-```
 
 ### Verification Steps
 
 **Successful Connection Indicators:**
-- XdebugClient shows: `[XdebugClient] Xdebug connected!`
+- Debug server shows: `[DebugServer] Xdebug connected!`
 - Script pauses at first line waiting for debugger commands
 - Breakpoints can be set and variables inspected
 
 **Failed Connection Indicators:**
 - Script executes immediately without pausing
-- No connection messages in XdebugClient output
-- `Address already in use` errors when starting XdebugClient
+- No connection messages in debug server output
+- `Address already in use` errors when starting the debug server
 
 ### Step Debugging vs Trace Analysis
 

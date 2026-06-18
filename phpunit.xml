@@ -26,6 +26,7 @@
         <exclude>
             <directory>src/Exceptions</directory>
             <file>src/prepend_filter.php</file>
+            <file>src/prepend_trace.php</file>
         </exclude>
     </source>
 </phpunit>

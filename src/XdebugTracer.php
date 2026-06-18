@@ -13,7 +13,6 @@ use function array_map;
 use function array_merge;
 use function array_unshift;
 use function count;
-use function dirname;
 use function escapeshellarg;
 use function explode;
 use function fclose;
@@ -108,7 +107,7 @@ class XdebugTracer
         echo "🔍 Tracing: $targetFile\n";
 
         // Build command with Xdebug trace enabled (detailed mode)
-        $prependFilter = dirname(__DIR__) . '/prepend_filter.php';
+        $prependFilter = __DIR__ . '/prepend_trace.php';
 
         // Get appropriate Xdebug flag (empty if already loaded)
         $xdebugFlag = XdebugFinder::getXdebugFlag();
