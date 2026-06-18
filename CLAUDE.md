@@ -320,7 +320,7 @@ Trace files (`.xt` format) contain structured execution data:
 - **Parameters**: Function arguments and values
 
 **Example Trace Output:**
-```
+```text
 Level  Func ID  Time Index  Memory  Function Name      User Def  Filename         Line  Params
 0      1        0.0001      384000  {main}            1         tests/fixtures/debug.php   1     
 1      2        0.0002      384100  fibonacci         1         tests/fixtures/debug.php   15    $n = 8
@@ -479,7 +479,7 @@ When MCP tools exceed 10% of context, Claude Code's Tool Search feature dynamica
 **For Interactive Step Debugging:**
 - User: "Debug this code", "Set breakpoints", "Step through execution", "Inspect variables"
 - AI automatically runs: `./bin/xstep path/to/file.php`
-- **IMPORTANT**: Requires the debug server (`./bin/xstep`) to be listening first (see Step Debugging Workflow below)
+- **IMPORTANT**: `./bin/xstep` is a single command that internally builds a DebugServer and spawns the target, so no separate listener is required (see Step Debugging Workflow below)
 
 **For Execution Flow Analysis:**
 - User: "Trace execution", "Show function calls", "Analyze execution flow"
@@ -708,7 +708,7 @@ php -dzend_extension=xdebug -dxdebug.mode=trace \
 ### Trace File Analysis Guide
 
 **Trace file structure (.xt format):**
-```
+```text
 Level | FuncID | Time    | Memory  | Function    | File:Line  | Parameters
 0     | 1      | 0.001   | 384000  | {main}      | tests/fixtures/debug.php:1 | 
 1     | 2      | 0.002   | 384100  | calculate() | tests/fixtures/debug.php:15| $n = 10
@@ -725,26 +725,28 @@ Level | FuncID | Time    | Memory  | Function    | File:Line  | Parameters
 ### Response Examples
 
 **❌ Wrong Response (Prohibited):**
-```
+````text
 "Add this debug code to see the variable value:
 ```php
 var_dump($user);  // Add this line
-echo "Checkpoint reached"; // Add this line  
+echo "Checkpoint reached"; // Add this line
 print_r($_POST); // Add this line
 ```
+"
+````
 
 **✅ Correct Response (Required):**
-```
+````text
 "Let's trace the execution to see the variable states:
 ```bash
 ./bin/xtrace user_auth.php
 ```
-This will show us the actual $user variable value at each step without modifying the code. 
+This will show us the actual $user variable value at each step without modifying the code.
 The trace file will reveal:
 - Where $user is initialized (or should be)
 - What value it has at each function call
 - The exact execution path leading to the error"
-```
+````
 
 ### MCP Tools Priority Order
 
