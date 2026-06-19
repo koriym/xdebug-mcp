@@ -234,8 +234,8 @@ class CompareRunnerTest extends TestCase
     {
         $runner = $this->createFakeRunner(['break' => 'calc.php:25:$x>0']);
         $runner->setFakeResults([
-            'php test.php 1' => ['breaks' => [['location' => ['file' => 'calc.php', 'line' => 25], 'variables' => ['$x' => 'int: 5']]]],
-            'php test.php 2' => ['breaks' => [['location' => ['file' => 'calc.php', 'line' => 25], 'variables' => ['$x' => 'int: 5']]]],
+            'php test.php 1' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'calc.php', 'line' => 25]], 'variables' => ['$x' => 'int: 5']]]],
+            'php test.php 2' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'calc.php', 'line' => 25]], 'variables' => ['$x' => 'int: 5']]]],
         ]);
 
         $result = $runner->run();
@@ -321,7 +321,7 @@ class CompareRunnerTest extends TestCase
             'breaks' => [
                 [
                     'step' => 1,
-                    'location' => ['file' => 'test.php', 'line' => 10],
+                    'stack' => [['function' => '{main}', 'file' => 'test.php', 'line' => 10]],
                     'variables' => ['$x' => 'int: 10', '$y' => 'int: 20'],
                     'recording_type' => 'full',
                 ],
@@ -354,7 +354,7 @@ class CompareRunnerTest extends TestCase
 
         $result = [
             'breaks' => [
-                ['location' => ['file' => 'test.php', 'line' => 10]],
+                ['stack' => [['function' => '{main}', 'file' => 'test.php', 'line' => 10]]],
             ],
         ];
 
@@ -369,7 +369,7 @@ class CompareRunnerTest extends TestCase
         $result = [
             'breaks' => [
                 [
-                    'location' => ['file' => 'src/test.php', 'line' => 42],
+                    'stack' => [['function' => '{main}', 'file' => 'src/test.php', 'line' => 42]],
                     'variables' => [],
                 ],
             ],
@@ -410,7 +410,7 @@ class CompareRunnerTest extends TestCase
 
         $result = [
             'breaks' => [
-                ['location' => ['file' => 'test.php', 'line' => 1], 'variables' => []],
+                ['stack' => [['function' => '{main}', 'file' => 'test.php', 'line' => 1]], 'variables' => []],
             ],
         ];
 
@@ -434,7 +434,7 @@ class CompareRunnerTest extends TestCase
                 'breaks' => [
                     [
                         'step' => 1,
-                        'location' => ['file' => 'test.php', 'line' => 10],
+                        'stack' => [['function' => '{main}', 'file' => 'test.php', 'line' => 10]],
                         'variables' => ['$x' => 'int: 1', '$sum' => 'int: 0'],
                         'recording_type' => 'full',
                     ],
@@ -445,7 +445,7 @@ class CompareRunnerTest extends TestCase
                 'breaks' => [
                     [
                         'step' => 1,
-                        'location' => ['file' => 'test.php', 'line' => 10],
+                        'stack' => [['function' => '{main}', 'file' => 'test.php', 'line' => 10]],
                         'variables' => ['$x' => 'int: 2', '$sum' => 'int: 0'],
                         'recording_type' => 'full',
                     ],
@@ -490,8 +490,8 @@ class CompareRunnerTest extends TestCase
     {
         $runner = $this->createFakeRunner(['context' => 'Testing context output']);
         $runner->setFakeResults([
-            'php test.php 1' => ['breaks' => [['location' => ['file' => 'f.php', 'line' => 1], 'variables' => []]]],
-            'php test.php 2' => ['breaks' => [['location' => ['file' => 'f.php', 'line' => 1], 'variables' => []]]],
+            'php test.php 1' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 1]], 'variables' => []]]],
+            'php test.php 2' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 1]], 'variables' => []]]],
         ]);
 
         $result = $runner->run();
@@ -504,8 +504,8 @@ class CompareRunnerTest extends TestCase
     {
         $runner = $this->createFakeRunner(['context' => '']);
         $runner->setFakeResults([
-            'php test.php 1' => ['breaks' => [['location' => ['file' => 'f.php', 'line' => 1], 'variables' => []]]],
-            'php test.php 2' => ['breaks' => [['location' => ['file' => 'f.php', 'line' => 1], 'variables' => []]]],
+            'php test.php 1' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 1]], 'variables' => []]]],
+            'php test.php 2' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 1]], 'variables' => []]]],
         ]);
 
         $result = $runner->run();
@@ -520,8 +520,8 @@ class CompareRunnerTest extends TestCase
             'label_b' => 'Edge case',
         ]);
         $runner->setFakeResults([
-            'php test.php 1' => ['breaks' => [['location' => ['file' => 'f.php', 'line' => 1], 'variables' => []]]],
-            'php test.php 2' => ['breaks' => [['location' => ['file' => 'f.php', 'line' => 1], 'variables' => []]]],
+            'php test.php 1' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 1]], 'variables' => []]]],
+            'php test.php 2' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 1]], 'variables' => []]]],
         ]);
 
         $result = $runner->run();
@@ -534,8 +534,8 @@ class CompareRunnerTest extends TestCase
     {
         $runner = $this->createFakeRunner();
         $runner->setFakeResults([
-            'php test.php 1' => ['breaks' => [['location' => ['file' => 'f.php', 'line' => 1], 'variables' => []]]],
-            'php test.php 2' => ['breaks' => [['location' => ['file' => 'f.php', 'line' => 1], 'variables' => []]]],
+            'php test.php 1' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 1]], 'variables' => []]]],
+            'php test.php 2' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 1]], 'variables' => []]]],
         ]);
 
         $result = $runner->run();
@@ -549,7 +549,7 @@ class CompareRunnerTest extends TestCase
         $runner = $this->createFakeRunner();
         $runner->setFakeResults([
             'php test.php 1' => ['breaks' => []],
-            'php test.php 2' => ['breaks' => [['location' => ['file' => 'f.php', 'line' => 10], 'variables' => ['$x' => 'int: 1']]]],
+            'php test.php 2' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 10]], 'variables' => ['$x' => 'int: 1']]]],
         ]);
 
         $result = $runner->run();
@@ -567,7 +567,7 @@ class CompareRunnerTest extends TestCase
             'php test.php 1' => [
                 'breaks' => [
                     [
-                        'location' => ['file' => 'f.php', 'line' => 10],
+                        'stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 10]],
                         'variables' => ['$a' => 'int: 1', '$shared' => 'int: 0'],
                     ],
                 ],
@@ -575,7 +575,7 @@ class CompareRunnerTest extends TestCase
             'php test.php 2' => [
                 'breaks' => [
                     [
-                        'location' => ['file' => 'f.php', 'line' => 10],
+                        'stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 10]],
                         'variables' => ['$b' => 'int: 2', '$shared' => 'int: 0'],
                     ],
                 ],
@@ -594,7 +594,7 @@ class CompareRunnerTest extends TestCase
         $runner = $this->createFakeRunner();
         // Only set result for run_a, not run_b
         $runner->setFakeResults([
-            'php test.php 1' => ['breaks' => [['location' => ['file' => 'f.php', 'line' => 1], 'variables' => []]]],
+            'php test.php 1' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 1]], 'variables' => []]]],
         ]);
 
         $this->expectException(RuntimeException::class);
@@ -607,8 +607,8 @@ class CompareRunnerTest extends TestCase
     {
         $runner = $this->createFakeRunner();
         $runner->setFakeResults([
-            'php test.php 1' => ['breaks' => [['location' => ['file' => 'f.php', 'line' => 1], 'variables' => ['$x' => 'int: 1']]]],
-            'php test.php 2' => ['breaks' => [['location' => ['file' => 'f.php', 'line' => 1], 'variables' => ['$x' => 'int: 2']]]],
+            'php test.php 1' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 1]], 'variables' => ['$x' => 'int: 1']]]],
+            'php test.php 2' => ['breaks' => [['stack' => [['function' => '{main}', 'file' => 'f.php', 'line' => 1]], 'variables' => ['$x' => 'int: 2']]]],
         ]);
 
         ob_start();

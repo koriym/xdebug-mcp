@@ -5,6 +5,10 @@
   "description": "Debug state at breakpoints plus execution trace. Breakpoints show 'crime scene photo', trace shows 'surveillance footage'.",
   "type": "object",
   "properties": {
+    "breakpoint": {
+      "$ref": "#/definitions/breakpoint_reference",
+      "description": "Breakpoint shared by all recorded steps, emitted once at the top level (step-recording mode). For multi-breakpoint runs the attribution appears per-step inside each break instead."
+    },
     "breaks": {
       "type": "array",
       "description": "Breakpoints hit during execution",
@@ -30,18 +34,6 @@
           "type": "integer",
           "description": "Sequential step number"
         },
-        "location": {
-          "type": "object",
-          "properties": {
-            "file": { "type": "string" },
-            "line": { "type": "integer" }
-          },
-          "required": ["file", "line"]
-        },
-        "function": {
-          "type": "string",
-          "description": "Current function or method name from the top stack frame"
-        },
         "stack": {
           "type": "array",
           "description": "Short stack summary for the current stop",
@@ -50,11 +42,12 @@
           }
         },
         "breakpoint": {
-          "$ref": "#/definitions/breakpoint_reference"
+          "$ref": "#/definitions/breakpoint_reference",
+          "description": "Per-step breakpoint attribution for multi-breakpoint runs. In step-recording mode the shared breakpoint is emitted once at the top level instead of here."
         },
         "variables": {
           "type": "object",
-          "description": "Variable values at breakpoint. In step-recording mode (--break + --steps) the contents depend on recording_type: a 'full' frame carries every variable, while a 'diff' frame carries only variables that were added, changed, or removed since the previous step (deleted variables appear with the value '[DELETED]'). When present, diff adds before/after and shallow key-level details."
+          "description": "Full variable snapshot at the breakpoint. Present only on 'full' frames; omitted on 'diff' frames because the values are recoverable from `diff` (each entry's `after`, with removed variables marked change 'removed')."
         },
         "diff": {
           "type": "object",
@@ -96,7 +89,7 @@
           }
         }
       },
-      "required": ["location", "variables"]
+      "required": ["stack"]
     },
     "breakpoint_reference": {
       "type": "object",

@@ -381,7 +381,7 @@ echo "Result: $result\n";
         $breaks = [
             [
                 'step' => 1,
-                'location' => ['file' => basename($this->testScript), 'line' => 3],
+                'stack' => [['function' => '{main}', 'file' => basename($this->testScript), 'line' => 3]],
                 'variables' => ['$x' => '10'],
             ],
         ];
@@ -416,7 +416,7 @@ echo "Result: $result\n";
         $breaks = [
             [
                 'step' => 1,
-                'location' => ['file' => basename($this->testScript), 'line' => 3],
+                'stack' => [['function' => '{main}', 'file' => basename($this->testScript), 'line' => 3]],
                 'variables' => ['$x' => '10'],
             ],
         ];

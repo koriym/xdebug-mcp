@@ -265,7 +265,7 @@ class CompareRunner
      * file to avoid a stdout/stderr pipe-fill deadlock, and `$cwd` sets
      * the process working directory (worktree for --compare-with).
      *
-     * @return array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>}
+     * @return array{breaks?: list<array{stack?: list<array{function: string, file: string, line: int}>, variables?: array<string, string>}>}
      */
     protected function executeXstep(string $command, string|null $cwd = null): array
     {
@@ -310,7 +310,7 @@ class CompareRunner
             throw new RuntimeException("xstep returned no output for command: {$command}");
         }
 
-        /** @var array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result */
+        /** @var array{breaks?: list<array{stack?: list<array{function: string, file: string, line: int}>, variables?: array<string, string>}>} $result */
         $result = $this->decodeXstepOutput($stdout, $command);
 
         return $result;
@@ -319,7 +319,7 @@ class CompareRunner
     /**
      * Decode xstep JSON and include a stdout excerpt when parsing fails.
      *
-     * @return array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>}
+     * @return array{breaks?: list<array{stack?: list<array{function: string, file: string, line: int}>, variables?: array<string, string>}>}
      */
     private function decodeXstepOutput(string $stdout, string $command): array
     {
@@ -346,7 +346,7 @@ class CompareRunner
             );
         }
 
-        /** @var array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result */
+        /** @var array{breaks?: list<array{stack?: list<array{function: string, file: string, line: int}>, variables?: array<string, string>}>} $result */
         return $result;
     }
 
@@ -406,7 +406,7 @@ class CompareRunner
     /**
      * Extract variables from the first breakpoint in xstep result
      *
-     * @param array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result
+     * @param array{breaks?: list<array{stack?: list<array{function: string, file: string, line: int}>, variables?: array<string, string>}>} $result
      *
      * @return array<string, string>
      */
@@ -426,8 +426,8 @@ class CompareRunner
      * When the breakpoint was not hit, fall back to the requested location so
      * consumers see where xcompare was looking rather than an empty sentinel.
      *
-     * @param array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result
-     * @param array{file: string, line: int}                                                                            $fallback
+     * @param array{breaks?: list<array{stack?: list<array{function: string, file: string, line: int}>, variables?: array<string, string>}>} $result
+     * @param array{file: string, line: int}                                                                                                 $fallback
      *
      * @return array{file: string, line: int}
      */
@@ -438,13 +438,18 @@ class CompareRunner
             return $fallback;
         }
 
-        return $breaks[0]['location'] ?? $fallback;
+        $frame = $breaks[0]['stack'][0] ?? null;
+        if ($frame === null) {
+            return $fallback;
+        }
+
+        return ['file' => $frame['file'], 'line' => $frame['line']];
     }
 
     /**
      * Extract execution status
      *
-     * @param array{breaks?: list<array{location?: array{file: string, line: int}, variables?: array<string, string>}>} $result
+     * @param array{breaks?: list<array{stack?: list<array{function: string, file: string, line: int}>, variables?: array<string, string>}>} $result
      */
     private function extractStatus(array $result): string
     {
