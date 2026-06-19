@@ -349,7 +349,7 @@ final class DebugServer
                     // Local PHP command
                     $scriptName = basename($this->targetScript, '.php');
                     $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
-                    $prependFilter = __DIR__ . '/../prepend_filter.php';
+                    $prependFilter = __DIR__ . '/prepend_trace.php';
 
                     // Get appropriate Xdebug flag (empty if already loaded)
                     $xdebugFlag = XdebugFinder::getXdebugFlag();
@@ -397,7 +397,7 @@ final class DebugServer
                 // Default: simple script execution
                 $scriptName = basename($this->targetScript, '.php');
                 $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
-                $prependFilter = __DIR__ . '/../prepend_filter.php';
+                $prependFilter = __DIR__ . '/prepend_trace.php';
 
                 // Get appropriate Xdebug flag (empty if already loaded)
                 $xdebugFlag = XdebugFinder::getXdebugFlag();
