@@ -446,7 +446,7 @@ final class McpServer
                 ],
                 [
                     'name' => 'xstep',
-                    'description' => 'Step debugging with breakpoints. Returns JSON with $schema URL for semantic details. Key fields: {breaks: [{step, location, variables}]}. Variables show diff only. Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
+                    'description' => 'Step debugging with breakpoints. Returns JSON with $schema URL for semantic details. Key fields: {breakpoint, breaks: [{step, stack, variables, diff}]}. Variables: full snapshot on the first step, diff-only afterwards. Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
                     'arguments' => [
                         [
                             'name' => 'script',

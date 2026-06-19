@@ -47,7 +47,7 @@
         },
         "variables": {
           "type": "object",
-          "description": "Full variable snapshot at the breakpoint. Present only on 'full' frames; omitted on 'diff' frames because the values are recoverable from `diff` (each entry's `after`, with removed variables marked change 'removed')."
+          "description": "Full variable snapshot at the breakpoint. Present only on 'full' frames; omitted on 'diff' frames because values are recoverable from `diff` (`after` for added/changed entries, and `change: 'removed'` with `before` for deletions)."
         },
         "diff": {
           "type": "object",
