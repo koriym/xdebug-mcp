@@ -142,7 +142,7 @@ final class McpServer
             ),
             'xstep' => new McpTool(
                 'xstep',
-                'Step debugging with breakpoints. Returns JSON with $schema URL for semantic details. Key fields: {breakpoint, breaks: [{step, stack, variables, diff}]}. Variables: full snapshot on the first step, diff-only afterwards. Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
+                'Step debugging with breakpoints. Returns JSON with $schema URL for semantic details. Key fields: {breakpoint, breaks: [{step, stack, variables, diff}]}; stack[0] is the current frame (stop file/line/function), later frames are callers. Variables: full snapshot on the first step, diff-only afterwards (variables absent from a diff are unchanged). Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
                 [
                     'type' => 'object',
                     'properties' => [
@@ -446,7 +446,7 @@ final class McpServer
                 ],
                 [
                     'name' => 'xstep',
-                    'description' => 'Step debugging with breakpoints. Returns JSON with $schema URL for semantic details. Key fields: {breakpoint, breaks: [{step, stack, variables, diff}]}. Variables: full snapshot on the first step, diff-only afterwards. Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
+                    'description' => 'Step debugging with breakpoints. Returns JSON with $schema URL for semantic details. Key fields: {breakpoint, breaks: [{step, stack, variables, diff}]}; stack[0] is the current frame (stop file/line/function), later frames are callers. Variables: full snapshot on the first step, diff-only afterwards (variables absent from a diff are unchanged). Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
                     'arguments' => [
                         [
                             'name' => 'script',
