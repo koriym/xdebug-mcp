@@ -71,7 +71,14 @@ Trace execution forward from start to finish. Captures complete execution flow, 
 Stop at breakpoint, step forward N times, record variable changes at each step. See how variable values affect branching ("this variable was X, so it went into this branch").
 
 **Output**: JSON with `$schema` URL for semantic details.
-**Key fields**: `{breaks: [{step, location, variables}]}` - Variables show diff only (changed values).
+**Key fields**: `{breakpoint, breaks: [{step, stack, variables?, diff?, recording_type}]}`
+
+**Reading the output** (slim by design — no field duplicates another):
+- `breakpoint` sits at the top level, shared by every step (not repeated per break).
+- A break's stop location and function are `stack[0]` (file/line/function). `stack` is innermost-first: index 0 is the current frame, the rest are its callers; each `line` is the stop line for index 0 and the call-site line for callers.
+- `recording_type: "full"` (first step) carries the complete `variables` snapshot. `"diff"` steps carry only `diff` and omit `variables`.
+- To get current values, apply successive `diff`s onto the last `full` snapshot; variables absent from a `diff` are unchanged. On a stack-frame change scope resets — old locals appear as `removed`, new ones as `added` with their values.
+- Values are rendered as `"type: value"` strings, e.g. `"int: 0"`, `"array: [1, 2, 3]"`.
 
 ```bash
 ~/.composer/vendor/bin/xstep --break=file.php:line --steps=N [--context=TEXT] [--include-vendor=PATTERNS] -- command
