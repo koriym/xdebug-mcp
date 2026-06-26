@@ -3495,9 +3495,15 @@ final class DebugServer
                 'line' => $topFrame['line'],
             ];
 
+            // Keep the fallback frame in `stack` when XML parsing yields no frames,
+            // so the machine-readable file/line is never lost (stack[0] is the contract).
+            $stack = $stackFrames !== []
+                ? array_slice($stackFrames, 0, self::STACK_CONTEXT_LIMIT)
+                : [$topFrame];
+
             return [
                 'step' => $breakNumber,
-                'stack' => array_slice($stackFrames, 0, self::STACK_CONTEXT_LIMIT),
+                'stack' => $stack,
                 'breakpoint' => $breakpoint !== null
                     ? ['id' => $breakpoint['id'], 'label' => $breakpoint['label']]
                     : $this->breakpointReferenceForLocation($location),

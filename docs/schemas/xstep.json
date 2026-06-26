@@ -37,6 +37,7 @@
         "stack": {
           "type": "array",
           "description": "Call stack at this stop, ordered innermost-first: index 0 is the current frame where execution stopped; each later entry is its caller. Read the stop location and function from stack[0] — the former per-step `location` and `function` fields were removed as duplicates of it.",
+          "minItems": 1,
           "items": {
             "$ref": "#/definitions/stack_frame"
           }
@@ -51,7 +52,7 @@
         },
         "diff": {
           "type": "object",
-          "description": "Variable changes since the previous recorded stop. Scalar changes include before/after values; array/object changes may include shallow key diffs. Variables absent from `diff` are unchanged from the previous step: reconstruct the full current state by applying successive diffs onto the most recent 'full' frame's snapshot. On a stack-frame change the previous frame's locals appear as `removed` and the new frame's variables as `added` (carrying their current values in `after`), so the 'unchanged' rule applies within one frame's scope — restart reconstruction from those `added` values on a frame change.",
+          "description": "Variable changes since the previous recorded stop. Scalar changes include before/after values; array/object changes may include shallow key diffs. Variables absent from `diff` are unchanged from the previous step: reconstruct the full current state by applying successive diffs onto the most recent 'full' frame's snapshot. A stack-frame change is visible through `stack[0]`; diff entries still represent name/value changes from the previous recorded stop, so same-name/same-value variables may remain absent from `diff` and should be carried forward unless a new 'full' frame is emitted.",
           "additionalProperties": {
             "$ref": "#/definitions/variable_diff"
           }
