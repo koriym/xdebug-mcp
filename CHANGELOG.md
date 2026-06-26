@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-06-27
+
+### Changed
+- xstep step-recording JSON is slimmed (~30% smaller, no information loss): per-step `location`/`function` are dropped (read them from `stack[0]`), the shared `breakpoint` is emitted once at the top level instead of on every step, and `variables` is omitted on diff frames (recoverable from `diff`) (#86).
+- xprofile `time_ms`/`memory_mb` are now real measurements parsed from the cachegrind `summary:` line (via the `events:` header) instead of heuristic estimates (#87).
+- xprofile `bottlenecks` is now a structured array `[{function, percentage, time_ms}]` instead of preformatted strings, so it can be filtered/sorted programmatically (#87).
+- Output format details now live in the JSON schemas; the xdebug skill and MCP tool descriptions defer to them instead of restating the shape (#86, #87).
+
+### Fixed
+- xprofile per-function cost summed the line number instead of the Time column, making bottleneck percentages meaningless; costs are now time-based and the bottleneck `time_ms` values sum to the reported total (#87).
+
+### Removed
+- Dead `XdebugProfiler` class and unused `ProfileStatistics`/`ProfileAnalysis` DTOs — never instantiated; both the CLI and MCP paths go through `bin/xprofile` (#88).
+
 ## [0.10.2] - 2026-06-15
 
 ### Added
