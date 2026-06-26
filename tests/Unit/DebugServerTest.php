@@ -433,6 +433,11 @@ echo "Result: $result\n";
         $this->assertIsArray($decoded);
         // Breakpoint is hoisted to the top level, emitted once for the whole run.
         $this->assertSame(['id' => '1', 'label' => 'bp1 fixture:10'], $decoded['breakpoint']);
+        // stack replaces per-step location/function — pin its contents so it can't silently vanish.
+        $this->assertSame(
+            [['function' => 'foo', 'file' => basename($this->testScript), 'line' => 10]],
+            $decoded['breaks'][0]['stack'],
+        );
         // Per-step breaks no longer carry the redundant location/function/breakpoint fields.
         $this->assertArrayNotHasKey('location', $decoded['breaks'][0]);
         $this->assertArrayNotHasKey('function', $decoded['breaks'][0]);
