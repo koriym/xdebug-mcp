@@ -244,8 +244,22 @@ function analyzeCachegrindFile(string $profileFile, ?string $includeVendor = nul
     // Simple file-based statistics (Cachegrind format is different from trace format)
     $content = file_get_contents($profileFile);
     $lines = explode("\n", $content);
-    
+
     $stats['total_lines'] = count($lines);
+
+    // Real measured totals from the cachegrind `summary:` line.
+    // Xdebug 3.x emits "events: Time_(10ns) Memory_(bytes)"; convert from those units.
+    $timeToMs = str_contains($content, 'Time_(10ns)') ? 1 / 100000.0 : null;
+    $measuredTimeMs = null;
+    $measuredMemoryMb = null;
+    if (preg_match('/^summary:\s+(\d+)(?:\s+(\d+))?/m', $content, $summaryMatch)) {
+        if ($timeToMs !== null) {
+            $measuredTimeMs = round((int) $summaryMatch[1] * $timeToMs, 3);
+        }
+        if (isset($summaryMatch[2])) {
+            $measuredMemoryMb = round((int) $summaryMatch[2] / 1048576, 2);
+        }
+    }
     
     // Count basic Cachegrind elements - accurate counting
     $stats['total_calls'] = substr_count($content, "\ncalls=");
@@ -336,13 +350,14 @@ function analyzeCachegrindFile(string $profileFile, ?string $includeVendor = nul
             }
         }
         
-        // Cost lines (numeric data) - simplified parsing
-        if (preg_match('/^(\d+)/', $line, $matches) && $currentFunction) {
-            $cost = (int)$matches[1];
+        // Cost lines are "<line> <Time> <Memory>". Sum the Time column (2nd field),
+        // not the line number (1st field), so costs/percentages reflect real time.
+        if (preg_match('/^\d+\s+(\d+)/', $line, $matches) && $currentFunction) {
+            $timeCost = (int)$matches[1];
             if (!isset($functionCosts[$currentFunction])) {
                 $functionCosts[$currentFunction] = 0;
             }
-            $functionCosts[$currentFunction] += $cost;
+            $functionCosts[$currentFunction] += $timeCost;
         }
     }
     
@@ -377,30 +392,38 @@ function analyzeCachegrindFile(string $profileFile, ?string $includeVendor = nul
             $meaningfulFunctions[$displayName] = $cost;
         }
         
-        // Top 5 functions with percentages
+        // Top 5 functions, structured: function name, share of total cost, and
+        // measured time (from the cachegrind Time column) when the units are known.
         $topFunctions = [];
         $totalCost = array_sum($functionCosts);
         if ($totalCost > 0) {
             foreach (array_slice($meaningfulFunctions, 0, 5, true) as $func => $cost) {
-                $percentage = round(($cost / $totalCost) * 100, 1);
-                $topFunctions[] = "{$func} ({$percentage}%)";
+                $entry = [
+                    'function' => $func,
+                    'percentage' => round(($cost / $totalCost) * 100, 1),
+                ];
+                if ($timeToMs !== null) {
+                    $entry['time_ms'] = round($cost * $timeToMs, 3);
+                }
+                $topFunctions[] = $entry;
             }
         }
-        
+
         $stats['bottleneck_functions'] = $topFunctions;
         
-        // Better estimates based on function costs and file size
-        $maxCost = max($functionCosts);
-        $totalCost = array_sum($functionCosts);
-        
-        // Execution time estimate based on total costs (more realistic scaling)
-        $stats['execution_time_ms'] = round($totalCost / 50000, 2); // Adjusted for better estimate
-        
-        // Memory estimate based on function count, call count, and file complexity  
-        $baseMemory = 2.5; // Base PHP memory usage in MB
-        $functionMemory = $stats['functions_count'] * 0.1; // Memory per function
-        $callMemory = $stats['total_calls'] * 0.001; // Memory per call
-        $stats['peak_memory_mb'] = round($baseMemory + $functionMemory + $callMemory, 1);
+        // Prefer the real measured totals from the summary line; fall back to a
+        // rough estimate only when the summary or its units are unavailable.
+        $stats['execution_time_ms'] = $measuredTimeMs
+            ?? round(array_sum($functionCosts) / 50000, 2);
+
+        if ($measuredMemoryMb !== null) {
+            $stats['peak_memory_mb'] = $measuredMemoryMb;
+        } else {
+            $baseMemory = 2.5; // Base PHP memory usage in MB
+            $functionMemory = $stats['functions_count'] * 0.1; // Memory per function
+            $callMemory = $stats['total_calls'] * 0.001; // Memory per call
+            $stats['peak_memory_mb'] = round($baseMemory + $functionMemory + $callMemory, 1);
+        }
     }
     
     // Estimate call depth (simplified)

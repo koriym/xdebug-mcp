@@ -117,8 +117,8 @@ Stop at breakpoint, step forward N times, record variable changes at each step. 
 
 Identify performance bottlenecks with precision data.
 
-**Output**: JSON with `$schema` URL for semantic details and AI analysis strategies.
-**Key fields**: `{time_ms, memory_mb, bottlenecks}` - Bottlenecks auto-identified.
+**Output**: JSON with a `$schema` URL. `time_ms`/`memory_mb` are measured from the cachegrind summary; `bottlenecks` is a structured array. Read the linked schema for the field shapes — don't infer the format here.
+**Key fields**: `{time_ms, memory_mb, bottlenecks}`
 
 ```bash
 ~/.composer/vendor/bin/xprofile [--json] [--context=TEXT] [--include-vendor=PATTERNS] -- command

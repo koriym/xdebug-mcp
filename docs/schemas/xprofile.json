@@ -45,11 +45,11 @@
     },
     "time_ms": {
       "type": "number",
-      "description": "Execution time in milliseconds"
+      "description": "Measured total execution time in milliseconds, from the cachegrind summary line (falls back to a rough estimate only when the summary or its units are unavailable)"
     },
     "memory_mb": {
       "type": "number",
-      "description": "Peak memory usage in megabytes"
+      "description": "Measured peak memory usage in megabytes, from the cachegrind summary line (falls back to a rough estimate when unavailable)"
     },
     "file_io": {
       "type": "integer",
@@ -61,8 +61,16 @@
     },
     "bottlenecks": {
       "type": "array",
-      "items": {"type": "string"},
-      "description": "Top expensive functions with percentages"
+      "description": "Top functions by time cost (descending), structured for machine processing",
+      "items": {
+        "type": "object",
+        "properties": {
+          "function": {"type": "string", "description": "Function or method name"},
+          "percentage": {"type": "number", "description": "Share of total time cost, percent"},
+          "time_ms": {"type": "number", "description": "Measured self time in milliseconds (present when the cachegrind Time unit is recognized)"}
+        },
+        "required": ["function", "percentage"]
+      }
     },
     "context": {
       "type": "string",
@@ -91,9 +99,9 @@
       "file_io": 15,
       "db_queries": 8,
       "bottlenecks": [
-        "App\\Repository::findAll (25.3%)",
-        "PDO::query (18.7%)",
-        "json_encode (8.2%)"
+        {"function": "App\\Repository::findAll", "percentage": 25.3, "time_ms": 11.4},
+        {"function": "PDO::query", "percentage": 18.7, "time_ms": 8.4},
+        {"function": "json_encode", "percentage": 8.2, "time_ms": 3.7}
       ]
     }
   ],
