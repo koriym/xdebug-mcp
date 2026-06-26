@@ -116,17 +116,16 @@ use const STDERR;
  *                     Integration tests exist but require specific Xdebug runtime setup.
  *                     Coverage: 1.39% (1/72 methods), 0.71% (9/1266 lines) - remaining
  *                     uncovered code paths require actual debugging sessions.
- * @phpstan-type DebugLocation array{file: string, line: int}
  * @phpstan-type StackFrame array{function: string, file: string, line: int}
  * @phpstan-type BreakpointRef array{id: string, label: string}
  * @phpstan-type ShallowKeyDiff array{added: array<string, string>, removed: array<string, string>, changed: array<string, array{before: string, after: string}>}
  * @phpstan-type VariableDiffEntry array{change: string, type: string, before?: string, after?: string, keys?: ShallowKeyDiff}
  * @phpstan-type VariableDiff array<string, VariableDiffEntry>
  * @phpstan-type WatchChange array{expression: string, value: string, previous: string|null, reason: string}
- * @phpstan-type DebugBreak array{step: int, location: DebugLocation, function: string, stack: list<StackFrame>, breakpoint: BreakpointRef, variables: array<string, string>, recording_type?: string, diff?: VariableDiff, watches?: list<WatchChange>}
+ * @phpstan-type DebugBreak array{step: int, stack: list<StackFrame>, breakpoint?: BreakpointRef, variables?: array<string, string>, recording_type?: string, diff?: VariableDiff, watches?: list<WatchChange>}
  * @phpstan-type TraceInfo array{file: string, lines: int, functions: int, max_depth: int, db_queries: int, error?: string}
  * @phpstan-type OutputDebugInfo array{trace_files_found: int, search_patterns: list<string>, latest_file: string|null}
- * @phpstan-type XstepJsonOutput array{'$schema': string, breaks: list<DebugBreak>, trace?: TraceInfo, context?: string, debug?: OutputDebugInfo}
+ * @phpstan-type XstepJsonOutput array{'$schema': string, breakpoint?: BreakpointRef, breaks: list<DebugBreak>, trace?: TraceInfo, context?: string, debug?: OutputDebugInfo}
  * @phpstan-type ShallowJsonValue string|int|float|bool|array<array-key, string|int|float|bool|array<array-key, string|int|float|bool|null>|null>|null
  * @phpstan-type ShallowJsonMap array<array-key, ShallowJsonValue>
  * @see https://xdebug.org/docs/step_debug
@@ -160,6 +159,9 @@ final class DebugServer
     private array $breaks = [];
     private bool $isDockerCommand = false;
     private bool $stepRecordingOutputDone = false;
+
+    /** @var BreakpointRef|null Breakpoint shared by every recorded step; emitted once at top level */
+    private array|null $recordedBreakpoint = null;
 
     /** @var list<array{id: string, label: string, file: string, line: int, condition?: string}> */
     private array $configuredBreakpoints = [];
@@ -710,13 +712,11 @@ final class DebugServer
                 continue;
             }
 
-            // Record the step
+            // Record the step (breakpoint is identical across steps, captured once)
+            $this->recordedBreakpoint ??= $breakpoint;
             $step = $this->createRecordedBreak(
                 $stepCount,
-                $location,
-                $topFrame,
                 $stackFrames,
-                $breakpoint,
                 $variablesToRecord,
                 $recordingType,
                 $variableDiff,
@@ -791,10 +791,7 @@ final class DebugServer
     }
 
     /**
-     * @param DebugLocation         $location
-     * @param StackFrame            $topFrame
      * @param list<StackFrame>      $stackFrames
-     * @param BreakpointRef         $breakpoint
      * @param array<string, string> $variables
      * @param VariableDiff          $variableDiff
      * @param list<WatchChange>     $watchData
@@ -803,24 +800,25 @@ final class DebugServer
      */
     private function createRecordedBreak(
         int $step,
-        array $location,
-        array $topFrame,
         array $stackFrames,
-        array $breakpoint,
         array $variables,
         string $recordingType,
         array $variableDiff,
         array $watchData,
     ): array {
+        // location and function are dropped: both duplicate stack[0]. breakpoint is
+        // identical across steps and emitted once at the top level (see outputStepRecordingResults).
         $debugBreak = [
             'step' => $step,
-            'location' => $location,
-            'function' => $topFrame['function'],
             'stack' => array_slice($stackFrames, 0, self::STACK_CONTEXT_LIMIT),
-            'breakpoint' => $breakpoint,
-            'variables' => $variables,
             'recording_type' => $recordingType,
         ];
+
+        // Full frames carry the complete snapshot; diff frames are reconstructable
+        // from the `diff` entries, so the duplicate `variables` map is omitted.
+        if ($recordingType !== 'diff') {
+            $debugBreak['variables'] = $variables;
+        }
 
         if ($variableDiff !== []) {
             $debugBreak['diff'] = $variableDiff;
@@ -2654,10 +2652,13 @@ final class DebugServer
 
         $this->stepRecordingOutputDone = true;
 
-        $result = [
-            '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xstep.json',
-            'breaks' => $this->breaks,
-        ];
+        $result = ['$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xstep.json'];
+
+        if ($this->recordedBreakpoint !== null) {
+            $result['breakpoint'] = $this->recordedBreakpoint;
+        }
+
+        $result['breaks'] = $this->breaks;
 
         // Preserve caller-provided context in JSON output
         if (($this->options['context'] ?? '') !== '') {
@@ -3471,7 +3472,7 @@ final class DebugServer
      *
      * @param array{id: string, label: string, file: string, line: int, condition?: string}|null $breakpoint
      *
-     * @return array{step: int, location: array{file: string, line: int}, function: string, stack: list<array{function: string, file: string, line: int}>, breakpoint: array{id: string, label: string}, variables: array<string, string>}|null
+     * @return array{step: int, stack: list<array{function: string, file: string, line: int}>, breakpoint: array{id: string, label: string}, variables: array<string, string>}|null
      */
     private function captureCurrentDebugState(int $breakNumber, array|null $breakpoint = null): array|null
     {
@@ -3494,11 +3495,15 @@ final class DebugServer
                 'line' => $topFrame['line'],
             ];
 
+            // Keep the fallback frame in `stack` when XML parsing yields no frames,
+            // so the machine-readable file/line is never lost (stack[0] is the contract).
+            $stack = $stackFrames !== []
+                ? array_slice($stackFrames, 0, self::STACK_CONTEXT_LIMIT)
+                : [$topFrame];
+
             return [
                 'step' => $breakNumber,
-                'location' => $location,
-                'function' => $topFrame['function'],
-                'stack' => array_slice($stackFrames, 0, self::STACK_CONTEXT_LIMIT),
+                'stack' => $stack,
                 'breakpoint' => $breakpoint !== null
                     ? ['id' => $breakpoint['id'], 'label' => $breakpoint['label']]
                     : $this->breakpointReferenceForLocation($location),
@@ -3581,12 +3586,13 @@ final class DebugServer
             $this->log(str_repeat('=', 60));
 
             foreach ($breaks as $break) {
-                $loc = $break['location'];
-                $this->log("📍 Step {$break['step']}: {$loc['file']}:{$loc['line']}");
+                $frame = $break['stack'][0] ?? ['file' => '', 'line' => 0];
+                $this->log("📍 Step {$break['step']}: {$frame['file']}:{$frame['line']}");
 
-                if ($break['variables'] !== []) {
+                $variables = $break['variables'] ?? [];
+                if ($variables !== []) {
                     $this->log('📊 Variables:');
-                    foreach ($break['variables'] as $name => $value) {
+                    foreach ($variables as $name => $value) {
                         $this->log("  {$name} = {$value}");
                     }
                 }

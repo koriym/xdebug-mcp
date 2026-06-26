@@ -142,7 +142,7 @@ final class McpServer
             ),
             'xstep' => new McpTool(
                 'xstep',
-                'Step debugging with breakpoints. Returns JSON with $schema URL for semantic details. Key fields: {breaks: [{step, location, variables}]}. Variables show diff only. Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
+                'Step debugging with breakpoints. Returns slim JSON with a $schema URL; read that schema for field semantics and variable-state reconstruction (the shape is deduplicated, not self-evident). Key fields: {breakpoint, breaks: [{step, stack, variables, diff}]}. Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
                 [
                     'type' => 'object',
                     'properties' => [
@@ -446,7 +446,7 @@ final class McpServer
                 ],
                 [
                     'name' => 'xstep',
-                    'description' => 'Step debugging with breakpoints. Returns JSON with $schema URL for semantic details. Key fields: {breaks: [{step, location, variables}]}. Variables show diff only. Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
+                    'description' => 'Step debugging with breakpoints. Returns slim JSON with a $schema URL; read that schema for field semantics and variable-state reconstruction (the shape is deduplicated, not self-evident). Key fields: {breakpoint, breaks: [{step, stack, variables, diff}]}. Breakpoint: file.php:line or file.php:line:condition. Vendor excluded by default.',
                     'arguments' => [
                         [
                             'name' => 'script',

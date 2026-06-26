@@ -5,6 +5,10 @@
   "description": "Debug state at breakpoints plus execution trace. Breakpoints show 'crime scene photo', trace shows 'surveillance footage'.",
   "type": "object",
   "properties": {
+    "breakpoint": {
+      "$ref": "#/definitions/breakpoint_reference",
+      "description": "Breakpoint shared by all recorded steps, emitted once at the top level (step-recording mode). For multi-breakpoint runs the attribution appears per-step inside each break instead."
+    },
     "breaks": {
       "type": "array",
       "description": "Breakpoints hit during execution",
@@ -30,35 +34,25 @@
           "type": "integer",
           "description": "Sequential step number"
         },
-        "location": {
-          "type": "object",
-          "properties": {
-            "file": { "type": "string" },
-            "line": { "type": "integer" }
-          },
-          "required": ["file", "line"]
-        },
-        "function": {
-          "type": "string",
-          "description": "Current function or method name from the top stack frame"
-        },
         "stack": {
           "type": "array",
-          "description": "Short stack summary for the current stop",
+          "description": "Call stack at this stop, ordered innermost-first: index 0 is the current frame where execution stopped; each later entry is its caller. Read the stop location and function from stack[0] — the former per-step `location` and `function` fields were removed as duplicates of it.",
+          "minItems": 1,
           "items": {
             "$ref": "#/definitions/stack_frame"
           }
         },
         "breakpoint": {
-          "$ref": "#/definitions/breakpoint_reference"
+          "$ref": "#/definitions/breakpoint_reference",
+          "description": "Per-step breakpoint attribution for multi-breakpoint runs. In step-recording mode the shared breakpoint is emitted once at the top level instead of here."
         },
         "variables": {
           "type": "object",
-          "description": "Variable values at breakpoint. In step-recording mode (--break + --steps) the contents depend on recording_type: a 'full' frame carries every variable, while a 'diff' frame carries only variables that were added, changed, or removed since the previous step (deleted variables appear with the value '[DELETED]'). When present, diff adds before/after and shallow key-level details."
+          "description": "Full variable snapshot at the breakpoint. Present only on 'full' frames; omitted on 'diff' frames because values are recoverable from `diff` (`after` for added/changed entries, and `change: 'removed'` with `before` for deletions). Each value is a rendered 'type: value' string, e.g. 'int: 0', 'array: [1, 2, 3]', 'uninitialized: ' (same format used by diff before/after)."
         },
         "diff": {
           "type": "object",
-          "description": "Variable changes since the previous recorded stop. Scalar changes include before/after values; array/object changes may include shallow key diffs.",
+          "description": "Variable changes since the previous recorded stop. Scalar changes include before/after values; array/object changes may include shallow key diffs. Variables absent from `diff` are unchanged from the previous step: reconstruct the full current state by applying successive diffs onto the most recent 'full' frame's snapshot. A stack-frame change is visible through `stack[0]`; diff entries still represent name/value changes from the previous recorded stop, so same-name/same-value variables may remain absent from `diff` and should be carried forward unless a new 'full' frame is emitted.",
           "additionalProperties": {
             "$ref": "#/definitions/variable_diff"
           }
@@ -66,7 +60,7 @@
         "recording_type": {
           "type": "string",
           "enum": ["full", "diff"],
-          "description": "Present only in step-recording mode (--break + --steps). 'full' marks the first recorded step and contains the complete variable snapshot; 'diff' marks subsequent steps and contains only the changes from the previous step (added, modified, or deleted entries — deletions are encoded as '[DELETED]')."
+          "description": "Present only in step-recording mode (--break + --steps). 'full' marks the first recorded step and carries the complete variable snapshot in `variables`; 'diff' marks subsequent steps and carries only the changes in `diff` (added, changed, or removed entries; removals use change 'removed' with a `before` value). On 'diff' steps the `variables` field is omitted, and a step with no variable changes carries an empty or absent `diff`."
         },
         "watches": {
           "type": "array",
@@ -96,7 +90,7 @@
           }
         }
       },
-      "required": ["location", "variables"]
+      "required": ["stack"]
     },
     "breakpoint_reference": {
       "type": "object",
@@ -115,10 +109,11 @@
     },
     "stack_frame": {
       "type": "object",
+      "description": "One call-stack frame. Frames are ordered innermost-first within `stack` (index 0 = current frame).",
       "properties": {
-        "function": { "type": "string" },
-        "file": { "type": "string" },
-        "line": { "type": "integer" }
+        "function": { "type": "string", "description": "Function or method name (Class::method, or '{main}' for the top-level script scope)" },
+        "file": { "type": "string", "description": "Source file basename" },
+        "line": { "type": "integer", "description": "Current execution line for the frame at index 0; the call-site line for caller frames" }
       },
       "required": ["function", "file", "line"]
     },

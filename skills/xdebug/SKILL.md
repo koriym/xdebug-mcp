@@ -70,8 +70,7 @@ Trace execution forward from start to finish. Captures complete execution flow, 
 
 Stop at breakpoint, step forward N times, record variable changes at each step. See how variable values affect branching ("this variable was X, so it went into this branch").
 
-**Output**: JSON with `$schema` URL for semantic details.
-**Key fields**: `{breaks: [{step, location, variables}]}` - Variables show diff only (changed values).
+**Output**: Slim, deduplicated JSON with a `$schema` URL — fields you might expect inline can live elsewhere, so **read the linked schema to interpret the structure and reconstruct variable state**. The schema is the source of truth; do not infer the format from examples.
 
 ```bash
 ~/.composer/vendor/bin/xstep --break=file.php:line --steps=N [--context=TEXT] [--include-vendor=PATTERNS] -- command

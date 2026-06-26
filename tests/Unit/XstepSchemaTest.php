@@ -22,6 +22,7 @@ final class XstepSchemaTest extends TestCase
         $this->assertIsString($schemaJson);
 
         /** @var array{
+         *     properties: array<string, mixed>,
          *     definitions: array{
          *         breakpoint: array{
          *             properties: array<string, array<string, mixed>>,
@@ -34,14 +35,19 @@ final class XstepSchemaTest extends TestCase
         $breakpoint = $schema['definitions']['breakpoint'];
         $properties = $breakpoint['properties'];
 
-        $this->assertArrayHasKey('location', $properties);
-        $this->assertArrayHasKey('function', $properties);
+        // location and function are dropped (duplicate stack[0]); variables is now optional (omitted on diff frames)
+        $this->assertArrayNotHasKey('location', $properties);
+        $this->assertArrayNotHasKey('function', $properties);
         $this->assertArrayHasKey('stack', $properties);
         $this->assertArrayHasKey('breakpoint', $properties);
         $this->assertArrayHasKey('variables', $properties);
         $this->assertArrayHasKey('diff', $properties);
-        $this->assertContains('location', $breakpoint['required']);
-        $this->assertContains('variables', $breakpoint['required']);
+        $this->assertContains('stack', $breakpoint['required']);
+        $this->assertNotContains('location', $breakpoint['required']);
+        $this->assertNotContains('variables', $breakpoint['required']);
+
+        // breakpoint is emitted once at the top level in step-recording mode
+        $this->assertArrayHasKey('breakpoint', $schema['properties']);
 
         $this->assertArrayHasKey('recording_type', $properties);
         $this->assertSame('string', $properties['recording_type']['type']);

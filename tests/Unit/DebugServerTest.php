@@ -381,7 +381,7 @@ echo "Result: $result\n";
         $breaks = [
             [
                 'step' => 1,
-                'location' => ['file' => basename($this->testScript), 'line' => 3],
+                'stack' => [['function' => '{main}', 'file' => basename($this->testScript), 'line' => 3]],
                 'variables' => ['$x' => '10'],
             ],
         ];
@@ -408,6 +408,42 @@ echo "Result: $result\n";
         $this->assertCount(1, $decoded['breaks']);
     }
 
+    public function testStepRecordingHoistsBreakpointToTopLevelAndOmitsPerStepFields(): void
+    {
+        $server = new DebugServer($this->testScript, 9004, null, [], true);
+        $reflection = new ReflectionClass($server);
+
+        $reflection->getProperty('breaks')->setValue($server, [
+            [
+                'step' => 1,
+                'stack' => [['function' => 'foo', 'file' => basename($this->testScript), 'line' => 10]],
+                'recording_type' => 'full',
+                'variables' => ['$a' => 'int: 1'],
+            ],
+        ]);
+        $reflection->getProperty('recordedBreakpoint')->setValue($server, ['id' => '1', 'label' => 'bp1 fixture:10']);
+
+        $outputStepRec = $reflection->getMethod('outputStepRecordingResults');
+
+        ob_start();
+        $outputStepRec->invoke($server);
+        $stdout = ob_get_clean();
+
+        $decoded = json_decode($stdout, true);
+        $this->assertIsArray($decoded);
+        // Breakpoint is hoisted to the top level, emitted once for the whole run.
+        $this->assertSame(['id' => '1', 'label' => 'bp1 fixture:10'], $decoded['breakpoint']);
+        // stack replaces per-step location/function — pin its contents so it can't silently vanish.
+        $this->assertSame(
+            [['function' => 'foo', 'file' => basename($this->testScript), 'line' => 10]],
+            $decoded['breaks'][0]['stack'],
+        );
+        // Per-step breaks no longer carry the redundant location/function/breakpoint fields.
+        $this->assertArrayNotHasKey('location', $decoded['breaks'][0]);
+        $this->assertArrayNotHasKey('function', $decoded['breaks'][0]);
+        $this->assertArrayNotHasKey('breakpoint', $decoded['breaks'][0]);
+    }
+
     public function testJsonOutputCanBePrettyPrintedWithTwoSpaces(): void
     {
         $server = new DebugServer($this->testScript, 9004, null, ['pretty' => true], true);
@@ -416,7 +452,7 @@ echo "Result: $result\n";
         $breaks = [
             [
                 'step' => 1,
-                'location' => ['file' => basename($this->testScript), 'line' => 3],
+                'stack' => [['function' => '{main}', 'file' => basename($this->testScript), 'line' => 3]],
                 'variables' => ['$x' => '10'],
             ],
         ];
