@@ -247,17 +247,35 @@ function analyzeCachegrindFile(string $profileFile, ?string $includeVendor = nul
 
     $stats['total_lines'] = count($lines);
 
-    // Real measured totals from the cachegrind `summary:` line.
-    // Xdebug 3.x emits "events: Time_(10ns) Memory_(bytes)"; convert from those units.
-    $timeToMs = str_contains($content, 'Time_(10ns)') ? 1 / 100000.0 : null;
+    // Read the cachegrind `events:` header to locate the Time and Memory columns,
+    // then take real measured totals from the `summary:` line. Units come from the
+    // header (e.g. Time_(10ns), Memory_(bytes)); reading indices from the header
+    // tolerates a non-default xdebug.cachegrind_events column order.
+    $timeIndex = null;
+    $memoryIndex = null;
+    $timeToMs = null;
+    if (preg_match('/^events:\s*(.+)$/m', $content, $eventsMatch)) {
+        foreach (preg_split('/\s+/', trim($eventsMatch[1])) as $i => $col) {
+            if (preg_match('/^Time_\((\d*)(ns|us|µs|ms|s)\)$/', $col, $unit)) {
+                $timeIndex = $i;
+                $multiplier = $unit[1] === '' ? 1 : (int) $unit[1];
+                $nsPerUnit = ['ns' => 1, 'us' => 1000, 'µs' => 1000, 'ms' => 1000000, 's' => 1000000000][$unit[2]] ?? 1;
+                $timeToMs = ($multiplier * $nsPerUnit) / 1000000.0;
+            } elseif (str_starts_with($col, 'Memory_(')) {
+                $memoryIndex = $i;
+            }
+        }
+    }
+
     $measuredTimeMs = null;
     $measuredMemoryMb = null;
-    if (preg_match('/^summary:\s+(\d+)(?:\s+(\d+))?/m', $content, $summaryMatch)) {
-        if ($timeToMs !== null) {
-            $measuredTimeMs = round((int) $summaryMatch[1] * $timeToMs, 3);
+    if (preg_match('/^summary:\s+(.+)$/m', $content, $summaryMatch)) {
+        $summaryCols = preg_split('/\s+/', trim($summaryMatch[1]));
+        if ($timeIndex !== null && $timeToMs !== null && isset($summaryCols[$timeIndex])) {
+            $measuredTimeMs = round((int) $summaryCols[$timeIndex] * $timeToMs, 3);
         }
-        if (isset($summaryMatch[2])) {
-            $measuredMemoryMb = round((int) $summaryMatch[2] / 1048576, 2);
+        if ($memoryIndex !== null && isset($summaryCols[$memoryIndex])) {
+            $measuredMemoryMb = round((int) $summaryCols[$memoryIndex] / 1048576, 2);
         }
     }
     
@@ -350,14 +368,13 @@ function analyzeCachegrindFile(string $profileFile, ?string $includeVendor = nul
             }
         }
         
-        // Cost lines are "<line> <Time> <Memory>". Sum the Time column (2nd field),
-        // not the line number (1st field), so costs/percentages reflect real time.
-        if (preg_match('/^\d+\s+(\d+)/', $line, $matches) && $currentFunction) {
-            $timeCost = (int)$matches[1];
-            if (!isset($functionCosts[$currentFunction])) {
-                $functionCosts[$currentFunction] = 0;
-            }
-            $functionCosts[$currentFunction] += $timeCost;
+        // Cost lines are "<line> <event0> <event1> ...". Sum the Time column,
+        // located via the events header (fall back to the first event column).
+        if ($currentFunction && preg_match('/^\d+(?:\s+\d+)+$/', $line)) {
+            $costCols = preg_split('/\s+/', $line);
+            $timeCol = $timeIndex !== null ? $timeIndex + 1 : 1;
+            $functionCosts[$currentFunction] = ($functionCosts[$currentFunction] ?? 0)
+                + (int) ($costCols[$timeCol] ?? 0);
         }
     }
     
@@ -487,7 +504,12 @@ function displayHumanReadableProfile(array $result): void
     if (!empty($result['bottleneck_functions'])) {
         echo "🎯 Top functions:\n";
         foreach ($result['bottleneck_functions'] as $func) {
-            echo "   $func\n";
+            $label = "{$func['function']} ({$func['percentage']}%)";
+            if (isset($func['time_ms'])) {
+                $label .= " {$func['time_ms']}ms";
+            }
+
+            echo "   {$label}\n";
         }
     }
     

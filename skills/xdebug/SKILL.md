@@ -117,7 +117,7 @@ Stop at breakpoint, step forward N times, record variable changes at each step. 
 
 Identify performance bottlenecks with precision data.
 
-**Output**: JSON with a `$schema` URL. `time_ms`/`memory_mb` are measured from the cachegrind summary; `bottlenecks` is a structured array. Read the linked schema for the field shapes — don't infer the format here.
+**Output**: JSON with a `schema` URL. `time_ms`/`memory_mb` are measured from the cachegrind summary; `bottlenecks` is a structured array. Read the linked schema for the field shapes — don't infer the format here.
 **Key fields**: `{time_ms, memory_mb, bottlenecks}`
 
 ```bash

@@ -118,7 +118,7 @@ final class McpServer
             ),
             'xprofile' => new McpTool(
                 'xprofile',
-                'Profile performance bottlenecks. Returns JSON with $schema URL; time_ms/memory_mb are measured from the cachegrind summary and bottlenecks is a structured array — read the schema for field shapes. Key fields: {time_ms, memory_mb, bottlenecks}. Vendor excluded by default.',
+                'Profile performance bottlenecks. Returns JSON with a schema URL; time_ms/memory_mb are measured from the cachegrind summary and bottlenecks is a structured array — read the schema for field shapes. Key fields: {time_ms, memory_mb, bottlenecks}. Vendor excluded by default.',
                 [
                     'type' => 'object',
                     'properties' => [
@@ -482,7 +482,7 @@ final class McpServer
                 ],
                 [
                     'name' => 'xprofile',
-                    'description' => 'Profile performance bottlenecks. Returns JSON with $schema URL; time_ms/memory_mb are measured from the cachegrind summary and bottlenecks is a structured array — read the schema for field shapes. Key fields: {time_ms, memory_mb, bottlenecks}. Vendor excluded by default.',
+                    'description' => 'Profile performance bottlenecks. Returns JSON with a schema URL; time_ms/memory_mb are measured from the cachegrind summary and bottlenecks is a structured array — read the schema for field shapes. Key fields: {time_ms, memory_mb, bottlenecks}. Vendor excluded by default.',
                     'arguments' => [
                         [
                             'name' => 'script',
