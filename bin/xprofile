@@ -244,8 +244,40 @@ function analyzeCachegrindFile(string $profileFile, ?string $includeVendor = nul
     // Simple file-based statistics (Cachegrind format is different from trace format)
     $content = file_get_contents($profileFile);
     $lines = explode("\n", $content);
-    
+
     $stats['total_lines'] = count($lines);
+
+    // Read the cachegrind `events:` header to locate the Time and Memory columns,
+    // then take real measured totals from the `summary:` line. Units come from the
+    // header (e.g. Time_(10ns), Memory_(bytes)); reading indices from the header
+    // tolerates a non-default xdebug.cachegrind_events column order.
+    $timeIndex = null;
+    $memoryIndex = null;
+    $timeToMs = null;
+    if (preg_match('/^events:\s*(.+)$/m', $content, $eventsMatch)) {
+        foreach (preg_split('/\s+/', trim($eventsMatch[1])) as $i => $col) {
+            if (preg_match('/^Time_\((\d*)(ns|us|µs|ms|s)\)$/', $col, $unit)) {
+                $timeIndex = $i;
+                $multiplier = $unit[1] === '' ? 1 : (int) $unit[1];
+                $nsPerUnit = ['ns' => 1, 'us' => 1000, 'µs' => 1000, 'ms' => 1000000, 's' => 1000000000][$unit[2]] ?? 1;
+                $timeToMs = ($multiplier * $nsPerUnit) / 1000000.0;
+            } elseif (str_starts_with($col, 'Memory_(')) {
+                $memoryIndex = $i;
+            }
+        }
+    }
+
+    $measuredTimeMs = null;
+    $measuredMemoryMb = null;
+    if (preg_match('/^summary:\s+(.+)$/m', $content, $summaryMatch)) {
+        $summaryCols = preg_split('/\s+/', trim($summaryMatch[1]));
+        if ($timeIndex !== null && $timeToMs !== null && isset($summaryCols[$timeIndex])) {
+            $measuredTimeMs = round((int) $summaryCols[$timeIndex] * $timeToMs, 3);
+        }
+        if ($memoryIndex !== null && isset($summaryCols[$memoryIndex])) {
+            $measuredMemoryMb = round((int) $summaryCols[$memoryIndex] / 1048576, 2);
+        }
+    }
     
     // Count basic Cachegrind elements - accurate counting
     $stats['total_calls'] = substr_count($content, "\ncalls=");
@@ -336,13 +368,13 @@ function analyzeCachegrindFile(string $profileFile, ?string $includeVendor = nul
             }
         }
         
-        // Cost lines (numeric data) - simplified parsing
-        if (preg_match('/^(\d+)/', $line, $matches) && $currentFunction) {
-            $cost = (int)$matches[1];
-            if (!isset($functionCosts[$currentFunction])) {
-                $functionCosts[$currentFunction] = 0;
-            }
-            $functionCosts[$currentFunction] += $cost;
+        // Cost lines are "<line> <event0> <event1> ...". Sum the Time column,
+        // located via the events header (fall back to the first event column).
+        if ($currentFunction && preg_match('/^\d+(?:\s+\d+)+$/', $line)) {
+            $costCols = preg_split('/\s+/', $line);
+            $timeCol = $timeIndex !== null ? $timeIndex + 1 : 1;
+            $functionCosts[$currentFunction] = ($functionCosts[$currentFunction] ?? 0)
+                + (int) ($costCols[$timeCol] ?? 0);
         }
     }
     
@@ -377,30 +409,38 @@ function analyzeCachegrindFile(string $profileFile, ?string $includeVendor = nul
             $meaningfulFunctions[$displayName] = $cost;
         }
         
-        // Top 5 functions with percentages
+        // Top 5 functions, structured: function name, share of total cost, and
+        // measured time (from the cachegrind Time column) when the units are known.
         $topFunctions = [];
         $totalCost = array_sum($functionCosts);
         if ($totalCost > 0) {
             foreach (array_slice($meaningfulFunctions, 0, 5, true) as $func => $cost) {
-                $percentage = round(($cost / $totalCost) * 100, 1);
-                $topFunctions[] = "{$func} ({$percentage}%)";
+                $entry = [
+                    'function' => $func,
+                    'percentage' => round(($cost / $totalCost) * 100, 1),
+                ];
+                if ($timeToMs !== null) {
+                    $entry['time_ms'] = round($cost * $timeToMs, 3);
+                }
+                $topFunctions[] = $entry;
             }
         }
-        
+
         $stats['bottleneck_functions'] = $topFunctions;
         
-        // Better estimates based on function costs and file size
-        $maxCost = max($functionCosts);
-        $totalCost = array_sum($functionCosts);
-        
-        // Execution time estimate based on total costs (more realistic scaling)
-        $stats['execution_time_ms'] = round($totalCost / 50000, 2); // Adjusted for better estimate
-        
-        // Memory estimate based on function count, call count, and file complexity  
-        $baseMemory = 2.5; // Base PHP memory usage in MB
-        $functionMemory = $stats['functions_count'] * 0.1; // Memory per function
-        $callMemory = $stats['total_calls'] * 0.001; // Memory per call
-        $stats['peak_memory_mb'] = round($baseMemory + $functionMemory + $callMemory, 1);
+        // Prefer the real measured totals from the summary line; fall back to a
+        // rough estimate only when the summary or its units are unavailable.
+        $stats['execution_time_ms'] = $measuredTimeMs
+            ?? round(array_sum($functionCosts) / 50000, 2);
+
+        if ($measuredMemoryMb !== null) {
+            $stats['peak_memory_mb'] = $measuredMemoryMb;
+        } else {
+            $baseMemory = 2.5; // Base PHP memory usage in MB
+            $functionMemory = $stats['functions_count'] * 0.1; // Memory per function
+            $callMemory = $stats['total_calls'] * 0.001; // Memory per call
+            $stats['peak_memory_mb'] = round($baseMemory + $functionMemory + $callMemory, 1);
+        }
     }
     
     // Estimate call depth (simplified)
@@ -464,7 +504,12 @@ function displayHumanReadableProfile(array $result): void
     if (!empty($result['bottleneck_functions'])) {
         echo "🎯 Top functions:\n";
         foreach ($result['bottleneck_functions'] as $func) {
-            echo "   $func\n";
+            $label = "{$func['function']} ({$func['percentage']}%)";
+            if (isset($func['time_ms'])) {
+                $label .= " {$func['time_ms']}ms";
+            }
+
+            echo "   {$label}\n";
         }
     }
     

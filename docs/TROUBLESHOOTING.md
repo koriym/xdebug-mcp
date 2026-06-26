@@ -222,7 +222,7 @@ rm /tmp/trace.*.xt /tmp/cachegrind.out.*
 # parse error: Invalid numeric literal at line 1, column 8
 
 # ✅ Now: Clean JSON output with captured script output under the "output" key
-./bin/xprofile --json -- php script.php | jq '.bottlenecks'
+./bin/xprofile --json -- php script.php | jq '.bottlenecks[].function'
 ```
 
 **Format Solutions**:
