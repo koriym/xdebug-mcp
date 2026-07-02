@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-07-03
+
+### Added
+- DebugServer supports concurrent sessions: falls back to an OS-assigned ephemeral port when the configured port (9004) is already in use, and cleanup now only targets its own child process instead of every session sharing a session key (#89).
+- xstep JSON output includes `debug_port` (always) and `requested_port` (only when a fallback occurred), so JSON-only callers can detect a port fallback (#90).
+
+### Changed
+- Cachegrind profile parsing now streams the file in a single pass instead of loading it whole, reducing memory use on large profiles (#89).
+
+### Fixed
+- DebugServer no longer silently discards session failures (listener-bind, connection, spawn errors); they now propagate with a non-zero exit and a stderr message (#89).
+- Conditional breakpoints are sent DBGp-encoded instead of as unescaped source on the command line, fixing a silent parse error for conditions containing spaces (#89).
+- A read failure mid-DBGp-frame no longer desyncs subsequent reads (#89).
+- `setBreakpoint()` throws `BreakpointException` on an empty response instead of recording a breakpoint that was never actually set (#89).
+- The MCP stdin loop no longer wedges on a single malformed line; each line is now parsed independently (#89).
+- Non-UTF-8 bytes in tool output no longer break MCP response encoding (#89).
+- CompareRunner removes its temporary git worktree on a fatal error, not only on normal return or a thrown exception (#89).
+
 ## [0.11.0] - 2026-06-27
 
 ### Changed
