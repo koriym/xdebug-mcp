@@ -93,12 +93,52 @@ class McpServerTest extends TestCase
         $this->assertEquals('Method not found: unknown/method', $response['error']['message']);
     }
 
-    public function testIsCompleteJsonRpc(): void
+    public function testHandleLineMalformedJsonReturnsParseError(): void
     {
-        $this->assertTrue($this->invokePrivateMethod($this->server, 'isCompleteJsonRpc', ['{"test": "value"}']));
-        $this->assertFalse($this->invokePrivateMethod($this->server, 'isCompleteJsonRpc', ['{"test": ']));
-        $this->assertFalse($this->invokePrivateMethod($this->server, 'isCompleteJsonRpc', ['']));
-        $this->assertFalse($this->invokePrivateMethod($this->server, 'isCompleteJsonRpc', ['not json']));
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleLine', ['{oops}']);
+        $response = $responseObj->toArray();
+
+        $this->assertNull($response['id']);
+        $this->assertEquals(-32700, $response['error']['code']);
+        $this->assertEquals('Parse error', $response['error']['message']);
+    }
+
+    public function testHandleLineValidRequestAfterMalformedLineIsNotWedged(): void
+    {
+        // Regression test for F2: a malformed line must not contaminate the
+        // next line. Each line is parsed independently by handleLine().
+        $firstResponse = $this->invokePrivateMethod($this->server, 'handleLine', ['{oops}']);
+        $this->assertEquals(-32700, $firstResponse->toArray()['error']['code']);
+
+        $secondResponse = $this->invokePrivateMethod(
+            $this->server,
+            'handleLine',
+            ['{"jsonrpc":"2.0","id":99,"method":"tools/list"}'],
+        );
+        $second = $secondResponse->toArray();
+
+        $this->assertEquals(99, $second['id']);
+        $this->assertArrayHasKey('result', $second);
+        $this->assertArrayHasKey('tools', $second['result']);
+    }
+
+    public function testHandleLineNonObjectJsonReturnsInvalidRequest(): void
+    {
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleLine', ['42']);
+        $response = $responseObj->toArray();
+
+        $this->assertEquals(-32600, $response['error']['code']);
+    }
+
+    public function testHandleLineNotificationsInitializedReturnsNull(): void
+    {
+        $result = $this->invokePrivateMethod(
+            $this->server,
+            'handleLine',
+            ['{"jsonrpc":"2.0","method":"notifications/initialized"}'],
+        );
+
+        $this->assertNull($result);
     }
 
     public function testToolCallWithoutConnection(): void

@@ -9,6 +9,17 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
 use function array_column;
+use function array_merge;
+use function dirname;
+use function explode;
+use function fclose;
+use function fwrite;
+use function is_array;
+use function json_decode;
+use function proc_close;
+use function proc_open;
+use function stream_get_contents;
+use function trim;
 
 class McpServerIntegrationTest extends TestCase
 {
@@ -112,22 +123,100 @@ class McpServerIntegrationTest extends TestCase
         $this->assertStringContainsString('Unknown tool: invalid_tool', $response['error']['message']);
     }
 
-    public function testCompleteJsonRpcValidation(): void
+    public function testMalformedLineIsNotWedgedAndValidRequestStillAnswered(): void
     {
-        $testCases = [
-            ['{"valid": "json"}', true],
-            ['{"incomplete": ', false],
-            ['', false],
-            ['not json at all', false],
-            ['{"nested": {"object": true}}', true],
-            ['[{"array": true}]', true],
-            ['{"string": "value", "number": 123, "boolean": true}', true],
+        // Regression test for F2: a malformed line must emit a -32700 parse
+        // error AND must not wedge the stream — the following valid request
+        // must still be answered. Exercises the real bin/xdebug-mcp process.
+        [$stdout] = $this->runServerProcess(
+            '{oops not json}' . "\n" . '{"jsonrpc":"2.0","id":42,"method":"tools/list"}' . "\n",
+            ['MCP_DEBUG' => ''],
+        );
+
+        $responses = $this->decodeResponses($stdout);
+        $codes = array_column(array_column($responses, 'error'), 'code');
+        $ids = array_column($responses, 'id');
+
+        $this->assertContains(-32700, $codes, 'malformed line should produce a -32700 parse error');
+        $this->assertContains(42, $ids, 'valid request after a malformed line must still be answered');
+    }
+
+    public function testRequestPayloadIsNotLoggedWithoutDebugMode(): void
+    {
+        [, $stderr] = $this->runServerProcess(
+            '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' . "\n",
+            ['MCP_DEBUG' => ''],
+        );
+
+        $this->assertStringNotContainsString('MCP Debug:', $stderr);
+        $this->assertStringNotContainsString('tools/list', $stderr);
+    }
+
+    public function testRequestPayloadIsLoggedWhenDebugModeEnabled(): void
+    {
+        [, $stderr] = $this->runServerProcess(
+            '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' . "\n",
+            ['MCP_DEBUG' => '1'],
+        );
+
+        $this->assertStringContainsString('MCP Debug:', $stderr);
+        $this->assertStringContainsString('Raw Claude CLI input', $stderr);
+        $this->assertStringContainsString('tools/list', $stderr);
+    }
+
+    /**
+     * Spawn the real bin/xdebug-mcp CLI (no mocks), write $input to STDIN,
+     * close the pipe (which makes the server's fgets loop reach EOF and exit),
+     * and return its [stdout, stderr].
+     *
+     * @param array<string, string> $env
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function runServerProcess(string $input, array $env): array
+    {
+        $descriptorSpec = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
         ];
 
-        foreach ($testCases as [$input, $expected]) {
-            $result = $this->invokeMethod($this->server, 'isCompleteJsonRpc', [$input]);
-            $this->assertEquals($expected, $result, "Failed for input: {$input}");
+        $binary = dirname(__DIR__, 2) . '/bin/xdebug-mcp';
+        $process = proc_open(['php', $binary], $descriptorSpec, $pipes, null, array_merge($_ENV, $env));
+
+        $this->assertIsResource($process);
+
+        fwrite($pipes[0], $input);
+        fclose($pipes[0]);
+
+        $stdout = (string) stream_get_contents($pipes[1]);
+        $stderr = (string) stream_get_contents($pipes[2]);
+
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        proc_close($process);
+
+        return [$stdout, $stderr];
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function decodeResponses(string $stdout): array
+    {
+        $responses = [];
+        foreach (explode("\n", trim($stdout)) as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+
+            $decoded = json_decode($line, true);
+            if (! is_array($decoded)) {
+                continue;
+            }
+
+            $responses[] = $decoded;
         }
+
+        return $responses;
     }
 
     private function invokeMethod(object $object, string $methodName, array $parameters = []): mixed
