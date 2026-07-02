@@ -1100,6 +1100,16 @@ final class DebugServer
 
         $response = $this->sendCommand('breakpoint_set', $params);
 
+        // sendCommand() returns '' on a read failure/connection drop. Without
+        // this guard an empty response would slip past the <error> check and
+        // the id="..." regex and return the 'unknown' sentinel, recording a
+        // breakpoint that was never actually set.
+        if ($response === '') {
+            throw new BreakpointException(
+                "No response from Xdebug when setting breakpoint at {$filename}:{$line}",
+            );
+        }
+
         if (str_contains($response, '<error')) {
             $message = 'Xdebug rejected breakpoint_set';
             if (preg_match('/<message>([^<]+)<\/message>/', $response, $matches)) {
@@ -2554,18 +2564,24 @@ final class DebugServer
             // ASCII digits, so the first NUL is always the header delimiter.
             $nulPos = $this->fillDbgpBufferUntilNul($socket, $timeout);
             $length = (int) substr($this->dbgpReadBuffer, 0, $nulPos);
-            $this->dbgpReadBuffer = substr($this->dbgpReadBuffer, $nulPos + 1);
 
             if ($length <= 0) {
                 throw new RuntimeException("Invalid response length: {$length}");
             }
 
-            // Need $length data bytes plus the trailing NUL.
-            $this->fillDbgpBufferTo($socket, $timeout, $length + 1);
+            // Do NOT consume the header until the whole frame (header + NUL +
+            // payload + trailing NUL) is buffered. If the payload read fails
+            // partway (readTimeout fires, or the connection drops), the buffer
+            // must still look like an intact, resumable frame — otherwise the
+            // next read would misparse leftover payload bytes as a new length
+            // header and desync every subsequent frame on this socket.
+            $headerLength = $nulPos + 1;
+            $frameLength = $headerLength + $length + 1;
+            $this->fillDbgpBufferTo($socket, $timeout, $frameLength);
 
-            $response = substr($this->dbgpReadBuffer, 0, $length);
-            $trailingNull = $this->dbgpReadBuffer[$length];
-            $this->dbgpReadBuffer = substr($this->dbgpReadBuffer, $length + 1);
+            $response = substr($this->dbgpReadBuffer, $headerLength, $length);
+            $trailingNull = $this->dbgpReadBuffer[$headerLength + $length];
+            $this->dbgpReadBuffer = substr($this->dbgpReadBuffer, $frameLength);
 
             if ($trailingNull !== "\0") {
                 $this->log('Warning: Expected trailing NULL byte, got: ' . bin2hex($trailingNull));

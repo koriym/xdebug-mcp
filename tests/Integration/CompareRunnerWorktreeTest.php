@@ -144,6 +144,7 @@ class CompareRunnerWorktreeTest extends TestCase
             $worktreePath = trim(implode('', $output));
 
             $this->assertNotSame('', $worktreePath, 'child should print the worktree path before the fatal error');
+            $this->assertNotSame(0, $exit, 'child must exit non-zero via the fatal error this test exercises');
             clearstatcache(true, $worktreePath);
             $this->assertDirectoryDoesNotExist(
                 $worktreePath,

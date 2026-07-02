@@ -51,6 +51,7 @@ use function tempnam;
 use function trim;
 use function unlink;
 
+use const JSON_INVALID_UTF8_SUBSTITUTE;
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
 use const STDIN;
@@ -87,7 +88,10 @@ final class McpServer
             'message' => $message,
             'data' => $data,
         ];
-        error_log('MCP Debug: ' . json_encode($logData, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+        // Substitute (don't throw on) non-UTF-8 bytes in the logged payload —
+        // an unset MCP_DEBUG already skips this, but with it set a non-UTF-8
+        // request line must not be able to wedge the loop from here either.
+        error_log('MCP Debug: ' . json_encode($logData, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE));
     }
 
     private function initializeTools(): void
@@ -276,11 +280,37 @@ final class McpServer
                 }
 
                 $this->debugLog('Sending response', ['id' => $response->id]);
-                echo json_encode($response, JSON_THROW_ON_ERROR) . "\n";
+                echo $this->encodeResponse($response) . "\n";
                 fflush(STDOUT);
             }
         } catch (Throwable $e) {
             error_log('MCP Server Fatal Error: ' . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString());
+        }
+    }
+
+    /**
+     * Encode a response for the wire without letting an encoding failure
+     * terminate the STDIN loop.
+     *
+     * Tool results embed the raw output of arbitrary scripts (exec()), which
+     * may contain non-UTF-8 bytes; those are substituted rather than thrown on,
+     * so the response is still delivered. On any other, unexpected encoding
+     * error we emit a protocol-valid error for the same id instead of dropping
+     * the response — a dropped response would leave the client waiting forever.
+     */
+    private function encodeResponse(JsonRpcResponse $response): string
+    {
+        try {
+            // JSON_INVALID_UTF8_SUBSTITUTE keeps non-UTF-8 tool output from
+            // throwing; the flag set otherwise matches the previous wire output.
+            return json_encode($response, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
+        } catch (JsonException $e) {
+            error_log('MCP Server Error: failed to encode response: ' . $e->getMessage());
+
+            return json_encode(
+                JsonRpcResponse::error($response->id, -32603, 'Failed to encode response'),
+                JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE,
+            );
         }
     }
 

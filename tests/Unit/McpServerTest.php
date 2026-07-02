@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp\Tests\Unit;
 
+use Koriym\XdebugMcp\DTO\GenericResult;
+use Koriym\XdebugMcp\DTO\JsonRpcResponse;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\McpServer;
 use PHPUnit\Framework\TestCase;
@@ -11,7 +13,10 @@ use ReflectionClass;
 use Throwable;
 
 use function array_column;
+use function json_decode;
 use function putenv;
+
+use const JSON_THROW_ON_ERROR;
 
 class McpServerTest extends TestCase
 {
@@ -120,6 +125,23 @@ class McpServerTest extends TestCase
         $this->assertEquals(99, $second['id']);
         $this->assertArrayHasKey('result', $second);
         $this->assertArrayHasKey('tools', $second['result']);
+    }
+
+    public function testEncodeResponseWithNonUtf8ToolOutputDoesNotThrow(): void
+    {
+        // Regression: tool results embed raw exec() output that may contain
+        // non-UTF-8 bytes. encodeResponse() must not throw (which would
+        // propagate to __invoke()'s outer catch and wedge the STDIN loop) — the
+        // bytes are substituted and a valid JSON response is still produced.
+        $response = JsonRpcResponse::success(7, new GenericResult([
+            'content' => [['type' => 'text', 'text' => "trace output \xff\xfe not utf-8"]],
+        ]));
+
+        $encoded = $this->invokePrivateMethod($this->server, 'encodeResponse', [$response]);
+
+        $decoded = json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(7, $decoded['id']);
+        $this->assertArrayHasKey('result', $decoded);
     }
 
     public function testHandleLineNonObjectJsonReturnsInvalidRequest(): void
