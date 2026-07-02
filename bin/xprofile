@@ -241,60 +241,85 @@ function analyzeCachegrindFile(string $profileFile, ?string $includeVendor = nul
         'mysql_query', 'pg_query', 'sqlite_query'
     ];
 
-    // Simple file-based statistics (Cachegrind format is different from trace format)
-    $content = file_get_contents($profileFile);
-    $lines = explode("\n", $content);
-
-    $stats['total_lines'] = count($lines);
-
-    // Read the cachegrind `events:` header to locate the Time and Memory columns,
-    // then take real measured totals from the `summary:` line. Units come from the
-    // header (e.g. Time_(10ns), Memory_(bytes)); reading indices from the header
-    // tolerates a non-default xdebug.cachegrind_events column order.
+    // Stream the Cachegrind file line by line instead of loading it whole:
+    // profiles can be hundreds of MB, and file_get_contents() + explode() held
+    // 2-3x the file size in memory at once. The events:/summary: headers are
+    // parsed inline the first time they are seen; the fn=/fl=/cost body below
+    // is unchanged.
+    //
+    // Units for Time/Memory come from the events header (e.g. Time_(10ns),
+    // Memory_(bytes)); reading column indices from the header tolerates a
+    // non-default xdebug.cachegrind_events column order.
     $timeIndex = null;
     $memoryIndex = null;
     $timeToMs = null;
-    if (preg_match('/^events:\s*(.+)$/m', $content, $eventsMatch)) {
-        foreach (preg_split('/\s+/', trim($eventsMatch[1])) as $i => $col) {
-            if (preg_match('/^Time_\((\d*)(ns|us|µs|ms|s)\)$/', $col, $unit)) {
-                $timeIndex = $i;
-                $multiplier = $unit[1] === '' ? 1 : (int) $unit[1];
-                $nsPerUnit = ['ns' => 1, 'us' => 1000, 'µs' => 1000, 'ms' => 1000000, 's' => 1000000000][$unit[2]] ?? 1;
-                $timeToMs = ($multiplier * $nsPerUnit) / 1000000.0;
-            } elseif (str_starts_with($col, 'Memory_(')) {
-                $memoryIndex = $i;
-            }
-        }
-    }
-
     $measuredTimeMs = null;
     $measuredMemoryMb = null;
-    if (preg_match('/^summary:\s+(.+)$/m', $content, $summaryMatch)) {
-        $summaryCols = preg_split('/\s+/', trim($summaryMatch[1]));
-        if ($timeIndex !== null && $timeToMs !== null && isset($summaryCols[$timeIndex])) {
-            $measuredTimeMs = round((int) $summaryCols[$timeIndex] * $timeToMs, 3);
-        }
-        if ($memoryIndex !== null && isset($summaryCols[$memoryIndex])) {
-            $measuredMemoryMb = round((int) $summaryCols[$memoryIndex] / 1048576, 2);
-        }
-    }
-    
-    // Count basic Cachegrind elements - accurate counting
-    $stats['total_calls'] = substr_count($content, "\ncalls=");
-    
+    $eventsParsed = false;
+    $summaryParsed = false;
+    $newlineCount = 0;
+
     // Use sets to track unique functions
     $uniqueFunctions = [];
     $userFunctions = [];
     $internalFunctions = [];
-    
+
     // Parse functions for classification and analysis
     $functionCosts = [];
     $currentFunction = null;
     $currentFile = null;
     $fileAliases = [];
-    
-    foreach ($lines as $line) {
-        $line = trim($line);
+
+    $handle = fopen($profileFile, 'r');
+    if ($handle === false) {
+        throw new \RuntimeException("Cannot open profile file: $profileFile");
+    }
+
+    while (($rawLine = fgets($handle)) !== false) {
+        // total_lines must stay byte-identical to the previous
+        // count(explode("\n", $content)) == (number of "\n") + 1.
+        if (str_ends_with($rawLine, "\n")) {
+            $newlineCount++;
+        }
+
+        $line = trim($rawLine);
+
+        // events: header — parse the first occurrence to locate the columns.
+        if (! $eventsParsed && str_starts_with($line, 'events:')) {
+            $eventsParsed = true;
+            foreach (preg_split('/\s+/', trim(substr($line, strlen('events:')))) as $i => $col) {
+                if (preg_match('/^Time_\((\d*)(ns|us|µs|ms|s)\)$/', $col, $unit)) {
+                    $timeIndex = $i;
+                    $multiplier = $unit[1] === '' ? 1 : (int) $unit[1];
+                    $nsPerUnit = ['ns' => 1, 'us' => 1000, 'µs' => 1000, 'ms' => 1000000, 's' => 1000000000][$unit[2]] ?? 1;
+                    $timeToMs = ($multiplier * $nsPerUnit) / 1000000.0;
+                } elseif (str_starts_with($col, 'Memory_(')) {
+                    $memoryIndex = $i;
+                }
+            }
+
+            continue;
+        }
+
+        // summary: line — real measured totals (appears once, near the end).
+        if (! $summaryParsed && str_starts_with($line, 'summary:')) {
+            $summaryParsed = true;
+            $summaryCols = preg_split('/\s+/', trim(substr($line, strlen('summary:'))));
+            if ($timeIndex !== null && $timeToMs !== null && isset($summaryCols[$timeIndex])) {
+                $measuredTimeMs = round((int) $summaryCols[$timeIndex] * $timeToMs, 3);
+            }
+            if ($memoryIndex !== null && isset($summaryCols[$memoryIndex])) {
+                $measuredMemoryMb = round((int) $summaryCols[$memoryIndex] / 1048576, 2);
+            }
+
+            continue;
+        }
+
+        // Count cost-block "calls=" markers (was substr_count($content, "\ncalls=")).
+        if (str_starts_with($line, 'calls=')) {
+            $stats['total_calls']++;
+            continue;
+        }
         
         if (preg_match('/^fl=\((\d+)\)\s+(.+)$/', $line, $matches)) {
             $currentFile = $matches[2];
@@ -377,7 +402,12 @@ function analyzeCachegrindFile(string $profileFile, ?string $includeVendor = nul
                 + (int) ($costCols[$timeCol] ?? 0);
         }
     }
-    
+
+    fclose($handle);
+
+    // Preserve the previous count(explode("\n", $content)) semantics exactly.
+    $stats['total_lines'] = $newlineCount + 1;
+
     // Set final counts from unique arrays
     $stats['functions_count'] = count($uniqueFunctions);
     $stats['user_functions'] = count($userFunctions); 
