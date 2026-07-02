@@ -129,7 +129,7 @@ use const STDERR;
  * @phpstan-type DebugBreak array{step: int, stack: list<StackFrame>, breakpoint?: BreakpointRef, variables?: array<string, string>, recording_type?: string, diff?: VariableDiff, watches?: list<WatchChange>}
  * @phpstan-type TraceInfo array{file: string, lines: int, functions: int, max_depth: int, db_queries: int, error?: string}
  * @phpstan-type OutputDebugInfo array{trace_files_found: int, search_patterns: list<string>, latest_file: string|null}
- * @phpstan-type XstepJsonOutput array{'$schema': string, breakpoint?: BreakpointRef, breaks: list<DebugBreak>, trace?: TraceInfo, context?: string, debug?: OutputDebugInfo}
+ * @phpstan-type XstepJsonOutput array{'$schema': string, breakpoint?: BreakpointRef, breaks: list<DebugBreak>, trace?: TraceInfo, context?: string, debug?: OutputDebugInfo, debug_port?: int, requested_port?: int}
  * @phpstan-type ShallowJsonValue string|int|float|bool|array<array-key, string|int|float|bool|array<array-key, string|int|float|bool|null>|null>|null
  * @phpstan-type ShallowJsonMap array<array-key, ShallowJsonValue>
  * @see https://xdebug.org/docs/step_debug
@@ -2803,6 +2803,28 @@ final class DebugServer
         ) ?? $json;
     }
 
+    /**
+     * Add the actually-bound debug port to the JSON result, so a caller only
+     * seeing --json output can still tell which port Xdebug is listening on.
+     *
+     * `requested_port` is only included when it differs from `debug_port` —
+     * i.e. when startXdebugListener() fell back to an ephemeral port because
+     * the configured one was already in use (see listenOnAvailablePort()).
+     *
+     * @param XstepJsonOutput $result
+     *
+     * @return XstepJsonOutput
+     */
+    private function addPortInfoToResult(array $result): array
+    {
+        $result['debug_port'] = $this->effectiveDebugPort;
+        if ($this->effectiveDebugPort !== $this->debugPort) {
+            $result['requested_port'] = $this->debugPort;
+        }
+
+        return $result;
+    }
+
     private function getMaxValueBytes(): int|null
     {
         $maxValueBytes = $this->options['maxValueBytes'] ?? null;
@@ -2903,6 +2925,8 @@ final class DebugServer
                 'error' => $e->getMessage(),
             ];
         }
+
+        $result = $this->addPortInfoToResult($result);
 
         echo $this->encodeJsonOutput($result) . "\n";
     }
@@ -3763,6 +3787,8 @@ final class DebugServer
 
         // Output format based on jsonMode or jsonOutput option
         if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
+            $debugState = $this->addPortInfoToResult($debugState);
+
             echo $this->encodeJsonOutput($debugState) . "\n";
 
             // Mark step-recording output as done only after JSON was successfully

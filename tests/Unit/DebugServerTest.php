@@ -525,6 +525,129 @@ echo "Result: $result\n";
         $this->assertCount(1, $decoded['breaks']);
     }
 
+    /**
+     * Regression test for the Nit split out of PR #89: when the listener
+     * bound the configured port directly (no fallback), --json output must
+     * still report debug_port, but must NOT include requested_port — there
+     * was nothing to fall back from.
+     */
+    public function testMultipleBreakResultsJsonIncludesDebugPortWithoutFallback(): void
+    {
+        $server = new DebugServer($this->testScript, 9004, null, [], true);
+        $reflection = new ReflectionClass($server);
+
+        $breaks = [
+            [
+                'step' => 1,
+                'stack' => [['function' => '{main}', 'file' => basename($this->testScript), 'line' => 3]],
+                'variables' => ['$x' => '10'],
+            ],
+        ];
+
+        $outputMultiple = $reflection->getMethod('outputMultipleBreakResults');
+
+        ob_start();
+        $outputMultiple->invoke($server, $breaks);
+        $stdout = ob_get_clean();
+
+        $decoded = json_decode($stdout, true);
+        $this->assertIsArray($decoded);
+        $this->assertSame(9004, $decoded['debug_port']);
+        $this->assertArrayNotHasKey('requested_port', $decoded);
+    }
+
+    /**
+     * Regression test for the Nit split out of PR #89: when
+     * listenOnAvailablePort() fell back to an ephemeral port (configured port
+     * busy), --json output must report BOTH the actually-bound debug_port and
+     * the originally requested_port, so a caller seeing only JSON can tell a
+     * fallback happened without reading human-readable logs.
+     */
+    public function testMultipleBreakResultsJsonIncludesRequestedPortOnFallback(): void
+    {
+        $server = new DebugServer($this->testScript, 9004, null, [], true);
+        $reflection = new ReflectionClass($server);
+
+        // Simulate startXdebugListener() having fallen back to an ephemeral
+        // port: effectiveDebugPort diverges from the configured debugPort.
+        $reflection->getProperty('effectiveDebugPort')->setValue($server, 62612);
+
+        $breaks = [
+            [
+                'step' => 1,
+                'stack' => [['function' => '{main}', 'file' => basename($this->testScript), 'line' => 3]],
+                'variables' => ['$x' => '10'],
+            ],
+        ];
+
+        $outputMultiple = $reflection->getMethod('outputMultipleBreakResults');
+
+        ob_start();
+        $outputMultiple->invoke($server, $breaks);
+        $stdout = ob_get_clean();
+
+        $decoded = json_decode($stdout, true);
+        $this->assertIsArray($decoded);
+        $this->assertSame(62612, $decoded['debug_port']);
+        $this->assertSame(9004, $decoded['requested_port']);
+    }
+
+    /**
+     * Same debug_port/requested_port contract as the multiple-breakpoint
+     * path, but for the other JSON emission site: outputStepRecordingResults()
+     * (the --steps recording path). Both output methods must stay consistent.
+     */
+    public function testStepRecordingResultsJsonIncludesDebugPortWithoutFallback(): void
+    {
+        $server = new DebugServer($this->testScript, 9004, null, [], true);
+        $reflection = new ReflectionClass($server);
+
+        $reflection->getProperty('breaks')->setValue($server, [
+            [
+                'step' => 1,
+                'stack' => [['function' => 'foo', 'file' => basename($this->testScript), 'line' => 10]],
+                'variables' => ['$a' => 'int: 1'],
+            ],
+        ]);
+
+        $outputStepRec = $reflection->getMethod('outputStepRecordingResults');
+
+        ob_start();
+        $outputStepRec->invoke($server);
+        $stdout = ob_get_clean();
+
+        $decoded = json_decode($stdout, true);
+        $this->assertIsArray($decoded);
+        $this->assertSame(9004, $decoded['debug_port']);
+        $this->assertArrayNotHasKey('requested_port', $decoded);
+    }
+
+    public function testStepRecordingResultsJsonIncludesRequestedPortOnFallback(): void
+    {
+        $server = new DebugServer($this->testScript, 9004, null, [], true);
+        $reflection = new ReflectionClass($server);
+
+        $reflection->getProperty('effectiveDebugPort')->setValue($server, 62612);
+        $reflection->getProperty('breaks')->setValue($server, [
+            [
+                'step' => 1,
+                'stack' => [['function' => 'foo', 'file' => basename($this->testScript), 'line' => 10]],
+                'variables' => ['$a' => 'int: 1'],
+            ],
+        ]);
+
+        $outputStepRec = $reflection->getMethod('outputStepRecordingResults');
+
+        ob_start();
+        $outputStepRec->invoke($server);
+        $stdout = ob_get_clean();
+
+        $decoded = json_decode($stdout, true);
+        $this->assertIsArray($decoded);
+        $this->assertSame(62612, $decoded['debug_port']);
+        $this->assertSame(9004, $decoded['requested_port']);
+    }
+
     public function testVariableDisplayCanBeTruncatedByBytes(): void
     {
         $server = new DebugServer($this->testScript, 9004, null, [], true);

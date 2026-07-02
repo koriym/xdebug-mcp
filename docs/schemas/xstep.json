@@ -22,6 +22,14 @@
     "context": {
       "type": "string",
       "description": "Optional analysis context"
+    },
+    "debug_port": {
+      "type": "integer",
+      "description": "Port the debug listener actually bound to. Normally equal to the configured/default port (9004), but differs when that port was already in use and the listener fell back to an OS-assigned ephemeral port (see requested_port)."
+    },
+    "requested_port": {
+      "type": "integer",
+      "description": "Configured debug port that was requested but unavailable. Present only when a port fallback occurred, i.e. when this differs from debug_port."
     }
   },
   "required": ["breaks", "trace"],
