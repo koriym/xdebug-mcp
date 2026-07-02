@@ -11,6 +11,7 @@ use ReflectionClass;
 
 use function array_filter;
 use function array_values;
+use function base64_encode;
 use function basename;
 use function chdir;
 use function count;
@@ -57,6 +58,58 @@ echo "Result: $result\n";
     {
         $server = new DebugServer($this->testScript, 9004);
         $this->assertInstanceOf(DebugServer::class, $server);
+    }
+
+    /**
+     * Regression test for F9: the lsof diagnostic used to run unconditionally
+     * in the constructor. It is now lazy (only triggered from a real bind
+     * failure), so the eager method must be gone and its lazy replacement
+     * present.
+     */
+    public function testConstructorDoesNotShellOutToLsof(): void
+    {
+        $reflection = new ReflectionClass(DebugServer::class);
+
+        $this->assertFalse(
+            $reflection->hasMethod('checkExistingSessions'),
+            'checkExistingSessions() should be removed; the lsof check must be lazy, not in the constructor.',
+        );
+        $this->assertTrue($reflection->hasMethod('logExistingSessions'));
+    }
+
+    public function testParsePidListReturnsEmptyForFalseNullOrEmptyOutput(): void
+    {
+        $reflection = new ReflectionClass(DebugServer::class);
+        $method = $reflection->getMethod('parsePidList');
+
+        $this->assertSame([], $method->invoke(null, false));
+        $this->assertSame([], $method->invoke(null, null));
+        $this->assertSame([], $method->invoke(null, ''));
+        $this->assertSame([], $method->invoke(null, "\n"));
+    }
+
+    public function testParsePidListParsesNewlineSeparatedPids(): void
+    {
+        $reflection = new ReflectionClass(DebugServer::class);
+        $method = $reflection->getMethod('parsePidList');
+
+        $this->assertSame(['1234', '5678'], $method->invoke(null, "1234\n5678\n"));
+        $this->assertSame(['4321'], $method->invoke(null, '4321'));
+    }
+
+    /**
+     * Regression test for F4: the effective (actually-bound) port defaults to
+     * the configured debug port until the listener rebinds to an ephemeral
+     * port. Every -dxdebug.client_port the spawned PHP receives reads this
+     * property, so it must start equal to the constructor argument.
+     */
+    public function testEffectiveDebugPortDefaultsToConfiguredPort(): void
+    {
+        $server = new DebugServer($this->testScript, 9004);
+        $reflection = new ReflectionClass($server);
+        $property = $reflection->getProperty('effectiveDebugPort');
+
+        $this->assertSame(9004, $property->getValue($server));
     }
 
     public function testConstructorWithInvalidScript(): void
@@ -594,5 +647,73 @@ echo "Result: $result\n";
         $optionsProperty = $reflection->getProperty('options');
         $options = $optionsProperty->getValue($server);
         $this->assertEquals(60, $options['timeout']);
+    }
+
+    /**
+     * Regression test for F3: the DBGp "--" data-segment key must render as
+     * "-- {value}", never as "-{key} {value}" (which for a literal "--" key
+     * produces the broken "--- {value}" triple-dash that Xdebug rejects with a
+     * parse error). This is the mechanism breakpoint_set uses to carry a
+     * base64-encoded conditional-breakpoint expression (see setBreakpoint()).
+     */
+    public function testBuildDbgpCommandRendersDataSegmentWithDoubleDashNotTripleDash(): void
+    {
+        $reflection = new ReflectionClass(DebugServer::class);
+        $buildDbgpCommand = $reflection->getMethod('buildDbgpCommand');
+
+        $command = $buildDbgpCommand->invoke(
+            null,
+            'breakpoint_set',
+            1,
+            ['t' => 'conditional', 's' => 'enabled', 'f' => 'file:///tmp/foo.php', 'n' => 5, '--' => 'JG4gPT0gMA=='],
+        );
+
+        $this->assertSame(
+            "breakpoint_set -i 1 -t conditional -s enabled -f file:///tmp/foo.php -n 5 -- JG4gPT0gMA==\0",
+            $command,
+        );
+        $this->assertStringNotContainsString('---', $command);
+    }
+
+    /**
+     * Regular (non "--") parameters must keep rendering as "-{key} {value}".
+     */
+    public function testBuildDbgpCommandRendersRegularFlagsWithSingleDash(): void
+    {
+        $reflection = new ReflectionClass(DebugServer::class);
+        $buildDbgpCommand = $reflection->getMethod('buildDbgpCommand');
+
+        $command = $buildDbgpCommand->invoke(null, 'context_get', 3, ['c' => '0']);
+
+        $this->assertSame("context_get -i 3 -c 0\0", $command);
+    }
+
+    /**
+     * Regression test for F3: a breakpoint condition containing a space (e.g.
+     * "$n == 0") must be sent as DBGp type "conditional" with the expression
+     * base64-encoded in the "--" data segment — never as the "-o"
+     * hit-condition-operator parameter, which is unrelated (it takes values
+     * like ">=", "==", "%") and cannot carry arbitrary PHP source.
+     */
+    public function testConditionalBreakpointEncodesConditionInDataSegmentNotDashO(): void
+    {
+        $reflection = new ReflectionClass(DebugServer::class);
+        $buildDbgpCommand = $reflection->getMethod('buildDbgpCommand');
+
+        // Mirror exactly what setBreakpoint() builds for a conditional
+        // breakpoint, to pin the wire format without needing a live socket.
+        $condition = '$n == 0';
+        $params = [
+            't' => 'conditional',
+            's' => 'enabled',
+            'f' => 'file:///tmp/foo.php',
+            'n' => 5,
+            '--' => base64_encode($condition),
+        ];
+        $command = $buildDbgpCommand->invoke(null, 'breakpoint_set', 1, $params);
+
+        $this->assertStringContainsString('-t conditional', $command);
+        $this->assertStringNotContainsString('-o $n == 0', $command);
+        $this->assertStringContainsString('-- ' . base64_encode($condition), $command);
     }
 }
