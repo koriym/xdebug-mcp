@@ -26,6 +26,7 @@ use function ksort;
 use function preg_match;
 use function proc_close;
 use function proc_open;
+use function register_shutdown_function;
 use function sort;
 use function stream_get_contents;
 use function strlen;
@@ -204,6 +205,17 @@ class CompareRunner
 
         $tempDir = sys_get_temp_dir() . '/xcompare-' . uniqid('', true);
         $this->worktreePath = $tempDir;
+
+        // run()'s try/finally already removes the worktree on a normal return or
+        // a thrown exception. This shutdown handler additionally covers a fatal
+        // error (the finally never runs then), so the worktree is not leaked.
+        // cleanupWorktree() nulls worktreePath, so a normal run makes this a
+        // no-op. NOTE: a SIGTERM/SIGKILL delivered while blocked in
+        // executeXstep()'s proc_close() still cannot be cleaned here — PHP
+        // shutdown functions do not run on signal-default termination.
+        register_shutdown_function(function (): void {
+            $this->cleanupWorktree();
+        });
 
         $output = [];
         $exitCode = 0;

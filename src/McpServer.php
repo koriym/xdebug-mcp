@@ -51,7 +51,9 @@ use function tempnam;
 use function trim;
 use function unlink;
 
+use const JSON_INVALID_UTF8_SUBSTITUTE;
 use const JSON_THROW_ON_ERROR;
+use const JSON_UNESCAPED_SLASHES;
 use const STDIN;
 use const STDOUT;
 
@@ -86,7 +88,10 @@ final class McpServer
             'message' => $message,
             'data' => $data,
         ];
-        error_log('MCP Debug: ' . json_encode($logData, JSON_THROW_ON_ERROR));
+        // Substitute (don't throw on) non-UTF-8 bytes in the logged payload —
+        // an unset MCP_DEBUG already skips this, but with it set a non-UTF-8
+        // request line must not be able to wedge the loop from here either.
+        error_log('MCP Debug: ' . json_encode($logData, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE));
     }
 
     private function initializeTools(): void
@@ -263,91 +268,89 @@ final class McpServer
     public function __invoke(): void
     {
         try {
-            $input = '';
-
             while (($line = fgets(STDIN)) !== false) {
-                $input .= $line;
-
-                if (! $this->isCompleteJsonRpc($input)) {
+                if (trim($line) === '') {
                     continue;
                 }
 
-                error_log('DEBUG: Raw Claude CLI input = ' . trim($input));
+                $response = $this->handleLine($line);
 
-                try {
-                    $request = json_decode(trim($input), true, 512, JSON_THROW_ON_ERROR);
-                } catch (JsonException) {
-                    // @codeCoverageIgnoreStart - JSON parse error path rarely triggered in tests
-                    // Invalid JSON, send parse error
-                    $errorResponse = [
-                        'jsonrpc' => '2.0',
-                        'id' => null,
-                        'error' => [
-                            'code' => -32700,
-                            'message' => 'Parse error',
-                        ],
-                    ];
-                    echo json_encode($errorResponse, JSON_THROW_ON_ERROR) . "\n";
-                    fflush(STDOUT);
-                    $input = '';
-
-                    continue;
-                    // @codeCoverageIgnoreEnd
-                }
-
-                // Validate request is an array
-                if (! is_array($request)) {
-                    $errorResponse = JsonRpcResponse::error(null, -32600, 'Invalid Request: expected object');
-                    echo json_encode($errorResponse, JSON_THROW_ON_ERROR) . "\n";
-                    fflush(STDOUT);
-                    $input = '';
-
+                if (! $response instanceof JsonRpcResponse) {
                     continue;
                 }
 
-                /** @var array{method?: string, params?: array<string, string|int|bool|array<string, string|int|bool>>, id?: string|int|null} $request */
-                $requestMethod = $request['method'] ?? 'unknown';
-                $requestId = $request['id'] ?? null;
-
-                error_log('DEBUG: Processing request method = ' . $requestMethod);
-
-                try {
-                    $response = $this->handleRequest($request);
-
-                    if ($response instanceof JsonRpcResponse) {
-                        $this->debugLog('Sending response', ['id' => $response->id]);
-                        echo json_encode($response, JSON_THROW_ON_ERROR) . "\n";
-                        fflush(STDOUT);
-                    }
-                } catch (Throwable $e) {
-                    error_log('DEBUG: MCP Server Error for method ' . $requestMethod . ': ' . $e->getMessage());
-                    error_log('MCP Server Error: ' . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString());
-
-                    $errorResponse = JsonRpcResponse::error($requestId, -32603, 'Internal error: ' . $e->getMessage());
-                    echo json_encode($errorResponse, JSON_THROW_ON_ERROR) . "\n";
-                    fflush(STDOUT);
-                }
-
-                $input = '';
+                $this->debugLog('Sending response', ['id' => $response->id]);
+                echo $this->encodeResponse($response) . "\n";
+                fflush(STDOUT);
             }
         } catch (Throwable $e) {
             error_log('MCP Server Fatal Error: ' . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString());
         }
     }
 
-    private function isCompleteJsonRpc(string $input): bool
+    /**
+     * Encode a response for the wire without letting an encoding failure
+     * terminate the STDIN loop.
+     *
+     * Tool results embed the raw output of arbitrary scripts (exec()), which
+     * may contain non-UTF-8 bytes; those are substituted rather than thrown on,
+     * so the response is still delivered. On any other, unexpected encoding
+     * error we emit a protocol-valid error for the same id instead of dropping
+     * the response — a dropped response would leave the client waiting forever.
+     */
+    private function encodeResponse(JsonRpcResponse $response): string
     {
-        $trimmed = trim($input);
-        if ($trimmed === '') {
-            return false;
+        try {
+            // JSON_INVALID_UTF8_SUBSTITUTE keeps non-UTF-8 tool output from
+            // throwing; the flag set otherwise matches the previous wire output.
+            return json_encode($response, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
+        } catch (JsonException $e) {
+            error_log('MCP Server Error: failed to encode response: ' . $e->getMessage());
+
+            return json_encode(
+                JsonRpcResponse::error($response->id, -32603, 'Failed to encode response'),
+                JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE,
+            );
         }
+    }
+
+    /**
+     * Parse and dispatch a single JSON-RPC request line.
+     *
+     * Stdio JSON-RPC framing is one message per line, so each line is decoded
+     * independently: a parse failure on one line can never affect any other
+     * line (there is no cross-line buffer to wedge). Returns null for
+     * notifications that require no response.
+     */
+    private function handleLine(string $line): JsonRpcResponse|null
+    {
+        $trimmed = trim($line);
+
+        $this->debugLog('Raw Claude CLI input', ['input' => $trimmed]);
 
         try {
-            json_decode($trimmed, false, 512, JSON_THROW_ON_ERROR);
-
-            return true;
+            $request = json_decode($trimmed, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException) {
-            return false;
+            return JsonRpcResponse::error(null, -32700, 'Parse error');
+        }
+
+        if (! is_array($request)) {
+            return JsonRpcResponse::error(null, -32600, 'Invalid Request: expected object');
+        }
+
+        /** @var array{method?: string, params?: array<string, string|int|bool|array<string, string|int|bool>>, id?: string|int|null} $request */
+        $requestMethod = $request['method'] ?? 'unknown';
+        $requestId = $request['id'] ?? null;
+
+        $this->debugLog('Processing request', ['method' => $requestMethod]);
+
+        try {
+            return $this->handleRequest($request);
+        } catch (Throwable $e) {
+            $this->debugLog('MCP Server Error for method ' . $requestMethod, ['message' => $e->getMessage()]);
+            error_log('MCP Server Error: ' . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString());
+
+            return JsonRpcResponse::error($requestId, -32603, 'Internal error: ' . $e->getMessage());
         }
     }
 

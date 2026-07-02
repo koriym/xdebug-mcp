@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp\Tests\Unit;
 
+use Koriym\XdebugMcp\DTO\GenericResult;
+use Koriym\XdebugMcp\DTO\JsonRpcResponse;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\McpServer;
 use PHPUnit\Framework\TestCase;
@@ -11,7 +13,10 @@ use ReflectionClass;
 use Throwable;
 
 use function array_column;
+use function json_decode;
 use function putenv;
+
+use const JSON_THROW_ON_ERROR;
 
 class McpServerTest extends TestCase
 {
@@ -93,12 +98,69 @@ class McpServerTest extends TestCase
         $this->assertEquals('Method not found: unknown/method', $response['error']['message']);
     }
 
-    public function testIsCompleteJsonRpc(): void
+    public function testHandleLineMalformedJsonReturnsParseError(): void
     {
-        $this->assertTrue($this->invokePrivateMethod($this->server, 'isCompleteJsonRpc', ['{"test": "value"}']));
-        $this->assertFalse($this->invokePrivateMethod($this->server, 'isCompleteJsonRpc', ['{"test": ']));
-        $this->assertFalse($this->invokePrivateMethod($this->server, 'isCompleteJsonRpc', ['']));
-        $this->assertFalse($this->invokePrivateMethod($this->server, 'isCompleteJsonRpc', ['not json']));
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleLine', ['{oops}']);
+        $response = $responseObj->toArray();
+
+        $this->assertNull($response['id']);
+        $this->assertEquals(-32700, $response['error']['code']);
+        $this->assertEquals('Parse error', $response['error']['message']);
+    }
+
+    public function testHandleLineValidRequestAfterMalformedLineIsNotWedged(): void
+    {
+        // Regression test for F2: a malformed line must not contaminate the
+        // next line. Each line is parsed independently by handleLine().
+        $firstResponse = $this->invokePrivateMethod($this->server, 'handleLine', ['{oops}']);
+        $this->assertEquals(-32700, $firstResponse->toArray()['error']['code']);
+
+        $secondResponse = $this->invokePrivateMethod(
+            $this->server,
+            'handleLine',
+            ['{"jsonrpc":"2.0","id":99,"method":"tools/list"}'],
+        );
+        $second = $secondResponse->toArray();
+
+        $this->assertEquals(99, $second['id']);
+        $this->assertArrayHasKey('result', $second);
+        $this->assertArrayHasKey('tools', $second['result']);
+    }
+
+    public function testEncodeResponseWithNonUtf8ToolOutputDoesNotThrow(): void
+    {
+        // Regression: tool results embed raw exec() output that may contain
+        // non-UTF-8 bytes. encodeResponse() must not throw (which would
+        // propagate to __invoke()'s outer catch and wedge the STDIN loop) — the
+        // bytes are substituted and a valid JSON response is still produced.
+        $response = JsonRpcResponse::success(7, new GenericResult([
+            'content' => [['type' => 'text', 'text' => "trace output \xff\xfe not utf-8"]],
+        ]));
+
+        $encoded = $this->invokePrivateMethod($this->server, 'encodeResponse', [$response]);
+
+        $decoded = json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(7, $decoded['id']);
+        $this->assertArrayHasKey('result', $decoded);
+    }
+
+    public function testHandleLineNonObjectJsonReturnsInvalidRequest(): void
+    {
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleLine', ['42']);
+        $response = $responseObj->toArray();
+
+        $this->assertEquals(-32600, $response['error']['code']);
+    }
+
+    public function testHandleLineNotificationsInitializedReturnsNull(): void
+    {
+        $result = $this->invokePrivateMethod(
+            $this->server,
+            'handleLine',
+            ['{"jsonrpc":"2.0","method":"notifications/initialized"}'],
+        );
+
+        $this->assertNull($result);
     }
 
     public function testToolCallWithoutConnection(): void

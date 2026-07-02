@@ -13,10 +13,12 @@ use Amp\Http\Server\RequestHandler;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
 use Amp\Process\Process;
+use Amp\Socket\InternetAddress;
 use Amp\Socket\ServerSocket;
 use Amp\Socket\Socket;
 use Amp\Socket\SocketException;
 use Amp\TimeoutCancellation;
+use Koriym\XdebugMcp\Exceptions\BreakpointException;
 use Koriym\XdebugMcp\Exceptions\DebugSessionException;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\Utilities\PathNormalizer;
@@ -39,6 +41,7 @@ use function array_reverse;
 use function array_slice;
 use function array_splice;
 use function array_unique;
+use function array_values;
 use function base64_decode;
 use function base64_encode;
 use function basename;
@@ -92,6 +95,7 @@ use function str_repeat;
 use function str_replace;
 use function str_starts_with;
 use function strlen;
+use function strpos;
 use function strtolower;
 use function strtoupper;
 use function substr;
@@ -150,6 +154,17 @@ final class DebugServer
     private ServerSocket|null $server = null;
     private Process|null $process = null;
     private int $transactionId = 1;
+
+    /** Leftover bytes read past a DBGp frame boundary; see readDbgpFrame(). */
+    private string $dbgpReadBuffer = '';
+
+    /**
+     * The port the listener is actually bound to. Defaults to the configured
+     * $debugPort, but falls back to an OS-assigned ephemeral port when that
+     * port is already in use, so concurrent sessions don't collide. Every
+     * -dxdebug.client_port the spawned PHP receives must use THIS value.
+     */
+    private int $effectiveDebugPort;
     private string|null $traceFile = null;
     private SocketHttpServer|null $httpServer = null;
     private bool $httpMode = false;
@@ -185,8 +200,15 @@ final class DebugServer
         $command = $options['command'] ?? [];
         $this->isDockerCommand = ContainerHelper::isContainerCommand($command);
 
-        // Check for existing sessions (warning only)
-        $this->checkExistingSessions();
+        // Until the listener actually binds, the effective port is the
+        // configured one. startXdebugListener() may replace it with an
+        // ephemeral port if $debugPort is already taken.
+        $this->effectiveDebugPort = $debugPort;
+
+        // Note: existing-session diagnostics (lsof) are deferred until a bind
+        // actually fails (see startXdebugListener()), instead of running on
+        // every construction — avoids startup cost and lsof-missing failures
+        // on containers/Windows.
 
         // Register shutdown handler to ensure cleanup
         register_shutdown_function([$this, 'emergencyCleanup']);
@@ -212,13 +234,53 @@ final class DebugServer
         ];
 
         try {
-            Future\awaitAll($tasks);
+            // Future\await() (unlike awaitAll()) throws on the first task
+            // failure, so listener-bind collisions, connection timeouts, and
+            // spawn errors are no longer silently discarded. Tasks that finish
+            // successfully call gracefulExit(0) themselves (see
+            // performDebugSequence()/startConsoleSession()), which exits the
+            // process before this call can return, so the success path is
+            // unaffected.
+            Future\await($tasks);
         } catch (Throwable $e) {
             $this->log('❌ Debug session failed: ' . $e->getMessage());
 
+            // Cleanup must still run (socket/process teardown, and JSON output
+            // in --json mode), but we must NOT force exit(0): that masked every
+            // failure as success. Run cleanup, then let the exception propagate
+            // so bin/xstep surfaces a non-zero exit + stderr message.
+            $this->emergencyCleanup();
+
             throw new DebugSessionException('Debug session failed', 0, $e);
-        } finally {
-            $this->gracefulExit(0);
+        }
+
+        // All tasks completed without the process having already exited via a
+        // task-internal gracefulExit(0) (e.g. traceOnly mode never reaches
+        // here). Normal successful completion.
+        $this->gracefulExit(0);
+    }
+
+    /**
+     * Bind the listener, preferring the configured port but falling back to an
+     * OS-assigned ephemeral port when it is already in use.
+     *
+     * The fixed port keeps working as the documented default (and the
+     * session-key isolation story with IDEs), while the fallback lets two
+     * xdebug-mcp sessions run concurrently instead of the second one silently
+     * failing on "Address already in use".
+     */
+    private function listenOnAvailablePort(string $listenAddress): ServerSocket
+    {
+        try {
+            return listen("{$listenAddress}:{$this->debugPort}");
+        } catch (SocketException) {
+            // Configured port busy (another xdebug-mcp session or an IDE). Emit
+            // a best-effort diagnostic, then bind an ephemeral port so this
+            // session can still run alongside the other one.
+            $this->logExistingSessions();
+            $this->log("⚠️ Port {$this->debugPort} in use; binding an ephemeral port instead");
+
+            return listen("{$listenAddress}:0");
         }
     }
 
@@ -231,8 +293,14 @@ final class DebugServer
             // Use 0.0.0.0 for Docker to allow connections from containers
             // Use 127.0.0.1 for local commands for security
             $listenAddress = $this->isDockerCommand ? '0.0.0.0' : '127.0.0.1';
-            $this->server = listen("{$listenAddress}:{$this->debugPort}");
-            $this->log("📡 Listener ready on {$listenAddress}:{$this->debugPort}");
+            $this->server = $this->listenOnAvailablePort($listenAddress);
+
+            $address = $this->server->getAddress();
+            $this->effectiveDebugPort = $address instanceof InternetAddress
+                ? $address->getPort()
+                : $this->debugPort;
+
+            $this->log("📡 Listener ready on {$listenAddress}:{$this->effectiveDebugPort}");
             $this->log('⏳ Waiting for Xdebug connection...');
 
             // Notify listener ready (Opus pattern)
@@ -252,6 +320,8 @@ final class DebugServer
 
             $this->log('✅ Xdebug connected!');
             $this->xdebugSocket = $socket;
+            // Fresh connection: discard any bytes buffered for a prior socket.
+            $this->dbgpReadBuffer = '';
 
             // Close server socket after accepting connection
             $this->server?->close();
@@ -315,7 +385,7 @@ final class DebugServer
                         '-dxdebug.mode=debug,trace',
                         '-dxdebug.start_with_request=yes',
                         '-dxdebug.client_host=' . $clientHost,
-                        '-dxdebug.client_port=' . $this->debugPort,
+                        '-dxdebug.client_port=' . $this->effectiveDebugPort,
                         '-dxdebug.output_dir=/tmp',
                         '-dxdebug.trace_output_name=trace-%s',
                         '-dxdebug.trace_format=1',
@@ -387,7 +457,7 @@ final class DebugServer
                         $includeVendorEnv,
                         escapeshellarg($phpBinary),
                         $xdebugPart,
-                        $this->debugPort,
+                        $this->effectiveDebugPort,
                         escapeshellarg($prependFilter),
                         implode(' ', array_map(escapeshellarg(...), array_slice($command, 1))),
                     );
@@ -430,7 +500,7 @@ final class DebugServer
                     $includeVendorEnv,
                     escapeshellarg($phpBinary),
                     $xdebugPart,
-                    $this->debugPort,
+                    $this->effectiveDebugPort,
                     escapeshellarg($prependFilter),
                     escapeshellarg($this->targetScript),
                 );
@@ -869,6 +939,36 @@ final class DebugServer
     }
 
     /**
+     * Build a DBGp command line, including the trailing NUL terminator.
+     *
+     * Every param is rendered as "-{key} {value}" EXCEPT the special "--" key,
+     * which DBGp reserves for a data segment (typically a base64-encoded
+     * expression) and which must be rendered as a literal "-- {value}" — never
+     * "-{key} {value}" (that would produce the "--- {value}" triple-dash that
+     * Xdebug rejects with a parse error). See eval's usage of "--" in
+     * evaluateExpression()/getJsonEncodeOutput() for the established convention
+     * this reuses.
+     *
+     * @param array<string, string|int> $params
+     */
+    private static function buildDbgpCommand(string $command, int $transactionId, array $params): string
+    {
+        $fullCommand = "{$command} -i {$transactionId}";
+
+        foreach ($params as $key => $value) {
+            if ($key === '--') {
+                $fullCommand .= " -- {$value}";
+
+                continue;
+            }
+
+            $fullCommand .= " -{$key} {$value}";
+        }
+
+        return $fullCommand . "\0";
+    }
+
+    /**
      * Send a DBGp command and wait for the response
      *
      * @param array<string, string|int> $params
@@ -886,14 +986,7 @@ final class DebugServer
 
         // Build full command with transaction ID
         $transactionId = $this->getNextTransactionId();
-        $fullCommand = "{$command} -i {$transactionId}";
-
-        // Add additional parameters
-        foreach ($params as $key => $value) {
-            $fullCommand .= " -{$key} {$value}";
-        }
-
-        $fullCommand .= "\0";
+        $fullCommand = self::buildDbgpCommand($command, $transactionId, $params);
 
         try {
             $this->xdebugSocket->write($fullCommand);
@@ -976,30 +1069,58 @@ final class DebugServer
 
     /**
      * Set breakpoint
+     *
+     * A conditional breakpoint is sent as DBGp type "conditional" with the PHP
+     * expression base64-encoded in the "--" data segment (the same convention
+     * evaluateExpression() uses for eval). The "-o" flag is the unrelated
+     * hit-condition operator (">=", "==", "%") and must never carry the
+     * expression: doing so puts raw, unescaped PHP source (potentially
+     * containing spaces) directly on the DBGp command line, which Xdebug
+     * rejects with a parse error.
+     *
+     * @throws BreakpointException If Xdebug rejects the breakpoint_set command.
      */
     private function setBreakpoint(string $filename, int $line, string|null $condition = null): string
     {
         $fileUri = $this->toFileUri($filename);
+        $trimmedCondition = $condition !== null ? trim($condition) : '';
+
         $params = [
-            't' => 'line',
+            't' => $trimmedCondition !== '' ? 'conditional' : 'line',
             's' => 'enabled',
             'f' => $fileUri,
             'n' => $line,
         ];
 
-        // Add condition if provided
-        if ($condition !== null && trim($condition) !== '') {
-            $params['o'] = trim($condition);
+        // A conditional expression travels base64-encoded in the "--" data
+        // segment, not as the "-o" hit-condition operator.
+        if ($trimmedCondition !== '') {
+            $params['--'] = base64_encode($trimmedCondition);
         }
 
         $response = $this->sendCommand('breakpoint_set', $params);
 
-        // Check for error
-        if (str_contains($response, '<error')) {
-            // Log the error for debugging
-            $this->log('⚠️ Breakpoint error: ' . $response);
+        // sendCommand() returns '' on a read failure/connection drop. Without
+        // this guard an empty response would slip past the <error> check and
+        // the id="..." regex and return the 'unknown' sentinel, recording a
+        // breakpoint that was never actually set.
+        if ($response === '') {
+            throw new BreakpointException(
+                "No response from Xdebug when setting breakpoint at {$filename}:{$line}",
+            );
+        }
 
-            return 'error';
+        if (str_contains($response, '<error')) {
+            $message = 'Xdebug rejected breakpoint_set';
+            if (preg_match('/<message>([^<]+)<\/message>/', $response, $matches)) {
+                $message = $matches[1];
+            }
+
+            $this->log("⚠️ Breakpoint error: {$message}");
+
+            throw new BreakpointException(
+                "Failed to set breakpoint at {$filename}:{$line}: {$message}",
+            );
         }
 
         // Parse breakpoint ID from response
@@ -1031,26 +1152,31 @@ final class DebugServer
             $line = (int) $breakpoint['line'];
             $condition = $breakpoint['condition'] ?? null;
 
-            // Set the breakpoint with condition
-            $breakpointId = $this->setBreakpoint($file, $line, $condition);
-
-            if ($breakpointId !== 'error') {
-                $breakpointMetadata = [
-                    'id' => $breakpointId,
-                    'label' => $this->makeBreakpointLabel($file, $line, $condition, $index),
-                    'file' => $file,
-                    'line' => $line,
-                ];
-                if ($condition !== null && $condition !== '') {
-                    $breakpointMetadata['condition'] = $condition;
-                }
-
-                $this->configuredBreakpoints[] = $breakpointMetadata;
+            // A single rejected breakpoint (e.g. a duplicate file:line, DBGp
+            // error code 200) must NOT abort the whole session: setBreakpoint()
+            // throws BreakpointException, so we catch it per-breakpoint, warn on
+            // stderr (stdout stays reserved for JSON output), and keep setting
+            // the remaining breakpoints. Letting it propagate would leave the
+            // Xdebug-paused child hanging until DEFAULT_EXECUTION_TIMEOUT.
+            try {
+                $breakpointId = $this->setBreakpoint($file, $line, $condition);
+            } catch (BreakpointException $e) {
+                fwrite(STDERR, "xstep: warning: {$e->getMessage()}\n");
 
                 continue;
             }
 
-            $this->log("❌ Failed to set breakpoint: {$file}:{$line}");
+            $breakpointMetadata = [
+                'id' => $breakpointId,
+                'label' => $this->makeBreakpointLabel($file, $line, $condition, $index),
+                'file' => $file,
+                'line' => $line,
+            ];
+            if ($condition !== null && $condition !== '') {
+                $breakpointMetadata['condition'] = $condition;
+            }
+
+            $this->configuredBreakpoints[] = $breakpointMetadata;
         }
     }
 
@@ -1369,7 +1495,7 @@ final class DebugServer
     public function enableHttpMode(int|null $httpPort = null): void
     {
         $this->httpMode = true;
-        $port = $httpPort ?: $this->debugPort + 100; // Default: debug port + 100
+        $port = $httpPort ?: $this->effectiveDebugPort + 100; // Default: debug port + 100
 
         // Create simple logger for AMP SocketHttpServer
         $logger = new class implements LoggerInterface {
@@ -2417,7 +2543,15 @@ final class DebugServer
     }
 
     /**
-     * Read DBGp frame - Fixed version with proper argument order
+     * Read one DBGp frame ("length\0data\0").
+     *
+     * Reads whole chunks into a persistent buffer and slices frames out of it,
+     * so the length header no longer costs one socket round-trip per digit. Any
+     * bytes read past the current frame stay buffered for the next call. The
+     * data body is taken by exact length (not by scanning for a NUL), so NUL
+     * bytes inside the payload — e.g. anonymous-class names on PHP 8.3+ — are
+     * preserved. The buffer belongs to the single Xdebug socket this server
+     * owns and is reset when that socket is (re)accepted.
      */
     private function readDbgpFrame(Socket $socket): string
     {
@@ -2426,52 +2560,72 @@ final class DebugServer
         $timeout = $timeoutValue > 0 ? new TimeoutCancellation($timeoutValue) : null;
 
         try {
-            // Read length header until NULL byte
-            // FIXED: Correct argument order - Cancellation first, then length
-            $lengthStr = '';
-            while (true) {
-                $char = $timeout instanceof TimeoutCancellation ? $socket->read($timeout, 1) : $socket->read(null, 1);
-                if ($char === null || $char === '') {
-                    throw new RuntimeException('Connection closed while reading length');
-                }
+            // Length header: everything up to the first NUL. The length is pure
+            // ASCII digits, so the first NUL is always the header delimiter.
+            $nulPos = $this->fillDbgpBufferUntilNul($socket, $timeout);
+            $length = (int) substr($this->dbgpReadBuffer, 0, $nulPos);
 
-                if ($char === "\0") {
-                    break;
-                }
-
-                $lengthStr .= $char;
-            }
-
-            $length = (int) $lengthStr;
             if ($length <= 0) {
                 throw new RuntimeException("Invalid response length: {$length}");
             }
 
-            // Read the response data
-            // FIXED: Correct argument order
-            $response = '';
-            $remaining = $length;
-            while ($remaining > 0) {
-                $chunk = $timeout instanceof TimeoutCancellation ? $socket->read($timeout, $remaining) : $socket->read(null, $remaining);
-                if ($chunk === null || $chunk === '') {
-                    throw new RuntimeException('Connection closed while reading response data');
-                }
+            // Do NOT consume the header until the whole frame (header + NUL +
+            // payload + trailing NUL) is buffered. If the payload read fails
+            // partway (readTimeout fires, or the connection drops), the buffer
+            // must still look like an intact, resumable frame — otherwise the
+            // next read would misparse leftover payload bytes as a new length
+            // header and desync every subsequent frame on this socket.
+            $headerLength = $nulPos + 1;
+            $frameLength = $headerLength + $length + 1;
+            $this->fillDbgpBufferTo($socket, $timeout, $frameLength);
 
-                $response .= $chunk;
-                $remaining -= strlen($chunk);
-            }
+            $response = substr($this->dbgpReadBuffer, $headerLength, $length);
+            $trailingNull = $this->dbgpReadBuffer[$headerLength + $length];
+            $this->dbgpReadBuffer = substr($this->dbgpReadBuffer, $frameLength);
 
-            // Read the trailing NULL byte
-            // FIXED: Correct argument order
-            $trailingNull = $timeout instanceof TimeoutCancellation ? $socket->read($timeout, 1) : $socket->read(null, 1);
             if ($trailingNull !== "\0") {
-                $this->log('Warning: Expected trailing NULL byte, got: ' . bin2hex($trailingNull ?? ''));
+                $this->log('Warning: Expected trailing NULL byte, got: ' . bin2hex($trailingNull));
             }
 
             return $response;
         } catch (Throwable $e) {
             throw new DebugSessionException('Failed to read DBGp frame: ' . $e->getMessage(), 0, $e);
         }
+    }
+
+    /**
+     * Read chunks into the buffer until it contains a NUL; return its offset.
+     */
+    private function fillDbgpBufferUntilNul(Socket $socket, TimeoutCancellation|null $timeout): int
+    {
+        while (true) {
+            $pos = strpos($this->dbgpReadBuffer, "\0");
+            if ($pos !== false) {
+                return $pos;
+            }
+
+            $this->dbgpReadBuffer .= $this->readDbgpChunk($socket, $timeout);
+        }
+    }
+
+    /**
+     * Read chunks into the buffer until it holds at least $need bytes.
+     */
+    private function fillDbgpBufferTo(Socket $socket, TimeoutCancellation|null $timeout, int $need): void
+    {
+        while (strlen($this->dbgpReadBuffer) < $need) {
+            $this->dbgpReadBuffer .= $this->readDbgpChunk($socket, $timeout);
+        }
+    }
+
+    private function readDbgpChunk(Socket $socket, TimeoutCancellation|null $timeout): string
+    {
+        $chunk = $timeout instanceof TimeoutCancellation ? $socket->read($timeout) : $socket->read();
+        if ($chunk === null || $chunk === '') {
+            throw new RuntimeException('Connection closed while reading DBGp frame');
+        }
+
+        return $chunk;
     }
 
     /**
@@ -2488,18 +2642,17 @@ final class DebugServer
     }
 
     /**
-     * Check for existing Xdebug sessions on our port (now session-key aware)
+     * Best-effort, warning-only diagnostic for why binding our port failed.
+     *
+     * Invoked lazily — only after a real bind failure — instead of on every
+     * construction. Shells out to `lsof`, which may be missing (containers,
+     * Windows); any failure to obtain PIDs is silently treated as "unknown"
+     * and never escalated, so this can never turn a bind failure into a
+     * different error.
      */
-    private function checkExistingSessions(): void
+    private function logExistingSessions(): void
     {
-        $command = sprintf('lsof -ti :%d 2>/dev/null', $this->debugPort);
-        $pids = shell_exec($command);
-
-        if (! $pids) {
-            return;
-        }
-
-        $pidList = array_filter(explode("\n", trim($pids)));
+        $pidList = self::findPidsListeningOnPort($this->debugPort);
         if ($pidList === []) {
             return;
         }
@@ -2507,6 +2660,33 @@ final class DebugServer
         $this->log(sprintf('🔌 Port %d shared with other sessions: %s', $this->debugPort, implode(', ', $pidList)));
         $this->log('🎯 Using session key "xdebug-mcp" for isolation');
         $this->log('💡 IDEs can use different session keys (PHPSTORM, vscode, etc.)');
+    }
+
+    /**
+     * Shell out to `lsof` to list PIDs bound to a port.
+     *
+     * @return list<string>
+     */
+    private static function findPidsListeningOnPort(int $port): array
+    {
+        $pids = shell_exec(sprintf('lsof -ti :%d 2>/dev/null', $port));
+
+        return self::parsePidList($pids);
+    }
+
+    /**
+     * Extracted for unit testing without shelling out to `lsof`. Returns an
+     * empty list whenever the output is unavailable, errors, or finds nothing.
+     *
+     * @return list<string>
+     */
+    private static function parsePidList(string|false|null $lsofOutput): array
+    {
+        if (! $lsofOutput) {
+            return [];
+        }
+
+        return array_values(array_filter(explode("\n", trim($lsofOutput))));
     }
 
     /**
@@ -2546,10 +2726,20 @@ final class DebugServer
         $this->log('🚨 Emergency cleanup triggered');
         $this->cleanup();
 
-        // Only kill our own xdebug-mcp processes on abnormal termination
-        // This preserves other sessions (IDE) using the same port with different keys
-        $command = 'pkill -f "XDEBUG_SESSION=xdebug-mcp" 2>/dev/null || true';
-        shell_exec($command);
+        // Kill only the child process WE spawned, by its PID. The previous
+        // `pkill -f "XDEBUG_SESSION=xdebug-mcp"` matched by command line and so
+        // also killed the children of any OTHER concurrent xdebug-mcp session
+        // (the session key is a constant, not per-session). kill() is a no-op
+        // if the process has already exited.
+        if (! ($this->process instanceof Process)) {
+            return;
+        }
+
+        try {
+            $this->process->kill();
+        } catch (Throwable) {
+            // Already exited / nothing to kill.
+        }
     }
 
     /**
@@ -2765,7 +2955,7 @@ final class DebugServer
     {
         $context = [
             'target_script' => $this->targetScript,
-            'debug_port' => $this->debugPort,
+            'debug_port' => $this->effectiveDebugPort,
             'trace_file' => $this->traceFile,
             'breakpoint_line' => $this->initialBreakpointLine,
         ];
