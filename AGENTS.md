@@ -4,14 +4,14 @@
 - Core code lives in `src/` under the `Koriym\XdebugMcp` namespace; CLI entrypoints are in `bin/` (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`, `check-env`).
 - Tests are in `tests/` (`Unit/`, `Integration/`, `docker/`, `ai/`), with fixtures under `tests/fixtures` and fake data under `tests/fake`.
 - Documentation and assets reside in `docs/`; sample scenarios are under `demo/`; profiler helpers live in `profiler/`.
-- Quality configs: `phpcs.xml`, `phpstan.neon`, `psalm.xml`, `rector.php`, `phpunit.xml`.
+- Quality configs: `phpcs.xml`, `phpstan.neon`, `rector.php`, `phpunit.xml`.
 
 ## Build, Test, and Development Commands
 - Install deps: `composer install`.
 - Fast test run: `composer test` (PHPUnit).
 - Full gate: `composer tests` (coding standard, static analysis, then PHPUnit).
 - Coverage: `composer coverage` (uses `bin/xcoverage` + PHPUnit, writes to `build/coverage`).
-- Static analysis: `composer sa` (PHPStan) and `composer psalm`.
+- Static analysis: `composer sa` (PHPStan).
 - Coding standard: `composer cs` / autofix with `composer cs-fix`.
 - Environment helpers: `composer check-env`, `composer install-mcp`, `composer install-desktop`.
 

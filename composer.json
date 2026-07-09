@@ -57,11 +57,6 @@
         "pcov": "php -dextension=pcov.so -d pcov.enabled=1 ./vendor/bin/phpunit --coverage-text --coverage-html=build/coverage --coverage-clover=build/coverage.xml",
         "cs": "phpcs",
         "cs-fix": "phpcbf src tests",
-        "psalm": "psalm --show-info=false",
-        "baseline": "psalm --set-baseline=psalm-baseline.xml",
-        "clean": [
-            "psalm --clear-cache"
-        ],
         "sa": [
             "php -d memory_limit=512M ./vendor/bin/phpstan"
         ],
@@ -76,7 +71,6 @@
             "@test"
         ],
         "build": [
-            "@clean",
             "@cs",
             "@sa",
             "@coverage"
