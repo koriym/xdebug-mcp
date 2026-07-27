@@ -70,7 +70,7 @@ The tools work by launching the target PHP script with Xdebug loaded on-demand (
 
 ## Commit & Pull Request Guidelines
 
-- Commit messages are short and prefixed by scope (e.g., `docs: ...`, `refactor: ...`, `fix: ...`); group unrelated changes into separate commits.
+- Commit messages are short, written in plain imperative without `feat:`/`fix:`/`docs:`-style Conventional Commits prefixes; group unrelated changes into separate commits.
 - PRs should describe intent, approach, and risk; link issues when available and paste relevant CLI output (test/coverage snapshots, `check-env` for environment changes).
 - Add screenshots or logs when touching docs/UX or CLI output formatting; note any required Xdebug/runtime configuration adjustments.
 
