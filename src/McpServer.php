@@ -1349,6 +1349,10 @@ final class McpServer
                 throw new InvalidArgumentException('Breakpoint argument is required');
             }
 
+            if (str_contains($breakpoint, ',')) {
+                throw new InvalidArgumentException('xcompare accepts a single breakpoint location shared by both runs (e.g., "src/Calculator.php:25")');
+            }
+
             $this->validateBreakpoints($breakpoint);
 
             $runA = $args['script_a'] ?? '';

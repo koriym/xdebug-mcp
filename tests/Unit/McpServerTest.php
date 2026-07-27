@@ -427,6 +427,23 @@ class McpServerTest extends TestCase
         $this->assertStringContainsString('Unknown tool: invalid-tool', $response['error']['message']);
     }
 
+    public function testExecuteXCompareRejectsMultipleBreakpoints(): void
+    {
+        // xcompare shares one breakpoint across both runs; comma-separated lists must be rejected
+        $result = $this->invokePrivateMethod($this->server, 'executeXCompare', [
+            null,
+            [
+                'script_a' => 'php tests/fake/loop-counter.php',
+                'script_b' => 'php tests/fake/array-manipulation.php',
+                'breakpoint' => 'tests/fake/loop-counter.php:10,tests/fake/array-manipulation.php:20',
+            ],
+        ]);
+        $response = $result->toArray();
+
+        $this->assertArrayHasKey('error', $response);
+        $this->assertStringContainsString('single breakpoint', $response['error']['message']);
+    }
+
     public function testToolsCallXDebug(): void
     {
         // Test tools/call request with xstep to hit executeToolCall case
