@@ -184,7 +184,7 @@ PHP);
 
         try {
             $command = sprintf(
-                'cd %s && ./bin/xcoverage -- php ./vendor/bin/phpunit --no-coverage --no-configuration --coverage-filter %s %s 2>&1',
+                'cd %s && ./bin/xcoverage --json -- php ./vendor/bin/phpunit --no-coverage --no-configuration --coverage-filter %s %s 2>&1',
                 escapeshellarg($root),
                 escapeshellarg($sourceDir),
                 escapeshellarg($testFile),
@@ -279,7 +279,7 @@ PHP);
 
         try {
             $command = sprintf(
-                'cd %s && ./bin/xcoverage --raw --source=%s -- php %s 2>&1',
+                'cd %s && ./bin/xcoverage --raw --json --source=%s -- php %s 2>&1',
                 escapeshellarg($root),
                 escapeshellarg($sourceDir),
                 escapeshellarg($entryFile),
@@ -326,7 +326,7 @@ PHP);
         }
 
         $command = sprintf(
-            'cd %s && ./bin/xcoverage --raw -- php -r %s 2>&1',
+            'cd %s && ./bin/xcoverage --raw --json -- php -r %s 2>&1',
             escapeshellarg(dirname(__DIR__, 2)),
             escapeshellarg('echo strlen("abc"), PHP_EOL;'),
         );
@@ -344,6 +344,26 @@ PHP);
         $this->assertSame('line', $coverage['coverage_type']);
         $this->assertGreaterThanOrEqual(1, $coverage['summary']['files']);
         $this->assertGreaterThanOrEqual(1, $coverage['summary']['covered_lines']);
+    }
+
+    public function testXcoverageRawDefaultsToCompactFormat(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        // 2>/dev/null drops the program output on STDERR; STDOUT must be the compact report only
+        $command = sprintf(
+            'cd %s && ./bin/xcoverage --raw -- php demo/coverage.php 2>/dev/null',
+            escapeshellarg(dirname(__DIR__, 2)),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+        $this->assertMatchesRegularExpression('/^\d+(?:\.\d+)?% \(\d+\/\d+ lines covered, \d+ files?\)\n/', $output);
+        $this->assertStringContainsString('demo/coverage.php:', $output);
+        $this->assertStringNotContainsString('{"$schema"', $output);
+        $this->assertStringNotContainsString('Code Coverage Demo', $output);
     }
 
     public function testXcoverageRawPhpRunPreservesLineConstant(): void
