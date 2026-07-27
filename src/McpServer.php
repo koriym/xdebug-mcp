@@ -6,6 +6,7 @@ namespace Koriym\XdebugMcp;
 
 use JsonException;
 use Koriym\XdebugMcp\DTO\GenericResult;
+use Koriym\XdebugMcp\DTO\JsonRpcError;
 use Koriym\XdebugMcp\DTO\JsonRpcResponse;
 use Koriym\XdebugMcp\DTO\McpTool;
 use Koriym\XdebugMcp\DTO\ToolsListResult;
@@ -907,6 +908,11 @@ final class McpServer
      */
     private function extractResultText(JsonRpcResponse $response): string
     {
+        // Surface execution errors (e.g. argument validation) instead of a bare "No result"
+        if ($response->error instanceof JsonRpcError) {
+            return 'Error: ' . $response->error->message;
+        }
+
         $data = $response->result?->jsonSerialize();
         if (! is_array($data)) {
             return 'No result';

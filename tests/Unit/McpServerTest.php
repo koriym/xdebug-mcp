@@ -392,18 +392,12 @@ class McpServerTest extends TestCase
 
     public function testExecuteToolCall(): void
     {
-        // Test executeToolCall method directly - it should handle exceptions and return formatted result
-        // The method catches exceptions and handles them, so let's test it returns proper error content
-        try {
-            $result = $this->invokePrivateMethod($this->server, 'executeToolCall', ['xtrace', ['script' => '']]);
-            // executeToolCall should return a string result, not throw exception
-            $this->assertIsString($result);
-            $this->assertStringContainsString('No result', $result); // Default fallback when execution fails
-        } catch (Throwable $e) {
-            // If an exception is thrown, it should be InvalidArgumentException
-            $this->assertInstanceOf(InvalidArgumentException::class, $e);
-            $this->assertStringContainsString('Script argument is required', $e->getMessage());
-        }
+        // executeToolCall surfaces execution errors (e.g. argument validation) as text
+        $result = $this->invokePrivateMethod($this->server, 'executeToolCall', ['xtrace', ['script' => '']]);
+
+        $this->assertIsString($result);
+        $this->assertStringContainsString('Error:', $result);
+        $this->assertStringContainsString('Script argument is required', $result);
     }
 
     public function testHandleToolCallError(): void
