@@ -132,6 +132,8 @@ final class PhpCommandParser
      * Find the script argument index after the PHP binary.
      *
      * Skips PHP options (both short and long) that consume a value argument.
+     * Returns false when inline code (-r/--run) is executed, as there is no
+     * script file argument in that case.
      *
      * @param array<int, string> $parts    Command parts.
      * @param int                $phpIndex Index of the PHP binary in $parts.
@@ -144,6 +146,15 @@ final class PhpCommandParser
 
         while (isset($parts[$scriptIndex]) && str_starts_with($parts[$scriptIndex], '-')) {
             $currentOption = $parts[$scriptIndex];
+
+            if (
+                in_array($currentOption, self::PHP_INLINE_CODE_OPTIONS, true)
+                || str_starts_with($currentOption, '--run=')
+                || (str_starts_with($currentOption, '-r') && $currentOption !== '-r')
+            ) {
+                return false;
+            }
+
             $scriptIndex++;
 
             if (

@@ -105,6 +105,17 @@ final class PhpCommandParserTest extends TestCase
         $this->assertFalse(PhpCommandParser::findScriptIndex(['php', '-d', 'memory_limit=1G'], 0));
     }
 
+    #[Test]
+    public function findScriptIndexReturnsFalseForInlineCode(): void
+    {
+        // Inline code execution has no script file argument
+        $this->assertFalse(PhpCommandParser::findScriptIndex(['php', '-r', 'echo 1;'], 0));
+        $this->assertFalse(PhpCommandParser::findScriptIndex(['php', '--run', 'echo 1;'], 0));
+        $this->assertFalse(PhpCommandParser::findScriptIndex(['php', '-recho 1;'], 0));
+        $this->assertFalse(PhpCommandParser::findScriptIndex(['php', '--run=echo 1;'], 0));
+        $this->assertFalse(PhpCommandParser::findScriptIndex(['php', '-d', 'memory_limit=1G', '-r', 'echo 1;'], 0));
+    }
+
     /** @return array<string, array{string, bool}> */
     public static function provideInlineCodeScripts(): array
     {
