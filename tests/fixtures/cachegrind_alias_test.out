@@ -1,0 +1,21 @@
+version: 1
+creator: xdebug 3.4.0 (PHP 8.4.23) (test fixture)
+cmd: /project/tests/fixtures/cachegrind_alias_test.php
+part: 1
+positions: line
+events: Time_(10ns) Memory_(bytes)
+summary: 90000 1048576
+fl=(1) php:internal
+fn=(1) php::strlen
+10 1000 1024
+fl=(2) /project/src/Service.php
+fn=(2) Service::run
+20 50000 524288
+fl=(2)
+fn=(2)
+30 20000 1024
+fn=(3) Service::helper
+40 10000 512
+fl=(2)
+fn=(2)
+50 5000 512

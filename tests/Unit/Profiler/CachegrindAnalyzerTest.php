@@ -89,6 +89,27 @@ final class CachegrindAnalyzerTest extends TestCase
     }
 
     #[Test]
+    public function resolvesBareFunctionAliasReferences(): void
+    {
+        // Callgrind name compression: costs under a bare fn=(N) reference must
+        // accumulate onto the function defined earlier by fn=(N) name.
+        $fixture = dirname(__DIR__, 2) . '/fixtures/cachegrind_alias_test.out';
+        $analyzer = new CachegrindAnalyzer();
+        $result = $analyzer->analyze($fixture);
+
+        $this->assertSame(3, $result['functions_count']);
+        $this->assertSame(2, $result['user_functions']);
+        $this->assertSame(1, $result['internal_functions']);
+
+        $functions = array_column($result['bottleneck_functions'], 'function');
+        $this->assertSame(['Service::run', 'Service::helper', 'php::strlen'], $functions);
+
+        // 50000 (definition) + 20000 + 5000 (bare alias references) = 75000 * 10ns = 0.75ms
+        $run = $result['bottleneck_functions'][0];
+        $this->assertSame(0.75, $run['time_ms']);
+    }
+
+    #[Test]
     public function throwsExceptionForMissingFile(): void
     {
         $this->expectException(RuntimeException::class);

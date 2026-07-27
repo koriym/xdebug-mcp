@@ -111,6 +111,7 @@ final class CachegrindAnalyzer
         $currentFunction = null;
         $currentFile = null;
         $fileAliases = [];
+        $functionAliases = [];
 
         $handle = fopen($profileFile, 'r');
         if ($handle === false) {
@@ -177,12 +178,19 @@ final class CachegrindAnalyzer
 
             if (strpos($line, 'fn=') === 0) {
                 $currentFunction = substr($line, 3);
-                if (! $this->shouldIncludeProfileFile($currentFile, $includeVendor)) {
-                    $currentFunction = null;
-                    continue;
+
+                // Callgrind name compression: fn=(N) name defines an alias,
+                // a bare fn=(N) references it. Resolve aliases like fl= does.
+                if (preg_match('/^\((\d+)\)\s+.+$/', $currentFunction, $defMatch)) {
+                    $functionAliases[$defMatch[1]] = $currentFunction;
+                } elseif (preg_match('/^\((\d+)\)$/', $currentFunction, $aliasMatch)) {
+                    $currentFunction = $functionAliases[$aliasMatch[1]] ?? null;
+                    if ($currentFunction === null) {
+                        continue;
+                    }
                 }
 
-                if (preg_match('/^\(\d+\)$/', $currentFunction)) {
+                if (! $this->shouldIncludeProfileFile($currentFile, $includeVendor)) {
                     $currentFunction = null;
                     continue;
                 }
