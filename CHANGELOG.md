@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-07-28
+
+### Added
+- `xcompare` MCP tool: compare variable states at the same breakpoint across two PHP executions (#91).
+- xcoverage now defaults to a compact AI-first report (coverage percent + uncovered lines per file); `--json` keeps the schema-backed JSON (#91).
+
+### Changed
+- xcoverage: STDOUT carries only the coverage report; the target program's own output and failed PHPUnit output go to STDERR (#91).
+- `tools/call` responses surface execution error messages instead of a bare "No result" (#91).
+- Extract `PhpCommandParser` and `CachegrindAnalyzer` from CLI scripts into unit-testable classes (#91).
+- Commit messages no longer use Conventional Commits prefixes (#91).
+
+### Fixed
+- xcompare rejects comma-separated breakpoint lists instead of silently mis-parsing them (#91).
+- `findScriptIndex()` returns false for inline code (`-r`/`--run`) instead of treating the code as a script file (#91).
+- Cachegrind analysis resolves Callgrind-style bare `fn=(id)` aliases instead of dropping their costs, and counts PDO static calls as database operations (#91).
+- Japanese locale detection matches `ja` as a primary language tag (no more `Azerbaijani` false positive), with POSIX priority order (LC_ALL → LC_MESSAGES → LANG) and macOS AppleLanguages fallback (#91).
+- `DbgpXml::sanitize()` preserves U+007F, consistent with `isXmlCharacter()` (#91).
+- xcoverage exits non-zero when the coverage payload is missing or corrupt instead of inheriting the target's exit status (#91).
+- Cross-platform `claude` CLI detection via PATH lookup instead of a hard-coded macOS path (#91).
+
 ## [0.11.1] - 2026-07-03
 
 ### Added
