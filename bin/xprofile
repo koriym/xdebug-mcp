@@ -6,8 +6,8 @@ declare(strict_types=1);
 // Load autoloader and get project root
 $projectRoot = require __DIR__ . '/autoload.php';
 
+use Koriym\XdebugMcp\Profiler\CachegrindAnalyzer;
 use Koriym\XdebugMcp\XdebugRunner;
-use Koriym\XdebugMcp\Utilities\VendorFilter;
 
 function showHelp(string $scriptName): void
 {
@@ -119,7 +119,9 @@ try {
         exit(1);
     }
 
-    $result = generateEnhancedProfileData($profileFile, $jsonOutput, $context, $scriptOutput, $includeVendor);
+    $analyzer = new CachegrindAnalyzer();
+    $stats = $analyzer->analyze($profileFile, $includeVendor);
+    $result = generateEnhancedProfileData($profileFile, $stats, $jsonOutput, $context, $scriptOutput);
 
     if ($jsonOutput) {
         // AI-optimized compact JSON output
@@ -148,16 +150,9 @@ try {
     exit(1);
 }
 
-function generateEnhancedProfileData(string $profileFile, bool $jsonOutput = false, ?string $context = null, ?string $scriptOutput = null, ?string $includeVendor = null): array
+function generateEnhancedProfileData(string $profileFile, array $stats, bool $jsonOutput = false, ?string $context = null, ?string $scriptOutput = null): array
 {
-    if (!file_exists($profileFile) || !is_readable($profileFile)) {
-        throw new \RuntimeException("Profile file not found or not readable: $profileFile");
-    }
-
     $fileSize = filesize($profileFile);
-
-    // Comprehensive analysis
-    $stats = analyzeCachegrindFile($profileFile, $includeVendor);
 
     if ($jsonOutput) {
         $result = [
@@ -186,321 +181,30 @@ function generateEnhancedProfileData(string $profileFile, bool $jsonOutput = fal
         }
 
         return $result;
-    } else {
-        // Human-readable result without emojis but with all data
-        $result = [
-            'profile_file' => $profileFile,
-            'total_lines' => $stats['total_lines'],
-            'file_size_bytes' => $fileSize,
-            'file_size_formatted' => $fileSize > 1024 ? round($fileSize / 1024, 1) . 'KB' : $fileSize . 'B',
-            'functions_count' => $stats['functions_count'],
-            'user_functions' => $stats['user_functions'],
-            'internal_functions' => $stats['internal_functions'],
-            'total_calls' => $stats['total_calls'],
-            'execution_time_ms' => $stats['execution_time_ms'],
-            'peak_memory_mb' => $stats['peak_memory_mb'],
-            'file_io_operations' => $stats['file_io_operations'],
-            'database_operations' => $stats['database_operations'],
-            'bottleneck_functions' => $stats['bottleneck_functions'],
-            'optimization_suggestions' => $stats['optimization_suggestions']
-        ];
-        
-        if ($context !== null) {
-            $result['analysis_context'] = $context;
-        }
-        
-        return $result;
     }
-}
 
-function analyzeCachegrindFile(string $profileFile, ?string $includeVendor = null): array
-{
-    $stats = [
-        'total_lines' => 0,
-        'functions_count' => 0,
-        'user_functions' => 0,
-        'internal_functions' => 0,
-        'total_calls' => 0,
-        'execution_time_ms' => 0,
-        'peak_memory_mb' => 0,
-        'file_io_operations' => 0,
-        'database_operations' => 0,
-        'bottleneck_functions' => [],
-        'optimization_suggestions' => []
+    $result = [
+        'profile_file' => $profileFile,
+        'total_lines' => $stats['total_lines'],
+        'file_size_bytes' => $fileSize,
+        'file_size_formatted' => $fileSize > 1024 ? round($fileSize / 1024, 1) . 'KB' : $fileSize . 'B',
+        'functions_count' => $stats['functions_count'],
+        'user_functions' => $stats['user_functions'],
+        'internal_functions' => $stats['internal_functions'],
+        'total_calls' => $stats['total_calls'],
+        'execution_time_ms' => $stats['execution_time_ms'],
+        'peak_memory_mb' => $stats['peak_memory_mb'],
+        'file_io_operations' => $stats['file_io_operations'],
+        'database_operations' => $stats['database_operations'],
+        'bottleneck_functions' => $stats['bottleneck_functions'],
+        'optimization_suggestions' => $stats['optimization_suggestions'],
     ];
 
-    $fileIOFunctions = [
-        'file_get_contents', 'file_put_contents', 'fopen', 'fread', 'fwrite', 'fclose',
-        'glob', 'scandir', 'is_file', 'file_exists', 'is_dir', 'mkdir', 'rmdir',
-        'copy', 'rename', 'unlink', 'chmod', 'touch', 'readfile'
-    ];
-
-    $dbFunctions = [
-        'mysqli_query', 'mysqli_prepare', 'mysqli_execute', 'mysqli_stmt_execute',
-        'PDO::query', 'PDO::prepare', 'PDO::exec', 'PDOStatement::execute',
-        'mysql_query', 'pg_query', 'sqlite_query'
-    ];
-
-    // Stream the Cachegrind file line by line instead of loading it whole:
-    // profiles can be hundreds of MB, and file_get_contents() + explode() held
-    // 2-3x the file size in memory at once. The events:/summary: headers are
-    // parsed inline the first time they are seen; the fn=/fl=/cost body below
-    // is unchanged.
-    //
-    // Units for Time/Memory come from the events header (e.g. Time_(10ns),
-    // Memory_(bytes)); reading column indices from the header tolerates a
-    // non-default xdebug.cachegrind_events column order.
-    $timeIndex = null;
-    $memoryIndex = null;
-    $timeToMs = null;
-    $measuredTimeMs = null;
-    $measuredMemoryMb = null;
-    $eventsParsed = false;
-    $summaryParsed = false;
-    $newlineCount = 0;
-
-    // Use sets to track unique functions
-    $uniqueFunctions = [];
-    $userFunctions = [];
-    $internalFunctions = [];
-
-    // Parse functions for classification and analysis
-    $functionCosts = [];
-    $currentFunction = null;
-    $currentFile = null;
-    $fileAliases = [];
-
-    $handle = fopen($profileFile, 'r');
-    if ($handle === false) {
-        throw new \RuntimeException("Cannot open profile file: $profileFile");
+    if ($context !== null) {
+        $result['analysis_context'] = $context;
     }
 
-    while (($rawLine = fgets($handle)) !== false) {
-        // total_lines must stay byte-identical to the previous
-        // count(explode("\n", $content)) == (number of "\n") + 1.
-        if (str_ends_with($rawLine, "\n")) {
-            $newlineCount++;
-        }
-
-        $line = trim($rawLine);
-
-        // events: header — parse the first occurrence to locate the columns.
-        if (! $eventsParsed && str_starts_with($line, 'events:')) {
-            $eventsParsed = true;
-            foreach (preg_split('/\s+/', trim(substr($line, strlen('events:')))) as $i => $col) {
-                if (preg_match('/^Time_\((\d*)(ns|us|µs|ms|s)\)$/', $col, $unit)) {
-                    $timeIndex = $i;
-                    $multiplier = $unit[1] === '' ? 1 : (int) $unit[1];
-                    $nsPerUnit = ['ns' => 1, 'us' => 1000, 'µs' => 1000, 'ms' => 1000000, 's' => 1000000000][$unit[2]] ?? 1;
-                    $timeToMs = ($multiplier * $nsPerUnit) / 1000000.0;
-                } elseif (str_starts_with($col, 'Memory_(')) {
-                    $memoryIndex = $i;
-                }
-            }
-
-            continue;
-        }
-
-        // summary: line — real measured totals (appears once, near the end).
-        if (! $summaryParsed && str_starts_with($line, 'summary:')) {
-            $summaryParsed = true;
-            $summaryCols = preg_split('/\s+/', trim(substr($line, strlen('summary:'))));
-            if ($timeIndex !== null && $timeToMs !== null && isset($summaryCols[$timeIndex])) {
-                $measuredTimeMs = round((int) $summaryCols[$timeIndex] * $timeToMs, 3);
-            }
-            if ($memoryIndex !== null && isset($summaryCols[$memoryIndex])) {
-                $measuredMemoryMb = round((int) $summaryCols[$memoryIndex] / 1048576, 2);
-            }
-
-            continue;
-        }
-
-        // Count cost-block "calls=" markers (was substr_count($content, "\ncalls=")).
-        if (str_starts_with($line, 'calls=')) {
-            $stats['total_calls']++;
-            continue;
-        }
-        
-        if (preg_match('/^fl=\((\d+)\)\s+(.+)$/', $line, $matches)) {
-            $currentFile = $matches[2];
-            $fileAliases[$matches[1]] = $currentFile;
-            continue;
-        }
-
-        if (preg_match('/^fl=\((\d+)\)$/', $line, $matches)) {
-            $currentFile = $fileAliases[$matches[1]] ?? null;
-            continue;
-        }
-
-        // Function definitions
-        if (strpos($line, 'fn=') === 0) {
-            $currentFunction = substr($line, 3);
-            if (! shouldIncludeProfileFile($currentFile, $includeVendor)) {
-                $currentFunction = null;
-                continue;
-            }
-            
-            // Skip empty function references (just numbers like "(19)")
-            if (preg_match('/^\(\d+\)$/', $currentFunction)) {
-                $currentFunction = null; // Don't process costs for unnamed functions
-                continue;
-            }
-            
-            // Track unique functions only if they have real names
-            if (!isset($uniqueFunctions[$currentFunction])) {
-                $uniqueFunctions[$currentFunction] = true;
-                
-                // Extract actual function name from format like "(2) php::glob" or "(1) fibonacci"
-                $functionName = $currentFunction;
-                if (preg_match('/\(\d+\)\s+(.+)/', $functionName, $matches)) {
-                    $functionName = $matches[1];
-                } else {
-                    // If it's just a number reference, skip it
-                    continue;
-                }
-                
-                // Classify user vs internal functions
-                if (strpos($functionName, 'php::') === 0 || strpos($functionName, '{main}') !== false || strpos($functionName, 'require') !== false) {
-                    $internalFunctions[$currentFunction] = true;
-                } else {
-                    $userFunctions[$currentFunction] = true;
-                }
-                
-                // Only check real function names for I/O and DB operations, not require/include
-                if (strpos($functionName, 'require') === false && strpos($functionName, 'include') === false) {
-                    // Check for I/O and DB operations
-                    $cleanFunctionName = $functionName;
-                    if (strpos($cleanFunctionName, 'php::') === 0) {
-                        $cleanFunctionName = substr($cleanFunctionName, 5); // Remove 'php::' prefix
-                    }
-                    
-                    // Remove function parameters/signatures if present
-                    $functionBase = explode('(', $cleanFunctionName)[0];
-                    $functionBase = explode('::', $cleanFunctionName)[0];
-                    $functionBase = explode('->', $cleanFunctionName)[0];
-                    
-                    // Be more selective about File I/O (only real file operations)
-                    $realFileIOFunctions = ['fopen', 'fread', 'fwrite', 'fclose', 'readfile'];
-                    if (in_array($functionBase, $realFileIOFunctions)) {
-                        $stats['file_io_operations']++;
-                    }
-                    
-                    // Only count actual database functions (not array operations)
-                    if (in_array($functionBase, $dbFunctions)) {
-                        $stats['database_operations']++;
-                    }
-                }
-            }
-        }
-        
-        // Cost lines are "<line> <event0> <event1> ...". Sum the Time column,
-        // located via the events header (fall back to the first event column).
-        if ($currentFunction && preg_match('/^\d+(?:\s+\d+)+$/', $line)) {
-            $costCols = preg_split('/\s+/', $line);
-            $timeCol = $timeIndex !== null ? $timeIndex + 1 : 1;
-            $functionCosts[$currentFunction] = ($functionCosts[$currentFunction] ?? 0)
-                + (int) ($costCols[$timeCol] ?? 0);
-        }
-    }
-
-    fclose($handle);
-
-    // Preserve the previous count(explode("\n", $content)) semantics exactly.
-    $stats['total_lines'] = $newlineCount + 1;
-
-    // Set final counts from unique arrays
-    $stats['functions_count'] = count($uniqueFunctions);
-    $stats['user_functions'] = count($userFunctions); 
-    $stats['internal_functions'] = count($internalFunctions);
-    
-    // Identify bottlenecks and generate suggestions
-    if (!empty($functionCosts)) {
-        arsort($functionCosts);
-        
-        // Filter out meaningless function names and extract readable names
-        $meaningfulFunctions = [];
-        foreach ($functionCosts as $func => $cost) {
-            // Skip number-only references
-            if (preg_match('/^\(\d+\)$/', $func)) {
-                continue;
-            }
-            
-            // Extract readable function name
-            $displayName = $func;
-            if (preg_match('/\(\d+\)\s+(.+)/', $func, $matches)) {
-                $displayName = $matches[1];
-            }
-            
-            // Skip require/include statements (not optimizable)
-            if (strpos($displayName, 'require') !== false || strpos($displayName, 'include') !== false) {
-                continue;
-            }
-            
-            $meaningfulFunctions[$displayName] = $cost;
-        }
-        
-        // Top 5 functions, structured: function name, share of total cost, and
-        // measured time (from the cachegrind Time column) when the units are known.
-        $topFunctions = [];
-        $totalCost = array_sum($functionCosts);
-        if ($totalCost > 0) {
-            foreach (array_slice($meaningfulFunctions, 0, 5, true) as $func => $cost) {
-                $entry = [
-                    'function' => $func,
-                    'percentage' => round(($cost / $totalCost) * 100, 1),
-                ];
-                if ($timeToMs !== null) {
-                    $entry['time_ms'] = round($cost * $timeToMs, 3);
-                }
-                $topFunctions[] = $entry;
-            }
-        }
-
-        $stats['bottleneck_functions'] = $topFunctions;
-        
-        // Prefer the real measured totals from the summary line; fall back to a
-        // rough estimate only when the summary or its units are unavailable.
-        $stats['execution_time_ms'] = $measuredTimeMs
-            ?? round(array_sum($functionCosts) / 50000, 2);
-
-        if ($measuredMemoryMb !== null) {
-            $stats['peak_memory_mb'] = $measuredMemoryMb;
-        } else {
-            $baseMemory = 2.5; // Base PHP memory usage in MB
-            $functionMemory = $stats['functions_count'] * 0.1; // Memory per function
-            $callMemory = $stats['total_calls'] * 0.001; // Memory per call
-            $stats['peak_memory_mb'] = round($baseMemory + $functionMemory + $callMemory, 1);
-        }
-    }
-    
-    // Estimate call depth (simplified)
-
-    return $stats;
-}
-
-function shouldIncludeProfileFile(?string $file, ?string $includeVendor): bool
-{
-    if ($file === null || $file === '' || $file === 'php:internal') {
-        return true;
-    }
-
-    $normalised = str_replace('\\', '/', $file);
-    $vendorPos = strpos($normalised, '/vendor/');
-    if ($vendorPos === false) {
-        return true;
-    }
-
-    if ($includeVendor === null || trim($includeVendor) === '') {
-        return false;
-    }
-
-    $relative = substr($normalised, $vendorPos + strlen('/vendor/'));
-    $segments = explode('/', $relative);
-    if (count($segments) < 2) {
-        return VendorFilter::matchesPackage('*/*', $includeVendor);
-    }
-
-    return VendorFilter::matchesPackage($segments[0] . '/' . $segments[1], $includeVendor);
+    return $result;
 }
 
 function displayHumanReadableProfile(array $result): void
@@ -512,25 +216,25 @@ function displayHumanReadableProfile(array $result): void
     echo "📊 Size: {$result['file_size_formatted']} ({$result['total_lines']} lines)\n";
     echo "📈 Functions: {$result['functions_count']} ({$result['user_functions']} user + {$result['internal_functions']} internal)\n";
     echo "📞 Calls: {$result['total_calls']}\n";
-    
+
     if ($result['execution_time_ms'] > 0) {
         echo "⏱️ Execution: {$result['execution_time_ms']}ms\n";
     }
-    
+
     if ($result['peak_memory_mb'] > 0) {
         echo "🧠 Memory: {$result['peak_memory_mb']}MB peak\n";
     }
-    
+
     // Only show File I/O if there are actual file operations (not just requires)
     if ($result['file_io_operations'] > 0) {
         echo "📂 File I/O: {$result['file_io_operations']} operations\n";
     }
-    
+
     // Only show Database operations if there are actual DB queries
     if ($result['database_operations'] > 0) {
         echo "🗃️ Database: {$result['database_operations']} queries\n";
     }
-    
+
     if (!empty($result['bottleneck_functions'])) {
         echo "🎯 Top functions:\n";
         foreach ($result['bottleneck_functions'] as $func) {
@@ -542,7 +246,7 @@ function displayHumanReadableProfile(array $result): void
             echo "   {$label}\n";
         }
     }
-    
+
     echo "\n💡 claude \"Analyze {$result['profile_file']}\"\n";
     echo "💡 kcachegrind {$result['profile_file']}\n";
 }

@@ -1,0 +1,30 @@
+version: 1
+creator: xdebug 3.4.0 (PHP 8.4.23) (test fixture)
+cmd: /project/tests/fixtures/cachegrind_test.php
+part: 1
+positions: line
+events: Time_(10ns) Memory_(bytes)
+summary: 123456 2097152
+fl=(1) php:internal
+fn=(1) php::strlen
+10 1000 1024
+fl=(2) /project/tests/fixtures/cachegrind_test.php
+fn=(2) {main}
+20 40000 1048576
+cfn=(3) main
+calls=1
+21 10000 524288
+fn=(3) main
+30 30000 524288
+fl=(3) /project/vendor/test/package/src/Helper.php
+fn=(4) Test\Package\Helper::help
+40 10000 2048
+fl=(2)
+fn=(5) process
+50 5000 1024
+cfn=(6) fopen
+calls=1
+51 2000 512
+fl=(1)
+fn=(6) fopen
+60 3000 512
