@@ -67,7 +67,7 @@ class McpServerIntegrationTest extends TestCase
         $this->assertEquals(2, $toolsResponse['id']);
         $this->assertArrayHasKey('result', $toolsResponse);
         $this->assertArrayHasKey('tools', $toolsResponse['result']);
-        $this->assertCount(5, $toolsResponse['result']['tools']);
+        $this->assertCount(6, $toolsResponse['result']['tools']);
 
         // Verify analysis tools are present
         $toolNames = array_column($toolsResponse['result']['tools'], 'name');
@@ -77,11 +77,42 @@ class McpServerIntegrationTest extends TestCase
             'xstep',
             'xcoverage',
             'xback',
+            'xcompare',
         ];
 
         foreach ($expectedTools as $toolName) {
             $this->assertContains($toolName, $toolNames, "Tool {$toolName} should be available");
         }
+    }
+
+    public function testToolsCallXCompare(): void
+    {
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 101,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'xcompare',
+                'arguments' => [
+                    'script_a' => 'php tests/fake/loop-counter.php',
+                    'script_b' => 'php tests/fake/array-manipulation.php',
+                    'breakpoint' => 'tests/fake/loop-counter.php:10',
+                    'context' => 'Tools call xcompare test',
+                ],
+            ],
+        ];
+
+        $responseObj = $this->invokeMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
+
+        $this->assertArrayHasKey('result', $response);
+        $this->assertEquals('2.0', $response['jsonrpc']);
+        $this->assertEquals(101, $response['id']);
+        $this->assertArrayHasKey('content', $response['result']);
+        $message = $response['result']['content'][0]['text'];
+        $this->assertStringContainsString('Breakpoint comparison completed', $message);
+        $this->assertStringContainsString('tests/fake/loop-counter.php', $message);
+        $this->assertStringContainsString('tests/fake/array-manipulation.php', $message);
     }
 
     public function testErrorHandling(): void

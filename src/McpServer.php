@@ -12,6 +12,7 @@ use Koriym\XdebugMcp\DTO\ToolsListResult;
 use Koriym\XdebugMcp\Exceptions\FileNotFoundException;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\Exceptions\InvalidToolException;
+use Koriym\XdebugMcp\Utilities\PhpCommandParser;
 use Throwable;
 
 use function array_filter;
@@ -40,7 +41,6 @@ use function is_string;
 use function json_decode;
 use function json_encode;
 use function preg_match;
-use function preg_split;
 use function str_contains;
 use function str_ends_with;
 use function str_starts_with;
@@ -54,6 +54,7 @@ use function unlink;
 use const JSON_INVALID_UTF8_SUBSTITUTE;
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
+use const JSON_UNESCAPED_UNICODE;
 use const STDIN;
 use const STDOUT;
 
@@ -257,6 +258,43 @@ final class McpServer
                     'required' => ['script'],
                 ],
             ),
+            'xcompare' => new McpTool(
+                'xcompare',
+                'Compare variable states at the same breakpoint across two PHP executions. Returns JSON with $schema URL for semantic details. Key fields: {breakpoint, run_a, run_b, diff, analysis_hints}.',
+                [
+                    'type' => 'object',
+                    'properties' => [
+                        'script_a' => [
+                            'type' => 'string',
+                            'description' => 'First PHP script to run (e.g., "php calc.php 10").',
+                        ],
+                        'script_b' => [
+                            'type' => 'string',
+                            'description' => 'Second PHP script to run (e.g., "php calc.php 0").',
+                        ],
+                        'breakpoint' => [
+                            'type' => 'string',
+                            'description' => 'Breakpoint location shared by both runs (e.g., "src/Calculator.php:25")',
+                        ],
+                        'context' => [
+                            'type' => 'string',
+                            'description' => 'Context description for comparison analysis',
+                            'default' => '',
+                        ],
+                        'steps' => [
+                            'type' => 'string',
+                            'description' => 'Max steps to record after breakpoint (default: 1)',
+                            'default' => '1',
+                        ],
+                        'include_vendor' => [
+                            'type' => 'string',
+                            'description' => 'Include vendor packages in trace (e.g., "bear/*,ray/di" or "*/*" for all)',
+                            'default' => '',
+                        ],
+                    ],
+                    'required' => ['script_a', 'script_b', 'breakpoint'],
+                ],
+            ),
         ];
     }
 
@@ -401,7 +439,7 @@ final class McpServer
                 'name' => 'xdebug-mcp-server',
                 'version' => '2.0.0',
             ],
-            'instructions' => 'PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, or analyze coverage of PHP code. Tools: xtrace (execution flow), xstep (breakpoint debugging), xprofile (performance), xcoverage (test coverage), xback (stack traces).',
+            'instructions' => 'PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, analyze coverage, or compare executions of PHP code. Tools: xtrace (execution flow), xstep (breakpoint debugging), xprofile (performance), xcoverage (test coverage), xback (stack traces), xcompare (breakpoint variable comparison across two runs).',
         ]));
     }
 
@@ -561,6 +599,42 @@ final class McpServer
                         ],
                     ],
                 ],
+                [
+                    'name' => 'xcompare',
+                    'description' => 'Compare variable states at the same breakpoint across two PHP executions. Returns JSON with $schema URL for semantic details. Key fields: {breakpoint, run_a, run_b, diff, analysis_hints}.',
+                    'arguments' => [
+                        [
+                            'name' => 'script_a',
+                            'description' => 'First PHP script to run (e.g., "php calc.php 10").',
+                            'required' => true,
+                        ],
+                        [
+                            'name' => 'script_b',
+                            'description' => 'Second PHP script to run (e.g., "php calc.php 0").',
+                            'required' => true,
+                        ],
+                        [
+                            'name' => 'breakpoint',
+                            'description' => 'Breakpoint location shared by both runs (e.g., "src/Calculator.php:25")',
+                            'required' => true,
+                        ],
+                        [
+                            'name' => 'context',
+                            'description' => 'Context description for comparison analysis',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'steps',
+                            'description' => 'Max steps to record after breakpoint (default: 1)',
+                            'required' => false,
+                        ],
+                        [
+                            'name' => 'include_vendor',
+                            'description' => 'Include vendor packages in trace (e.g., "bear/*,ray/di" or "*/*" for all)',
+                            'required' => false,
+                        ],
+                    ],
+                ],
             ],
         ]));
     }
@@ -592,6 +666,7 @@ final class McpServer
             'xprofile' => $this->executeXProfile($id, $args),
             'xcoverage' => $this->executeXCoverage($id, $args),
             'xback' => $this->executeXBacktrace($id, $args),
+            'xcompare' => $this->executeXCompare($id, $args),
             default => JsonRpcResponse::error($id, -32601, "Unknown prompt: {$promptName}"),
         };
     }
@@ -615,6 +690,7 @@ final class McpServer
             'xstep' => ['script', 'breakpoints', 'steps', 'context', 'include_vendor'],
             'xcoverage' => ['script', 'context', 'include_vendor', 'cwd', 'php', 'source'],
             'xback' => ['script', 'breakpoint', 'depth', 'context', 'cwd', 'php'],
+            'xcompare' => ['script_a', 'script_b', 'breakpoint', 'context', 'steps', 'include_vendor'],
             default => [],
         };
 
@@ -682,54 +758,7 @@ final class McpServer
 
     private function isPhpInlineCodeScript(string $script): bool
     {
-        $parts = preg_split('/\s+/', trim($script)) ?: [];
-        if ($parts === [] || preg_match('/^(\S*[\/\\\\])?php([0-9.]*)?(\.exe)?$/i', $parts[0]) !== 1) {
-            return false;
-        }
-
-        // Only inspect PHP interpreter options before the script file. Stop at the
-        // first non-option token (the script) or "--" so that a script's own
-        // arguments (e.g. `php app.php -r foo`) are not mistaken for inline code.
-        $optionsWithValue = [
-            '-d',
-            '-c',
-            '-z',
-            '-B',
-            '-R',
-            '-F',
-            '-E',
-            '--define',
-            '--php-ini',
-            '--zend-extension',
-            '--process-begin',
-            '--process-code',
-            '--process-file',
-            '--process-end',
-        ];
-
-        for ($i = 1; isset($parts[$i]); $i++) {
-            $arg = $parts[$i];
-
-            if (
-                $arg === '-r' || $arg === '--run'
-                || str_starts_with($arg, '--run=')
-                || (str_starts_with($arg, '-r') && $arg !== '-r')
-            ) {
-                return true;
-            }
-
-            if ($arg === '--' || ! str_starts_with($arg, '-')) {
-                return false;
-            }
-
-            if (! in_array($arg, $optionsWithValue, true) || ! isset($parts[$i + 1])) {
-                continue;
-            }
-
-            $i++;
-        }
-
-        return false;
+        return PhpCommandParser::isPhpInlineCodeScript($script);
     }
 
     /**
@@ -860,6 +889,11 @@ final class McpServer
 
             case 'xback':
                 $result = $this->executeXBacktrace(null, $arguments);
+
+                return $this->extractResultText($result);
+
+            case 'xcompare':
+                $result = $this->executeXCompare(null, $arguments);
 
                 return $this->extractResultText($result);
 
@@ -1302,6 +1336,90 @@ final class McpServer
         } catch (Throwable $e) {
             // @codeCoverageIgnoreStart - Exception handling path requires backtrace failures which are environment-dependent
             return JsonRpcResponse::error($id, -32000, 'xback execution failed: ' . $e->getMessage());
+            // @codeCoverageIgnoreEnd
+        }
+    }
+
+    /** @param array<string, string> $args */
+    private function executeXCompare(string|int|null $id, array $args): JsonRpcResponse
+    {
+        try {
+            $breakpoint = $args['breakpoint'] ?? '';
+            if ($breakpoint === '') {
+                throw new InvalidArgumentException('Breakpoint argument is required');
+            }
+
+            $this->validateBreakpoints($breakpoint);
+
+            $runA = $args['script_a'] ?? '';
+            $runB = $args['script_b'] ?? '';
+
+            if ($runA === '' || $runB === '') {
+                throw new InvalidArgumentException('Both script_a and script_b arguments are required');
+            }
+
+            $runA = $this->processScriptArgument($runA);
+            $runB = $this->processScriptArgument($runB);
+
+            $this->validatePhpBinaryScript($runA);
+            $this->validatePhpBinaryScript($runB);
+
+            $context = $args['context'] ?? '';
+            $steps = $args['steps'] ?? '1';
+            $includeVendor = $args['include_vendor'] ?? '';
+
+            $options = [
+                'break' => $breakpoint,
+                'run_a' => $runA,
+                'run_b' => $runB,
+            ];
+
+            if ($context !== '') {
+                $options['context'] = $context;
+            }
+
+            if ($steps !== '') {
+                $options['steps'] = (int) $steps;
+            }
+
+            if ($includeVendor !== '') {
+                $options['include_vendor'] = $includeVendor;
+            }
+
+            $runner = new CompareRunner($options);
+            $result = $runner->run();
+
+            $outputText = json_encode($result, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+            return JsonRpcResponse::success($id, new GenericResult([
+                'messages' => [
+                    [
+                        'role' => 'assistant',
+                        'content' => [
+                            'type' => 'text',
+                            'text' => 'Breakpoint comparison completed:' . "\n\n" .
+                                '**Breakpoint**: ' . $breakpoint . "\n" .
+                                '**Run A**: ' . $runA . "\n" .
+                                '**Run B**: ' . $runB . "\n" .
+                                '**Context**: ' . $context . "\n\n" .
+                                '**Result**:' . "\n```json\n" . $outputText . "\n```",
+                        ],
+                    ],
+                ],
+                'debug_data' => [
+                    'breakpoint' => $breakpoint,
+                    'run_a' => $runA,
+                    'run_b' => $runB,
+                    'context' => $context,
+                    'steps' => $steps,
+                    'include_vendor' => $includeVendor,
+                    'output' => $outputText,
+                    'timestamp' => date('Y-m-d H:i:s'),
+                ],
+            ]));
+        } catch (Throwable $e) {
+            // @codeCoverageIgnoreStart - Exception handling path requires CompareRunner/xstep failures which are environment-dependent
+            return JsonRpcResponse::error($id, -32000, 'xcompare execution failed: ' . $e->getMessage());
             // @codeCoverageIgnoreEnd
         }
     }

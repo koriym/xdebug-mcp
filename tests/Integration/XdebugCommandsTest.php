@@ -612,6 +612,6 @@ PHP);
         $this->assertEquals(1, $response['id']);
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('tools', $response['result']);
-        $this->assertCount(5, $response['result']['tools'], 'Should have 5 execution tools');
+        $this->assertCount(6, $response['result']['tools'], 'Should have 6 execution tools');
     }
 }

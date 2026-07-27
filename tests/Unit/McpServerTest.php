@@ -66,7 +66,7 @@ class McpServerTest extends TestCase
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('tools', $response['result']);
-        $this->assertCount(5, $response['result']['tools']);
+        $this->assertCount(6, $response['result']['tools']);
 
         $toolNames = array_column($response['result']['tools'], 'name');
         // Test that execution tools are present
@@ -75,6 +75,7 @@ class McpServerTest extends TestCase
         $this->assertContains('xstep', $toolNames);
         $this->assertContains('xcoverage', $toolNames);
         $this->assertContains('xback', $toolNames);
+        $this->assertContains('xcompare', $toolNames);
 
         // Test that interactive debugging tools are removed
         $this->assertNotContains('xdebug_connect', $toolNames);
@@ -253,7 +254,7 @@ class McpServerTest extends TestCase
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('prompts', $response['result']);
-        $this->assertCount(5, $response['result']['prompts']);
+        $this->assertCount(6, $response['result']['prompts']);
 
         $promptNames = array_column($response['result']['prompts'], 'name');
         $this->assertContains('xtrace', $promptNames);
@@ -261,6 +262,7 @@ class McpServerTest extends TestCase
         $this->assertContains('xprofile', $promptNames);
         $this->assertContains('xcoverage', $promptNames);
         $this->assertContains('xback', $promptNames);
+        $this->assertContains('xcompare', $promptNames);
     }
 
     public function testNotificationsInitialized(): void
