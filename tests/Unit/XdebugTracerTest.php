@@ -116,8 +116,10 @@ final class XdebugTracerTest extends TestCase
     public static function provideLanguageOutputs(): array
     {
         return [
-            'AppleLanguages ja' => ["(\n    ja,\n    en\n)", true],
+            'locale tag ja' => ['ja', true],
+            'locale ja_JP' => ['ja_JP.UTF-8', true],
             'English only' => ['en_US.UTF-8', false],
+            'Azerbaijani is not Japanese' => ['Azerbaijani', false],
             'hiragana 日本語' => ['日本語', true],
             'mixed upper JA' => ['JA_JP', true],
         ];

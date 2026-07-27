@@ -443,8 +443,17 @@ class XdebugTracer
 
     private function isJapanese(string $value): bool
     {
-        $lower = strtolower($value);
+        if (str_contains($value, '日本語')) {
+            return true;
+        }
 
-        return str_contains($lower, 'ja') || str_contains($lower, '日本語');
+        $lower = strtolower(trim($value));
+        if (str_contains($lower, 'japanese')) {
+            return true;
+        }
+
+        // Match "ja" only as a primary language tag (e.g. ja, ja-JP, ja_JP.UTF-8);
+        // a bare substring match would misclassify e.g. "Azerbaijani".
+        return preg_match('/^ja(?:[-_.@]|$)/', $lower) === 1;
     }
 }
