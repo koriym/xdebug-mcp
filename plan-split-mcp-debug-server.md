@@ -367,7 +367,7 @@ interface OutputFormatterInterface
 
 ### Phase 0: 安全網の整備
 1. すべての既存テストが通ることを確認: `composer tests`
-2. `bin/test-json` を実行し、現状の JSON 出力を golden ファイルとして保存。
+2. `composer test-json` を実行し、現状の JSON 出力を golden ファイルとして保存。
 3. 各メソッドの振る舞いを pin する回帰テストを追加（特に `McpServerTest`, `DebugServerTest` の reflection テスト対象）。
 4. PHPStan ベースラインを更新しておく。
 
@@ -404,6 +404,7 @@ interface OutputFormatterInterface
 - `src/Mcp/Tool/XprofileRunner.php`
 - `src/Mcp/Tool/XcoverageRunner.php`
 - `src/Mcp/Tool/XbackRunner.php`
+- `src/Mcp/Tool/XcompareRunner.php`（既存 `CompareRunner` をラップする薄いアダプター）
 
 移行対象:
 - `McpServer::initializeTools()` (98) → `ToolRegistry`
@@ -496,7 +497,7 @@ interface OutputFormatterInterface
 - 未使用の use 文を整理。
 - `composer dump-autoload`
 - `composer tests` フルゲート
-- `bin/test-json` で出力一致確認
+- `composer test-json` で出力一致確認
 - `composer demo` で bin スクリプト全体の動作確認
 
 ---
@@ -536,8 +537,7 @@ composer test
 composer test-json
 composer sa
 composer cs
-./bin/test-json
-./demo/run-demo.sh
+composer demo
 ```
 
 ---
@@ -547,7 +547,7 @@ composer cs
 | リスク | 影響 | 回避策 |
 |---|---|---|
 | 公開 I/F 変更で `bin/xstep`, `bin/xback` が動かなくなる | 高 | `DebugServer` のコンストラクタ・公開メソッドはファサードとして維持。内部委譲にするだけ。 |
-| `bin/xdebug-mcp` の JSON-RPC 応答形状が変わる | 高 | `ToolExecutor` / `PromptExecutor` は既存の `JsonRpcResponse` 生成ロジックを踏襲。`bin/test-json` で一致確認。 |
+| `bin/xdebug-mcp` の JSON-RPC 応答形状が変わる | 高 | `ToolExecutor` / `PromptExecutor` は既存の `JsonRpcResponse` 生成ロジックを踏襲。`composer test-json` で一致確認。 |
 | テストが reflection 対象メソッド移動で壊れる | 中 | Phase 0 で回帰テストを追加。移行時にテストも同時に新クラス向けに書き換える。 |
 | Xdebug 環境なしでは DebugServer 系テストが動かない | 中 | `DbgpTransportInterface` を注入し、XML 応答を replay する fake transport を使う。 |
 | 子プロセスやソケットのクリーンアップ漏れ | 高 | `CleanupManager` を一元化。`emergencyCleanup()` は `DebugServer` に残し、シャットダウンハンドラを登録し続ける。 |
@@ -572,6 +572,7 @@ composer cs
 - `src/Mcp/Tool/XprofileRunner.php`
 - `src/Mcp/Tool/XcoverageRunner.php`
 - `src/Mcp/Tool/XbackRunner.php`
+- `src/Mcp/Tool/XcompareRunner.php`（既存 `CompareRunner` をラップする薄いアダプター）
 - `src/Dbgp/DbgpTransportInterface.php`
 - `src/Dbgp/DbgpTransport.php`
 - `src/Dbgp/XmlResponseParser.php`
@@ -614,7 +615,7 @@ composer cs
 ## 9. 成功基準
 
 1. `composer tests` がすべて通る。
-2. `bin/test-json` の出力がリファクタリング前後で一致する。
+2. `composer test-json` の出力がリファクタリング前後で一致する。
 3. `bin/xdebug-mcp` を起動した `tools/list` / `tools/call` / `prompts/get` が従来通り動作する。
 4. `bin/xstep`, `bin/xback` が既存のスクリプトで動作する。
 5. `McpServer` の行数が 400 行未満、`DebugServer` が 500 行未満（ファサード化後）となる。
