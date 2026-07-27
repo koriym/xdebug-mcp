@@ -246,7 +246,7 @@ register_shutdown_function(function() use ($tempDir, $branchCoverage) {
             "uncovered" => $uncoveredOnly
         ];
     }
-    echo(json_encode($result, JSON_UNESCAPED_SLASHES));
+    echo(json_encode($result, JSON_UNESCAPED_SLASHES) . PHP_EOL);
 });
 xdebug_start_code_coverage($coverageFlags);
 ';
@@ -518,7 +518,7 @@ $xdebugFlag = XdebugFinder::getXdebugFlag();
 if (empty($args)) {
     if (file_exists('./vendor/bin/phpunit')) {
         $args = ['./vendor/bin/phpunit', '--no-coverage', '--testdox', '--no-progress', '--colors=never'];
-        echo "# Raw mode: Running PHPUnit with Xdebug direct coverage\n";
+        fwrite(STDERR, "# Raw mode: Running PHPUnit with Xdebug direct coverage\n");
     } else {
         echo "Usage: " . $argv[0] . " --raw [--branch-coverage] [--include-vendor=PATTERNS] [--] php script.php [args...]\n";
         echo "No arguments provided and ./vendor/bin/phpunit not found.\n";
@@ -604,16 +604,23 @@ if ($programOutput !== []) {
     fwrite(STDERR, implode("\n", $programOutput) . "\n");
 }
 
-if ($jsonLine !== null) {
-    $result = json_decode($jsonLine, true);
-    if (! $jsonOutput && is_array($result) && ($result['coverage_type'] ?? null) === 'line') {
-        echo renderCompactCoverage($result) . "\n";
-    } else {
-        // --json, or branch coverage (complex data stays machine-readable)
-        echo $jsonLine . "\n";
-    }
-} else {
+if ($jsonLine === null) {
     fwrite(STDERR, "Error: coverage JSON was not produced (exit code: {$exitCode})\n");
+    exit($exitCode !== 0 ? $exitCode : 1);
+}
+
+try {
+    $result = json_decode($jsonLine, true, 512, JSON_THROW_ON_ERROR);
+} catch (JsonException $e) {
+    fwrite(STDERR, "Error: coverage JSON is invalid: {$e->getMessage()}\n");
+    exit(1);
+}
+
+if (! $jsonOutput && ($result['coverage_type'] ?? null) === 'line') {
+    echo renderCompactCoverage($result) . "\n";
+} else {
+    // --json, or branch coverage (complex data stays machine-readable)
+    echo $jsonLine . "\n";
 }
 
 if ($shutdownScript !== null && file_exists($shutdownScript)) {
