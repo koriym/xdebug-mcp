@@ -47,8 +47,16 @@ class DebugServerXmlSanitizerTest extends TestCase
 
     public function testStripsAdditionalC0Controls(): void
     {
-        $input = "begin\x01\x05\x0B\x0C\x0E\x1F\x7Fend";
+        $input = "begin\x01\x05\x0B\x0C\x0E\x1Fend";
         $this->assertSame('beginend', DbgpXml::sanitize($input));
+    }
+
+    public function testPreservesDeleteCharacter(): void
+    {
+        // U+007F (DEL) is a valid XML 1.0 character and must be preserved,
+        // consistent with DbgpXml::isXmlCharacter()
+        $input = "begin\x7Fend";
+        $this->assertSame($input, DbgpXml::sanitize($input));
     }
 
     public function testStripsInvalidNumericCharacterReferences(): void

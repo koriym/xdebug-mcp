@@ -44,7 +44,7 @@ final class DbgpXml
             $xml,
         ) ?? $xml;
 
-        return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $xml) ?? $xml;
+        return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $xml) ?? $xml;
     }
 
     public static function isXmlCharacter(int $codepoint): bool
