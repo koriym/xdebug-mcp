@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp;
 
+use Koriym\XdebugMcp\Utilities\PhpCommandParser;
+
 use function in_array;
 use function preg_match;
-use function str_starts_with;
 
 /**
  * Helper class for container command detection and PHP command location
@@ -89,34 +90,16 @@ final class ContainerHelper
         return false;
     }
 
-    /** PHP CLI options that take a separate value argument */
-    private const PHP_OPTIONS_WITH_VALUE = ['-d', '-c', '-z', '-B', '-R', '-F', '-E'];
-
     /**
      * Skip PHP options to find the actual script argument index
      *
-     * @param string[] $parts    Command parts
-     * @param int      $phpIndex Index of the 'php' command
+     * @param array<int, string> $parts    Command parts
+     * @param int                $phpIndex Index of the 'php' command
      *
      * @return int|false Index of the script argument or false if not found
      */
     public static function findScriptIndex(array $parts, int $phpIndex): int|false
     {
-        $scriptIndex = $phpIndex + 1;
-
-        // Skip PHP options (starting with -)
-        while (isset($parts[$scriptIndex]) && str_starts_with($parts[$scriptIndex], '-')) {
-            $currentOption = $parts[$scriptIndex];
-            $scriptIndex++;
-
-            // If this option takes a value, skip the next argument too
-            if (! in_array($currentOption, self::PHP_OPTIONS_WITH_VALUE, true) || ! isset($parts[$scriptIndex])) {
-                continue;
-            }
-
-            $scriptIndex++;
-        }
-
-        return isset($parts[$scriptIndex]) ? $scriptIndex : false;
+        return PhpCommandParser::findScriptIndex($parts, $phpIndex);
     }
 }

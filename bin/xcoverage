@@ -4,6 +4,7 @@
 // Load autoloader
 require_once __DIR__ . '/autoload.php';
 use Koriym\XdebugMcp\XdebugFinder;
+use Koriym\XdebugMcp\Utilities\PhpCommandParser;
 use Koriym\XdebugMcp\Utilities\VendorFilter;
 
 // Xdebug's sentinel value for "exit" branch target in branch coverage data
@@ -109,110 +110,6 @@ $debug = getenv('COVERAGE_DEBUG');
 if ($debug) {
     fwrite(STDERR, "[COVERAGE_DEBUG] Raw mode: " . ($rawMode ? 'true' : 'false') . "\n");
     fwrite(STDERR, "[COVERAGE_DEBUG] Args: " . json_encode($args) . "\n");
-}
-
-/**
- * Normalize a user-provided PHPUnit command into arguments for the local PHPUnit binary.
- *
- * xcoverage asks PHPUnit for Clover output, so flags that disable coverage are removed.
- *
- * @param list<string> $args
- *
- * @return list<string>
- */
-function normalizePhpUnitArguments(array $args): array
-{
-    if (! empty($args) && isPhpBinary($args[0])) {
-        $args = array_slice($args, 1);
-    }
-
-    if (! empty($args) && isPhpUnitCommand($args[0])) {
-        $args = array_slice($args, 1);
-    }
-
-    $normalized = [];
-    foreach ($args as $arg) {
-        if ($arg === '--no-coverage') {
-            continue;
-        }
-
-        $normalized[] = $arg;
-    }
-
-    return $normalized;
-}
-
-/**
- * @param list<string> $args
- *
- * @return list<string>
- */
-function normalizeRawArguments(array $args): array
-{
-    if (! empty($args) && isPhpBinary($args[0])) {
-        return array_slice($args, 1);
-    }
-
-    return $args;
-}
-
-function isPhpBinary(string $arg): bool
-{
-    $binary = basename(str_replace('\\', '/', $arg));
-
-    return preg_match('/^php(?:[0-9.]+)?(?:\.exe)?$/i', $binary) === 1;
-}
-
-function isPhpUnitCommand(string $arg): bool
-{
-    $binary = basename(str_replace('\\', '/', $arg));
-
-    return $binary === 'phpunit' || $binary === 'phpunit.phar';
-}
-
-/**
- * @param list<string> $args
- *
- * @return array{code_index: int, code_prefix: string, option: string}|null
- */
-function findPhpRunCodeArgument(array $args): array|null
-{
-    // Only PHP interpreter options that appear before the script file may
-    // introduce inline code. Stop scanning once the script path (first
-    // non-option) or the "--" end-of-options marker is reached so the script's
-    // own arguments are not mistaken for inline code (e.g. `php app.php -r foo`).
-    // $args has already had the leading php binary stripped by normalizeRawArguments().
-    $optionsWithValue = [
-        '-d', '-c', '-z', '-B', '-R', '-F', '-E',
-        '--define', '--php-ini', '--zend-extension',
-        '--process-begin', '--process-code', '--process-file', '--process-end',
-    ];
-
-    for ($index = 0; isset($args[$index]); $index++) {
-        $arg = $args[$index];
-
-        if ($arg === '-r' || $arg === '--run') {
-            return ['code_index' => $index + 1, 'code_prefix' => '', 'option' => $arg];
-        }
-
-        if (str_starts_with($arg, '-r') && $arg !== '-r') {
-            return ['code_index' => $index, 'code_prefix' => '-r', 'option' => '-r'];
-        }
-
-        if (str_starts_with($arg, '--run=')) {
-            return ['code_index' => $index, 'code_prefix' => '--run=', 'option' => '--run'];
-        }
-
-        if ($arg === '--' || ! str_starts_with($arg, '-')) {
-            return null;
-        }
-
-        if (in_array($arg, $optionsWithValue, true) && isset($args[$index + 1])) {
-            $index++;
-        }
-    }
-
-    return null;
 }
 
 function buildRawCoverageBootstrap(
@@ -387,7 +284,7 @@ if (!$rawMode) {
     // Build PHPUnit command with coverage-clover (stable XML format)
     $phpunitArgs = array_merge(
         ['--coverage-clover=' . $coverageFile, '--testdox', '--no-progress', '--colors=never'],
-        normalizePhpUnitArguments($args),
+        PhpCommandParser::normalizePhpUnitArguments($args),
     );
 
     echo "# Running PHPUnit with coverage (respects @codeCoverageIgnore)\n";
@@ -529,7 +426,7 @@ if (!$rawMode) {
 }
 
 // Raw mode - uses Xdebug directly (original behavior)
-$args = normalizeRawArguments($args);
+$args = PhpCommandParser::normalizeRawArguments($args);
 $branchFlag = $branchCoverage ? 'true' : 'false';
 $sourceFilterEnabled = $sourceOption !== null && $sourceOption !== '';
 $vendorExcludePaths = [];
@@ -580,7 +477,7 @@ if (empty($args)) {
 }
 
 $shutdownScript = null;
-$runCodeArgument = findPhpRunCodeArgument($args);
+$runCodeArgument = PhpCommandParser::findPhpRunCodeArgument($args);
 if ($runCodeArgument !== null) {
     $codeIndex = $runCodeArgument['code_index'];
     $codePrefix = $runCodeArgument['code_prefix'];
