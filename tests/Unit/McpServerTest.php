@@ -66,7 +66,7 @@ class McpServerTest extends TestCase
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('tools', $response['result']);
-        $this->assertCount(5, $response['result']['tools']);
+        $this->assertCount(6, $response['result']['tools']);
 
         $toolNames = array_column($response['result']['tools'], 'name');
         // Test that execution tools are present
@@ -75,6 +75,7 @@ class McpServerTest extends TestCase
         $this->assertContains('xstep', $toolNames);
         $this->assertContains('xcoverage', $toolNames);
         $this->assertContains('xback', $toolNames);
+        $this->assertContains('xcompare', $toolNames);
 
         // Test that interactive debugging tools are removed
         $this->assertNotContains('xdebug_connect', $toolNames);
@@ -253,7 +254,7 @@ class McpServerTest extends TestCase
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('prompts', $response['result']);
-        $this->assertCount(5, $response['result']['prompts']);
+        $this->assertCount(6, $response['result']['prompts']);
 
         $promptNames = array_column($response['result']['prompts'], 'name');
         $this->assertContains('xtrace', $promptNames);
@@ -261,6 +262,7 @@ class McpServerTest extends TestCase
         $this->assertContains('xprofile', $promptNames);
         $this->assertContains('xcoverage', $promptNames);
         $this->assertContains('xback', $promptNames);
+        $this->assertContains('xcompare', $promptNames);
     }
 
     public function testNotificationsInitialized(): void
@@ -390,18 +392,12 @@ class McpServerTest extends TestCase
 
     public function testExecuteToolCall(): void
     {
-        // Test executeToolCall method directly - it should handle exceptions and return formatted result
-        // The method catches exceptions and handles them, so let's test it returns proper error content
-        try {
-            $result = $this->invokePrivateMethod($this->server, 'executeToolCall', ['xtrace', ['script' => '']]);
-            // executeToolCall should return a string result, not throw exception
-            $this->assertIsString($result);
-            $this->assertStringContainsString('No result', $result); // Default fallback when execution fails
-        } catch (Throwable $e) {
-            // If an exception is thrown, it should be InvalidArgumentException
-            $this->assertInstanceOf(InvalidArgumentException::class, $e);
-            $this->assertStringContainsString('Script argument is required', $e->getMessage());
-        }
+        // executeToolCall surfaces execution errors (e.g. argument validation) as text
+        $result = $this->invokePrivateMethod($this->server, 'executeToolCall', ['xtrace', ['script' => '']]);
+
+        $this->assertIsString($result);
+        $this->assertStringContainsString('Error:', $result);
+        $this->assertStringContainsString('Script argument is required', $result);
     }
 
     public function testHandleToolCallError(): void
@@ -423,6 +419,23 @@ class McpServerTest extends TestCase
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals(-32000, $response['error']['code']);
         $this->assertStringContainsString('Unknown tool: invalid-tool', $response['error']['message']);
+    }
+
+    public function testExecuteXCompareRejectsMultipleBreakpoints(): void
+    {
+        // xcompare shares one breakpoint across both runs; comma-separated lists must be rejected
+        $result = $this->invokePrivateMethod($this->server, 'executeXCompare', [
+            null,
+            [
+                'script_a' => 'php tests/fake/loop-counter.php',
+                'script_b' => 'php tests/fake/array-manipulation.php',
+                'breakpoint' => 'tests/fake/loop-counter.php:10,tests/fake/array-manipulation.php:20',
+            ],
+        ]);
+        $response = $result->toArray();
+
+        $this->assertArrayHasKey('error', $response);
+        $this->assertStringContainsString('single breakpoint', $response['error']['message']);
     }
 
     public function testToolsCallXDebug(): void

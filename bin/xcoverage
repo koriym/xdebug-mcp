@@ -4,6 +4,7 @@
 // Load autoloader
 require_once __DIR__ . '/autoload.php';
 use Koriym\XdebugMcp\XdebugFinder;
+use Koriym\XdebugMcp\Utilities\PhpCommandParser;
 use Koriym\XdebugMcp\Utilities\VendorFilter;
 
 // Xdebug's sentinel value for "exit" branch target in branch coverage data
@@ -37,9 +38,13 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
     echo "                              (--raw mode only; takes precedence over --include-vendor)\n";
     echo "  --cwd=PATH                Run from PATH (target project root)\n";
     echo "  --php=PATH                Use this PHP binary instead of " . PHP_BINARY . "\n";
+    echo "  --json                    Emit JSON instead of the default compact format\n";
     echo "  --help, -h                Show this help\n";
     echo "\n";
     echo "NOTES:\n";
+    echo "  STDOUT carries only the coverage report (compact, or JSON with --json).\n";
+    echo "  The target program's own output (and PHPUnit test results on failure)\n";
+    echo "  is redirected to STDERR.\n";
     echo "  --raw mode does not honor non-executable line metadata, so closing braces and\n";
     echo "  declarations may appear as uncovered. Use the default PHPUnit mode for parity\n";
     echo "  with php-code-coverage / Codecov.\n";
@@ -56,7 +61,10 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
     echo "  # Include specific vendor packages (raw mode)\n";
     echo "  " . $argv[0] . " --raw --include-vendor=bear/resource,ray/di -- php script.php\n";
     echo "\n";
-    echo "OUTPUT FORMAT:\n";
+    echo "OUTPUT FORMAT (compact, default):\n";
+    echo "  75% (30/40 lines covered, 1 file)\n";
+    echo "  /path/to/file.php:21,37-38,44   <- uncovered lines per file\n";
+    echo "  Use --json for the machine-readable format:\n";
     echo "  - summary: {files, total_lines, covered_lines, uncovered_lines, coverage_percent}\n";
     echo "  - uncovered: Ranges of uncovered lines, e.g., [10, \"15-20\", 25]\n";
     echo "  Schema: https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json\n";
@@ -66,7 +74,7 @@ if (in_array('--help', $argv) || in_array('-h', $argv)) {
 
 // Parse options
 $optind = 0;
-$options = getopt('', ['include-vendor::', 'branch-coverage', 'raw', 'cwd:', 'php:', 'source:'], $optind);
+$options = getopt('', ['include-vendor::', 'branch-coverage', 'raw', 'cwd:', 'php:', 'source:', 'json'], $optind);
 
 $includeVendor = $options['include-vendor'] ?? null;
 $branchCoverage = isset($options['branch-coverage']);
@@ -74,6 +82,7 @@ $rawMode = isset($options['raw']);
 $cwdOption = $options['cwd'] ?? null;
 $phpOverride = $options['php'] ?? null;
 $sourceOption = $options['source'] ?? null;
+$jsonOutput = isset($options['json']);
 
 // Resolve --php against the original cwd before chdir.
 if ($phpOverride !== null && $phpOverride !== '') {
@@ -109,110 +118,6 @@ $debug = getenv('COVERAGE_DEBUG');
 if ($debug) {
     fwrite(STDERR, "[COVERAGE_DEBUG] Raw mode: " . ($rawMode ? 'true' : 'false') . "\n");
     fwrite(STDERR, "[COVERAGE_DEBUG] Args: " . json_encode($args) . "\n");
-}
-
-/**
- * Normalize a user-provided PHPUnit command into arguments for the local PHPUnit binary.
- *
- * xcoverage asks PHPUnit for Clover output, so flags that disable coverage are removed.
- *
- * @param list<string> $args
- *
- * @return list<string>
- */
-function normalizePhpUnitArguments(array $args): array
-{
-    if (! empty($args) && isPhpBinary($args[0])) {
-        $args = array_slice($args, 1);
-    }
-
-    if (! empty($args) && isPhpUnitCommand($args[0])) {
-        $args = array_slice($args, 1);
-    }
-
-    $normalized = [];
-    foreach ($args as $arg) {
-        if ($arg === '--no-coverage') {
-            continue;
-        }
-
-        $normalized[] = $arg;
-    }
-
-    return $normalized;
-}
-
-/**
- * @param list<string> $args
- *
- * @return list<string>
- */
-function normalizeRawArguments(array $args): array
-{
-    if (! empty($args) && isPhpBinary($args[0])) {
-        return array_slice($args, 1);
-    }
-
-    return $args;
-}
-
-function isPhpBinary(string $arg): bool
-{
-    $binary = basename(str_replace('\\', '/', $arg));
-
-    return preg_match('/^php(?:[0-9.]+)?(?:\.exe)?$/i', $binary) === 1;
-}
-
-function isPhpUnitCommand(string $arg): bool
-{
-    $binary = basename(str_replace('\\', '/', $arg));
-
-    return $binary === 'phpunit' || $binary === 'phpunit.phar';
-}
-
-/**
- * @param list<string> $args
- *
- * @return array{code_index: int, code_prefix: string, option: string}|null
- */
-function findPhpRunCodeArgument(array $args): array|null
-{
-    // Only PHP interpreter options that appear before the script file may
-    // introduce inline code. Stop scanning once the script path (first
-    // non-option) or the "--" end-of-options marker is reached so the script's
-    // own arguments are not mistaken for inline code (e.g. `php app.php -r foo`).
-    // $args has already had the leading php binary stripped by normalizeRawArguments().
-    $optionsWithValue = [
-        '-d', '-c', '-z', '-B', '-R', '-F', '-E',
-        '--define', '--php-ini', '--zend-extension',
-        '--process-begin', '--process-code', '--process-file', '--process-end',
-    ];
-
-    for ($index = 0; isset($args[$index]); $index++) {
-        $arg = $args[$index];
-
-        if ($arg === '-r' || $arg === '--run') {
-            return ['code_index' => $index + 1, 'code_prefix' => '', 'option' => $arg];
-        }
-
-        if (str_starts_with($arg, '-r') && $arg !== '-r') {
-            return ['code_index' => $index, 'code_prefix' => '-r', 'option' => '-r'];
-        }
-
-        if (str_starts_with($arg, '--run=')) {
-            return ['code_index' => $index, 'code_prefix' => '--run=', 'option' => '--run'];
-        }
-
-        if ($arg === '--' || ! str_starts_with($arg, '-')) {
-            return null;
-        }
-
-        if (in_array($arg, $optionsWithValue, true) && isset($args[$index + 1])) {
-            $index++;
-        }
-    }
-
-    return null;
 }
 
 function buildRawCoverageBootstrap(
@@ -341,7 +246,7 @@ register_shutdown_function(function() use ($tempDir, $branchCoverage) {
             "uncovered" => $uncoveredOnly
         ];
     }
-    echo(json_encode($result, JSON_UNESCAPED_SLASHES));
+    echo(json_encode($result, JSON_UNESCAPED_SLASHES) . PHP_EOL);
 });
 xdebug_start_code_coverage($coverageFlags);
 ';
@@ -355,6 +260,45 @@ function compactPhpSnippet(string $php): string
     }
 
     return $compact . ' ';
+}
+
+/**
+ * Render coverage result in the compact AI-first format:
+ *
+ *   75% (30/40 lines covered, 1 file)
+ *   /path/to/file.php:21,37-38,44
+ */
+function renderCompactCoverage(array $result): string
+{
+    $summary = $result['summary'];
+    $files = (int) $summary['files'];
+    $lines = [
+        sprintf(
+            '%s%% (%d/%d lines covered, %d file%s)',
+            $summary['coverage_percent'],
+            $summary['covered_lines'],
+            $summary['total_lines'],
+            $files,
+            $files === 1 ? '' : 's',
+        ),
+    ];
+
+    foreach ($result['uncovered'] as $file => $uncoveredLines) {
+        $lines[] = $file . ':' . implode(',', array_map('strval', $uncoveredLines));
+    }
+
+    return implode("\n", $lines);
+}
+
+function emitCoverageResult(array $result, bool $jsonOutput): void
+{
+    if ($jsonOutput) {
+        echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . "\n";
+
+        return;
+    }
+
+    echo renderCompactCoverage($result) . "\n";
 }
 
 function prefixPhpRunCode(string $inlineCode, string $inlineBootstrap): string
@@ -387,10 +331,10 @@ if (!$rawMode) {
     // Build PHPUnit command with coverage-clover (stable XML format)
     $phpunitArgs = array_merge(
         ['--coverage-clover=' . $coverageFile, '--testdox', '--no-progress', '--colors=never'],
-        normalizePhpUnitArguments($args),
+        PhpCommandParser::normalizePhpUnitArguments($args),
     );
 
-    echo "# Running PHPUnit with coverage (respects @codeCoverageIgnore)\n";
+    fwrite(STDERR, "# Running PHPUnit with coverage (respects @codeCoverageIgnore)\n");
 
     $escapedArgs = array_map('escapeshellarg', $phpunitArgs);
     // Run PHPUnit via PHP with Xdebug enabled
@@ -406,8 +350,11 @@ if (!$rawMode) {
     exec($cmd . ' 2>&1', $lines, $exitCode);
     $testOutput = implode("\n", $lines);
 
-    // Output test results
-    echo $testOutput . "\n";
+    // Test results are diagnostics, not coverage data - send them to STDERR
+    // on failure so STDOUT carries only the coverage JSON (AI consumption).
+    if ($exitCode !== 0) {
+        fwrite(STDERR, $testOutput . "\n");
+    }
 
     // Check if coverage file was created
     if (!file_exists($coverageFile)) {
@@ -448,7 +395,7 @@ if (!$rawMode) {
                 ],
                 'uncovered' => []
             ];
-            echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . "\n";
+            emitCoverageResult($result, $jsonOutput);
             unlink($coverageFile);
             exit($exitCode);
         }
@@ -513,7 +460,7 @@ if (!$rawMode) {
             'uncovered' => $uncoveredOnly
         ];
 
-        echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . "\n";
+        emitCoverageResult($result, $jsonOutput);
 
     } catch (Throwable $e) {
         fwrite(STDERR, "Error processing coverage: " . $e->getMessage() . "\n");
@@ -529,7 +476,7 @@ if (!$rawMode) {
 }
 
 // Raw mode - uses Xdebug directly (original behavior)
-$args = normalizeRawArguments($args);
+$args = PhpCommandParser::normalizeRawArguments($args);
 $branchFlag = $branchCoverage ? 'true' : 'false';
 $sourceFilterEnabled = $sourceOption !== null && $sourceOption !== '';
 $vendorExcludePaths = [];
@@ -571,7 +518,7 @@ $xdebugFlag = XdebugFinder::getXdebugFlag();
 if (empty($args)) {
     if (file_exists('./vendor/bin/phpunit')) {
         $args = ['./vendor/bin/phpunit', '--no-coverage', '--testdox', '--no-progress', '--colors=never'];
-        echo "# Raw mode: Running PHPUnit with Xdebug direct coverage\n";
+        fwrite(STDERR, "# Raw mode: Running PHPUnit with Xdebug direct coverage\n");
     } else {
         echo "Usage: " . $argv[0] . " --raw [--branch-coverage] [--include-vendor=PATTERNS] [--] php script.php [args...]\n";
         echo "No arguments provided and ./vendor/bin/phpunit not found.\n";
@@ -580,7 +527,7 @@ if (empty($args)) {
 }
 
 $shutdownScript = null;
-$runCodeArgument = findPhpRunCodeArgument($args);
+$runCodeArgument = PhpCommandParser::findPhpRunCodeArgument($args);
 if ($runCodeArgument !== null) {
     $codeIndex = $runCodeArgument['code_index'];
     $codePrefix = $runCodeArgument['code_prefix'];
@@ -639,9 +586,43 @@ if ($debug) {
 $lines = [];
 $exitCode = 0;
 exec($cmd . ' 2>&1', $lines, $exitCode);
-$output = implode("\n", $lines);
 
-echo $output;
+// STDOUT carries only the coverage JSON for AI consumption; the target
+// program's own output (stdout/stderr) is redirected to STDERR.
+$jsonLine = null;
+$programOutput = [];
+foreach ($lines as $line) {
+    if (str_starts_with($line, '{"$schema"')) {
+        $jsonLine = $line;
+        continue;
+    }
+
+    $programOutput[] = $line;
+}
+
+if ($programOutput !== []) {
+    fwrite(STDERR, implode("\n", $programOutput) . "\n");
+}
+
+if ($jsonLine === null) {
+    fwrite(STDERR, "Error: coverage JSON was not produced (exit code: {$exitCode})\n");
+    exit($exitCode !== 0 ? $exitCode : 1);
+}
+
+try {
+    $result = json_decode($jsonLine, true, 512, JSON_THROW_ON_ERROR);
+} catch (JsonException $e) {
+    fwrite(STDERR, "Error: coverage JSON is invalid: {$e->getMessage()}\n");
+    exit(1);
+}
+
+if (! $jsonOutput && ($result['coverage_type'] ?? null) === 'line') {
+    echo renderCompactCoverage($result) . "\n";
+} else {
+    // --json, or branch coverage (complex data stays machine-readable)
+    echo $jsonLine . "\n";
+}
+
 if ($shutdownScript !== null && file_exists($shutdownScript)) {
     unlink($shutdownScript);
 }

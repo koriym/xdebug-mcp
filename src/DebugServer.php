@@ -18,6 +18,7 @@ use Amp\Socket\ServerSocket;
 use Amp\Socket\Socket;
 use Amp\Socket\SocketException;
 use Amp\TimeoutCancellation;
+use Koriym\XdebugMcp\Dbgp\DbgpXml;
 use Koriym\XdebugMcp\Exceptions\BreakpointException;
 use Koriym\XdebugMcp\Exceptions\DebugSessionException;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
@@ -63,7 +64,6 @@ use function getenv;
 use function glob;
 use function implode;
 use function in_array;
-use function intval;
 use function is_array;
 use function is_bool;
 use function is_float;
@@ -2452,47 +2452,6 @@ final class DebugServer
     }
 
     /**
-     * Strip XML 1.0 illegal control characters from a DBGp byte stream.
-     *
-     * Xdebug emits raw bytes (e.g., NUL inside anonymous-class names from PHP 8.3+)
-     * and can also surface invalid numeric character references such as &#0;.
-     * Both forms make libxml's strict parser reject the response.
-     */
-    private static function sanitizeDbgpXml(string $xml): string
-    {
-        $xml = preg_replace_callback(
-            '/&#(x[0-9A-Fa-f]+|\d+);/',
-            static function (array $matches): string {
-                $value = $matches[1];
-                $isHex = $value[0] === 'x';
-                $digits = $isHex ? ltrim(substr($value, 1), '0') : ltrim($value, '0');
-                $digits = $digits === '' ? '0' : $digits;
-
-                if (strlen($digits) > ($isHex ? 6 : 7)) {
-                    return '';
-                }
-
-                $codepoint = $isHex ? intval($digits, 16) : (int) $digits;
-
-                return self::isXmlCharacter($codepoint) ? $matches[0] : '';
-            },
-            $xml,
-        ) ?? $xml;
-
-        return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $xml) ?? $xml;
-    }
-
-    private static function isXmlCharacter(int $codepoint): bool
-    {
-        return $codepoint === 0x09
-            || $codepoint === 0x0A
-            || $codepoint === 0x0D
-            || ($codepoint >= 0x20 && $codepoint <= 0xD7FF)
-            || ($codepoint >= 0xE000 && $codepoint <= 0xFFFD)
-            || ($codepoint >= 0x10000 && $codepoint <= 0x10FFFF);
-    }
-
-    /**
      * Parse XML response safely without error suppression
      */
     private function parseXmlResponse(string $xmlString): SimpleXMLElement|null
@@ -2505,7 +2464,7 @@ final class DebugServer
         $useErrors = libxml_use_internal_errors(true);
         libxml_clear_errors();
 
-        $xml = simplexml_load_string(self::sanitizeDbgpXml($xmlString));
+        $xml = simplexml_load_string(DbgpXml::sanitize($xmlString));
 
         // Get any errors that occurred
         $errors = libxml_get_errors();
@@ -3085,7 +3044,7 @@ final class DebugServer
             $variables = [];
             $useErrors = libxml_use_internal_errors(true);
             libxml_clear_errors();
-            $xml = simplexml_load_string(self::sanitizeDbgpXml($response));
+            $xml = simplexml_load_string(DbgpXml::sanitize($response));
             libxml_clear_errors();
             libxml_use_internal_errors($useErrors);
             if ($xml && (property_exists($xml, 'property') && $xml->property !== null)) {
@@ -3228,7 +3187,7 @@ final class DebugServer
 
             $useErrors = libxml_use_internal_errors(true);
             libxml_clear_errors();
-            $xml = simplexml_load_string(self::sanitizeDbgpXml($response));
+            $xml = simplexml_load_string(DbgpXml::sanitize($response));
             libxml_clear_errors();
             libxml_use_internal_errors($useErrors);
             if (! $xml || (! property_exists($xml, 'property') || $xml->property === null)) {
@@ -3740,7 +3699,7 @@ final class DebugServer
         try {
             $useErrors = libxml_use_internal_errors(true);
             libxml_clear_errors();
-            $xml = simplexml_load_string(self::sanitizeDbgpXml($stackXml));
+            $xml = simplexml_load_string(DbgpXml::sanitize($stackXml));
             libxml_clear_errors();
             libxml_use_internal_errors($useErrors);
             if (! $xml || (! property_exists($xml, 'stack') || $xml->stack === null)) {
@@ -3846,7 +3805,7 @@ final class DebugServer
         try {
             $useErrors = libxml_use_internal_errors(true);
             libxml_clear_errors();
-            $xml = simplexml_load_string(self::sanitizeDbgpXml($response));
+            $xml = simplexml_load_string(DbgpXml::sanitize($response));
             libxml_clear_errors();
             libxml_use_internal_errors($useErrors);
             if ($xml) {

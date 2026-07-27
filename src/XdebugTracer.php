@@ -32,15 +32,20 @@ use function ini_get;
 use function is_readable;
 use function number_format;
 use function passthru;
+use function preg_match;
 use function preg_replace;
 use function round;
 use function shell_exec;
 use function sprintf;
 use function str_contains;
 use function str_ends_with;
+use function str_replace;
 use function strtolower;
 use function trim;
 use function usort;
+
+use const PHP_EOL;
+use const PHP_OS_FAMILY;
 
 /**
  * AI-Native Xdebug trace data generator with comprehensive statistics
@@ -368,13 +373,87 @@ class XdebugTracer
 
     public function analyzeWithClaude(string $traceFile): void
     {
-        $languageOutput = shell_exec('defaults read -g AppleLanguages') ?: (getenv('LANG') ?: getenv('LC_ALL') ?: '');
-        $lang = str_contains($languageOutput, 'ja') ? 'Japanese' : 'English';
+        if (! $this->isClaudeCommandAvailable()) {
+            echo PHP_EOL . '⚠️ Claude Code CLI is not installed or not in PATH. Skipping AI analysis.' . PHP_EOL;
+
+            return;
+        }
+
+        $lang = $this->detectLanguage();
         $claudePrompt = "Analyze this Xdebug trace file for code quality across multiple dimensions: 1) Security vulnerabilities (SQL injection, XSS, unsafe operations), 2) Performance efficiency (N+1 queries, redundant operations, memory leaks), 3) Code principles violations (DRY, SOLID, separation of concerns), 4) Execution patterns and debugging insights. Focus especially on AI/Junior developer code that passes tests but has hidden quality issues: $traceFile. Answer in $lang.";
 
         echo "\n🤖 Starting Claude Code analysis...\n";
         passthru('claude ' . escapeshellarg($claudePrompt));
         echo "\n";
         echo "🤖 Claude Code analysis completed.\n";
+    }
+
+    private function isClaudeCommandAvailable(): bool
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            $output = shell_exec('where claude 2> NUL');
+        } else {
+            $output = shell_exec('command -v claude 2>/dev/null');
+        }
+
+        return ($output ?? '') !== '';
+    }
+
+    private function detectLanguage(): string
+    {
+        $output = $this->resolveLanguageOutput();
+
+        return $this->isJapanese($output) ? 'Japanese' : 'English';
+    }
+
+    private function resolveLanguageOutput(): string
+    {
+        $env = (string) (getenv('LC_ALL') ?: getenv('LC_MESSAGES') ?: getenv('LANG') ?: '');
+
+        if ($env !== '') {
+            return $env;
+        }
+
+        if (PHP_OS_FAMILY === 'Darwin') {
+            return $this->parsePrimaryAppleLanguage((string) shell_exec('defaults read -g AppleLanguages'));
+        }
+
+        return '';
+    }
+
+    private function parsePrimaryAppleLanguage(string $output): string
+    {
+        if ($output === '') {
+            return '';
+        }
+
+        if (preg_match('/"([^"]+)"/', $output, $matches) === 1) {
+            return $matches[1];
+        }
+
+        $normalized = trim(str_replace(['(', ')'], '', $output));
+        if ($normalized === '') {
+            return '';
+        }
+
+        $parts = explode(',', $normalized);
+
+        return trim($parts[0]);
+    }
+
+    private function isJapanese(string $value): bool
+    {
+        if (str_contains($value, '日本語')) {
+            return true;
+        }
+
+        $lower = strtolower(trim($value));
+        if (str_contains($lower, 'japanese')) {
+            return true;
+        }
+
+        // Match "ja" only as a primary language tag (e.g. ja, ja-JP, ja_JP.UTF-8);
+        // a bare substring match would misclassify e.g. "Azerbaijani".
+        return preg_match('/^ja(?:[-_.@]|$)/', $lower) === 1;
     }
 }

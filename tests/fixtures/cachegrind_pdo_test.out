@@ -1,0 +1,19 @@
+version: 1
+creator: xdebug 3.4.0 (PHP 8.4.23) (test fixture)
+cmd: /project/tests/fixtures/cachegrind_pdo_test.php
+part: 1
+positions: line
+events: Time_(10ns) Memory_(bytes)
+summary: 200000 1048576
+fl=(1) php:internal
+fn=(1) php::strlen
+10 1000 1024
+fl=(2) /project/tests/fixtures/cachegrind_pdo_test.php
+fn=(2) {main}
+20 100000 524288
+cfn=(3) PDO::query
+calls=1
+21 50000 262144
+fl=(1)
+fn=(3) PDO::query
+30 49000 262144
