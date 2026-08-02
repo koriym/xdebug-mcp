@@ -260,9 +260,11 @@ class McpServerIntegrationTest extends TestCase
 
     public function testModernMetaMissingRequiredFieldsOverStdio(): void
     {
-        // _meta declares clientCapabilities but omits protocolVersion
+        // _meta declares protocolVersion but omits clientCapabilities.
+        // (A request with clientCapabilities but no protocolVersion has no
+        // stateless marker and passes as legacy.)
         [$stdout] = $this->runServerProcess(
-            '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/clientCapabilities":{}}}}' . "\n",
+            '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}}' . "\n",
             ['MCP_DEBUG' => ''],
         );
 
@@ -302,6 +304,19 @@ class McpServerIntegrationTest extends TestCase
         $this->assertCount(6, $responses[0]['result']['tools']);
     }
 
+    public function testNonArrayParamsOverStdio(): void
+    {
+        // Regression: scalar params must yield -32602, not -32603 with internals
+        [$stdout] = $this->runServerProcess(
+            '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":"oops"}' . "\n",
+            ['MCP_DEBUG' => ''],
+        );
+
+        $responses = $this->decodeResponses($stdout);
+        $this->assertCount(1, $responses);
+        $this->assertSame(-32602, $responses[0]['error']['code']);
+    }
+
     /**
      * Spawn the real bin/xdebug-mcp CLI (no mocks), write $input to STDIN,
      * close the pipe (which makes the server's fgets loop reach EOF and exit),
@@ -322,18 +337,8 @@ class McpServerIntegrationTest extends TestCase
         $binary = dirname(__DIR__, 2) . '/bin/xdebug-mcp';
 
         // $_ENV is often nearly empty under PHPUnit (variables_order=GPCS);
-        // ensure PATH/HOME survive so tool calls can locate php and Xdebug
-        $baseEnv = $_ENV;
-        foreach (['PATH', 'HOME'] as $key) {
-            $value = getenv($key);
-            if ($value === false || isset($baseEnv[$key])) {
-                continue;
-            }
-
-            $baseEnv[$key] = $value;
-        }
-
-        $process = proc_open(['php', $binary], $descriptorSpec, $pipes, null, array_merge($baseEnv, $env));
+        // forward the real environment so tool calls can locate php and Xdebug
+        $process = proc_open(['php', $binary], $descriptorSpec, $pipes, null, array_merge(getenv(), $env));
 
         $this->assertIsResource($process);
 

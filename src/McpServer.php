@@ -17,7 +17,6 @@ use Koriym\XdebugMcp\Utilities\PhpCommandParser;
 use Throwable;
 
 use function array_filter;
-use function array_keys;
 use function array_map;
 use function array_merge;
 use function array_values;
@@ -64,7 +63,12 @@ final class McpServer
 {
     /** Supported MCP protocol versions, oldest first (dual-era: legacy + stateless) */
     private const SUPPORTED_VERSIONS = ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25', '2026-07-28'];
-    private const LATEST_VERSION = '2026-07-28';
+
+    /** Legacy (initialize-handshake) revisions, oldest first */
+    private const LEGACY_VERSIONS = ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25'];
+
+    /** Latest legacy revision — the fallback for initialize requests; the stateless 2026-07-28 has no handshake and must not be named in an initialize result */
+    private const LATEST_LEGACY_VERSION = '2025-11-25';
     private const INSTRUCTIONS = 'PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, analyze coverage, or compare executions of PHP code. Tools: xtrace (execution flow), xstep (breakpoint debugging), xprofile (performance), xcoverage (test coverage), xback (stack traces), xcompare (breakpoint variable comparison across two runs).';
 
     /** @var array<string, McpTool> */
@@ -383,7 +387,7 @@ final class McpServer
             return JsonRpcResponse::error(null, -32600, 'Invalid Request: expected object');
         }
 
-        /** @var array{method?: string, params?: array<string, string|int|bool|array<string, string|int|bool>>, id?: string|int|null} $request */
+        /** @var array{method?: string, params?: string|int|bool|array<string, string|int|bool|array<string, string|int|bool>>|null, id?: string|int|null} $request */
         $requestMethod = $request['method'] ?? 'unknown';
         $requestId = $request['id'] ?? null;
 
@@ -399,16 +403,23 @@ final class McpServer
         }
     }
 
-    /** @param array{method?: string, params?: array<string, string|int|bool|array<string, string|int|bool>>, id?: string|int|null} $request */
+    /** @param array{method?: string, params?: string|int|bool|array<string, string|int|bool|array<string, string|int|bool>>|null, id?: string|int|null} $request */
     private function handleRequest(array $request): JsonRpcResponse|null
     {
         $method = $request['method'] ?? '';
         $params = $request['params'] ?? [];
         $id = $request['id'] ?? null;
 
-        // MCP 2026-07-28 (stateless): requests carrying io.modelcontextprotocol/*
-        // _meta keys must declare a supported protocol version (SEP-2575).
-        // Requests without them are legacy (initialize-era) and pass through.
+        // params is decoded JSON — it may be a scalar even though handlers
+        // expect an object; reject before it reaches typed signatures
+        if (! is_array($params)) {
+            return JsonRpcResponse::error($id, -32602, 'Invalid params: expected object');
+        }
+
+        // MCP 2026-07-28 (stateless): requests carrying the
+        // io.modelcontextprotocol/protocolVersion _meta key must declare a
+        // supported protocol version (SEP-2575). Requests without it are
+        // legacy (initialize-era) and pass through.
         $metaError = $this->validateProtocolMeta($id, $params);
         if ($metaError instanceof JsonRpcResponse) {
             return $metaError;
@@ -435,11 +446,13 @@ final class McpServer
     /**
      * Validate MCP 2026-07-28 per-request protocol fields.
      *
-     * A request whose _meta contains io.modelcontextprotocol/* keys is a
-     * "modern" stateless request: it must declare protocolVersion and
-     * clientCapabilities (-32602 if missing), and the version must be one
-     * this server implements (-32022 UnsupportedProtocolVersion otherwise).
-     * Returns null when the request is valid or legacy (no modern _meta).
+     * The stateless marker is the io.modelcontextprotocol/protocolVersion
+     * _meta key: when present, clientCapabilities is also required (-32602 if
+     * missing) and the version must be one this server implements (-32022
+     * UnsupportedProtocolVersion otherwise). Other keys under the reserved
+     * io.modelcontextprotocol/ prefix (logLevel, subscriptionId, ...) may
+     * legitimately appear on their own, so they are not treated as markers.
+     * Returns null when the request is valid or legacy (no protocolVersion).
      *
      * @param array<string, string|int|bool|array<string, string|int|bool>> $params
      */
@@ -450,19 +463,11 @@ final class McpServer
             return null;
         }
 
-        $hasProtocolKeys = false;
-        foreach (array_keys($meta) as $key) {
-            if (str_starts_with((string) $key, 'io.modelcontextprotocol/')) {
-                $hasProtocolKeys = true;
-                break;
-            }
-        }
-
-        if (! $hasProtocolKeys) {
+        $version = $meta['io.modelcontextprotocol/protocolVersion'] ?? null;
+        if ($version === null) {
             return null;
         }
 
-        $version = $meta['io.modelcontextprotocol/protocolVersion'] ?? null;
         if (! is_string($version) || ! isset($meta['io.modelcontextprotocol/clientCapabilities'])) {
             return JsonRpcResponse::error($id, -32602, 'Invalid params: missing required _meta fields (io.modelcontextprotocol/protocolVersion, io.modelcontextprotocol/clientCapabilities)');
         }
@@ -477,11 +482,12 @@ final class McpServer
     /** @param array<string, string|int|bool|array<string, string|int|bool>> $params */
     private function handleInitialize(string|int|null $id, array $params): JsonRpcResponse
     {
-        // Legacy handshake (2025-11-25 and earlier): use the protocol version
-        // requested by the client, defaulting to latest when unsupported
-        $clientVersion = $params['protocolVersion'] ?? self::LATEST_VERSION;
-        if (! is_string($clientVersion) || ! in_array($clientVersion, self::SUPPORTED_VERSIONS, true)) {
-            $clientVersion = self::LATEST_VERSION;
+        // Legacy handshake: negotiate within the legacy (initialize-era)
+        // revisions only — the stateless 2026-07-28 has no handshake and
+        // must not be named in an initialize result
+        $clientVersion = $params['protocolVersion'] ?? self::LATEST_LEGACY_VERSION;
+        if (! is_string($clientVersion) || ! in_array($clientVersion, self::LEGACY_VERSIONS, true)) {
+            $clientVersion = self::LATEST_LEGACY_VERSION;
         }
 
         return JsonRpcResponse::success($id, new GenericResult([

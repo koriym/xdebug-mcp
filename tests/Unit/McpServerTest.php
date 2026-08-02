@@ -341,8 +341,65 @@ class McpServerTest extends TestCase
         $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
-        // Should default to latest supported version
-        $this->assertEquals('2026-07-28', $response['result']['protocolVersion']);
+        // Should default to the latest legacy (handshake-era) version
+        $this->assertEquals('2025-11-25', $response['result']['protocolVersion']);
+    }
+
+    public function testInitializeNeverReturnsStatelessVersion(): void
+    {
+        // 2026-07-28 has no initialize handshake, so an initialize result
+        // must not name it — fall back to the latest legacy revision
+        foreach ([['protocolVersion' => '2026-07-28'], []] as $index => $params) {
+            $request = [
+                'jsonrpc' => '2.0',
+                'id' => 90 + $index,
+                'method' => 'initialize',
+                'params' => $params,
+            ];
+
+            $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+            $response = $responseObj->toArray();
+
+            $this->assertEquals('2025-11-25', $response['result']['protocolVersion']);
+        }
+    }
+
+    public function testNonArrayParamsReturnsInvalidParams(): void
+    {
+        // Regression: scalar params must yield -32602, not an internal error
+        // leaking method signatures/file paths
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 95,
+            'method' => 'tools/list',
+            'params' => 'oops',
+        ];
+
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
+
+        $this->assertArrayHasKey('error', $response);
+        $this->assertEquals(-32602, $response['error']['code']);
+        $this->assertStringNotContainsString('McpServer', $response['error']['message']);
+    }
+
+    public function testPrefixedNonVersionMetaKeyPassesAsLegacy(): void
+    {
+        // io.modelcontextprotocol/ is a reserved prefix for the whole spec
+        // (logLevel, subscriptionId, ...); only protocolVersion marks a
+        // stateless request. Other reserved keys alone must not be rejected.
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 96,
+            'method' => 'tools/list',
+            'params' => ['_meta' => ['io.modelcontextprotocol/logLevel' => 'debug']],
+        ];
+
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
+
+        $this->assertArrayHasKey('result', $response);
+        $this->assertArrayHasKey('tools', $response['result']);
     }
 
     public function testServerDiscover(): void
