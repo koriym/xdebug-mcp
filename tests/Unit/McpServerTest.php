@@ -8,6 +8,7 @@ use Koriym\XdebugMcp\DTO\GenericResult;
 use Koriym\XdebugMcp\DTO\JsonRpcResponse;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\McpServer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use Throwable;
@@ -345,23 +346,32 @@ class McpServerTest extends TestCase
         $this->assertEquals('2025-11-25', $response['result']['protocolVersion']);
     }
 
-    public function testInitializeNeverReturnsStatelessVersion(): void
+    /** @param array<string, string> $params */
+    #[DataProvider('provideInitializeVersionsFallingBackToLegacy')]
+    public function testInitializeNeverReturnsStatelessVersion(array $params): void
     {
         // 2026-07-28 has no initialize handshake, so an initialize result
         // must not name it — fall back to the latest legacy revision
-        foreach ([['protocolVersion' => '2026-07-28'], []] as $index => $params) {
-            $request = [
-                'jsonrpc' => '2.0',
-                'id' => 90 + $index,
-                'method' => 'initialize',
-                'params' => $params,
-            ];
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 90,
+            'method' => 'initialize',
+            'params' => $params,
+        ];
 
-            $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
-            $response = $responseObj->toArray();
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
-            $this->assertEquals('2025-11-25', $response['result']['protocolVersion']);
-        }
+        $this->assertEquals('2025-11-25', $response['result']['protocolVersion']);
+    }
+
+    /** @return array<string, array{0: array<string, string>}> */
+    public static function provideInitializeVersionsFallingBackToLegacy(): array
+    {
+        return [
+            'stateless version requested' => [['protocolVersion' => '2026-07-28']],
+            'version omitted' => [[]],
+        ];
     }
 
     public function testNonArrayParamsReturnsInvalidParams(): void
@@ -516,22 +526,31 @@ class McpServerTest extends TestCase
         $this->assertArrayHasKey('tools', $response['result']);
     }
 
-    public function testListResultsContainCacheableFields(): void
+    #[DataProvider('provideListMethods')]
+    public function testListResultsContainCacheableFields(string $method): void
     {
-        foreach (['tools/list', 'prompts/list', 'resources/list'] as $index => $method) {
-            $request = [
-                'jsonrpc' => '2.0',
-                'id' => 30 + $index,
-                'method' => $method,
-            ];
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 30,
+            'method' => $method,
+        ];
 
-            $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
-            $response = $responseObj->toArray();
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
 
-            $this->assertArrayHasKey('ttlMs', $response['result'], $method);
-            $this->assertArrayHasKey('cacheScope', $response['result'], $method);
-            $this->assertSame('complete', $response['result']['resultType'], $method);
-        }
+        $this->assertArrayHasKey('ttlMs', $response['result'], $method);
+        $this->assertArrayHasKey('cacheScope', $response['result'], $method);
+        $this->assertSame('complete', $response['result']['resultType'], $method);
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function provideListMethods(): array
+    {
+        return [
+            'tools/list' => ['tools/list'],
+            'prompts/list' => ['prompts/list'],
+            'resources/list' => ['resources/list'],
+        ];
     }
 
     public function testValidatePhpBinaryScript(): void
