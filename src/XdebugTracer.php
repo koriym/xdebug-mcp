@@ -6,6 +6,7 @@ namespace Koriym\XdebugMcp;
 
 use Koriym\XdebugMcp\DTO\TraceStatistics;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
+use Koriym\XdebugMcp\Utilities\XdebugEnv;
 use RuntimeException;
 
 use function array_keys;
@@ -133,11 +134,13 @@ class XdebugTracer
             array_unshift($xdebugOptions, trim($xdebugFlag));
         }
 
-        // Combine all arguments
+        // Combine all arguments (env prefix pins the mode: environment
+        // variables take precedence over -d flags, see XdebugEnv)
         $allArgs = array_merge($xdebugOptions, [$targetFile], $phpArgs);
-        $cmd = 'php ' . implode(' ', array_map(escapeshellarg(...), $allArgs));
+        $cmd = XdebugEnv::shellPrefix('trace') . 'php ' . implode(' ', array_map(escapeshellarg(...), $allArgs));
 
         // Execute with passthru to show output
+        XdebugEnv::noticeIfInherited();
         $exitCode = 0;
         passthru($cmd, $exitCode);
 

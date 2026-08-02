@@ -23,6 +23,7 @@ use Koriym\XdebugMcp\Exceptions\BreakpointException;
 use Koriym\XdebugMcp\Exceptions\DebugSessionException;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\Utilities\PathNormalizer;
+use Koriym\XdebugMcp\Utilities\XdebugEnv;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use SimpleXMLElement;
@@ -362,6 +363,8 @@ final class DebugServer
             $cancellation = new TimeoutCancellation(3.0);
             $this->listenerReady?->getFuture()->await($cancellation);
 
+            XdebugEnv::noticeIfInherited();
+
             // Check if custom command is provided
             if (isset($this->options['command']) && $this->options['command'] !== []) {
                 $command = $this->options['command'];
@@ -437,7 +440,7 @@ final class DebugServer
                         : '';
 
                     $cmd = sprintf(
-                        'XDEBUG_SESSION=xdebug-mcp %s%s %s'
+                        'XDEBUG_SESSION=xdebug-mcp ' . XdebugEnv::shellPrefix('debug,trace') . '%s%s %s'
                         . '-dxdebug.mode=debug,trace '
                         . '-dxdebug.start_with_request=yes '
                         . '-dxdebug.client_host=127.0.0.1 '
@@ -484,7 +487,7 @@ final class DebugServer
                     : '';
 
                 $cmd = sprintf(
-                    'XDEBUG_SESSION=xdebug-mcp %s%s %s'
+                    'XDEBUG_SESSION=xdebug-mcp ' . XdebugEnv::shellPrefix('debug,trace') . '%s%s %s'
                     . '-dxdebug.mode=debug,trace '
                     . '-dxdebug.start_with_request=yes '
                     . '-dxdebug.client_host=127.0.0.1 '

@@ -375,10 +375,9 @@ class McpServerIntegrationTest extends TestCase
 
         // $_ENV is often nearly empty under PHPUnit (variables_order=GPCS);
         // forward the real environment so tool calls can locate php and
-        // Xdebug — but strip inherited Xdebug settings, which take precedence
-        // over the tools' own on-demand Xdebug configuration and break them
+        // Xdebug. Inherited XDEBUG_* variables no longer need stripping:
+        // the tools pin their own Xdebug env in spawned children (XdebugEnv)
         $forward = getenv();
-        unset($forward['XDEBUG_MODE'], $forward['XDEBUG_CONFIG'], $forward['XDEBUG_TRIGGER']);
 
         $process = proc_open(['php', $binary], $descriptorSpec, $pipes, null, array_merge($forward, $env));
 

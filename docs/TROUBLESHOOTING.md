@@ -87,6 +87,22 @@ pkill -f "xdebug"
 pkill -f "9004"
 ```
 
+### 4. Inherited XDEBUG_MODE / XDEBUG_CONFIG / XDEBUG_TRIGGER
+
+**Issue**: Tools hang (~30 s then `Amp\TimeoutException`), report `Trace file not found in /tmp`, or silently analyze output from a previous run when `XDEBUG_MODE` (or `XDEBUG_CONFIG` / `XDEBUG_TRIGGER`) is set in your shell. Environment variables take precedence over the `-d` flags the tools use, so an inherited setting hijacks the tool's own Xdebug configuration.
+
+**Fixed in current version**: The tools pin their own Xdebug environment in every spawned child process, so inherited values are overridden automatically. You will see a one-line notice when this happens:
+
+```text
+Note: inherited XDEBUG_MODE ignored; the tool pins its own Xdebug configuration.
+```
+
+No action is required — the notice is informational. If you are on an older version, unset the variables first:
+
+```bash
+unset XDEBUG_MODE XDEBUG_CONFIG XDEBUG_TRIGGER
+```
+
 ## 🚀 Forward Trace Issues
 
 ### 1. Conditional Breakpoints Not Triggering

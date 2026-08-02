@@ -6,6 +6,7 @@ require_once __DIR__ . '/autoload.php';
 use Koriym\XdebugMcp\XdebugFinder;
 use Koriym\XdebugMcp\Utilities\PhpCommandParser;
 use Koriym\XdebugMcp\Utilities\VendorFilter;
+use Koriym\XdebugMcp\Utilities\XdebugEnv;
 
 // Xdebug's sentinel value for "exit" branch target in branch coverage data
 const XDEBUG_BRANCH_EXIT_SENTINEL = 2147483645;
@@ -337,8 +338,10 @@ if (!$rawMode) {
     fwrite(STDERR, "# Running PHPUnit with coverage (respects @codeCoverageIgnore)\n");
 
     $escapedArgs = array_map('escapeshellarg', $phpunitArgs);
-    // Run PHPUnit via PHP with Xdebug enabled
-    $cmd = escapeshellarg($phpPath) . $xdebugFlag . ' -dxdebug.mode=coverage -dpcov.enabled=0 ' . escapeshellarg('./vendor/bin/phpunit') . ' ' . implode(' ', $escapedArgs);
+    // Run PHPUnit via PHP with Xdebug enabled (env prefix pins the mode:
+    // environment variables take precedence over -d flags, see XdebugEnv)
+    XdebugEnv::noticeIfInherited();
+    $cmd = XdebugEnv::shellPrefix('coverage') . escapeshellarg($phpPath) . $xdebugFlag . ' -dxdebug.mode=coverage -dpcov.enabled=0 ' . escapeshellarg('./vendor/bin/phpunit') . ' ' . implode(' ', $escapedArgs);
 
     if ($debug) {
         fwrite(STDERR, "[COVERAGE_DEBUG] PHPUnit command: $cmd\n");
@@ -569,7 +572,11 @@ if ($runCodeArgument !== null) {
 }
 
 $escapedArgs = array_map('escapeshellarg', $args);
-$cmd = escapeshellarg($phpPath)
+// Env prefix pins the mode: environment variables take precedence over
+// -d flags, so an inherited XDEBUG_MODE would hijack coverage (see XdebugEnv)
+XdebugEnv::noticeIfInherited();
+$cmd = XdebugEnv::shellPrefix('coverage')
+     . escapeshellarg($phpPath)
      . $xdebugFlag
      . ' -dxdebug.mode=coverage ';
 
