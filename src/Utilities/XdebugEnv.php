@@ -41,17 +41,26 @@ final class XdebugEnv
     /**
      * Emit a one-line notice when inherited Xdebug variables are overridden
      *
-     * @param resource|null $stderr Stream for the notice (STDERR by default)
+     * XDEBUG_MODE is reported only when its value differs from the pinned
+     * mode — an inherited value identical to what the tool would set is not
+     * overridden in effect. XDEBUG_CONFIG/XDEBUG_TRIGGER are reported on any
+     * presence, including empty-but-present (which Xdebug treats as set).
+     *
+     * @param string        $pinnedMode The mode the tool pins via shellPrefix()
+     * @param resource|null $stderr     Stream for the notice (STDERR by default)
      */
-    public static function noticeIfInherited($stderr = null): void
+    public static function noticeIfInherited(string $pinnedMode, $stderr = null): void
     {
         $stderr ??= STDERR;
 
         $found = [];
         foreach (self::INHERITED_VARS as $var) {
-            // !== false: an empty-but-present variable still counts as set
-            // for Xdebug (e.g. an empty XDEBUG_TRIGGER enables the trigger)
-            if (getenv($var) === false) {
+            $value = getenv($var);
+            if ($value === false) {
+                continue;
+            }
+
+            if ($var === 'XDEBUG_MODE' && $value === $pinnedMode) {
                 continue;
             }
 

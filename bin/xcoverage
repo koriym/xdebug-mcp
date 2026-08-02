@@ -340,7 +340,7 @@ if (!$rawMode) {
     $escapedArgs = array_map('escapeshellarg', $phpunitArgs);
     // Run PHPUnit via PHP with Xdebug enabled (env prefix pins the mode:
     // environment variables take precedence over -d flags, see XdebugEnv)
-    XdebugEnv::noticeIfInherited();
+    XdebugEnv::noticeIfInherited('coverage');
     $cmd = XdebugEnv::shellPrefix('coverage') . escapeshellarg($phpPath) . $xdebugFlag . ' -dxdebug.mode=coverage -dpcov.enabled=0 ' . escapeshellarg('./vendor/bin/phpunit') . ' ' . implode(' ', $escapedArgs);
 
     if ($debug) {
@@ -574,7 +574,7 @@ if ($runCodeArgument !== null) {
 $escapedArgs = array_map('escapeshellarg', $args);
 // Env prefix pins the mode: environment variables take precedence over
 // -d flags, so an inherited XDEBUG_MODE would hijack coverage (see XdebugEnv)
-XdebugEnv::noticeIfInherited();
+XdebugEnv::noticeIfInherited('coverage');
 $cmd = XdebugEnv::shellPrefix('coverage')
      . escapeshellarg($phpPath)
      . $xdebugFlag

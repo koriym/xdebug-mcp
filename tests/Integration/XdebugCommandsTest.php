@@ -19,6 +19,7 @@ use function is_executable;
 use function json_decode;
 use function json_encode;
 use function mkdir;
+use function preg_replace;
 use function random_bytes;
 use function realpath;
 use function rmdir;
@@ -380,6 +381,8 @@ PHP);
 
         $output = shell_exec($command);
         $this->assertNotNull($output);
+        // Drop the inherited-Xdebug-env notice (STDERR) that may precede program output
+        $output = (string) preg_replace('/^Note: inherited .*\n/m', '', $output);
         $this->assertStringStartsWith("1\n", $output);
     }
 
@@ -397,6 +400,8 @@ PHP);
 
         $output = shell_exec($command);
         $this->assertNotNull($output);
+        // Drop the inherited-Xdebug-env notice (STDERR) that may precede program output
+        $output = (string) preg_replace('/^Note: inherited .*\n/m', '', $output);
         $this->assertStringStartsWith("1\n", $output);
         $this->assertStringNotContainsString('strict_types declaration must be the very first statement', $output);
     }

@@ -140,7 +140,7 @@ class XdebugTracer
         $cmd = XdebugEnv::shellPrefix('trace') . 'php ' . implode(' ', array_map(escapeshellarg(...), $allArgs));
 
         // Execute with passthru to show output
-        XdebugEnv::noticeIfInherited();
+        XdebugEnv::noticeIfInherited('trace');
         $exitCode = 0;
         passthru($cmd, $exitCode);
 

@@ -363,7 +363,7 @@ final class DebugServer
             $cancellation = new TimeoutCancellation(3.0);
             $this->listenerReady?->getFuture()->await($cancellation);
 
-            XdebugEnv::noticeIfInherited();
+            XdebugEnv::noticeIfInherited('debug,trace');
 
             // Check if custom command is provided
             if (isset($this->options['command']) && $this->options['command'] !== []) {

@@ -127,7 +127,7 @@ class XdebugRunner
         if ($this->isDockerCommand($this->commandParts)) {
             $command = $this->buildDockerCommand($this->commandParts); // @codeCoverageIgnore
         } else {
-            XdebugEnv::noticeIfInherited();
+            XdebugEnv::noticeIfInherited($this->mode);
             $this->validateLocalFile($this->commandParts);
             $command = $this->buildLocalCommand($this->commandParts);
         }
