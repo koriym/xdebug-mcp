@@ -11,7 +11,7 @@ use JsonSerializable;
  */
 final class JsonRpcError implements JsonSerializable
 {
-    /** @param array{supportedVersions?: list<string>}|null $data */
+    /** @param array{supported?: list<string>, requested?: string}|null $data */
     public function __construct(
         public readonly int $code,
         public readonly string $message,
@@ -19,7 +19,7 @@ final class JsonRpcError implements JsonSerializable
     ) {
     }
 
-    /** @return array{code: int, message: string, data?: array{supportedVersions?: list<string>}} */
+    /** @return array{code: int, message: string, data?: array{supported?: list<string>, requested?: string}} */
     public function jsonSerialize(): array
     {
         $error = [

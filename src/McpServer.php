@@ -17,6 +17,7 @@ use Koriym\XdebugMcp\Utilities\PhpCommandParser;
 use Throwable;
 
 use function array_filter;
+use function array_key_exists;
 use function array_map;
 use function array_merge;
 use function array_values;
@@ -407,8 +408,15 @@ final class McpServer
     private function handleRequest(array $request): JsonRpcResponse|null
     {
         $method = $request['method'] ?? '';
-        $params = $request['params'] ?? [];
         $id = $request['id'] ?? null;
+
+        // JSON-RPC 2.0 §4.1: a notification (no id member) must never be
+        // answered — not even with an error
+        if (! array_key_exists('id', $request)) {
+            return null;
+        }
+
+        $params = $request['params'] ?? [];
 
         // params is decoded JSON — it may be a scalar even though handlers
         // expect an object; reject before it reaches typed signatures
@@ -463,17 +471,22 @@ final class McpServer
             return null;
         }
 
-        $version = $meta['io.modelcontextprotocol/protocolVersion'] ?? null;
-        if ($version === null) {
+        if (! array_key_exists('io.modelcontextprotocol/protocolVersion', $meta)) {
             return null;
         }
 
-        if (! is_string($version) || ! isset($meta['io.modelcontextprotocol/clientCapabilities'])) {
-            return JsonRpcResponse::error($id, -32602, 'Invalid params: missing required _meta fields (io.modelcontextprotocol/protocolVersion, io.modelcontextprotocol/clientCapabilities)');
+        $version = $meta['io.modelcontextprotocol/protocolVersion'];
+        if (! is_string($version)) {
+            return JsonRpcResponse::error($id, -32602, 'Invalid params: io.modelcontextprotocol/protocolVersion must be a string');
+        }
+
+        if (! isset($meta['io.modelcontextprotocol/clientCapabilities'])) {
+            return JsonRpcResponse::error($id, -32602, 'Invalid params: missing required _meta field (io.modelcontextprotocol/clientCapabilities)');
         }
 
         if (! in_array($version, self::SUPPORTED_VERSIONS, true)) {
-            return JsonRpcResponse::error($id, -32022, "Unsupported protocol version: {$version}", ['supportedVersions' => self::SUPPORTED_VERSIONS]);
+            // UnsupportedProtocolVersionError: data shape per 2026-07-28 schema
+            return JsonRpcResponse::error($id, -32022, "Unsupported protocol version: {$version}", ['supported' => self::SUPPORTED_VERSIONS, 'requested' => $version]);
         }
 
         return null;

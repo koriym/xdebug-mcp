@@ -476,7 +476,8 @@ class McpServerTest extends TestCase
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals(-32022, $response['error']['code']);
         $this->assertStringContainsString('Unsupported protocol version', $response['error']['message']);
-        $this->assertContains('2026-07-28', $response['error']['data']['supportedVersions']);
+        $this->assertContains('2026-07-28', $response['error']['data']['supported']);
+        $this->assertSame('1999-01-01', $response['error']['data']['requested']);
     }
 
     public function testModernMetaMissingRequiredFieldsReturnsInvalidParams(): void

@@ -27,13 +27,13 @@ final class JsonRpcResponse implements JsonSerializable
         return new self(id: $id, result: $result);
     }
 
-    /** @param array{supportedVersions?: list<string>}|null $data */
+    /** @param array{supported?: list<string>, requested?: string}|null $data */
     public static function error(string|int|null $id, int $code, string $message, array|null $data = null): self
     {
         return new self(id: $id, error: new JsonRpcError($code, $message, $data));
     }
 
-    /** @return array{jsonrpc: string, id: string|int|null, result?: array<string, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|null>|null>|null>|null>|null>, error?: array{code: int, message: string, data?: array{supportedVersions?: list<string>}}} */
+    /** @return array{jsonrpc: string, id: string|int|null, result?: array<string, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|null>|null>|null>|null>|null>, error?: array{code: int, message: string, data?: array{supported?: list<string>, requested?: string}}} */
     public function jsonSerialize(): array
     {
         $response = [
@@ -81,7 +81,7 @@ final class JsonRpcResponse implements JsonSerializable
         return $data;
     }
 
-    /** @return array{jsonrpc: string, id: string|int|null, result?: array<string, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|null>|null>|null>|null>|null>, error?: array{code: int, message: string, data?: array{supportedVersions?: list<string>}}} */
+    /** @return array{jsonrpc: string, id: string|int|null, result?: array<string, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|null>|null>|null>|null>|null>, error?: array{code: int, message: string, data?: array{supported?: list<string>, requested?: string}}} */
     public function toArray(): array
     {
         return $this->jsonSerialize();
