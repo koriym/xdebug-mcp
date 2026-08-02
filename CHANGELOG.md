@@ -15,10 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README now recommends the Skill integration over the MCP server for AI coding agents (with a comparison table and guidance on when MCP is the right choice), and correctly documents that MCP exposes all one-shot tools including `xcompare`.
 
 ### Fixed
-- `McpServerIntegrationTest` process spawner now forwards the real environment (`getenv()`) to the server process, so MCP tool calls that locate `php`/Xdebug work when PHPUnit runs with a minimal environment.
+- `McpServerIntegrationTest` process spawner now forwards the real environment (`getenv()`) to the server process, so MCP tool calls that locate `php`/Xdebug work when PHPUnit runs with a minimal environment; inherited `XDEBUG_MODE`/`XDEBUG_CONFIG`/`XDEBUG_TRIGGER` are stripped since they take precedence over the tools' own on-demand Xdebug configuration.
 - MCP requests with non-object `params` now return -32602 (Invalid params) instead of an internal error (-32603) that leaked method signatures and file paths to the client.
 - Stateless request detection now keys on the presence of `io.modelcontextprotocol/protocolVersion` only; other keys under the reserved prefix (e.g. `logLevel`) no longer cause spurious -32602 rejections.
 - `initialize` never names the stateless 2026-07-28 revision (which has no handshake); negotiation stays within legacy revisions, falling back to 2025-11-25.
+- The -32022 (UnsupportedProtocolVersion) error data now matches the 2026-07-28 schema: `data: {supported, requested}`.
+- Notifications (requests without an `id`) are never answered, per JSON-RPC 2.0 §4.1 — previously malformed notifications could receive error responses.
 
 ## [0.12.0] - 2026-07-28
 
