@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- MCP protocol version 2026-07-28 (stateless) support: `server/discover` RPC, per-request `_meta` protocol fields (`io.modelcontextprotocol/protocolVersion`, `clientCapabilities`) with -32022/-32602 validation, `resultType` on every result, server identity in result `_meta`, and `ttlMs`/`cacheScope` cache hints on list endpoints. Legacy `initialize` handshake clients (2025-11-25 and earlier) remain supported (dual-era).
+- Protocol-level integration tests that spawn the real `bin/xdebug-mcp` process and exercise the stateless workflows end to end: `server/discover` probe, handshake-less `tools/list`/`tools/call`, unsupported-version (-32022) and missing-`_meta` (-32602) errors, and the legacy `initialize` flow.
+
+### Fixed
+- `McpServerIntegrationTest` process spawner now forwards `PATH`/`HOME` to the server process, so MCP tool calls that locate `php`/Xdebug work when PHPUnit runs with a minimal environment.
+
 ## [0.12.0] - 2026-07-28
 
 ### Added

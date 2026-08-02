@@ -17,6 +17,7 @@ use Koriym\XdebugMcp\Utilities\PhpCommandParser;
 use Throwable;
 
 use function array_filter;
+use function array_keys;
 use function array_map;
 use function array_merge;
 use function array_values;
@@ -61,6 +62,11 @@ use const STDOUT;
 
 final class McpServer
 {
+    /** Supported MCP protocol versions, oldest first (dual-era: legacy + stateless) */
+    private const SUPPORTED_VERSIONS = ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25', '2026-07-28'];
+    private const LATEST_VERSION = '2026-07-28';
+    private const INSTRUCTIONS = 'PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, analyze coverage, or compare executions of PHP code. Tools: xtrace (execution flow), xstep (breakpoint debugging), xprofile (performance), xcoverage (test coverage), xback (stack traces), xcompare (breakpoint variable comparison across two runs).';
+
     /** @var array<string, McpTool> */
     protected array $tools = [];
     private bool $debugMode = false;
@@ -400,9 +406,18 @@ final class McpServer
         $params = $request['params'] ?? [];
         $id = $request['id'] ?? null;
 
+        // MCP 2026-07-28 (stateless): requests carrying io.modelcontextprotocol/*
+        // _meta keys must declare a supported protocol version (SEP-2575).
+        // Requests without them are legacy (initialize-era) and pass through.
+        $metaError = $this->validateProtocolMeta($id, $params);
+        if ($metaError instanceof JsonRpcResponse) {
+            return $metaError;
+        }
+
         try {
             return match ($method) {
                 'initialize' => $this->handleInitialize($id, $params),
+                'server/discover' => $this->handleServerDiscover($id),
                 'tools/list' => $this->handleToolsList($id),
                 'tools/call' => $this->handleToolCall($id, $params),
                 'resources/list' => $this->handleResourcesList($id),
@@ -417,16 +432,56 @@ final class McpServer
         }
     }
 
+    /**
+     * Validate MCP 2026-07-28 per-request protocol fields.
+     *
+     * A request whose _meta contains io.modelcontextprotocol/* keys is a
+     * "modern" stateless request: it must declare protocolVersion and
+     * clientCapabilities (-32602 if missing), and the version must be one
+     * this server implements (-32022 UnsupportedProtocolVersion otherwise).
+     * Returns null when the request is valid or legacy (no modern _meta).
+     *
+     * @param array<string, string|int|bool|array<string, string|int|bool>> $params
+     */
+    private function validateProtocolMeta(string|int|null $id, array $params): JsonRpcResponse|null
+    {
+        $meta = $params['_meta'] ?? null;
+        if (! is_array($meta)) {
+            return null;
+        }
+
+        $hasProtocolKeys = false;
+        foreach (array_keys($meta) as $key) {
+            if (str_starts_with((string) $key, 'io.modelcontextprotocol/')) {
+                $hasProtocolKeys = true;
+                break;
+            }
+        }
+
+        if (! $hasProtocolKeys) {
+            return null;
+        }
+
+        $version = $meta['io.modelcontextprotocol/protocolVersion'] ?? null;
+        if (! is_string($version) || ! isset($meta['io.modelcontextprotocol/clientCapabilities'])) {
+            return JsonRpcResponse::error($id, -32602, 'Invalid params: missing required _meta fields (io.modelcontextprotocol/protocolVersion, io.modelcontextprotocol/clientCapabilities)');
+        }
+
+        if (! in_array($version, self::SUPPORTED_VERSIONS, true)) {
+            return JsonRpcResponse::error($id, -32022, "Unsupported protocol version: {$version}", ['supportedVersions' => self::SUPPORTED_VERSIONS]);
+        }
+
+        return null;
+    }
+
     /** @param array<string, string|int|bool|array<string, string|int|bool>> $params */
     private function handleInitialize(string|int|null $id, array $params): JsonRpcResponse
     {
-        // Use the protocol version requested by the client, defaulting to latest
-        $clientVersion = $params['protocolVersion'] ?? '2025-06-18';
-
-        // Ensure we support the requested version
-        $supportedVersions = ['2024-11-05', '2025-03-26', '2025-06-18'];
-        if (! in_array($clientVersion, $supportedVersions, true)) {
-            $clientVersion = '2025-06-18';
+        // Legacy handshake (2025-11-25 and earlier): use the protocol version
+        // requested by the client, defaulting to latest when unsupported
+        $clientVersion = $params['protocolVersion'] ?? self::LATEST_VERSION;
+        if (! is_string($clientVersion) || ! in_array($clientVersion, self::SUPPORTED_VERSIONS, true)) {
+            $clientVersion = self::LATEST_VERSION;
         }
 
         return JsonRpcResponse::success($id, new GenericResult([
@@ -437,10 +492,30 @@ final class McpServer
                 'prompts' => ['listChanged' => true],
             ],
             'serverInfo' => [
-                'name' => 'xdebug-mcp-server',
-                'version' => '2.0.0',
+                'name' => Constants::MCP_SERVER_NAME,
+                'version' => Constants::MCP_SERVER_VERSION,
             ],
-            'instructions' => 'PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, analyze coverage, or compare executions of PHP code. Tools: xtrace (execution flow), xstep (breakpoint debugging), xprofile (performance), xcoverage (test coverage), xback (stack traces), xcompare (breakpoint variable comparison across two runs).',
+            'instructions' => self::INSTRUCTIONS,
+        ]));
+    }
+
+    /**
+     * MCP 2026-07-28 server/discover (SEP-2575): advertise supported protocol
+     * versions, capabilities, and identity. Also used by dual-era clients as
+     * the stdio backward-compatibility probe.
+     */
+    private function handleServerDiscover(string|int|null $id): JsonRpcResponse
+    {
+        return JsonRpcResponse::success($id, new GenericResult([
+            'supportedVersions' => self::SUPPORTED_VERSIONS,
+            'capabilities' => [
+                'tools' => ['listChanged' => true],
+                'resources' => ['listChanged' => false],
+                'prompts' => ['listChanged' => true],
+            ],
+            'instructions' => self::INSTRUCTIONS,
+            'ttlMs' => Constants::MCP_LIST_CACHE_TTL_MS,
+            'cacheScope' => Constants::MCP_LIST_CACHE_SCOPE,
         ]));
     }
 
@@ -453,6 +528,8 @@ final class McpServer
     {
         return JsonRpcResponse::success($id, new GenericResult([
             'resources' => [],
+            'ttlMs' => Constants::MCP_LIST_CACHE_TTL_MS,
+            'cacheScope' => Constants::MCP_LIST_CACHE_SCOPE,
         ]));
     }
 
@@ -637,6 +714,8 @@ final class McpServer
                     ],
                 ],
             ],
+            'ttlMs' => Constants::MCP_LIST_CACHE_TTL_MS,
+            'cacheScope' => Constants::MCP_LIST_CACHE_SCOPE,
         ]));
     }
 
