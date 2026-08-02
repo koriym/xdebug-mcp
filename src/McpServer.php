@@ -62,11 +62,11 @@ use const STDOUT;
 
 final class McpServer
 {
-    /** Supported MCP protocol versions, oldest first (dual-era: legacy + stateless) */
-    private const SUPPORTED_VERSIONS = ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25', '2026-07-28'];
-
     /** Legacy (initialize-handshake) revisions, oldest first */
     private const LEGACY_VERSIONS = ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25'];
+
+    /** Supported MCP protocol versions, oldest first (dual-era: legacy + stateless) */
+    private const SUPPORTED_VERSIONS = [...self::LEGACY_VERSIONS, '2026-07-28'];
 
     /** Latest legacy revision — the fallback for initialize requests; the stateless 2026-07-28 has no handshake and must not be named in an initialize result */
     private const LATEST_LEGACY_VERSION = '2025-11-25';
