@@ -295,6 +295,9 @@ class CompareRunner
         ];
 
         $pipes = [];
+        // Inherits the parent env untouched: the spawned bin/xstep pins its
+        // own Xdebug env downstream (see XdebugEnv). If this ever spawns a
+        // PHP process directly, it must pin the env the same way.
         $process = proc_open($fullCommand, $descriptors, $pipes, $cwd);
         if (! is_resource($process)) {
             unlink($stderrPath);

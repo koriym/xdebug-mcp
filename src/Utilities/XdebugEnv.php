@@ -28,12 +28,14 @@ final class XdebugEnv
     /**
      * Shell prefix that pins the Xdebug mode for a child command
      *
-     * XDEBUG_CONFIG and XDEBUG_TRIGGER are cleared because both can alter
-     * the effective Xdebug mode/features regardless of `-d` flags.
+     * XDEBUG_CONFIG and XDEBUG_TRIGGER are truly unset via `env -u` — not
+     * emptied, because an empty-but-present variable still counts as set
+     * for Xdebug (an empty XDEBUG_TRIGGER activates the trigger). Both can
+     * alter the effective Xdebug mode/features regardless of `-d` flags.
      */
     public static function shellPrefix(string $mode): string
     {
-        return sprintf('XDEBUG_MODE=%s XDEBUG_CONFIG= XDEBUG_TRIGGER= ', escapeshellarg($mode));
+        return sprintf('env -u XDEBUG_CONFIG -u XDEBUG_TRIGGER XDEBUG_MODE=%s ', escapeshellarg($mode));
     }
 
     /**
@@ -47,8 +49,9 @@ final class XdebugEnv
 
         $found = [];
         foreach (self::INHERITED_VARS as $var) {
-            $value = getenv($var);
-            if ($value === false || $value === '') {
+            // !== false: an empty-but-present variable still counts as set
+            // for Xdebug (e.g. an empty XDEBUG_TRIGGER enables the trigger)
+            if (getenv($var) === false) {
                 continue;
             }
 

@@ -25,11 +25,11 @@ final class XdebugEnvTest extends TestCase
     }
 
     #[Test]
-    public function shellPrefixPinsModeAndClearsConfigAndTrigger(): void
+    public function shellPrefixPinsModeAndUnsetsConfigAndTrigger(): void
     {
         $prefix = XdebugEnv::shellPrefix('coverage');
 
-        $this->assertSame("XDEBUG_MODE='coverage' XDEBUG_CONFIG= XDEBUG_TRIGGER= ", $prefix);
+        $this->assertSame("env -u XDEBUG_CONFIG -u XDEBUG_TRIGGER XDEBUG_MODE='coverage' ", $prefix);
     }
 
     #[Test]
@@ -53,6 +53,15 @@ final class XdebugEnvTest extends TestCase
         $this->assertStringContainsString('XDEBUG_MODE', $notice);
         $this->assertStringContainsString('XDEBUG_TRIGGER', $notice);
         $this->assertStringNotContainsString('XDEBUG_CONFIG,', $notice);
+    }
+
+    #[Test]
+    public function noticeIfInheritedReportsEmptyButPresentVars(): void
+    {
+        // An empty-but-present variable still counts as set for Xdebug
+        putenv('XDEBUG_TRIGGER=');
+
+        $this->assertStringContainsString('XDEBUG_TRIGGER', $this->captureNotice());
     }
 
     private function captureNotice(): string
