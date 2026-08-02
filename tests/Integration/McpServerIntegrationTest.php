@@ -14,6 +14,7 @@ use function dirname;
 use function explode;
 use function fclose;
 use function fwrite;
+use function getenv;
 use function is_array;
 use function json_decode;
 use function proc_close;
@@ -195,6 +196,164 @@ class McpServerIntegrationTest extends TestCase
         $this->assertStringContainsString('tools/list', $stderr);
     }
 
+    public function testServerDiscoverOverStdio(): void
+    {
+        // MCP 2026-07-28: server/discover is the dual-era probe on stdio
+        [$stdout] = $this->runServerProcess(
+            '{"jsonrpc":"2.0","id":1,"method":"server/discover"}' . "\n",
+            ['MCP_DEBUG' => ''],
+        );
+
+        $responses = $this->decodeResponses($stdout);
+        $this->assertCount(1, $responses);
+
+        $result = $responses[0]['result'];
+        $this->assertContains('2026-07-28', $result['supportedVersions']);
+        $this->assertContains('2024-11-05', $result['supportedVersions']);
+        $this->assertArrayHasKey('capabilities', $result);
+        $this->assertSame('complete', $result['resultType']);
+        $this->assertSame(
+            'xdebug-mcp-server',
+            $result['_meta']['io.modelcontextprotocol/serverInfo']['name'],
+        );
+    }
+
+    public function testStatelessModernWorkflowOverStdio(): void
+    {
+        // MCP 2026-07-28: no initialize handshake — every request carries its
+        // protocol version and client capabilities in _meta
+        $meta = '"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}';
+        [$stdout] = $this->runServerProcess(
+            '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{' . $meta . '}}' . "\n"
+            . '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"xback","arguments":{"script":"php tests/fake/loop-counter.php","breakpoint":"tests/fake/loop-counter.php:10"},' . $meta . '}}' . "\n",
+            ['MCP_DEBUG' => ''],
+        );
+
+        $responses = $this->decodeResponses($stdout);
+        $this->assertCount(2, $responses);
+
+        $this->assertCount(6, $responses[0]['result']['tools']);
+        $this->assertSame('complete', $responses[0]['result']['resultType']);
+        $this->assertSame(
+            'xdebug-mcp-server',
+            $responses[0]['result']['_meta']['io.modelcontextprotocol/serverInfo']['name'],
+        );
+
+        $this->assertArrayHasKey('content', $responses[1]['result']);
+        // Match the success marker, not just "backtrace" — the failure
+        // message ("Stack trace (backtrace) failed") contains it too
+        $this->assertStringContainsString('Stack trace (backtrace) retrieved', $responses[1]['result']['content'][0]['text']);
+        $this->assertStringNotContainsString('failed', $responses[1]['result']['content'][0]['text']);
+    }
+
+    public function testUnsupportedProtocolVersionOverStdio(): void
+    {
+        [$stdout] = $this->runServerProcess(
+            '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2030-01-01","io.modelcontextprotocol/clientCapabilities":{}}}}' . "\n",
+            ['MCP_DEBUG' => ''],
+        );
+
+        $responses = $this->decodeResponses($stdout);
+        $this->assertCount(1, $responses);
+
+        $error = $responses[0]['error'];
+        $this->assertSame(-32022, $error['code']);
+        $this->assertContains('2026-07-28', $error['data']['supported']);
+        $this->assertSame('2030-01-01', $error['data']['requested']);
+    }
+
+    public function testServerDiscoverWithModernMetaOverStdio(): void
+    {
+        // Modern (2026-07-28) form: params._meta is required on every request,
+        // including server/discover — exercise both eras of the probe
+        [$stdout] = $this->runServerProcess(
+            '{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}' . "\n",
+            ['MCP_DEBUG' => ''],
+        );
+
+        $responses = $this->decodeResponses($stdout);
+        $this->assertCount(1, $responses);
+
+        $result = $responses[0]['result'];
+        $this->assertContains('2026-07-28', $result['supportedVersions']);
+        $this->assertSame('complete', $result['resultType']);
+    }
+
+    public function testNotificationWithInvalidParamsGetsNoResponse(): void
+    {
+        // JSON-RPC 2.0 §4.1: notifications must not be answered, even with
+        // an error — the following request must still get its response
+        [$stdout] = $this->runServerProcess(
+            '{"jsonrpc":"2.0","method":"notifications/initialized","params":"oops"}' . "\n"
+            . '{"jsonrpc":"2.0","id":9,"method":"tools/list"}' . "\n",
+            ['MCP_DEBUG' => ''],
+        );
+
+        $responses = $this->decodeResponses($stdout);
+        $this->assertCount(1, $responses);
+        $this->assertSame(9, $responses[0]['id']);
+        $this->assertCount(6, $responses[0]['result']['tools']);
+    }
+
+    public function testModernMetaMissingRequiredFieldsOverStdio(): void
+    {
+        // _meta declares protocolVersion but omits clientCapabilities.
+        // (A request with clientCapabilities but no protocolVersion has no
+        // stateless marker and passes as legacy.)
+        [$stdout] = $this->runServerProcess(
+            '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}}' . "\n",
+            ['MCP_DEBUG' => ''],
+        );
+
+        $responses = $this->decodeResponses($stdout);
+        $this->assertCount(1, $responses);
+        $this->assertSame(-32602, $responses[0]['error']['code']);
+    }
+
+    public function testLegacyInitializeWorkflowOverStdio(): void
+    {
+        // Dual-era: legacy clients (2025-11-25 and earlier) keep working.
+        // The initialized notification must produce no response.
+        [$stdout] = $this->runServerProcess(
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"legacy","version":"1.0"}}}' . "\n"
+            . '{"jsonrpc":"2.0","method":"notifications/initialized"}' . "\n"
+            . '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' . "\n",
+            ['MCP_DEBUG' => ''],
+        );
+
+        $responses = $this->decodeResponses($stdout);
+        $this->assertCount(2, $responses, 'notification must not produce a response');
+        $this->assertSame('2025-06-18', $responses[0]['result']['protocolVersion']);
+        $this->assertCount(6, $responses[1]['result']['tools']);
+    }
+
+    public function testRequestWithNonProtocolMetaPassesAsLegacyOverStdio(): void
+    {
+        // _meta without io.modelcontextprotocol/* keys (e.g. progressToken)
+        // is not a modern request and must not be rejected
+        [$stdout] = $this->runServerProcess(
+            '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"progressToken":"tok1"}}}' . "\n",
+            ['MCP_DEBUG' => ''],
+        );
+
+        $responses = $this->decodeResponses($stdout);
+        $this->assertCount(1, $responses);
+        $this->assertCount(6, $responses[0]['result']['tools']);
+    }
+
+    public function testNonArrayParamsOverStdio(): void
+    {
+        // Regression: scalar params must yield -32602, not -32603 with internals
+        [$stdout] = $this->runServerProcess(
+            '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":"oops"}' . "\n",
+            ['MCP_DEBUG' => ''],
+        );
+
+        $responses = $this->decodeResponses($stdout);
+        $this->assertCount(1, $responses);
+        $this->assertSame(-32602, $responses[0]['error']['code']);
+    }
+
     /**
      * Spawn the real bin/xdebug-mcp CLI (no mocks), write $input to STDIN,
      * close the pipe (which makes the server's fgets loop reach EOF and exit),
@@ -213,7 +372,15 @@ class McpServerIntegrationTest extends TestCase
         ];
 
         $binary = dirname(__DIR__, 2) . '/bin/xdebug-mcp';
-        $process = proc_open(['php', $binary], $descriptorSpec, $pipes, null, array_merge($_ENV, $env));
+
+        // $_ENV is often nearly empty under PHPUnit (variables_order=GPCS);
+        // forward the real environment so tool calls can locate php and
+        // Xdebug — but strip inherited Xdebug settings, which take precedence
+        // over the tools' own on-demand Xdebug configuration and break them
+        $forward = getenv();
+        unset($forward['XDEBUG_MODE'], $forward['XDEBUG_CONFIG'], $forward['XDEBUG_TRIGGER']);
+
+        $process = proc_open(['php', $binary], $descriptorSpec, $pipes, null, array_merge($forward, $env));
 
         $this->assertIsResource($process);
 

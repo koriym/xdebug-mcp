@@ -11,18 +11,26 @@ use JsonSerializable;
  */
 final class JsonRpcError implements JsonSerializable
 {
+    /** @param array{supported?: list<string>, requested?: string}|null $data */
     public function __construct(
         public readonly int $code,
         public readonly string $message,
+        public readonly array|null $data = null,
     ) {
     }
 
-    /** @return array{code: int, message: string} */
+    /** @return array{code: int, message: string, data?: array{supported?: list<string>, requested?: string}} */
     public function jsonSerialize(): array
     {
-        return [
+        $error = [
             'code' => $this->code,
             'message' => $this->message,
         ];
+
+        if ($this->data !== null) {
+            $error['data'] = $this->data;
+        }
+
+        return $error;
     }
 }

@@ -8,6 +8,7 @@ use Koriym\XdebugMcp\DTO\GenericResult;
 use Koriym\XdebugMcp\DTO\JsonRpcResponse;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\McpServer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use Throwable;
@@ -341,8 +342,215 @@ class McpServerTest extends TestCase
         $response = $responseObj->toArray();
 
         $this->assertArrayHasKey('result', $response);
-        // Should default to latest supported version
-        $this->assertEquals('2025-06-18', $response['result']['protocolVersion']);
+        // Should default to the latest legacy (handshake-era) version
+        $this->assertEquals('2025-11-25', $response['result']['protocolVersion']);
+    }
+
+    /** @param array<string, string> $params */
+    #[DataProvider('provideInitializeVersionsFallingBackToLegacy')]
+    public function testInitializeNeverReturnsStatelessVersion(array $params): void
+    {
+        // 2026-07-28 has no initialize handshake, so an initialize result
+        // must not name it — fall back to the latest legacy revision
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 90,
+            'method' => 'initialize',
+            'params' => $params,
+        ];
+
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
+
+        $this->assertEquals('2025-11-25', $response['result']['protocolVersion']);
+    }
+
+    /** @return array<string, array{0: array<string, string>}> */
+    public static function provideInitializeVersionsFallingBackToLegacy(): array
+    {
+        return [
+            'stateless version requested' => [['protocolVersion' => '2026-07-28']],
+            'version omitted' => [[]],
+        ];
+    }
+
+    public function testNonArrayParamsReturnsInvalidParams(): void
+    {
+        // Regression: scalar params must yield -32602, not an internal error
+        // leaking method signatures/file paths
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 95,
+            'method' => 'tools/list',
+            'params' => 'oops',
+        ];
+
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
+
+        $this->assertArrayHasKey('error', $response);
+        $this->assertEquals(-32602, $response['error']['code']);
+        $this->assertStringNotContainsString('McpServer', $response['error']['message']);
+    }
+
+    public function testPrefixedNonVersionMetaKeyPassesAsLegacy(): void
+    {
+        // io.modelcontextprotocol/ is a reserved prefix for the whole spec
+        // (logLevel, subscriptionId, ...); only protocolVersion marks a
+        // stateless request. Other reserved keys alone must not be rejected.
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 96,
+            'method' => 'tools/list',
+            'params' => ['_meta' => ['io.modelcontextprotocol/logLevel' => 'debug']],
+        ];
+
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
+
+        $this->assertArrayHasKey('result', $response);
+        $this->assertArrayHasKey('tools', $response['result']);
+    }
+
+    public function testServerDiscover(): void
+    {
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 20,
+            'method' => 'server/discover',
+        ];
+
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
+
+        $this->assertArrayHasKey('result', $response);
+        $this->assertArrayHasKey('supportedVersions', $response['result']);
+        $this->assertContains('2026-07-28', $response['result']['supportedVersions']);
+        $this->assertContains('2024-11-05', $response['result']['supportedVersions']);
+        $this->assertArrayHasKey('capabilities', $response['result']);
+        $this->assertArrayHasKey('tools', $response['result']['capabilities']);
+        $this->assertArrayHasKey('instructions', $response['result']);
+        $this->assertSame('complete', $response['result']['resultType']);
+        $this->assertSame(
+            'xdebug-mcp-server',
+            $response['result']['_meta']['io.modelcontextprotocol/serverInfo']['name'],
+        );
+    }
+
+    public function testStatelessRequestWithoutInitialize(): void
+    {
+        // MCP 2026-07-28: no handshake; every request carries its protocol
+        // version and capabilities in _meta
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 21,
+            'method' => 'tools/list',
+            'params' => [
+                '_meta' => [
+                    'io.modelcontextprotocol/protocolVersion' => '2026-07-28',
+                    'io.modelcontextprotocol/clientCapabilities' => [],
+                    'io.modelcontextprotocol/clientInfo' => ['name' => 'modern-client', 'version' => '1.0.0'],
+                ],
+            ],
+        ];
+
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
+
+        $this->assertArrayHasKey('result', $response);
+        $this->assertArrayHasKey('tools', $response['result']);
+        $this->assertSame('complete', $response['result']['resultType']);
+        $this->assertSame(
+            'xdebug-mcp-server',
+            $response['result']['_meta']['io.modelcontextprotocol/serverInfo']['name'],
+        );
+    }
+
+    public function testUnsupportedProtocolVersionMetaReturnsError(): void
+    {
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 22,
+            'method' => 'tools/list',
+            'params' => [
+                '_meta' => [
+                    'io.modelcontextprotocol/protocolVersion' => '1999-01-01',
+                    'io.modelcontextprotocol/clientCapabilities' => [],
+                ],
+            ],
+        ];
+
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
+
+        $this->assertArrayHasKey('error', $response);
+        $this->assertEquals(-32022, $response['error']['code']);
+        $this->assertStringContainsString('Unsupported protocol version', $response['error']['message']);
+        $this->assertContains('2026-07-28', $response['error']['data']['supported']);
+        $this->assertSame('1999-01-01', $response['error']['data']['requested']);
+    }
+
+    public function testModernMetaMissingRequiredFieldsReturnsInvalidParams(): void
+    {
+        // _meta has io.modelcontextprotocol/* keys but lacks clientCapabilities
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 23,
+            'method' => 'tools/list',
+            'params' => [
+                '_meta' => ['io.modelcontextprotocol/protocolVersion' => '2026-07-28'],
+            ],
+        ];
+
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
+
+        $this->assertArrayHasKey('error', $response);
+        $this->assertEquals(-32602, $response['error']['code']);
+    }
+
+    public function testLegacyRequestWithoutMetaIsNotRejected(): void
+    {
+        // Dual-era: requests without modern _meta (legacy clients) pass through
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 24,
+            'method' => 'tools/list',
+            'params' => ['_meta' => ['progressToken' => 'abc']],
+        ];
+
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
+
+        $this->assertArrayHasKey('result', $response);
+        $this->assertArrayHasKey('tools', $response['result']);
+    }
+
+    #[DataProvider('provideListMethods')]
+    public function testListResultsContainCacheableFields(string $method): void
+    {
+        $request = [
+            'jsonrpc' => '2.0',
+            'id' => 30,
+            'method' => $method,
+        ];
+
+        $responseObj = $this->invokePrivateMethod($this->server, 'handleRequest', [$request]);
+        $response = $responseObj->toArray();
+
+        $this->assertArrayHasKey('ttlMs', $response['result'], $method);
+        $this->assertArrayHasKey('cacheScope', $response['result'], $method);
+        $this->assertSame('complete', $response['result']['resultType'], $method);
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function provideListMethods(): array
+    {
+        return [
+            'tools/list' => ['tools/list'],
+            'prompts/list' => ['prompts/list'],
+            'resources/list' => ['resources/list'],
+        ];
     }
 
     public function testValidatePhpBinaryScript(): void

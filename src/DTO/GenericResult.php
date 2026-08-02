@@ -9,16 +9,18 @@ namespace Koriym\XdebugMcp\DTO;
  *
  * Use this when a specific result DTO doesn't exist yet.
  * Prefer creating specific DTOs for type safety where practical.
+ *
+ * @phpstan-import-type JsonObject from Types
  */
 final class GenericResult implements JsonRpcResultInterface
 {
-    /** @param array<string, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|null>|null>|null>|null>|null> $data */
+    /** @param JsonObject $data */
     public function __construct(
         private readonly array $data,
     ) {
     }
 
-    /** @return array<string, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|null>|null>|null>|null>|null> */
+    /** @return JsonObject */
     public function jsonSerialize(): array
     {
         return $this->data;

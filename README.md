@@ -58,7 +58,15 @@ composer global require koriym/xdebug-mcp
 
 ### 3. (Optional) Wire up an AI assistant
 
-**Claude Code** — install the plugin:
+Two integrations are available. **We recommend the Skill**: these tools are stateless one-shot CLI commands by design, so letting the agent run them directly — guided by the Skill's usage notes — is the simplest and most accurate path. Choose MCP when your client has no shell access or no Skill support.
+
+| | Skill (recommended) | MCP server |
+|---|---|---|
+| How it works | The agent reads `SKILL.md` and runs the CLI tools directly | The client calls the tools over JSON-RPC (stdio) |
+| Setup | Plugin install, or copy one directory | Register in the client's MCP config |
+| Best for | AI coding agents with shell access (Claude Code, Codex, ...) | MCP-capable clients without shell/Skill support (e.g. Claude Desktop) |
+
+**Claude Code** — install the plugin (which bundles the Skill):
 
 ```text
 /plugin marketplace add koriym/xdebug-mcp
@@ -146,7 +154,7 @@ flowchart LR
 | `xback` | Call stack at breakpoint | "Show me how we got to this error" |
 | `xcompare` | Compare variable states across two runs | "Compare input 10 vs 0" or "Compare with main branch" |
 
-All tools in this table are available as CLI commands. MCP currently exposes the core one-shot analysis tools: `xtrace`, `xprofile`, `xstep`, `xcoverage`, and `xback`. `xcompare` is CLI-only.
+All tools in this table are available both as CLI commands and as MCP tools. `xrepl` (the interactive debugger below) is CLI-only.
 
 ## CLI Usage
 
@@ -205,7 +213,9 @@ Schemas live under [docs/schemas/](docs/schemas/). AI assistants — and humans 
 
 ## MCP Configuration
 
-For any MCP-capable client, register `xdebug-mcp` in that client's MCP config (e.g. `.mcp.json`). MCP exposes `xtrace`, `xprofile`, `xstep`, `xcoverage`, and `xback`:
+For AI coding agents with shell access, the [Skill](#3-optional-wire-up-an-ai-assistant) is the recommended integration. Register the MCP server instead when your client supports MCP but cannot run shell commands or Skills (e.g. Claude Desktop), or when you want a schema-validated tool interface shared across MCP clients.
+
+Add `xdebug-mcp` to the client's MCP config (e.g. `.mcp.json`). MCP exposes all one-shot tools: `xtrace`, `xprofile`, `xstep`, `xcoverage`, `xback`, and `xcompare`:
 
 ```json
 {
@@ -306,7 +316,7 @@ Looking for a different approach? [kpanuragh/xdebug-mcp](https://github.com/kpan
 
 ## Why "xdebug-mcp"?
 
-This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. MCP is still supported for any MCP-capable client, but the CLI is now the primary interface. The core MCP tools (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`) also work as standalone CLI commands; `xcompare` and `xrepl` are CLI-only tools.
+This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. MCP is still supported for any MCP-capable client, but the CLI is now the primary interface. The MCP tools (`xstep`, `xtrace`, `xprofile`, `xcoverage`, `xback`, `xcompare`) also work as standalone CLI commands; `xrepl` is CLI-only.
 
 ## Resources
 
