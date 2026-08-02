@@ -11,9 +11,11 @@ use JsonSerializable;
  *
  * All JSON-RPC result DTOs must implement this interface to ensure
  * they can be properly serialized in responses.
+ *
+ * @phpstan-import-type JsonObject from Types
  */
 interface JsonRpcResultInterface extends JsonSerializable
 {
-    /** @return array<string, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|array<array-key, bool|float|int|string|null>|null>|null>|null>|null> */
+    /** @return JsonObject */
     public function jsonSerialize(): array;
 }

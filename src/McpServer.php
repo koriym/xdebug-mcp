@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace Koriym\XdebugMcp;
 
 use JsonException;
-use Koriym\XdebugMcp\DTO\GenericResult;
+use Koriym\XdebugMcp\DTO\DiscoverResult;
+use Koriym\XdebugMcp\DTO\InitializeResult;
 use Koriym\XdebugMcp\DTO\JsonRpcError;
 use Koriym\XdebugMcp\DTO\JsonRpcResponse;
 use Koriym\XdebugMcp\DTO\McpTool;
+use Koriym\XdebugMcp\DTO\PromptExecutionResult;
+use Koriym\XdebugMcp\DTO\PromptsListResult;
+use Koriym\XdebugMcp\DTO\ResourcesListResult;
+use Koriym\XdebugMcp\DTO\ToolCallResult;
 use Koriym\XdebugMcp\DTO\ToolsListResult;
 use Koriym\XdebugMcp\Exceptions\FileNotFoundException;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
@@ -71,6 +76,13 @@ final class McpServer
     /** Latest legacy revision — the fallback for initialize requests; the stateless 2026-07-28 has no handshake and must not be named in an initialize result */
     private const LATEST_LEGACY_VERSION = '2025-11-25';
     private const INSTRUCTIONS = 'PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, analyze coverage, or compare executions of PHP code. Tools: xtrace (execution flow), xstep (breakpoint debugging), xprofile (performance), xcoverage (test coverage), xback (stack traces), xcompare (breakpoint variable comparison across two runs).';
+
+    /** Server capabilities advertised by initialize and server/discover */
+    private const CAPABILITIES = [
+        'tools' => ['listChanged' => true],
+        'resources' => ['listChanged' => false],
+        'prompts' => ['listChanged' => true],
+    ];
 
     /** @var array<string, McpTool> */
     protected array $tools = [];
@@ -503,19 +515,15 @@ final class McpServer
             $clientVersion = self::LATEST_LEGACY_VERSION;
         }
 
-        return JsonRpcResponse::success($id, new GenericResult([
-            'protocolVersion' => $clientVersion,
-            'capabilities' => [
-                'tools' => ['listChanged' => true],
-                'resources' => ['listChanged' => false],
-                'prompts' => ['listChanged' => true],
-            ],
-            'serverInfo' => [
+        return JsonRpcResponse::success($id, new InitializeResult(
+            $clientVersion,
+            self::CAPABILITIES,
+            [
                 'name' => Constants::MCP_SERVER_NAME,
                 'version' => Constants::MCP_SERVER_VERSION,
             ],
-            'instructions' => self::INSTRUCTIONS,
-        ]));
+            self::INSTRUCTIONS,
+        ));
     }
 
     /**
@@ -525,17 +533,13 @@ final class McpServer
      */
     private function handleServerDiscover(string|int|null $id): JsonRpcResponse
     {
-        return JsonRpcResponse::success($id, new GenericResult([
-            'supportedVersions' => self::SUPPORTED_VERSIONS,
-            'capabilities' => [
-                'tools' => ['listChanged' => true],
-                'resources' => ['listChanged' => false],
-                'prompts' => ['listChanged' => true],
-            ],
-            'instructions' => self::INSTRUCTIONS,
-            'ttlMs' => Constants::MCP_LIST_CACHE_TTL_MS,
-            'cacheScope' => Constants::MCP_LIST_CACHE_SCOPE,
-        ]));
+        return JsonRpcResponse::success($id, new DiscoverResult(
+            self::SUPPORTED_VERSIONS,
+            self::CAPABILITIES,
+            self::INSTRUCTIONS,
+            Constants::MCP_LIST_CACHE_TTL_MS,
+            Constants::MCP_LIST_CACHE_SCOPE,
+        ));
     }
 
     private function handleToolsList(string|int|null $id): JsonRpcResponse
@@ -545,17 +549,17 @@ final class McpServer
 
     private function handleResourcesList(string|int|null $id): JsonRpcResponse
     {
-        return JsonRpcResponse::success($id, new GenericResult([
-            'resources' => [],
-            'ttlMs' => Constants::MCP_LIST_CACHE_TTL_MS,
-            'cacheScope' => Constants::MCP_LIST_CACHE_SCOPE,
-        ]));
+        return JsonRpcResponse::success($id, new ResourcesListResult(
+            [],
+            Constants::MCP_LIST_CACHE_TTL_MS,
+            Constants::MCP_LIST_CACHE_SCOPE,
+        ));
     }
 
     private function handlePromptsList(string|int|null $id): JsonRpcResponse
     {
-        return JsonRpcResponse::success($id, new GenericResult([
-            'prompts' => [
+        return JsonRpcResponse::success($id, new PromptsListResult(
+            [
                 [
                     'name' => 'xtrace',
                     'description' => 'Trace PHP execution flow. Returns JSON with $schema URL for semantic details and AI analysis strategies. Key fields: {lines, functions, max_depth, db_queries}. Vendor excluded by default.',
@@ -733,9 +737,9 @@ final class McpServer
                     ],
                 ],
             ],
-            'ttlMs' => Constants::MCP_LIST_CACHE_TTL_MS,
-            'cacheScope' => Constants::MCP_LIST_CACHE_SCOPE,
-        ]));
+            Constants::MCP_LIST_CACHE_TTL_MS,
+            Constants::MCP_LIST_CACHE_SCOPE,
+        ));
     }
 
     /** @param array<string, string|int|bool|array<string, string|int|bool>> $params */
@@ -949,14 +953,7 @@ final class McpServer
         try {
             $result = $this->executeToolCall($toolName, $arguments);
 
-            return JsonRpcResponse::success($id, new GenericResult([
-                'content' => [
-                    [
-                        'type' => 'text',
-                        'text' => $result,
-                    ],
-                ],
-            ]));
+            return JsonRpcResponse::success($id, new ToolCallResult($result));
         } catch (Throwable $e) {
             return JsonRpcResponse::error($id, -32000, $e->getMessage());
         }
@@ -1068,17 +1065,9 @@ final class McpServer
                 throw new InvalidArgumentException('Permission denied accessing: ' . $script);
             }
 
-            return JsonRpcResponse::success($id, new GenericResult([
-                'messages' => [
-                    [
-                        'role' => 'assistant',
-                        'content' => [
-                            'type' => 'text',
-                            'text' => 'Forward Trace execution ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$originalScript}\n**Context**: {$context}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Output**:\n```\n" . $outputText . "\n```",
-                        ],
-                    ],
-                ],
-                'debug_data' => [
+            return JsonRpcResponse::success($id, new PromptExecutionResult(
+                'Forward Trace execution ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$originalScript}\n**Context**: {$context}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Output**:\n```\n" . $outputText . "\n```",
+                [
                     'command' => $cmd,
                     'exit_code' => $returnCode,
                     'output' => $outputText,
@@ -1086,7 +1075,7 @@ final class McpServer
                     'script' => $script,
                     'timestamp' => date('Y-m-d H:i:s'),
                 ],
-            ]));
+            ));
         } catch (Throwable $e) {
             // @codeCoverageIgnoreStart - Exception handling difficult to test without mocking shell commands
             return JsonRpcResponse::error($id, -32000, 'xtrace execution failed: ' . $e->getMessage());
@@ -1188,17 +1177,9 @@ final class McpServer
                 throw new InvalidArgumentException('Debug error: ' . $matches[1]);
             }
 
-            return JsonRpcResponse::success($id, new GenericResult([
-                'messages' => [
-                    [
-                        'role' => 'assistant',
-                        'content' => [
-                            'type' => 'text',
-                            'text' => 'Forward Trace debugging ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Breakpoints**: {$breakpoints}\n**Steps**: {$steps}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Debug Output**:\n```\n" . $outputText . "\n```",
-                        ],
-                    ],
-                ],
-                'debug_data' => [
+            return JsonRpcResponse::success($id, new PromptExecutionResult(
+                'Forward Trace debugging ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Breakpoints**: {$breakpoints}\n**Steps**: {$steps}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Debug Output**:\n```\n" . $outputText . "\n```",
+                [
                     'command' => $cmd,
                     'exit_code' => $returnCode,
                     'output' => $outputText,
@@ -1208,7 +1189,7 @@ final class McpServer
                     'steps' => $steps,
                     'timestamp' => date('Y-m-d H:i:s'),
                 ],
-            ]));
+            ));
         } catch (Throwable $e) {
             // @codeCoverageIgnoreStart - Exception handling difficult to test without mocking shell commands
             return JsonRpcResponse::error($id, -32000, 'xstep execution failed: ' . $e->getMessage());
@@ -1251,17 +1232,9 @@ final class McpServer
                 throw new InvalidArgumentException('Permission denied accessing: ' . $script);
             }
 
-            return JsonRpcResponse::success($id, new GenericResult([
-                'messages' => [
-                    [
-                        'role' => 'assistant',
-                        'content' => [
-                            'type' => 'text',
-                            'text' => 'Performance profiling ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Profile Analysis**:\n```\n" . $outputText . "\n```",
-                        ],
-                    ],
-                ],
-                'debug_data' => [
+            return JsonRpcResponse::success($id, new PromptExecutionResult(
+                'Performance profiling ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Profile Analysis**:\n```\n" . $outputText . "\n```",
+                [
                     'command' => $cmd,
                     'exit_code' => $returnCode,
                     'output' => $outputText,
@@ -1269,7 +1242,7 @@ final class McpServer
                     'script' => $script,
                     'timestamp' => date('Y-m-d H:i:s'),
                 ],
-            ]));
+            ));
         } catch (Throwable $e) {
             // @codeCoverageIgnoreStart - Exception handling path requires shell command failures which are difficult to reproduce consistently in tests
             return JsonRpcResponse::error($id, -32000, 'xprofile execution failed: ' . $e->getMessage());
@@ -1335,17 +1308,9 @@ final class McpServer
                 throw new InvalidArgumentException('Permission denied accessing: ' . $script);
             }
 
-            return JsonRpcResponse::success($id, new GenericResult([
-                'messages' => [
-                    [
-                        'role' => 'assistant',
-                        'content' => [
-                            'type' => 'text',
-                            'text' => 'Code coverage analysis ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Format**: json\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Coverage Report**:\n```\n" . $outputText . "\n```",
-                        ],
-                    ],
-                ],
-                'debug_data' => [
+            return JsonRpcResponse::success($id, new PromptExecutionResult(
+                'Code coverage analysis ' . ($returnCode === 0 ? 'completed' : 'failed') . ":\n\n**Script**: {$script}\n**Context**: {$context}\n**Format**: json\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Coverage Report**:\n```\n" . $outputText . "\n```",
+                [
                     'command' => $cmd,
                     'exit_code' => $returnCode,
                     'output' => $outputText,
@@ -1353,7 +1318,7 @@ final class McpServer
                     'script' => $script,
                     'timestamp' => date('Y-m-d H:i:s'),
                 ],
-            ]));
+            ));
         } catch (Throwable $e) {
             // @codeCoverageIgnoreStart - Exception handling path requires coverage collection failures which are environment-dependent and difficult to test reliably
             return JsonRpcResponse::error($id, -32000, 'xcoverage execution failed: ' . $e->getMessage());
@@ -1416,17 +1381,9 @@ final class McpServer
                 throw new InvalidArgumentException('Permission denied accessing: ' . $script);
             }
 
-            return JsonRpcResponse::success($id, new GenericResult([
-                'messages' => [
-                    [
-                        'role' => 'assistant',
-                        'content' => [
-                            'type' => 'text',
-                            'text' => 'Stack trace (backtrace) ' . ($returnCode === 0 ? 'retrieved' : 'failed') . ":\n\n**Script**: {$originalScript}\n**Context**: {$context}\n**Breakpoint**: {$breakpoint}\n**Depth**: {$depth}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Stack Trace**:\n```\n" . $outputText . "\n```",
-                        ],
-                    ],
-                ],
-                'debug_data' => [
+            return JsonRpcResponse::success($id, new PromptExecutionResult(
+                'Stack trace (backtrace) ' . ($returnCode === 0 ? 'retrieved' : 'failed') . ":\n\n**Script**: {$originalScript}\n**Context**: {$context}\n**Breakpoint**: {$breakpoint}\n**Depth**: {$depth}\n**Command**: `{$cmd}`\n**Exit Code**: {$returnCode}\n\n**Stack Trace**:\n```\n" . $outputText . "\n```",
+                [
                     'command' => $cmd,
                     'exit_code' => $returnCode,
                     'output' => $outputText,
@@ -1436,7 +1393,7 @@ final class McpServer
                     'depth' => $depth,
                     'timestamp' => date('Y-m-d H:i:s'),
                 ],
-            ]));
+            ));
         } catch (Throwable $e) {
             // @codeCoverageIgnoreStart - Exception handling path requires backtrace failures which are environment-dependent
             return JsonRpcResponse::error($id, -32000, 'xback execution failed: ' . $e->getMessage());
@@ -1499,22 +1456,14 @@ final class McpServer
 
             $outputText = json_encode($result, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-            return JsonRpcResponse::success($id, new GenericResult([
-                'messages' => [
-                    [
-                        'role' => 'assistant',
-                        'content' => [
-                            'type' => 'text',
-                            'text' => 'Breakpoint comparison completed:' . "\n\n" .
-                                '**Breakpoint**: ' . $breakpoint . "\n" .
-                                '**Run A**: ' . $runA . "\n" .
-                                '**Run B**: ' . $runB . "\n" .
-                                '**Context**: ' . $context . "\n\n" .
-                                '**Result**:' . "\n```json\n" . $outputText . "\n```",
-                        ],
-                    ],
-                ],
-                'debug_data' => [
+            return JsonRpcResponse::success($id, new PromptExecutionResult(
+                'Breakpoint comparison completed:' . "\n\n" .
+                    '**Breakpoint**: ' . $breakpoint . "\n" .
+                    '**Run A**: ' . $runA . "\n" .
+                    '**Run B**: ' . $runB . "\n" .
+                    '**Context**: ' . $context . "\n\n" .
+                    '**Result**:' . "\n```json\n" . $outputText . "\n```",
+                [
                     'breakpoint' => $breakpoint,
                     'run_a' => $runA,
                     'run_b' => $runB,
@@ -1524,7 +1473,7 @@ final class McpServer
                     'output' => $outputText,
                     'timestamp' => date('Y-m-d H:i:s'),
                 ],
-            ]));
+            ));
         } catch (Throwable $e) {
             // @codeCoverageIgnoreStart - Exception handling path requires CompareRunner/xstep failures which are environment-dependent
             return JsonRpcResponse::error($id, -32000, 'xcompare execution failed: ' . $e->getMessage());
