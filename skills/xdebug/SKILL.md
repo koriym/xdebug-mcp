@@ -1,6 +1,6 @@
 ---
 name: xdebug
-description: PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, or analyze coverage of PHP code. Trigger phrases include "trace this function", "profile this code", "check coverage", "debug PHP", "set breakpoint", "find the bottleneck", "why is this slow", "トレース", "プロファイル", "カバレッジ".
+description: PHP debugging and analysis tools using Xdebug. Use when asked to trace, debug, profile, analyze coverage, or compare executions of PHP code. Trigger phrases include "trace this function", "profile this code", "check coverage", "debug PHP", "set breakpoint", "find the bottleneck", "why is this slow", "compare two runs", "トレース", "プロファイル", "カバレッジ", "比較".
 ---
 
 # Xdebug MCP Tools
@@ -18,6 +18,7 @@ Tools are installed globally via composer. Use absolute paths:
 | xprofile | `~/.composer/vendor/bin/xprofile` |
 | xcoverage | `~/.composer/vendor/bin/xcoverage` |
 | xback | `~/.composer/vendor/bin/xback` |
+| xcompare | `~/.composer/vendor/bin/xcompare` |
 
 ## Tool Selection Guide
 
@@ -28,6 +29,7 @@ Tools are installed globally via composer. Use absolute paths:
 | Profile, performance, bottlenecks, slow code | xprofile |
 | Coverage, test coverage, which lines tested | xcoverage |
 | Backtrace, call stack, how did we get here | xback |
+| Compare variable states across two runs, normal vs edge case, compare with git branch | xcompare |
 
 ### "Trace" Ambiguity
 
@@ -196,6 +198,56 @@ Get call stack (backtrace) at a specific line. Shows "who called this?" - the ch
 
 ---
 
+## xcompare - Breakpoint Comparison
+
+Compare variable states at the same breakpoint across two different executions. Useful for normal vs edge case inputs, success vs failure, or current code vs another git ref.
+
+**Output**: JSON with `$schema` URL. `diff` contains `{changed, unchanged, only_in_a, only_in_b}` plus `analysis_hints`.
+**Key fields**: `{breakpoint, run_a, run_b, diff, analysis_hints}`
+
+```bash
+# Mode 1: Compare two commands
+~/.composer/vendor/bin/xcompare --break=FILE:LINE --run-a="CMD" --run-b="CMD" [--context=TEXT]
+
+# Mode 2: Compare with another git ref
+~/.composer/vendor/bin/xcompare --break=FILE:LINE --run="CMD" --compare-with=REF [--context=TEXT]
+```
+
+### Options
+
+- `--label-a` / `--label-b` - Labels for run A/B (default: command or 'HEAD'/ref name)
+- `--steps=N` - Steps to record after breakpoint (default: 1)
+- `--include-vendor` - Include vendor packages in trace
+
+### Examples
+
+```bash
+# Normal vs edge case input
+~/.composer/vendor/bin/xcompare --break=src/Calculator.php:25 \
+  --run-a="php calc.php 10" --run-b="php calc.php 0" \
+  --context="Compare division behavior with normal vs zero input"
+
+# Authentication success vs failure
+~/.composer/vendor/bin/xcompare --break=src/Auth.php:42 \
+  --run-a="php login.php valid_user" --run-b="php login.php invalid_user" \
+  --context="Compare authentication flow"
+
+# Current code vs main branch
+~/.composer/vendor/bin/xcompare --break=src/Calculator.php:25 \
+  --run="php calc.php 10" --compare-with=main \
+  --context="Compare current implementation vs main"
+```
+
+**Note**: `--run-a`, `--run-b`, and `--run` are executed through the shell — only pass trusted input.
+
+### When to Use
+
+- "Compare how different inputs affect variable states"
+- "Debug edge cases by comparing normal vs problematic inputs"
+- "Compare current code vs another git branch/commit"
+
+---
+
 ## Common Options
 
 | Option | Description |
@@ -221,3 +273,4 @@ By default, vendor code is excluded to focus on your code. Use `--include-vendor
 - xprofile: https://koriym.github.io/xdebug-mcp/schemas/xprofile.json
 - xcoverage: https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json
 - xback: https://koriym.github.io/xdebug-mcp/schemas/xback.json
+- xcompare: https://koriym.github.io/xdebug-mcp/schemas/xcompare.json
