@@ -38,6 +38,8 @@ AI-powered PHP debugging tools using Xdebug's runtime analysis. Works with Claud
 | `xprofile` | Performance profiling | `xprofile --json -- php api.php` |
 | `xcoverage` | Code coverage analysis | `xcoverage -- vendor/bin/phpunit` |
 | `xback` | Call stack at breakpoint | `xback --break="file.php:50" -- php app.php` |
+| `xcompare` | Compare variables across two runs | `xcompare --break="file.php:25" --run-a="php a.php 1" --run-b="php a.php 2"` |
+| `xrepl` | Interactive REPL debugger | `xrepl --break="file.php:42" -- php app.php` |
 
 ## Installation
 
@@ -92,6 +94,7 @@ Find the correct path: `which xdebug-mcp`
 "Profile api.php and find the performance bottleneck"
 "Trace the authentication flow in login.php"
 "Check test coverage for UserService"
+"Compare variable states between normal and edge case inputs in calc.php"
 ```
 
 ### CLI Tools
@@ -111,6 +114,12 @@ xcoverage -- vendor/bin/phpunit
 
 # Stack trace at breakpoint
 xback --break="app.php:50" -- php app.php
+
+# Compare two runs at a breakpoint
+xcompare --break="calc.php:25" --run-a="php calc.php 10" --run-b="php calc.php 0"
+
+# Compare current code vs main branch
+xcompare --break="calc.php:25" --run="php calc.php 10" --compare-with=main
 ```
 
 ### Conditional Breakpoints
@@ -126,7 +135,7 @@ xstep --break='loop.php:15' --steps=100 -- php script.php
 ### Interactive REPL
 
 ```bash
-xstep --break="script.php:42" -- php script.php
+xrepl --break="script.php:42" -- php script.php
 ```
 
 Commands:

@@ -23,6 +23,8 @@ AI-powered PHP debugging tools using Xdebug's runtime analysis. Works with Claud
 | `xprofile` | Performance profiling |
 | `xcoverage` | Code coverage analysis |
 | `xback` | Call stack at breakpoint |
+| `xcompare` | Compare variables across two runs |
+| `xrepl` | Interactive REPL debugger |
 
 ## Installation
 
@@ -73,6 +75,7 @@ Create `.mcp.json` in your project root:
 "Profile api.php and find the performance bottleneck"
 "Trace the authentication flow in login.php"
 "Check test coverage for UserService"
+"Compare variable states between normal and edge case inputs in calc.php"
 ```
 
 ### CLI Tools
@@ -92,6 +95,12 @@ xcoverage -- vendor/bin/phpunit
 
 # Stack trace at breakpoint
 xback --break="app.php:50" -- php app.php
+
+# Compare two runs at a breakpoint
+xcompare --break="calc.php:25" --run-a="php calc.php 10" --run-b="php calc.php 0"
+
+# Interactive REPL debugger
+xrepl --break="script.php:42" -- php script.php
 ```
 
 ### Conditional Breakpoints

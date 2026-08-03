@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - README recommends the Skill integration over the MCP server for AI coding agents.
+- Consolidate the xcompare skill into `skills/xdebug/SKILL.md` (removing `.claude/skills/xcompare.md`); llms docs now cover xcompare and xrepl.
 
 ### Fixed
 - Tools no longer break or analyze stale output when `XDEBUG_MODE`/`XDEBUG_CONFIG`/`XDEBUG_TRIGGER` is inherited: spawned processes pin their own Xdebug env, with a one-line notice when overriding (#94).
