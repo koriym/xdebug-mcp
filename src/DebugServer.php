@@ -363,8 +363,6 @@ final class DebugServer
             $cancellation = new TimeoutCancellation(3.0);
             $this->listenerReady?->getFuture()->await($cancellation);
 
-            XdebugEnv::noticeIfInherited('debug,trace');
-
             // Check if custom command is provided
             if (isset($this->options['command']) && $this->options['command'] !== []) {
                 $command = $this->options['command'];
@@ -422,6 +420,8 @@ final class DebugServer
                     $this->traceFile = $traceFile;
                 } elseif ($command[0] === 'php') {
                     // Local PHP command
+                    XdebugEnv::noticeIfInherited('debug,trace');
+
                     $scriptName = basename($this->targetScript, '.php');
                     $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
                     $prependFilter = __DIR__ . '/prepend_trace.php';
@@ -470,6 +470,8 @@ final class DebugServer
                 }
             } else {
                 // Default: simple script execution
+                XdebugEnv::noticeIfInherited('debug,trace');
+
                 $scriptName = basename($this->targetScript, '.php');
                 $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
                 $prependFilter = __DIR__ . '/prepend_trace.php';
