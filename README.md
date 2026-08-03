@@ -230,6 +230,8 @@ Add `xdebug-mcp` to the client's MCP config (e.g. `.mcp.json`). MCP exposes all 
 
 Find the path with `which xdebug-mcp`. Restart your client after editing the config.
 
+The server speaks the stateless 2026-07-28 protocol revision (handshake-less, discoverable via `server/discover`) and keeps the legacy `initialize` handshake for clients on 2025-11-25 and earlier — both over stdio.
+
 ## Interactive REPL
 
 For hands-on debugging without AI, use the interactive debugger (`xrepl`):
