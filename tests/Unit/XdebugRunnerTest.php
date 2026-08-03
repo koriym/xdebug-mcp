@@ -303,8 +303,9 @@ final class XdebugRunnerTest extends TestCase
 
         $command = $runner->buildCommand();
 
-        // Xdebug args should be injected after 'php' command
-        $this->assertStringContainsString('docker compose run --rm php php', $command);
+        // Xdebug args should be injected after 'php' command, and the mode
+        // pinned in the container env (env takes precedence over -d flags)
+        $this->assertStringContainsString('docker compose run -e XDEBUG_MODE=trace --rm php php', $command);
         $this->assertStringContainsString('-dxdebug.mode=trace', $command);
 
         // Verify order: 'php' command should come before xdebug args

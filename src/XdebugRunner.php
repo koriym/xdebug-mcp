@@ -314,6 +314,19 @@ class XdebugRunner
         // path is not guaranteed to exist inside the container.
         $xdebugArgs = $this->generateXdebugArguments(false);
 
+        // Pin XDEBUG_MODE in the container env: environment variables take
+        // precedence over -d flags, so a host value leaked via compose
+        // `environment:` (e.g. XDEBUG_MODE: ${XDEBUG_MODE:-develop}) would
+        // otherwise silently override the tool's mode.
+        $envInsertIndex = ContainerHelper::findDockerEnvInsertIndex($parts);
+        if ($envInsertIndex !== false) {
+            array_splice($parts, $envInsertIndex, 0, ['-e', 'XDEBUG_MODE=' . $this->mode]);
+
+            if ($envInsertIndex <= $phpIndex) {
+                $phpIndex += 2;
+            }
+        }
+
         // Insert Xdebug arguments right after 'php' command
         foreach (array_reverse($xdebugArgs) as $arg) {
             array_splice($parts, $phpIndex + 1, 0, [$arg]);
