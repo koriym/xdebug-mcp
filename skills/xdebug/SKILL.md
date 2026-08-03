@@ -19,6 +19,7 @@ Tools are installed globally via composer. Use absolute paths:
 | xcoverage | `~/.composer/vendor/bin/xcoverage` |
 | xback | `~/.composer/vendor/bin/xback` |
 | xcompare | `~/.composer/vendor/bin/xcompare` |
+| xrepl | `~/.composer/vendor/bin/xrepl` |
 
 ## Tool Selection Guide
 
@@ -30,13 +31,15 @@ Tools are installed globally via composer. Use absolute paths:
 | Coverage, test coverage, which lines tested | xcoverage |
 | Backtrace, call stack, how did we get here | xback |
 | Compare variable states across two runs, normal vs edge case, compare with git branch | xcompare |
+| Interactive debugging, REPL, step manually (human-friendly) | xrepl |
 
 ### "Trace" Ambiguity
 
 The word "trace" can mean different things:
 - **Forward Trace** → `xtrace` (records execution from start to finish)
 - **Backtrace / Stack Trace** → `xback` (shows call stack at a point)
-- **Step through / Debug** → `xstep` (interactive with breakpoints)
+- **Step through / Debug (recording)** → `xstep` (records N steps from a breakpoint, JSON output)
+- **Interactive debugging** → `xrepl` (human-friendly REPL session, not JSON)
 
 ---
 
@@ -245,6 +248,43 @@ Compare variable states at the same breakpoint across two different executions. 
 - "Compare how different inputs affect variable states"
 - "Debug edge cases by comparing normal vs problematic inputs"
 - "Compare current code vs another git branch/commit"
+
+---
+
+## xrepl - Interactive REPL Debugger
+
+Human-friendly interactive debugging session with breakpoints and variable inspection. Unlike the other tools, xrepl is an interactive session rather than one-shot JSON output — for AI-driven analysis, prefer `xstep`.
+
+```bash
+~/.composer/vendor/bin/xrepl --break=FILE:LINE [--include-vendor=PATTERNS] -- command
+```
+
+### Commands
+
+- `s` - Step into function
+- `o` - Step over line
+- `out` - Step out of function
+- `c` - Continue execution
+- `p <var>` - Print variable (e.g., `p $user`)
+- `bt` - Show backtrace
+- `l` - List source code
+- `q` - Quit debugger
+
+### Examples
+
+```bash
+# Break at line 42 and debug interactively
+~/.composer/vendor/bin/xrepl --break="script.php:42" -- php script.php
+
+# Conditional breakpoint
+~/.composer/vendor/bin/xrepl --break="user.php:15:\$id==null" -- php user.php
+```
+
+### When to Use
+
+- "Let me debug interactively"
+- "Step through manually and inspect variables"
+- Exploratory debugging by a human at the terminal
 
 ---
 
