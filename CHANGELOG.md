@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-03
+
 ### Added
 - MCP 2026-07-28 (stateless) protocol support: `server/discover`, per-request `_meta` protocol fields, `resultType`, and cache hints. Legacy `initialize` clients (2025-11-25 and earlier) remain supported.
 - Protocol-level integration tests for the stateless workflows and the legacy `initialize` flow.
