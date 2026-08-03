@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Koriym\XdebugMcp;
 
 use Koriym\XdebugMcp\Utilities\PhpCommandParser;
+use Koriym\XdebugMcp\Utilities\XdebugEnv;
 use RuntimeException;
 
 use function array_map;
@@ -126,6 +127,7 @@ class XdebugRunner
         if ($this->isDockerCommand($this->commandParts)) {
             $command = $this->buildDockerCommand($this->commandParts); // @codeCoverageIgnore
         } else {
+            XdebugEnv::noticeIfInherited($this->mode);
             $this->validateLocalFile($this->commandParts);
             $command = $this->buildLocalCommand($this->commandParts);
         }
@@ -282,9 +284,13 @@ class XdebugRunner
         }
 
         $xdebugArgs = $this->generateXdebugArguments(true);
-        $envPrefix = $this->includeVendor !== null
-            ? sprintf('XDEBUG_MCP_INCLUDE_VENDOR=%s ', escapeshellarg($this->includeVendor))
-            : '';
+        // Pin the mode in the child env: environment variables take
+        // precedence over -d flags, so an inherited XDEBUG_MODE would
+        // otherwise hijack the configuration (see XdebugEnv).
+        $envPrefix = XdebugEnv::shellPrefix($this->mode);
+        if ($this->includeVendor !== null) {
+            $envPrefix .= sprintf('XDEBUG_MCP_INCLUDE_VENDOR=%s ', escapeshellarg($this->includeVendor));
+        }
 
         return $envPrefix . escapeshellarg($phpBinary) . ' ' . implode(' ', $xdebugArgs) . ' ' . implode(' ', array_map(escapeshellarg(...), $workingParts));
     }
@@ -307,6 +313,19 @@ class XdebugRunner
         // Do not inject the local auto_prepend_file into containers. The host
         // path is not guaranteed to exist inside the container.
         $xdebugArgs = $this->generateXdebugArguments(false);
+
+        // Pin XDEBUG_MODE in the container env: environment variables take
+        // precedence over -d flags, so a host value leaked via compose
+        // `environment:` (e.g. XDEBUG_MODE: ${XDEBUG_MODE:-develop}) would
+        // otherwise silently override the tool's mode.
+        $envInsertIndex = ContainerHelper::findDockerEnvInsertIndex($parts);
+        if ($envInsertIndex !== false) {
+            array_splice($parts, $envInsertIndex, 0, ['-e', 'XDEBUG_MODE=' . $this->mode]);
+
+            if ($envInsertIndex <= $phpIndex) {
+                $phpIndex += 2;
+            }
+        }
 
         // Insert Xdebug arguments right after 'php' command
         foreach (array_reverse($xdebugArgs) as $arg) {

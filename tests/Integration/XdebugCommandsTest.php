@@ -14,11 +14,14 @@ use function escapeshellarg;
 use function explode;
 use function file_exists;
 use function file_put_contents;
+use function getenv;
 use function is_dir;
 use function is_executable;
 use function json_decode;
 use function json_encode;
 use function mkdir;
+use function preg_match;
+use function preg_replace;
 use function random_bytes;
 use function realpath;
 use function rmdir;
@@ -380,6 +383,7 @@ PHP);
 
         $output = shell_exec($command);
         $this->assertNotNull($output);
+        $output = $this->assertAndStripEnvNotice($output);
         $this->assertStringStartsWith("1\n", $output);
     }
 
@@ -397,8 +401,26 @@ PHP);
 
         $output = shell_exec($command);
         $this->assertNotNull($output);
+        $output = $this->assertAndStripEnvNotice($output);
         $this->assertStringStartsWith("1\n", $output);
         $this->assertStringNotContainsString('strict_types declaration must be the very first statement', $output);
+    }
+
+    /**
+     * Assert the inherited-Xdebug-env notice (STDERR) appears exactly when
+     * this test process inherited env that xcoverage actually overrides,
+     * and return the output with the notice line removed
+     */
+    private function assertAndStripEnvNotice(string $output): string
+    {
+        $hasNotice = preg_match('/^Note: inherited .*\n/m', $output) === 1;
+        $mode = getenv('XDEBUG_MODE');
+        $expectNotice = ($mode !== false && $mode !== 'coverage')
+            || getenv('XDEBUG_CONFIG') !== false
+            || getenv('XDEBUG_TRIGGER') !== false;
+        $this->assertSame($expectNotice, $hasNotice);
+
+        return (string) preg_replace('/^Note: inherited .*\n/m', '', $output);
     }
 
     public function testXcoverageRawBranchPhpRunFailsBeforeExecutingInlineCode(): void

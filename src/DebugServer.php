@@ -23,6 +23,7 @@ use Koriym\XdebugMcp\Exceptions\BreakpointException;
 use Koriym\XdebugMcp\Exceptions\DebugSessionException;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\Utilities\PathNormalizer;
+use Koriym\XdebugMcp\Utilities\XdebugEnv;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use SimpleXMLElement;
@@ -419,6 +420,8 @@ final class DebugServer
                     $this->traceFile = $traceFile;
                 } elseif ($command[0] === 'php') {
                     // Local PHP command
+                    XdebugEnv::noticeIfInherited('debug,trace');
+
                     $scriptName = basename($this->targetScript, '.php');
                     $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
                     $prependFilter = __DIR__ . '/prepend_trace.php';
@@ -437,7 +440,7 @@ final class DebugServer
                         : '';
 
                     $cmd = sprintf(
-                        'XDEBUG_SESSION=xdebug-mcp %s%s %s'
+                        'XDEBUG_SESSION=xdebug-mcp ' . XdebugEnv::shellPrefix('debug,trace') . '%s%s %s'
                         . '-dxdebug.mode=debug,trace '
                         . '-dxdebug.start_with_request=yes '
                         . '-dxdebug.client_host=127.0.0.1 '
@@ -467,6 +470,8 @@ final class DebugServer
                 }
             } else {
                 // Default: simple script execution
+                XdebugEnv::noticeIfInherited('debug,trace');
+
                 $scriptName = basename($this->targetScript, '.php');
                 $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
                 $prependFilter = __DIR__ . '/prepend_trace.php';
@@ -484,7 +489,7 @@ final class DebugServer
                     : '';
 
                 $cmd = sprintf(
-                    'XDEBUG_SESSION=xdebug-mcp %s%s %s'
+                    'XDEBUG_SESSION=xdebug-mcp ' . XdebugEnv::shellPrefix('debug,trace') . '%s%s %s'
                     . '-dxdebug.mode=debug,trace '
                     . '-dxdebug.start_with_request=yes '
                     . '-dxdebug.client_host=127.0.0.1 '
