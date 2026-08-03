@@ -8,21 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- MCP protocol version 2026-07-28 (stateless) support: `server/discover` RPC, per-request `_meta` protocol fields (`io.modelcontextprotocol/protocolVersion`, `clientCapabilities`) with -32022/-32602 validation, `resultType` on every result, server identity in result `_meta`, and `ttlMs`/`cacheScope` cache hints on list endpoints. Legacy `initialize` handshake clients (2025-11-25 and earlier) remain supported (dual-era).
-- Protocol-level integration tests that spawn the real `bin/xdebug-mcp` process and exercise the stateless workflows end to end: `server/discover` probe, handshake-less `tools/list`/`tools/call`, unsupported-version (-32022) and missing-`_meta` (-32602) errors, and the legacy `initialize` flow.
+- MCP 2026-07-28 (stateless) protocol support: `server/discover`, per-request `_meta` protocol fields, `resultType`, and cache hints. Legacy `initialize` clients (2025-11-25 and earlier) remain supported.
+- Protocol-level integration tests for the stateless workflows and the legacy `initialize` flow.
 
 ### Changed
-- README now recommends the Skill integration over the MCP server for AI coding agents (with a comparison table and guidance on when MCP is the right choice), and correctly documents that MCP exposes all one-shot tools including `xcompare`.
+- README recommends the Skill integration over the MCP server for AI coding agents.
 
 ### Fixed
-- Tools no longer break (or silently analyze stale `/tmp` output) when `XDEBUG_MODE`/`XDEBUG_CONFIG`/`XDEBUG_TRIGGER` is inherited from the environment: spawned child processes now pin their own Xdebug env (`XDEBUG_MODE=<tool mode>` set, config/trigger truly unset via `env -u`), which takes precedence over both inherited env and `-d` flags, and a one-line notice is emitted when inherited variables are overridden (#94). This also fixes the 3 integration tests that failed under `XDEBUG_MODE=coverage`, so the test-side env scrub in `McpServerIntegrationTest` is removed.
-- Docker runs of xtrace/xprofile/xcoverage now also pin the mode: `XdebugRunner` injects `-e XDEBUG_MODE=<tool mode>` into `docker run`/`compose run`/`exec` commands, so a host value leaked through compose `environment:` (e.g. `XDEBUG_MODE: ${XDEBUG_MODE:-develop}`) no longer silently overrides `-dxdebug.mode` and drops the trace/profile output.
-- `McpServerIntegrationTest` process spawner now forwards the real environment (`getenv()`) to the server process, so MCP tool calls that locate `php`/Xdebug work when PHPUnit runs with a minimal environment; spawned local tools override their own Xdebug variables, so no test-side stripping is needed.
-- MCP requests with non-object `params` now return -32602 (Invalid params) instead of an internal error (-32603) that leaked method signatures and file paths to the client.
-- Stateless request detection now keys on the presence of `io.modelcontextprotocol/protocolVersion` only; other keys under the reserved prefix (e.g. `logLevel`) no longer cause spurious -32602 rejections.
-- `initialize` never names the stateless 2026-07-28 revision (which has no handshake); negotiation stays within legacy revisions, falling back to 2025-11-25.
-- The -32022 (UnsupportedProtocolVersion) error data now matches the 2026-07-28 schema: `data: {supported, requested}`.
-- Notifications (requests without an `id`) are never answered, per JSON-RPC 2.0 §4.1 — previously malformed notifications could receive error responses.
+- Tools no longer break or analyze stale output when `XDEBUG_MODE`/`XDEBUG_CONFIG`/`XDEBUG_TRIGGER` is inherited: spawned processes pin their own Xdebug env, with a one-line notice when overriding (#94).
+- Docker runs inject `-e XDEBUG_MODE=<tool mode>` so a host value leaked through compose `environment:` cannot override `-dxdebug.mode`.
+- MCP requests with non-object `params` return -32602 instead of an internal error leaking file paths.
+- Stateless request detection keys on the presence of `io.modelcontextprotocol/protocolVersion` only.
+- `initialize` negotiates within legacy revisions only, falling back to 2025-11-25.
+- The -32022 error data now matches the 2026-07-28 schema: `{supported, requested}`.
+- Notifications (requests without an `id`) are never answered, per JSON-RPC 2.0.
 
 ## [0.12.0] - 2026-07-28
 
