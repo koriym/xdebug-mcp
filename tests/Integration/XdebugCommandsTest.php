@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Koriym\XdebugMcp\Tests\Integration;
 
+use JsonSchema\Validator;
 use Koriym\XdebugMcp\XdebugFinder;
 use PHPUnit\Framework\TestCase;
 
@@ -13,6 +14,7 @@ use function dirname;
 use function escapeshellarg;
 use function explode;
 use function file_exists;
+use function file_get_contents;
 use function file_put_contents;
 use function getenv;
 use function is_dir;
@@ -480,6 +482,33 @@ PHP);
         $this->assertStringContainsString('--max-depth=N', $output);
     }
 
+    public function testXstepAcceptsAbsolutePhpBinaryPath(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/debug_test.php';
+        $command = sprintf(
+            'cd %s && ./bin/xstep --break=%s -- %s %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':27'),
+            escapeshellarg(PHP_BINARY),
+            escapeshellarg($fixture),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+        $this->assertStringNotContainsString('Could not determine target script', $output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('https://koriym.github.io/xdebug-mcp/schemas/xstep.json', $payload['$schema']);
+        $this->assertSame(27, $payload['breaks'][0]['stack'][0]['line']);
+    }
+
     public function testXbackCommandExists(): void
     {
         $this->assertTrue(file_exists(__DIR__ . '/../../bin/xback'));
@@ -572,10 +601,6 @@ PHP);
 
         $fixture = dirname(__DIR__) . '/fixtures/print_cwd.php';
 
-        // Run with --php pointing at an absolute PHP binary path. Without the
-        // fix this fails with "Custom command must start with 'php' or be a
-        // Docker/Podman/Kubectl command" because $command[0] becomes the
-        // absolute path and DebugServer's strict-equality check rejects it.
         $command = sprintf(
             'cd %s && ./bin/xback --php=%s -- php %s 2>&1',
             escapeshellarg(dirname(__DIR__, 2)),
@@ -586,7 +611,7 @@ PHP);
         $output = shell_exec($command);
         $this->assertNotNull($output);
         $this->assertStringNotContainsString(
-            "must start with 'php'",
+            'must start with a PHP binary',
             $output,
             '--php override should not fall through to the DebugServer error path',
         );
@@ -597,6 +622,42 @@ PHP);
         $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
         $this->assertIsArray($payload);
         $this->assertArrayHasKey('$schema', $payload);
+    }
+
+    public function testXbackOutputsBacktraceSchema(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/debug_test.php';
+        $command = sprintf(
+            'cd %s && ./bin/xback --break=%s --depth=2 -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':18'),
+            escapeshellarg($fixture),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+        $json = substr($output, $jsonStart);
+
+        $schema = json_decode((string) file_get_contents(dirname(__DIR__, 2) . '/docs/schemas/xback.json'), false, 512, JSON_THROW_ON_ERROR);
+        $document = json_decode($json, false, 512, JSON_THROW_ON_ERROR);
+        $validator = new Validator();
+        $validator->validate($document, $schema);
+        $this->assertTrue($validator->isValid(), var_export($validator->getErrors(), true));
+
+        $payload = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('https://koriym.github.io/xdebug-mcp/schemas/xback.json', $payload['$schema']);
+        $this->assertSame($fixture, $payload['script']);
+        $this->assertSame([
+            ['level' => 0, 'function' => 'calculate_sum', 'file' => 'debug_test.php', 'line' => 18],
+            ['level' => 1, 'function' => 'main', 'file' => 'debug_test.php', 'line' => 27],
+        ], $payload['stack']);
     }
 
     public function testAllCommandsAreExecutable(): void

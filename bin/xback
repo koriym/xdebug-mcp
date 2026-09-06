@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 use Koriym\XdebugMcp\DebugServer;
 use Koriym\XdebugMcp\Constants;
+use Koriym\XdebugMcp\Utilities\PhpCommandParser;
 
 /**
  * Display help information
@@ -20,7 +21,7 @@ function showHelp(): void
     echo "  --depth=N         Maximum stack depth to return (default: 10)\n";
     echo "  --context=TEXT    Context description for AI analysis\n";
     echo "  --cwd=PATH        Run from PATH (target project root)\n";
-    echo "  --php=PATH        Use this PHP binary instead of the default 'php'\n";
+    echo "  --php=PATH        Run the command with this PHP binary\n";
     echo "  --help, -h        Show this help\n";
     echo "\n";
     echo "OUTPUT: Structured JSON (schema: xback.json)\n";
@@ -86,16 +87,23 @@ function parseBreakpoint(string $breakSpec, bool $isDockerCommand = false): ?arr
 
 /**
  * Output structured backtrace JSON
+ *
+ * @param list<array{function: string, file: string, line: int}> $frames Innermost first, as recorded by DebugServer
  */
-function outputBacktraceJson(string $script, ?string $breakpointStr, string $context, int $depth, array $stack): void
+function outputBacktraceJson(string $script, ?string $breakpointStr, string $context, int $depth, array $frames): void
 {
+    $stack = [];
+    foreach (array_slice($frames, 0, $depth) as $level => $frame) {
+        $stack[] = ['level' => $level] + $frame;
+    }
+
     $result = [
         '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xback.json',
         'script' => $script,
         'breakpoint' => $breakpointStr,
         'context' => $context,
         'depth' => $depth,
-        'stack' => array_slice($stack, 0, $depth),
+        'stack' => $stack,
         'timestamp' => date('c'),
     ];
 
@@ -187,10 +195,6 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
     // Detect Docker/Podman/Kubectl commands
     $isDockerCommand = \Koriym\XdebugMcp\ContainerHelper::isContainerCommand($command);
 
-    // Decide whether the --php override should apply to the local command.
-    // Keep $command[0] as the literal 'php' so DebugServer's strict-equality
-    // check still selects the local-PHP execution branch; the actual override
-    // path is plumbed through DebugServer's `phpBinary` option below.
     $applyPhpOverride = (
         !$isDockerCommand
         && $phpOverride !== null
@@ -223,8 +227,12 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
         } else {
             throw new RuntimeException("Could not find PHP command in Docker command: " . implode(' ', $command));
         }
-    } elseif ($command[0] === 'php' && isset($command[1])) {
-        $targetScript = $command[1];
+    } elseif (PhpCommandParser::isPhpBinary($command[0])) {
+        $scriptIndex = PhpCommandParser::findScriptIndex($command, 0);
+        if ($scriptIndex === false) {
+            throw new RuntimeException("Could not determine target script from command: " . implode(' ', $command));
+        }
+        $targetScript = $command[$scriptIndex];
         if (!file_exists($targetScript)) {
             throw new RuntimeException("Target script not found: $targetScript");
         }
@@ -247,51 +255,15 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
         'jsonOutput' => true,
         'context' => $context,
         'maxSteps' => 1,
+        'onResult' => static function (array $result) use ($targetScript, $breakpointStr, $context, $depth): void {
+            outputBacktraceJson($targetScript, $breakpointStr, $context, $depth, $result['breaks'][0]['stack'] ?? []);
+        },
     ];
 
     if ($applyPhpOverride) {
         $options['phpBinary'] = $phpOverride;
     }
 
-    // Capture DebugServer output
-    ob_start();
     $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, null, $options, true);
     $server();
-    $output = ob_get_clean();
-
-    // Parse DebugServer output and reformat to backtrace schema
-    $debugData = json_decode($output, true);
-
-    $stack = [];
-    if (isset($debugData['breaks'][0]['stack'])) {
-        // If DebugServer provides stack info
-        foreach ($debugData['breaks'][0]['stack'] as $level => $frameStr) {
-            if (preg_match('/^(.+) at (.+):(\d+)$/', $frameStr, $m)) {
-                $stack[] = [
-                    'level' => $level,
-                    'function' => $m[1],
-                    'file' => $m[2],
-                    'line' => (int)$m[3],
-                ];
-            }
-        }
-    } elseif (isset($debugData['breaks'][0]['location'])) {
-        // Fallback: use location from breaks
-        $loc = $debugData['breaks'][0]['location'];
-        $stack[] = [
-            'level' => 0,
-            'function' => '{main}',
-            'file' => $loc['file'] ?? $targetScript,
-            'line' => $loc['line'] ?? 1,
-        ];
-    }
-
-    // Output in backtrace schema format
-    outputBacktraceJson(
-        $targetScript,
-        $breakpointStr,
-        $context,
-        $depth,
-        $stack
-    );
 })();
