@@ -23,6 +23,7 @@ use Koriym\XdebugMcp\Exceptions\BreakpointException;
 use Koriym\XdebugMcp\Exceptions\DebugSessionException;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\Utilities\PathNormalizer;
+use Koriym\XdebugMcp\Utilities\PhpCommandParser;
 use Koriym\XdebugMcp\Utilities\XdebugEnv;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -185,7 +186,7 @@ final class DebugServer
     /** @var array{id: string, label: string, file: string, line: int, condition?: string}|null */
     private array|null $activeBreakpoint = null;
 
-    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, phpBinary?: string, includeVendor?: string|null} $options */
+    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, phpBinary?: string, includeVendor?: string|null, onResult?: callable(XstepJsonOutput): void} $options */
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
@@ -418,7 +419,7 @@ final class DebugServer
 
                     $cmd = implode(' ', $command);
                     $this->traceFile = $traceFile;
-                } elseif ($command[0] === 'php') {
+                } elseif (PhpCommandParser::isPhpBinary($command[0])) {
                     // Local PHP command
                     XdebugEnv::noticeIfInherited('debug,trace');
 
@@ -430,11 +431,9 @@ final class DebugServer
                     $xdebugFlag = XdebugFinder::getXdebugFlag();
                     $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
 
-                    // Allow callers (e.g. xback --php=...) to override the spawned
-                    // PHP binary while keeping $command[0] as the literal 'php'.
                     $phpBinary = ($this->options['phpBinary'] ?? '') !== ''
                         ? (string) $this->options['phpBinary']
-                        : 'php';
+                        : $command[0];
                     $includeVendorEnv = ($this->options['includeVendor'] ?? null) !== null
                         ? 'XDEBUG_MCP_INCLUDE_VENDOR=' . escapeshellarg((string) $this->options['includeVendor']) . ' '
                         : '';
@@ -466,7 +465,7 @@ final class DebugServer
                     );
                     $this->traceFile = $traceFile;
                 } else {
-                    throw new RuntimeException("Custom command must start with 'php' or be a Docker/Podman/Kubectl command");
+                    throw new RuntimeException('Custom command must start with a PHP binary or be a Docker/Podman/Kubectl command');
                 }
             } else {
                 // Default: simple script execution
@@ -2768,6 +2767,25 @@ final class DebugServer
     }
 
     /**
+     * An `onResult` sink receives the document instead of stdout. The process
+     * exits right after the document is produced, so this is the only way for
+     * an embedding script (bin/xback) to reshape it.
+     *
+     * @param XstepJsonOutput $result
+     */
+    private function emitResult(array $result): void
+    {
+        $sink = $this->options['onResult'] ?? null;
+        if ($sink !== null) {
+            $sink($result);
+
+            return;
+        }
+
+        echo $this->encodeJsonOutput($result) . "\n";
+    }
+
+    /**
      * Add the actually-bound debug port to the JSON result, so a caller only
      * seeing --json output can still tell which port Xdebug is listening on.
      *
@@ -2890,9 +2908,7 @@ final class DebugServer
             ];
         }
 
-        $result = $this->addPortInfoToResult($result);
-
-        echo $this->encodeJsonOutput($result) . "\n";
+        $this->emitResult($this->addPortInfoToResult($result));
     }
 
     /**
@@ -3751,9 +3767,7 @@ final class DebugServer
 
         // Output format based on jsonMode or jsonOutput option
         if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
-            $debugState = $this->addPortInfoToResult($debugState);
-
-            echo $this->encodeJsonOutput($debugState) . "\n";
+            $this->emitResult($this->addPortInfoToResult($debugState));
 
             // Mark step-recording output as done only after JSON was successfully
             // emitted so the cleanup phase can still fall back to its own output

@@ -6,6 +6,7 @@ declare(strict_types=1);
 use Koriym\XdebugMcp\DebugServer;
 use Koriym\XdebugMcp\Constants;
 use Koriym\XdebugMcp\Exceptions\InvalidLineException;
+use Koriym\XdebugMcp\Utilities\PhpCommandParser;
 
 /**
  * Exception for invalid breakpoint format
@@ -90,7 +91,7 @@ function showHelp(string $commandName = 'xstep'): void
         echo "  c        Continue execution\n";
         echo "  p <var>  Print variable (e.g., p \$user)\n";
         echo "  bt       Show backtrace\n";
-        echo "  l        List source code\n";
+        echo "  l        Show current location (stack and variables)\n";
         echo "  q        Quit debugger\n";
         echo "\n";
     } else {
@@ -387,7 +388,7 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
     // Handle legacy format: script.php [breakpoint_file] [break_line]
     // Skip when --break= is used so positional args don't leak into $targetScript
     // (e.g. `-- php main.php` with a `php/` directory in CWD would match file_exists).
-    if (empty($breakpoints) && count($command) >= 1 && !str_contains($command[0], ' ') && file_exists($command[0])) {
+    if (empty($breakpoints) && count($command) >= 1 && !str_contains($command[0], ' ') && !PhpCommandParser::isPhpBinary($command[0]) && file_exists($command[0])) {
         $targetScript = $command[0];
         if (!isset($breakpointFile) && isset($command[1])) {
             $breakpointFile = $command[1];
@@ -415,12 +416,11 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             throw new RuntimeException("Could not find PHP command in Docker command: " . implode(' ', $command));
         }
     } else {
-        // New format: complex command after --
-        if ($command[0] === 'php' && isset($command[1])) {
-            $targetScript = $command[1];
-        } else {
+        $scriptIndex = PhpCommandParser::isPhpBinary($command[0]) ? PhpCommandParser::findScriptIndex($command, 0) : false;
+        if ($scriptIndex === false) {
             throw new RuntimeException("Could not determine target script from command: " . implode(' ', $command));
         }
+        $targetScript = $command[$scriptIndex];
     }
 
     // Validate target script (skip for Docker where script is in container)
