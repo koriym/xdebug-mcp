@@ -510,6 +510,37 @@ PHP);
     }
 
     /**
+     * The auto_prepend helpers share the target's global scope, so their own
+     * variables used to appear in every captured dump — and would overwrite a
+     * target variable of the same name. The breakpoint must sit at top-level
+     * scope: inside a function only locals are dumped, which hides the leak.
+     */
+    public function testCapturedVariablesExcludeAutoPrependInternals(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/debug_friendly.php';
+        $output = shell_exec(sprintf(
+            'cd %s && ./bin/xstep --break=%s -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':26'),
+            escapeshellarg($fixture),
+        ));
+        $this->assertNotNull($output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $variables = $payload['breaks'][0]['variables'];
+        $this->assertArrayHasKey('$number', $variables, 'Expected the target own globals to be captured');
+        $this->assertArrayNotHasKey('$vendorPath', $variables);
+        $this->assertArrayNotHasKey('$excludePaths', $variables);
+    }
+
+    /**
      * Regression test: `php -d key=value script.php` must resolve the script
      * argument, not the `-d` flag itself. The old code took $command[1]
      * verbatim as the script whenever $command[0] === 'php', which broke on

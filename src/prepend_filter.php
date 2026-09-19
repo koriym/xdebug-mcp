@@ -12,6 +12,12 @@ use Koriym\XdebugMcp\Utilities\VendorFilter;
 // so vendor code is filtered out from the very beginning, including the
 // Composer autoloader.
 //
+// This file shares the target's global scope, so its variables are unset
+// before handing control over: otherwise they show up in variable dumps and
+// can overwrite a target variable of the same name. A closure would scope
+// them too, but tracing is already running here and its frame would be
+// recorded as tool noise.
+//
 // Override via env:
 // - XDEBUG_MCP_DISABLE_VENDOR_FILTER=1  disable filtering entirely
 // - XDEBUG_MCP_INCLUDE_VENDOR=pkg/*     keep selected packages
@@ -34,3 +40,5 @@ if ($excludePaths !== []) {
     xdebug_set_filter(XDEBUG_FILTER_TRACING, XDEBUG_PATH_EXCLUDE, $excludePaths);
     xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, $excludePaths);
 }
+
+unset($vendorPath, $excludePaths);
