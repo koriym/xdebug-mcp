@@ -109,13 +109,13 @@ Run the demo examples to see each tool in action:
 ./bin/xstep --break="demo/buggy.php:22" -- php demo/buggy.php
 
 # Trace execution flow
-./bin/xtrace --context="Debug demo" -- php demo/buggy.php
+./bin/xtrace --json --context="Debug demo" -- php demo/buggy.php
 
 # Profile performance bottlenecks
 ./bin/xprofile --json -- php demo/slow.php
 
 # Analyze code coverage (raw mode for plain PHP scripts)
-./bin/xcoverage --raw -- php demo/coverage.php
+./bin/xcoverage --json --raw -- php demo/coverage.php
 
 # Get stack trace at breakpoint
 ./bin/xback --break="demo/buggy.php:44" -- php demo/buggy.php
@@ -127,7 +127,7 @@ Run the demo examples to see each tool in action:
 ./bin/xcompare --break="src/calc.php:25" --run="php src/calc.php 10" --compare-with=main
 ```
 
-Each command outputs structured JSON data that AI can analyze to provide debugging insights.
+Each command outputs structured JSON that AI can analyze to provide debugging insights. xtrace, xprofile, and xcoverage print text unless `--json` is given; the other tools print JSON by default.
 
 ## How It Works
 
@@ -194,15 +194,15 @@ Run `--help` on any tool for detailed options.
 
 ## Schema-Backed JSON Output
 
-Every tool emits JSON with a `$schema` URL, so the output is machine-verifiable and self-describing — no log-string parsing needed:
+Every tool emits JSON with a schema URL (`$schema`, or `schema` for xtrace and xprofile), so the output is machine-verifiable and self-describing — no log-string parsing needed. xstep, xback, and xcompare print JSON by default; xtrace, xprofile, and xcoverage with `--json`:
 
 ```json
 {
   "$schema": "https://koriym.github.io/xdebug-mcp/schemas/xstep.json",
   "breaks": [
     {
-      "location": {"file": "demo/buggy.php", "line": 22},
-      "variables": {"$user": "NULL", "$id": "42"}
+      "stack": [{"function": "calculateSum", "file": "buggy.php", "line": 22}],
+      "variables": {"$a": "int: 10", "$b": "int: 5"}
     }
   ],
   "trace": { "...": "..." }
@@ -250,7 +250,7 @@ xrepl --break="script.php:42" -- php script.php
 | `c` | Continue execution |
 | `p <var>` | Print variable (e.g., `p $user`) |
 | `bt` | Show backtrace |
-| `l` | List source code |
+| `l` | Show current location (stack and variables) |
 | `q` | Quit debugger |
 
 ## Docker Support

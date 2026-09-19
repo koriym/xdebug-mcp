@@ -47,7 +47,7 @@ The word "trace" can mean different things:
 
 Trace execution forward from start to finish. Captures complete execution flow, function calls, parameters, and timing data.
 
-**Output**: JSON with `$schema` URL for semantic details and AI analysis strategies.
+**Output**: Text by default; `--json` gives JSON with a `schema` URL for semantic details and AI analysis strategies.
 **Key fields**: `{lines, functions, max_depth, db_queries}`
 
 ```bash
@@ -121,7 +121,7 @@ Stop at breakpoint, step forward N times, record variable changes at each step. 
 
 Identify performance bottlenecks with precision data.
 
-**Output**: JSON with a `schema` URL. `time_ms`/`memory_mb` are measured from the cachegrind summary; `bottlenecks` is a structured array. Read the linked schema for the field shapes — don't infer the format here.
+**Output**: Text by default; `--json` gives JSON with a `schema` URL. `time_ms`/`memory_mb` are measured from the cachegrind summary; `bottlenecks` is a structured array. Read the linked schema for the field shapes — don't infer the format here.
 **Key fields**: `{time_ms, memory_mb, bottlenecks}`
 
 ```bash
@@ -149,11 +149,11 @@ Identify performance bottlenecks with precision data.
 
 Collect code coverage data for PHPUnit or any PHP script. Shows only uncovered lines (compact output).
 
-**Output**: JSON with `$schema` URL for semantic details.
+**Output**: Text by default; `--json` gives JSON with a `$schema` URL for semantic details.
 **Key fields**: `{summary: {coverage_percent, covered_lines, uncovered_lines}, uncovered: {file: [lines]}}`
 
 ```bash
-~/.composer/vendor/bin/xcoverage [--include-vendor=PATTERNS] -- command
+~/.composer/vendor/bin/xcoverage [--json] [--include-vendor=PATTERNS] -- command
 ~/.composer/vendor/bin/xcoverage -- vendor/bin/phpunit        # PHPUnit
 ~/.composer/vendor/bin/xcoverage -- php script.php            # Any PHP script
 ```
@@ -179,7 +179,7 @@ Collect code coverage data for PHPUnit or any PHP script. Shows only uncovered l
 Get call stack (backtrace) at a specific line. Shows "who called this?" - the chain of function calls that led to this point.
 
 **Output**: JSON with `$schema` URL for semantic details.
-**Key fields**: `{backtrace: [{file, line, function, args}]}`
+**Key fields**: `{script, breakpoint, stack: [{level, function, file, line}]}`
 
 ```bash
 ~/.composer/vendor/bin/xback [--break=SPEC] [--depth=N] [--context=TEXT] -- command
@@ -267,7 +267,7 @@ Human-friendly interactive debugging session with breakpoints and variable inspe
 - `c` - Continue execution
 - `p <var>` - Print variable (e.g., `p $user`)
 - `bt` - Show backtrace
-- `l` - List source code
+- `l` - Show current location (stack and variables)
 - `q` - Quit debugger
 
 ### Examples

@@ -23,6 +23,7 @@ use Koriym\XdebugMcp\Exceptions\BreakpointException;
 use Koriym\XdebugMcp\Exceptions\DebugSessionException;
 use Koriym\XdebugMcp\Exceptions\InvalidArgumentException;
 use Koriym\XdebugMcp\Utilities\PathNormalizer;
+use Koriym\XdebugMcp\Utilities\PhpCommandParser;
 use Koriym\XdebugMcp\Utilities\XdebugEnv;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -86,6 +87,7 @@ use function preg_replace;
 use function preg_replace_callback;
 use function property_exists;
 use function rawurlencode;
+use function realpath;
 use function register_shutdown_function;
 use function round;
 use function shell_exec;
@@ -146,6 +148,9 @@ final class DebugServer
     private const DEFAULT_CHILD_VALUE_BYTES = 20;
     private const STACK_CONTEXT_LIMIT = 5;
 
+    /** Upper bound when stepping out of the injected prepend helper into the target script */
+    private const MAX_PRELUDE_STEPS = 200;
+
     /** @var DeferredFuture<bool>|null */
     private DeferredFuture|null $listenerReady = null;
 
@@ -185,7 +190,7 @@ final class DebugServer
     /** @var array{id: string, label: string, file: string, line: int, condition?: string}|null */
     private array|null $activeBreakpoint = null;
 
-    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, phpBinary?: string, includeVendor?: string|null} $options */
+    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, phpBinary?: string, includeVendor?: string|null, firstLineFallback?: bool, onResult?: callable(XstepJsonOutput): void} $options */
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
@@ -418,7 +423,7 @@ final class DebugServer
 
                     $cmd = implode(' ', $command);
                     $this->traceFile = $traceFile;
-                } elseif ($command[0] === 'php') {
+                } elseif (PhpCommandParser::isPhpBinary($command[0])) {
                     // Local PHP command
                     XdebugEnv::noticeIfInherited('debug,trace');
 
@@ -430,11 +435,9 @@ final class DebugServer
                     $xdebugFlag = XdebugFinder::getXdebugFlag();
                     $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
 
-                    // Allow callers (e.g. xback --php=...) to override the spawned
-                    // PHP binary while keeping $command[0] as the literal 'php'.
                     $phpBinary = ($this->options['phpBinary'] ?? '') !== ''
                         ? (string) $this->options['phpBinary']
-                        : 'php';
+                        : $command[0];
                     $includeVendorEnv = ($this->options['includeVendor'] ?? null) !== null
                         ? 'XDEBUG_MCP_INCLUDE_VENDOR=' . escapeshellarg((string) $this->options['includeVendor']) . ' '
                         : '';
@@ -466,7 +469,7 @@ final class DebugServer
                     );
                     $this->traceFile = $traceFile;
                 } else {
-                    throw new RuntimeException("Custom command must start with 'php' or be a Docker/Podman/Kubectl command");
+                    throw new RuntimeException('Custom command must start with a PHP binary or be a Docker/Podman/Kubectl command');
                 }
             } else {
                 // Default: simple script execution
@@ -916,8 +919,15 @@ final class DebugServer
         $this->log("🎬 exit-on-break mode with Step Recording ({$maxSteps} steps)");
 
         try {
-            // Start execution and wait for first breakpoint
-            $response = $this->sendCommand('run');
+            // `xback` documents a location even without `--break`, where there
+            // is nothing for `run` to stop at; stepping lands on the first
+            // executable line. Opt-in: `xstep --steps` without a breakpoint
+            // keeps running to completion as before.
+            $hasBreakpoint = ($this->options['breakpoints'] ?? []) !== [] || $this->initialBreakpointLine !== null;
+            $stepToFirstLine = ! $hasBreakpoint && ($this->options['firstLineFallback'] ?? false);
+            $response = $stepToFirstLine
+                ? $this->stepToTargetScript()
+                : $this->sendCommand('run');
 
             if ($this->didBreak($response)) {
                 $this->log('🎯 Breakpoint hit, starting Step Recording...');
@@ -940,6 +950,69 @@ final class DebugServer
             }
         } catch (Throwable $e) {
             $this->log('❌ Step Recording error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Step out of the injected auto_prepend helper into the code being debugged.
+     *
+     * The first step lands inside the helper, which is tooling, not user code.
+     * Stepping over its lines leaves it without descending into the functions
+     * it calls. The helper is identified by its full path: a target script that
+     * happens to share its basename would otherwise look like the destination.
+     *
+     * @return string The break response outside the helper, or the last response seen
+     */
+    private function stepToTargetScript(): string
+    {
+        $prependHelper = realpath(__DIR__ . '/prepend_trace.php');
+        $response = $this->sendCommand('step_into');
+
+        for ($i = 0; $i < self::MAX_PRELUDE_STEPS; $i++) {
+            if (! $this->didBreak($response) || $prependHelper === false) {
+                return $response;
+            }
+
+            $file = $this->extractFilePathFromBreakResponse($response);
+            if ($file === null || $file !== $prependHelper) {
+                return $response;
+            }
+
+            $response = $this->sendCommand('step_over');
+        }
+
+        return $response;
+    }
+
+    /**
+     * Full local path of the break location, as opposed to the basename that
+     * extractLocationDataFromBreakResponse() reports for display.
+     */
+    private function extractFilePathFromBreakResponse(string $response): string|null
+    {
+        try {
+            $useErrors = libxml_use_internal_errors(true);
+            libxml_clear_errors();
+            $xml = simplexml_load_string(DbgpXml::sanitize($response));
+            libxml_clear_errors();
+            libxml_use_internal_errors($useErrors);
+            if (! $xml) {
+                return null;
+            }
+
+            $xml->registerXPathNamespace('xdebug', 'https://xdebug.org/dbgp/xdebug');
+            $messages = $xml->xpath('//xdebug:message');
+            if (! is_array($messages) || $messages === []) {
+                return null;
+            }
+
+            $filename = str_replace('file://', '', (string) $messages[0]['filename']);
+
+            return realpath($filename) ?: $filename;
+        } catch (Throwable $e) {
+            $this->log('❌ Error parsing break location: ' . $e->getMessage());
+
+            return null;
         }
     }
 
@@ -2768,6 +2841,25 @@ final class DebugServer
     }
 
     /**
+     * An `onResult` sink receives the document instead of stdout. The process
+     * exits right after the document is produced, so this is the only way for
+     * an embedding script (bin/xback) to reshape it.
+     *
+     * @param XstepJsonOutput $result
+     */
+    private function emitResult(array $result): void
+    {
+        $sink = $this->options['onResult'] ?? null;
+        if ($sink !== null) {
+            $sink($result);
+
+            return;
+        }
+
+        echo $this->encodeJsonOutput($result) . "\n";
+    }
+
+    /**
      * Add the actually-bound debug port to the JSON result, so a caller only
      * seeing --json output can still tell which port Xdebug is listening on.
      *
@@ -2890,9 +2982,7 @@ final class DebugServer
             ];
         }
 
-        $result = $this->addPortInfoToResult($result);
-
-        echo $this->encodeJsonOutput($result) . "\n";
+        $this->emitResult($this->addPortInfoToResult($result));
     }
 
     /**
@@ -3751,9 +3841,7 @@ final class DebugServer
 
         // Output format based on jsonMode or jsonOutput option
         if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
-            $debugState = $this->addPortInfoToResult($debugState);
-
-            echo $this->encodeJsonOutput($debugState) . "\n";
+            $this->emitResult($this->addPortInfoToResult($debugState));
 
             // Mark step-recording output as done only after JSON was successfully
             // emitted so the cleanup phase can still fall back to its own output

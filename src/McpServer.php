@@ -245,7 +245,7 @@ final class McpServer
             ),
             'xback' => new McpTool(
                 'xback',
-                'Capture call stack (backtrace) at specific line. Returns JSON with $schema URL for semantic details. Key fields: {backtrace: [{file, line, function, args}]}.',
+                'Capture call stack (backtrace) at specific line. Returns JSON with $schema URL for semantic details. Key fields: {script, breakpoint, stack: [{level, function, file, line}]}.',
                 [
                     'type' => 'object',
                     'properties' => [
@@ -676,7 +676,7 @@ final class McpServer
                 ],
                 [
                     'name' => 'xback',
-                    'description' => 'Capture call stack (backtrace) at specific line. Returns JSON with $schema URL for semantic details. Key fields: {backtrace: [{file, line, function, args}]}.',
+                    'description' => 'Capture call stack (backtrace) at specific line. Returns JSON with $schema URL for semantic details. Key fields: {script, breakpoint, stack: [{level, function, file, line}]}.',
                     'arguments' => [
                         [
                             'name' => 'script',

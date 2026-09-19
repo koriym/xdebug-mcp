@@ -145,7 +145,7 @@ Commands:
 - `c` - Continue execution
 - `p <var>` - Print variable (e.g., `p $user`)
 - `bt` - Show backtrace
-- `l` - List source code
+- `l` - Show current location (stack and variables)
 - `q` - Quit debugger
 
 ### Docker Support
