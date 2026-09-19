@@ -189,7 +189,7 @@ final class DebugServer
     /** @var array{id: string, label: string, file: string, line: int, condition?: string}|null */
     private array|null $activeBreakpoint = null;
 
-    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, phpBinary?: string, includeVendor?: string|null, onResult?: callable(XstepJsonOutput): void} $options */
+    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, phpBinary?: string, includeVendor?: string|null, firstLineFallback?: bool, onResult?: callable(XstepJsonOutput): void} $options */
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
@@ -918,14 +918,15 @@ final class DebugServer
         $this->log("🎬 exit-on-break mode with Step Recording ({$maxSteps} steps)");
 
         try {
-            // Without a breakpoint there is nothing for `run` to stop at, so the
-            // session would end with no recorded location. Stepping lands on the
-            // first executable line, which is what `xback -- php script.php`
-            // documents as its default.
+            // `xback` documents a location even without `--break`, where there
+            // is nothing for `run` to stop at; stepping lands on the first
+            // executable line. Opt-in: `xstep --steps` without a breakpoint
+            // keeps running to completion as before.
             $hasBreakpoint = ($this->options['breakpoints'] ?? []) !== [] || $this->initialBreakpointLine !== null;
-            $response = $hasBreakpoint
-                ? $this->sendCommand('run')
-                : $this->stepToTargetScript();
+            $stepToFirstLine = ! $hasBreakpoint && ($this->options['firstLineFallback'] ?? false);
+            $response = $stepToFirstLine
+                ? $this->stepToTargetScript()
+                : $this->sendCommand('run');
 
             if ($this->didBreak($response)) {
                 $this->log('🎯 Breakpoint hit, starting Step Recording...');

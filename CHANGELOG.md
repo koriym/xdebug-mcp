@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `xstep`/`xrepl` accept an absolute PHP binary after `--` as the README documents; `xback` accepts one without `--php`.
 - `xback` emits the documented `xback.json` document (`stack` frames with `level`, `--depth` applied) instead of the `xstep.json` one.
-- `xback` without `--break` reports the first executable line of the target script again, instead of an empty `stack`; the injected `auto_prepend_file` helper is stepped past so the frame is user code.
+- `xback` without `--break` reports the first executable line of the target script instead of an empty `stack`; the injected `auto_prepend_file` helper is stepped past so the frame is user code.
 - README and skill docs: xtrace, xprofile, and xcoverage need `--json` for JSON output; the xrepl `l` command shows the current location, not source code.
 
 ## [0.13.0] - 2026-08-03
