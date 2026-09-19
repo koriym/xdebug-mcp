@@ -373,7 +373,7 @@ class XdebugRunner
         if ($this->mode === 'trace') {
             $args[] = '-dxdebug.trace_format=1';
 
-            if ($isLocal && ! XdebugFinder::isForeignBinary($phpBinary)) {
+            if ($isLocal && XdebugFinder::canUseHostHelpers($phpBinary)) {
                 $prependFile = __DIR__ . '/prepend_filter.php';
                 if (file_exists($prependFile)) {
                     $args[] = '-dauto_prepend_file=' . $prependFile;

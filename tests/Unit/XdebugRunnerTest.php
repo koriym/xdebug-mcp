@@ -12,16 +12,25 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use RuntimeException;
 
+use function basename;
 use function file_exists;
 use function file_put_contents;
+use function getenv;
 use function implode;
 use function mkdir;
+use function putenv;
 use function rmdir;
 use function strpos;
+use function symlink;
 use function sys_get_temp_dir;
 use function tempnam;
 use function uniqid;
 use function unlink;
+
+use const PATH_SEPARATOR;
+use const PHP_BINARY;
+use const PHP_MAJOR_VERSION;
+use const PHP_MINOR_VERSION;
 
 #[CoversClass(XdebugRunner::class)]
 final class XdebugRunnerTest extends TestCase
@@ -322,9 +331,9 @@ final class XdebugRunnerTest extends TestCase
      * A container runs its own PHP: the host's extension (built for this
      * interpreter's ABI) and the host-path prepend helper must stay out of it.
      *
-     * The argument builder is called directly: when this process has Xdebug
-     * loaded, the flag is empty anyway and a command-level assertion would
-     * pass even with the container gating removed.
+     * The `auto_prepend_file` assertion is the load-bearing one — where Xdebug
+     * is loaded in the test process (as in CI) the extension flag is empty for
+     * every caller, so its absence alone proves nothing.
      */
     #[Test]
     public function doesNotInjectHostExtensionOrPrependIntoContainerArguments(): void
@@ -352,6 +361,36 @@ final class XdebugRunnerTest extends TestCase
         // The same builder does add the prepend for a same-version local run,
         // so the container result is a real difference, not an empty build.
         $this->assertStringContainsString('auto_prepend_file', $localArgs);
+    }
+
+    /**
+     * A PATH name like `php8.4` never resolves through realpath(), so a gate
+     * based on path identity read it as a different PHP and dropped the
+     * vendor-filter helper. Debian/Ubuntu install exactly these names
+     * (`php8.2-cli`), so this is the normal way to name an interpreter there.
+     */
+    #[Test]
+    public function keepsPrependForSameVersionInterpreterNamedOnPath(): void
+    {
+        $dir = sys_get_temp_dir() . '/xdebug-mcp-path-' . uniqid();
+        mkdir($dir, 0777, true);
+        $alias = $dir . '/php' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+        symlink(PHP_BINARY, $alias);
+        $originalPath = (string) getenv('PATH');
+        putenv('PATH=' . $dir . PATH_SEPARATOR . $originalPath);
+
+        try {
+            $runner = new XdebugRunner(['script', '--', basename($alias), __FILE__]);
+            $runner->setMode('trace');
+            $build = (new ReflectionClass($runner))->getMethod('buildLocalCommand');
+            $command = $build->invoke($runner, [basename($alias), __FILE__]);
+
+            $this->assertStringContainsString('auto_prepend_file', $command);
+        } finally {
+            putenv('PATH=' . $originalPath);
+            unlink($alias);
+            rmdir($dir);
+        }
     }
 
     #[Test]

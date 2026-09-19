@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 use function array_keys;
 use function bin2hex;
+use function chmod;
 use function copy;
 use function dirname;
 use function escapeshellarg;
@@ -830,6 +831,49 @@ PHP);
             $this->assertSame(2, $payload['stack'][0]['line']);
         } finally {
             unlink($script);
+            rmdir($dir);
+        }
+    }
+
+    /**
+     * A target whose Xdebug cannot be resolved must be reported the same way
+     * by every tool: one line naming the target version, exit 1. xstep and
+     * xback used to print a result document with an empty `breaks`/`stack`
+     * first — which reads as a successful run that hit nothing — and then die
+     * with an uncaught fatal.
+     */
+    public function testUnresolvableTargetIsReportedUniformly(): void
+    {
+        $dir = sys_get_temp_dir() . '/xdebug-mcp-unresolvable-' . bin2hex(random_bytes(6));
+        mkdir($dir, 0777, true);
+        // The name must satisfy PhpCommandParser::isPhpBinary(), or the tools
+        // treat this path as a script argument instead of the interpreter.
+        $fake = $dir . '/php4.9';
+        // Answers the probe as a PHP version no Xdebug build can satisfy.
+        file_put_contents($fake, "#!/bin/sh\necho \"__XDEBUG_MCP_PROBE__|0|/nonexistent|4.9\"\n");
+        chmod($fake, 0o755);
+        $script = $dir . '/t.php';
+        file_put_contents($script, "<?php\n\$x = 1;\necho \$x, PHP_EOL;\n");
+
+        $commands = [
+            'xtrace' => sprintf('./bin/xtrace -- %s %s', escapeshellarg($fake), escapeshellarg($script)),
+            'xstep' => sprintf('./bin/xstep --break=%s -- %s %s', escapeshellarg($script . ':3'), escapeshellarg($fake), escapeshellarg($script)),
+            'xback' => sprintf('./bin/xback --break=%s --php=%s -- php %s', escapeshellarg($script . ':3'), escapeshellarg($fake), escapeshellarg($script)),
+            'xcoverage' => sprintf('./bin/xcoverage --raw --php=%s -- php %s', escapeshellarg($fake), escapeshellarg($script)),
+        ];
+
+        try {
+            foreach ($commands as $tool => $command) {
+                $output = shell_exec(sprintf('cd %s && %s 2>&1; printf "EXIT:%%d" "$?"', escapeshellarg(dirname(__DIR__, 2)), $command));
+                $this->assertNotNull($output);
+                $this->assertStringContainsString('EXIT:1', $output, $tool . ' must exit 1');
+                $this->assertStringContainsString('not loadable in PHP 4.9', $output, $tool . ' must name the target version');
+                $this->assertStringNotContainsString('"$schema"', $output, $tool . ' must not emit a result document');
+                $this->assertStringNotContainsString('Uncaught', $output, $tool . ' must not surface a fatal');
+            }
+        } finally {
+            unlink($script);
+            unlink($fake);
             rmdir($dir);
         }
     }

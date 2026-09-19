@@ -7,12 +7,16 @@ namespace Koriym\XdebugMcp;
 use Koriym\XdebugMcp\Exceptions\XdebugNotAvailableException;
 
 use function array_key_exists;
+use function array_pop;
+use function array_slice;
+use function count;
 use function escapeshellarg;
 use function exec;
 use function explode;
 use function extension_loaded;
 use function file_exists;
 use function fwrite;
+use function implode;
 use function ini_get;
 use function realpath;
 use function sprintf;
@@ -163,12 +167,33 @@ final class XdebugFinder
     }
 
     /**
-     * A binary is foreign when it is neither unset nor the running interpreter.
+     * Whether the host-built `auto_prepend_file` helpers can run on the target.
      *
-     * Callers use this to skip host-built artifacts (the auto_prepend_file
-     * helpers are written for this interpreter's PHP version).
+     * The helpers are written against this interpreter's PHP version, so the
+     * question is version equality, not path identity: a second install of the
+     * same version, or a PATH name like `php8.4`, is a perfectly good host for
+     * them. The probe is skipped for the running interpreter, which is the
+     * common local case; for anything else getXdebugFlag() has already probed
+     * and cached, so this costs no extra process.
      */
-    public static function isForeignBinary(string|null $phpBinary): bool
+    public static function canUseHostHelpers(string|null $phpBinary): bool
+    {
+        if (! self::isForeignBinary($phpBinary)) {
+            return true;
+        }
+
+        $probe = self::probe((string) $phpBinary);
+
+        return $probe !== null && $probe['version'] === PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+    }
+
+    /**
+     * A binary is foreign when it is neither unset nor literally the running
+     * interpreter. This only decides whether a probe is needed — it is not a
+     * version comparison (a PATH name never resolves here, so it reads as
+     * foreign and gets probed).
+     */
+    private static function isForeignBinary(string|null $phpBinary): bool
     {
         if ($phpBinary === null || $phpBinary === '' || $phpBinary === 'php') {
             return false;
@@ -182,7 +207,9 @@ final class XdebugFinder
      *
      * The target may print startup warnings (duplicate modules, ABI notices) to
      * stdout before our echo, so the answer carries a marker and is matched per
-     * line instead of being read as the whole output.
+     * line instead of being read as the whole output. stdin is closed because a
+     * path that turns out not to be a PHP binary may otherwise sit waiting for
+     * input forever.
      *
      * @return array{loaded: bool, extensionDir: string, version: string}|null Null when the binary cannot be run
      */
@@ -193,10 +220,17 @@ final class XdebugFinder
         }
 
         $code = 'echo "\n", "' . self::PROBE_MARKER . '|", extension_loaded("xdebug") ? "1" : "0", "|", ini_get("extension_dir"), "|", PHP_MAJOR_VERSION, ".", PHP_MINOR_VERSION, "\n";';
+        $nullDevice = PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null';
         $output = [];
         $exitCode = 0;
         exec(
-            sprintf('%s -d error_reporting=0 -r %s 2>/dev/null', escapeshellarg($phpBinary), escapeshellarg($code)),
+            sprintf(
+                '%s -d error_reporting=0 -r %s 2>%s <%s',
+                escapeshellarg($phpBinary),
+                escapeshellarg($code),
+                $nullDevice,
+                $nullDevice,
+            ),
             $output,
             $exitCode,
         );
@@ -210,15 +244,19 @@ final class XdebugFinder
                 continue;
             }
 
+            // Read the fixed fields from the ends: an extension_dir containing
+            // the separator would otherwise shift everything after it.
             $parts = explode('|', trim($line));
-            if (! isset($parts[3])) {
+            if (count($parts) < 4) {
                 break;
             }
 
+            $version = array_pop($parts);
+
             return self::$probeCache[$phpBinary] = [
                 'loaded' => $parts[1] === '1',
-                'extensionDir' => $parts[2],
-                'version' => $parts[3],
+                'extensionDir' => implode('|', array_slice($parts, 2)),
+                'version' => $version,
             ];
         }
 

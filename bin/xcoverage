@@ -3,6 +3,7 @@
 
 // Load autoloader
 require_once __DIR__ . '/autoload.php';
+use Koriym\XdebugMcp\Exceptions\XdebugNotAvailableException;
 use Koriym\XdebugMcp\XdebugFinder;
 use Koriym\XdebugMcp\Utilities\PhpCommandParser;
 use Koriym\XdebugMcp\Utilities\VendorFilter;
@@ -291,6 +292,20 @@ function renderCompactCoverage(array $result): string
     return implode("\n", $lines);
 }
 
+/**
+ * Resolve the Xdebug flag for the target, reporting an unusable target as a
+ * one-line error rather than an uncaught fatal with a stack trace.
+ */
+function resolveXdebugFlag(?string $phpOverride): string
+{
+    try {
+        return XdebugFinder::getXdebugFlag($phpOverride);
+    } catch (XdebugNotAvailableException $e) {
+        fwrite(STDERR, "❌ Error: " . $e->getMessage() . "\n");
+        exit(1);
+    }
+}
+
 function emitCoverageResult(array $result, bool $jsonOutput): void
 {
     if ($jsonOutput) {
@@ -327,7 +342,7 @@ if (!$rawMode) {
 
     // Get Xdebug flag for explicit loading, probing the binary that will run
     $phpPath = $phpOverride ?? PHP_BINARY;
-    $xdebugFlag = XdebugFinder::getXdebugFlag($phpOverride);
+    $xdebugFlag = resolveXdebugFlag($phpOverride);
 
     // Build PHPUnit command with coverage-clover (stable XML format)
     $phpunitArgs = array_merge(
@@ -515,7 +530,7 @@ if ($sourceFilterEnabled) {
 }
 
 $phpPath = $phpOverride ?? PHP_BINARY;
-$xdebugFlag = XdebugFinder::getXdebugFlag($phpOverride);
+$xdebugFlag = resolveXdebugFlag($phpOverride);
 
 // Default to PHPUnit for raw mode if no args
 if (empty($args)) {

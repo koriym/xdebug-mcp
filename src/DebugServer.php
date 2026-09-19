@@ -181,6 +181,9 @@ final class DebugServer
     private bool $isDockerCommand = false;
     private bool $stepRecordingOutputDone = false;
 
+    /** A result document describes a run; without a launched target there is nothing to report. */
+    private bool $targetLaunched = false;
+
     /** @var BreakpointRef|null Breakpoint shared by every recorded step; emitted once at top level */
     private array|null $recordedBreakpoint = null;
 
@@ -441,9 +444,9 @@ final class DebugServer
 
                     // The prepend helper is written for this interpreter's PHP
                     // version, so it is only safe on a same-version target.
-                    $prependPart = XdebugFinder::isForeignBinary($phpBinary)
-                        ? ''
-                        : '-dauto_prepend_file=' . escapeshellarg(__DIR__ . '/prepend_trace.php') . ' ';
+                    $prependPart = XdebugFinder::canUseHostHelpers($phpBinary)
+                        ? '-dauto_prepend_file=' . escapeshellarg(__DIR__ . '/prepend_trace.php') . ' '
+                        : '';
                     $includeVendorEnv = ($this->options['includeVendor'] ?? null) !== null
                         ? 'XDEBUG_MCP_INCLUDE_VENDOR=' . escapeshellarg((string) $this->options['includeVendor']) . ' '
                         : '';
@@ -495,9 +498,9 @@ final class DebugServer
                 $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
                 // The prepend helper is written for this interpreter's PHP
                 // version, so it is only safe on a same-version target.
-                $prependPart = XdebugFinder::isForeignBinary($phpBinary)
-                    ? ''
-                    : '-dauto_prepend_file=' . escapeshellarg(__DIR__ . '/prepend_trace.php') . ' ';
+                $prependPart = XdebugFinder::canUseHostHelpers($phpBinary)
+                    ? '-dauto_prepend_file=' . escapeshellarg(__DIR__ . '/prepend_trace.php') . ' '
+                    : '';
                 $includeVendorEnv = ($this->options['includeVendor'] ?? null) !== null
                     ? 'XDEBUG_MCP_INCLUDE_VENDOR=' . escapeshellarg((string) $this->options['includeVendor']) . ' '
                     : '';
@@ -531,6 +534,7 @@ final class DebugServer
 
             // Execute with AMP Process
             $this->process = Process::start($cmd);
+            $this->targetLaunched = true;
             $this->log('📋 Process started, PID: ' . $this->process->getPid());
 
             // Skip process waiting for interactive debugging to avoid connection issues
@@ -2818,8 +2822,11 @@ final class DebugServer
             $this->xdebugSocket->close();
         }
 
-        // Output Step Recording results in JSON mode (always output even if no breaks hit)
-        if ($this->jsonMode) {
+        // Output Step Recording results in JSON mode (always output even if no
+        // breaks hit). A target that never launched — e.g. Xdebug could not be
+        // resolved for it — has no run to describe, and an empty document would
+        // read as a successful run that simply hit nothing.
+        if ($this->jsonMode && $this->targetLaunched) {
             $this->outputStepRecordingResults();
         }
 

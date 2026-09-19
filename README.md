@@ -287,7 +287,7 @@ The tool runs on your modern PHP while the target script executes on the specifi
 xback --break="legacy_app.php:30" --php=/path/to/php7.2 -- php legacy_app.php
 ```
 
-The target binary is asked about its own Xdebug: if its `php.ini` already loads Xdebug, nothing is injected; otherwise an Xdebug build matching the *target's* version is looked up. An extension built for the tool's own PHP is never pushed into a different version — when no matching build exists, the run fails with a message naming the target version instead of producing a broken session.
+When the target is named explicitly — an absolute path, a versioned name such as `php8.2`, or `--php=` — it is asked about its own Xdebug: if its `php.ini` already loads Xdebug, nothing is injected; otherwise an Xdebug build matching the *target's* version is looked up. An extension built for another PHP version is never pushed into it, and when no matching build exists the run fails with a message naming the target version instead of producing a broken session. A bare `php` is assumed to be the interpreter running the tool, so if your `PATH` resolves `php` to a different version than the one running xdebug-mcp, name that interpreter explicitly.
 
 ### Xdebug 3.x Compatibility
 

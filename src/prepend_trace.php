@@ -28,8 +28,9 @@ if (! extension_loaded('xdebug')) {
     return;
 }
 
-// Only the filter setup needs locals; xdebug_start_trace() stays at global
-// scope so the closure's own frame never lands in the trace.
+// Only the filter setup needs locals. xdebug_start_trace() stays at global
+// scope so this file reads top-down; under xstep/xback the session already
+// traces from request start, so the closure frame is recorded either way.
 (static function (): void {
     if (! function_exists('xdebug_set_filter') || getenv('XDEBUG_MCP_DISABLE_VENDOR_FILTER') === '1') {
         return;
