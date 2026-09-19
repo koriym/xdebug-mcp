@@ -9,10 +9,12 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 use RuntimeException;
 
 use function file_exists;
 use function file_put_contents;
+use function implode;
 use function mkdir;
 use function rmdir;
 use function strpos;
@@ -314,6 +316,42 @@ final class XdebugRunnerTest extends TestCase
         $this->assertNotFalse($phpPos);
         $this->assertNotFalse($xdebugPos);
         $this->assertLessThan($xdebugPos, $phpPos);
+    }
+
+    /**
+     * A container runs its own PHP: the host's extension (built for this
+     * interpreter's ABI) and the host-path prepend helper must stay out of it.
+     *
+     * The argument builder is called directly: when this process has Xdebug
+     * loaded, the flag is empty anyway and a command-level assertion would
+     * pass even with the container gating removed.
+     */
+    #[Test]
+    public function doesNotInjectHostExtensionOrPrependIntoContainerArguments(): void
+    {
+        $runner = new XdebugRunner([
+            'script',
+            '--',
+            'docker',
+            'compose',
+            'run',
+            '--rm',
+            'php',
+            'php',
+            '/app/test.php',
+        ]);
+        $runner->setMode('trace');
+
+        $generate = (new ReflectionClass($runner))->getMethod('generateXdebugArguments');
+        $containerArgs = implode(' ', $generate->invoke($runner, false, null));
+        $localArgs = implode(' ', $generate->invoke($runner, true, null));
+
+        $this->assertStringNotContainsString('zend_extension', $containerArgs);
+        $this->assertStringNotContainsString('auto_prepend_file', $containerArgs);
+
+        // The same builder does add the prepend for a same-version local run,
+        // so the container result is a real difference, not an empty build.
+        $this->assertStringContainsString('auto_prepend_file', $localArgs);
     }
 
     #[Test]

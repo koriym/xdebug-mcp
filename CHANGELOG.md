@@ -8,9 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- `xstep`/`xrepl` accept an absolute PHP binary after `--` as the README documents; `xback` accepts one without `--php`.
+- `xstep`/`xrepl` accept an absolute PHP binary after `--` as the README documents; `xback` accepts one without `--php`. This also fixes `-- php -d key=value script.php`, which previously took `-d` itself as the script.
 - `xback` emits the documented `xback.json` document (`stack` frames with `level`, `--depth` applied) instead of the `xstep.json` one.
 - `xback` without `--break` reports the first executable line of the target script instead of an empty `stack`; the injected `auto_prepend_file` helper is stepped past so the frame is user code.
+- `xback --depth` above 5 no longer gets silently capped: `DebugServer`'s internal stack-frame limit is now caller-controlled instead of a fixed constant.
+- MCP `xcoverage` tool now always requests `--json` (previously returned compact text despite its description promising JSON), accepts a `raw` argument, and implies raw mode automatically when `include_vendor`/`source` (raw-mode-only options) or an inline-code script is given, instead of silently ignoring them in the default PHPUnit mode. `skills/xdebug/SKILL.md` examples corrected to include `--raw` where required.
+- Cross-version targets resolve Xdebug from the target binary instead of the host: the target is probed for its own Xdebug, an extension built for the tool's PHP is never injected into a different version, and an unsatisfiable target fails with a message naming its version. Container commands no longer receive the host extension or the host-path `auto_prepend_file` helper either.
 - README and skill docs: xtrace, xprofile, and xcoverage need `--json` for JSON output; the xrepl `l` command shows the current location, not source code.
 
 ## [0.13.0] - 2026-08-03

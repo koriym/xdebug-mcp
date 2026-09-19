@@ -461,6 +461,33 @@ echo "Result: $result\n";
         $this->assertCount(1, $decoded['breaks']);
     }
 
+    /**
+     * Regression test: an `onResult` sink receives the JSON document instead
+     * of it being echoed to stdout. This is what lets bin/xback reshape the
+     * xstep-shaped result before the process exits (see DebugServer::emitResult).
+     */
+    public function testOnResultSinkReceivesResultInsteadOfStdout(): void
+    {
+        $received = null;
+        $options = [
+            'onResult' => static function (array $result) use (&$received): void {
+                $received = $result;
+            },
+        ];
+        $server = new DebugServer($this->testScript, 9004, null, $options, true);
+
+        $reflection = new ReflectionClass($server);
+        $outputStepRec = $reflection->getMethod('outputStepRecordingResults');
+
+        ob_start();
+        $outputStepRec->invoke($server);
+        $stdout = ob_get_clean();
+
+        $this->assertSame('', $stdout, 'onResult sink must suppress stdout output');
+        $this->assertIsArray($received);
+        $this->assertSame('https://koriym.github.io/xdebug-mcp/schemas/xstep.json', $received['$schema']);
+    }
+
     public function testStepRecordingHoistsBreakpointToTopLevelAndOmitsPerStepFields(): void
     {
         $server = new DebugServer($this->testScript, 9004, null, [], true);

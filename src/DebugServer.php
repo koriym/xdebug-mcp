@@ -190,7 +190,7 @@ final class DebugServer
     /** @var array{id: string, label: string, file: string, line: int, condition?: string}|null */
     private array|null $activeBreakpoint = null;
 
-    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, phpBinary?: string, includeVendor?: string|null, firstLineFallback?: bool, onResult?: callable(XstepJsonOutput): void} $options */
+    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, phpBinary?: string, includeVendor?: string|null, stackFrames?: int, firstLineFallback?: bool, onResult?: callable(XstepJsonOutput): void} $options */
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
@@ -429,15 +429,21 @@ final class DebugServer
 
                     $scriptName = basename($this->targetScript, '.php');
                     $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
-                    $prependFilter = __DIR__ . '/prepend_trace.php';
-
-                    // Get appropriate Xdebug flag (empty if already loaded)
-                    $xdebugFlag = XdebugFinder::getXdebugFlag();
-                    $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
 
                     $phpBinary = ($this->options['phpBinary'] ?? '') !== ''
                         ? (string) $this->options['phpBinary']
                         : $command[0];
+
+                    // Probe the binary that will actually run: an extension built
+                    // for this interpreter cannot be loaded into another PHP.
+                    $xdebugFlag = XdebugFinder::getXdebugFlag($phpBinary);
+                    $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
+
+                    // The prepend helper is written for this interpreter's PHP
+                    // version, so it is only safe on a same-version target.
+                    $prependPart = XdebugFinder::isForeignBinary($phpBinary)
+                        ? ''
+                        : '-dauto_prepend_file=' . escapeshellarg(__DIR__ . '/prepend_trace.php') . ' ';
                     $includeVendorEnv = ($this->options['includeVendor'] ?? null) !== null
                         ? 'XDEBUG_MCP_INCLUDE_VENDOR=' . escapeshellarg((string) $this->options['includeVendor']) . ' '
                         : '';
@@ -458,13 +464,13 @@ final class DebugServer
                         . '-derror_reporting=E_ERROR '
                         . '-dlog_errors=1 '
                         . '-derror_log=/tmp/php.log '
-                        . '-dauto_prepend_file=%s '
+                        . '%s'
                         . '%s',
                         $includeVendorEnv,
                         escapeshellarg($phpBinary),
                         $xdebugPart,
                         $this->effectiveDebugPort,
-                        escapeshellarg($prependFilter),
+                        $prependPart,
                         implode(' ', array_map(escapeshellarg(...), array_slice($command, 1))),
                     );
                     $this->traceFile = $traceFile;
@@ -477,16 +483,21 @@ final class DebugServer
 
                 $scriptName = basename($this->targetScript, '.php');
                 $traceFile = '/tmp/trace-%t-' . $scriptName . '.xt';
-                $prependFilter = __DIR__ . '/prepend_trace.php';
-
-                // Get appropriate Xdebug flag (empty if already loaded)
-                $xdebugFlag = XdebugFinder::getXdebugFlag();
-                $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
 
                 // Honor an optional PHP-binary override.
                 $phpBinary = ($this->options['phpBinary'] ?? '') !== ''
                     ? (string) $this->options['phpBinary']
                     : 'php';
+
+                // Probe the binary that will actually run: an extension built
+                // for this interpreter cannot be loaded into another PHP.
+                $xdebugFlag = XdebugFinder::getXdebugFlag($phpBinary);
+                $xdebugPart = $xdebugFlag !== '' ? $xdebugFlag . ' ' : '';
+                // The prepend helper is written for this interpreter's PHP
+                // version, so it is only safe on a same-version target.
+                $prependPart = XdebugFinder::isForeignBinary($phpBinary)
+                    ? ''
+                    : '-dauto_prepend_file=' . escapeshellarg(__DIR__ . '/prepend_trace.php') . ' ';
                 $includeVendorEnv = ($this->options['includeVendor'] ?? null) !== null
                     ? 'XDEBUG_MCP_INCLUDE_VENDOR=' . escapeshellarg((string) $this->options['includeVendor']) . ' '
                     : '';
@@ -503,13 +514,13 @@ final class DebugServer
                     . '-dxdebug.log=/tmp/xdebug.log '
                     . '-dxdebug.log_level=7 '
                     . '-dxdebug.connect_timeout_ms=5000 '
-                    . '-dauto_prepend_file=%s '
+                    . '%s'
                     . '%s',
                     $includeVendorEnv,
                     escapeshellarg($phpBinary),
                     $xdebugPart,
                     $this->effectiveDebugPort,
-                    escapeshellarg($prependFilter),
+                    $prependPart,
                     escapeshellarg($this->targetScript),
                 );
                 $this->traceFile = $traceFile;
@@ -888,7 +899,7 @@ final class DebugServer
         // identical across steps and emitted once at the top level (see outputStepRecordingResults).
         $debugBreak = [
             'step' => $step,
-            'stack' => array_slice($stackFrames, 0, self::STACK_CONTEXT_LIMIT),
+            'stack' => array_slice($stackFrames, 0, $this->getStackFrameLimit()),
             'recording_type' => $recordingType,
         ];
 
@@ -2895,6 +2906,19 @@ final class DebugServer
         return is_int($maxDepth) && $maxDepth > 0 ? $maxDepth : null;
     }
 
+    /**
+     * Number of stack frames to capture at a breakpoint. Defaults to
+     * STACK_CONTEXT_LIMIT for xstep's interactive display; callers that need
+     * a caller-controlled depth (e.g. bin/xback's `--depth`) pass `stackFrames`
+     * so the frames aren't truncated before the caller's own slicing runs.
+     */
+    private function getStackFrameLimit(): int
+    {
+        $stackFrames = $this->options['stackFrames'] ?? null;
+
+        return is_int($stackFrames) && $stackFrames > 0 ? $stackFrames : self::STACK_CONTEXT_LIMIT;
+    }
+
     private function truncateStringValue(string $value, int|null $maxBytes): string
     {
         if ($maxBytes === null || strlen($value) <= $maxBytes) {
@@ -3766,7 +3790,7 @@ final class DebugServer
             // Keep the fallback frame in `stack` when XML parsing yields no frames,
             // so the machine-readable file/line is never lost (stack[0] is the contract).
             $stack = $stackFrames !== []
-                ? array_slice($stackFrames, 0, self::STACK_CONTEXT_LIMIT)
+                ? array_slice($stackFrames, 0, $this->getStackFrameLimit())
                 : [$topFrame];
 
             return [

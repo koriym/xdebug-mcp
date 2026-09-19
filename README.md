@@ -281,6 +281,14 @@ xstep --break="legacy_app.php:30" -- /opt/homebrew/opt/php@7.2/bin/php legacy_ap
 
 The tool runs on your modern PHP while the target script executes on the specified PHP binary — provided the specified PHP has a compatible Xdebug 3.x installed. No Docker required. Check the compatibility table below before trying older PHP binaries.
 
+`xback` and `xcoverage` also accept `--php=PATH` to pick the target binary while keeping `php` in the command:
+
+```bash
+xback --break="legacy_app.php:30" --php=/path/to/php7.2 -- php legacy_app.php
+```
+
+The target binary is asked about its own Xdebug: if its `php.ini` already loads Xdebug, nothing is injected; otherwise an Xdebug build matching the *target's* version is looked up. An extension built for the tool's own PHP is never pushed into a different version — when no matching build exists, the run fails with a message naming the target version instead of producing a broken session.
+
 ### Xdebug 3.x Compatibility
 
 | Xdebug | Supported PHP |

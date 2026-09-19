@@ -509,6 +509,39 @@ PHP);
         $this->assertSame(27, $payload['breaks'][0]['stack'][0]['line']);
     }
 
+    /**
+     * Regression test: `php -d key=value script.php` must resolve the script
+     * argument, not the `-d` flag itself. The old code took $command[1]
+     * verbatim as the script whenever $command[0] === 'php', which broke on
+     * any interpreter option preceding the script.
+     */
+    public function testXstepAcceptsPhpWithDOptionBeforeScript(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/debug_test.php';
+        $command = sprintf(
+            'cd %s && ./bin/xstep --break=%s -- php -d memory_limit=256M %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':27'),
+            escapeshellarg($fixture),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+        $this->assertStringNotContainsString('Could not determine target script', $output);
+        $this->assertStringNotContainsString('Target script not found', $output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('https://koriym.github.io/xdebug-mcp/schemas/xstep.json', $payload['$schema']);
+        $this->assertSame(27, $payload['breaks'][0]['stack'][0]['line']);
+    }
+
     public function testXbackCommandExists(): void
     {
         $this->assertTrue(file_exists(__DIR__ . '/../../bin/xback'));
@@ -722,6 +755,48 @@ PHP);
             unlink($script);
             rmdir($dir);
         }
+    }
+
+    /**
+     * Regression test: `--depth` must bound the returned frame count up to
+     * the actual call-stack depth, not be silently capped by DebugServer's
+     * internal STACK_CONTEXT_LIMIT (5) before xback's own slicing runs.
+     * fibonacci(5)'s first hit of the base-case return (line 9, `if ($n <= 1)`
+     * true) is 6 frames deep (fibonacci x5 + {main}), so --depth=3 truncates
+     * to 3 and --depth=20 returns all 6.
+     */
+    public function testXbackDepthBoundsFramesUpToActualStackDepth(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/debug_friendly.php';
+
+        $shallowOutput = shell_exec(sprintf(
+            'cd %s && ./bin/xback --break=%s --depth=3 -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':9'),
+            escapeshellarg($fixture),
+        ));
+        $this->assertNotNull($shallowOutput);
+        $jsonStart = strrpos($shallowOutput, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $shallowOutput);
+        $shallow = json_decode(substr($shallowOutput, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertCount(3, $shallow['stack']);
+
+        $deepOutput = shell_exec(sprintf(
+            'cd %s && ./bin/xback --break=%s --depth=20 -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':9'),
+            escapeshellarg($fixture),
+        ));
+        $this->assertNotNull($deepOutput);
+        $jsonStart = strrpos($deepOutput, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $deepOutput);
+        $deep = json_decode(substr($deepOutput, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertCount(6, $deep['stack']);
+        $this->assertSame('{main}', $deep['stack'][5]['function']);
     }
 
     public function testAllCommandsAreExecutable(): void

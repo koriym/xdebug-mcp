@@ -257,6 +257,7 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
         'maxSteps' => 1,
         // No --break: report the first executable line, as the help documents
         'firstLineFallback' => true,
+        'stackFrames' => $depth,
         'onResult' => static function (array $result) use ($targetScript, $breakpointStr, $context, $depth): void {
             outputBacktraceJson($targetScript, $breakpointStr, $context, $depth, $result['breaks'][0]['stack'] ?? []);
         },
