@@ -87,6 +87,7 @@ use function preg_replace;
 use function preg_replace_callback;
 use function property_exists;
 use function rawurlencode;
+use function realpath;
 use function register_shutdown_function;
 use function round;
 use function shell_exec;
@@ -953,26 +954,27 @@ final class DebugServer
     }
 
     /**
-     * Step until execution reaches the target script.
+     * Step out of the injected auto_prepend helper into the code being debugged.
      *
-     * The first step lands inside the injected auto_prepend helper, which is
-     * tooling, not user code. Stepping over its lines leaves it without
-     * descending into the functions it calls.
+     * The first step lands inside the helper, which is tooling, not user code.
+     * Stepping over its lines leaves it without descending into the functions
+     * it calls. The helper is identified by its full path: a target script that
+     * happens to share its basename would otherwise look like the destination.
      *
-     * @return string The break response at the target script, or the last response seen
+     * @return string The break response outside the helper, or the last response seen
      */
     private function stepToTargetScript(): string
     {
-        $targetFile = basename($this->targetScript);
+        $prependHelper = realpath(__DIR__ . '/prepend_trace.php');
         $response = $this->sendCommand('step_into');
 
         for ($i = 0; $i < self::MAX_PRELUDE_STEPS; $i++) {
-            if (! $this->didBreak($response)) {
+            if (! $this->didBreak($response) || $prependHelper === false) {
                 return $response;
             }
 
-            $location = $this->extractLocationDataFromBreakResponse($response);
-            if ($location === null || $location['file'] === $targetFile) {
+            $file = $this->extractFilePathFromBreakResponse($response);
+            if ($file === null || $file !== $prependHelper) {
                 return $response;
             }
 
@@ -980,6 +982,38 @@ final class DebugServer
         }
 
         return $response;
+    }
+
+    /**
+     * Full local path of the break location, as opposed to the basename that
+     * extractLocationDataFromBreakResponse() reports for display.
+     */
+    private function extractFilePathFromBreakResponse(string $response): string|null
+    {
+        try {
+            $useErrors = libxml_use_internal_errors(true);
+            libxml_clear_errors();
+            $xml = simplexml_load_string(DbgpXml::sanitize($response));
+            libxml_clear_errors();
+            libxml_use_internal_errors($useErrors);
+            if (! $xml) {
+                return null;
+            }
+
+            $xml->registerXPathNamespace('xdebug', 'https://xdebug.org/dbgp/xdebug');
+            $messages = $xml->xpath('//xdebug:message');
+            if (! is_array($messages) || $messages === []) {
+                return null;
+            }
+
+            $filename = str_replace('file://', '', (string) $messages[0]['filename']);
+
+            return realpath($filename) ?: $filename;
+        } catch (Throwable $e) {
+            $this->log('❌ Error parsing break location: ' . $e->getMessage());
+
+            return null;
+        }
     }
 
     /**

@@ -688,6 +688,42 @@ PHP);
         $this->assertSame('debug_test.php', $payload['stack'][0]['file']);
     }
 
+    /**
+     * The helper is skipped by full path, not by basename: a target script
+     * named prepend_trace.php used to satisfy the "reached the target" check
+     * while execution was still inside the injected helper.
+     */
+    public function testXbackSkipsPrependHelperEvenWhenTargetSharesItsName(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $dir = sys_get_temp_dir() . '/xdebug-mcp-collide-' . bin2hex(random_bytes(6));
+        mkdir($dir, 0777, true);
+        $script = $dir . '/prepend_trace.php';
+        file_put_contents($script, "<?php\n\$mine = 41 + 1;\necho \$mine, PHP_EOL;\n");
+
+        try {
+            $output = shell_exec(sprintf(
+                'cd %s && ./bin/xback -- php %s 2>&1',
+                escapeshellarg(dirname(__DIR__, 2)),
+                escapeshellarg($script),
+            ));
+            $this->assertNotNull($output);
+
+            $jsonStart = strrpos($output, '{"$schema"');
+            $this->assertNotFalse($jsonStart, $output);
+
+            $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+            // The target has 3 lines; the helper's first break sits past its end.
+            $this->assertSame(2, $payload['stack'][0]['line']);
+        } finally {
+            unlink($script);
+            rmdir($dir);
+        }
+    }
+
     public function testAllCommandsAreExecutable(): void
     {
         $commands = [
