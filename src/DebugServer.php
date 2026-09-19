@@ -147,6 +147,9 @@ final class DebugServer
     private const DEFAULT_CHILD_VALUE_BYTES = 20;
     private const STACK_CONTEXT_LIMIT = 5;
 
+    /** Upper bound when stepping out of the injected prepend helper into the target script */
+    private const MAX_PRELUDE_STEPS = 200;
+
     /** @var DeferredFuture<bool>|null */
     private DeferredFuture|null $listenerReady = null;
 
@@ -915,8 +918,14 @@ final class DebugServer
         $this->log("🎬 exit-on-break mode with Step Recording ({$maxSteps} steps)");
 
         try {
-            // Start execution and wait for first breakpoint
-            $response = $this->sendCommand('run');
+            // Without a breakpoint there is nothing for `run` to stop at, so the
+            // session would end with no recorded location. Stepping lands on the
+            // first executable line, which is what `xback -- php script.php`
+            // documents as its default.
+            $hasBreakpoint = ($this->options['breakpoints'] ?? []) !== [] || $this->initialBreakpointLine !== null;
+            $response = $hasBreakpoint
+                ? $this->sendCommand('run')
+                : $this->stepToTargetScript();
 
             if ($this->didBreak($response)) {
                 $this->log('🎯 Breakpoint hit, starting Step Recording...');
@@ -940,6 +949,36 @@ final class DebugServer
         } catch (Throwable $e) {
             $this->log('❌ Step Recording error: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Step until execution reaches the target script.
+     *
+     * The first step lands inside the injected auto_prepend helper, which is
+     * tooling, not user code. Stepping over its lines leaves it without
+     * descending into the functions it calls.
+     *
+     * @return string The break response at the target script, or the last response seen
+     */
+    private function stepToTargetScript(): string
+    {
+        $targetFile = basename($this->targetScript);
+        $response = $this->sendCommand('step_into');
+
+        for ($i = 0; $i < self::MAX_PRELUDE_STEPS; $i++) {
+            if (! $this->didBreak($response)) {
+                return $response;
+            }
+
+            $location = $this->extractLocationDataFromBreakResponse($response);
+            if ($location === null || $location['file'] === $targetFile) {
+                return $response;
+            }
+
+            $response = $this->sendCommand('step_over');
+        }
+
+        return $response;
     }
 
     /**

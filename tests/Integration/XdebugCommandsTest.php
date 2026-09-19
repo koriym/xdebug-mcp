@@ -660,6 +660,34 @@ PHP);
         ], $payload['stack']);
     }
 
+    /**
+     * `xback -- php script.php` documents "stack at first executable line".
+     * Without a breakpoint there is nothing to stop at, so the stack came back
+     * empty; the capture must also skip the injected auto_prepend helper and
+     * report a frame in the target script itself.
+     */
+    public function testXbackWithoutBreakpointCapturesFirstLineOfTargetScript(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/debug_test.php';
+        $output = shell_exec(sprintf(
+            'cd %s && ./bin/xback -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture),
+        ));
+        $this->assertNotNull($output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertNotSame([], $payload['stack'], 'Default run must report a location');
+        $this->assertSame('debug_test.php', $payload['stack'][0]['file']);
+    }
+
     public function testAllCommandsAreExecutable(): void
     {
         $commands = [
