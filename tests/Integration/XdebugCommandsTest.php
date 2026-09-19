@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 use function array_keys;
 use function bin2hex;
+use function copy;
 use function dirname;
 use function escapeshellarg;
 use function explode;
@@ -538,6 +539,51 @@ PHP);
         $this->assertArrayHasKey('$number', $variables, 'Expected the target own globals to be captured');
         $this->assertArrayNotHasKey('$vendorPath', $variables);
         $this->assertArrayNotHasKey('$excludePaths', $variables);
+    }
+
+    /**
+     * When the tool tree has no sibling vendor/ directory, `locateVendorDir()`
+     * returns null. That path used to return early from prepend_filter.php
+     * with $vendorPath already defined, leaking it into the target's scope.
+     */
+    public function testPrependFilterLeavesNoVariablesWhenVendorDirIsAbsent(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $root = dirname(__DIR__, 2);
+        $toolDir = sys_get_temp_dir() . '/xdebug-mcp-novendor-' . bin2hex(random_bytes(6));
+        mkdir($toolDir . '/src/Utilities', 0777, true);
+        foreach (['src/prepend_filter.php', 'src/Utilities/VendorFilter.php', 'src/Utilities/PathNormalizer.php'] as $file) {
+            copy($root . '/' . $file, $toolDir . '/' . $file);
+        }
+
+        $script = $toolDir . '/target.php';
+        file_put_contents($script, "<?php\n\$mine = 1;\necho implode(',', array_keys(get_defined_vars())), PHP_EOL;\n");
+
+        try {
+            $output = shell_exec(sprintf(
+                '%s%s -d auto_prepend_file=%s %s 2>&1',
+                escapeshellarg(PHP_BINARY),
+                XdebugFinder::getXdebugFlag(),
+                escapeshellarg($toolDir . '/src/prepend_filter.php'),
+                escapeshellarg($script),
+            ));
+            $this->assertNotNull($output);
+            $this->assertStringContainsString('mine', $output);
+            $this->assertStringNotContainsString('vendorPath', $output);
+            $this->assertStringNotContainsString('excludePaths', $output);
+        } finally {
+            unlink($script);
+            foreach (['src/prepend_filter.php', 'src/Utilities/VendorFilter.php', 'src/Utilities/PathNormalizer.php'] as $file) {
+                unlink($toolDir . '/' . $file);
+            }
+
+            rmdir($toolDir . '/src/Utilities');
+            rmdir($toolDir . '/src');
+            rmdir($toolDir);
+        }
     }
 
     /**

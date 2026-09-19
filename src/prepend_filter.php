@@ -30,12 +30,13 @@ if (getenv('XDEBUG_MCP_DISABLE_VENDOR_FILTER') === '1') {
     return;
 }
 
+// Single exit below the first assignment: an early `return` here would leave
+// $vendorPath behind in the target's scope, which is the leak this avoids.
 $vendorPath = VendorFilter::locateVendorDir();
-if ($vendorPath === null) {
-    return;
-}
+$excludePaths = $vendorPath === null
+    ? []
+    : VendorFilter::excludePaths($vendorPath, VendorFilter::includeVendorFromEnv());
 
-$excludePaths = VendorFilter::excludePaths($vendorPath, VendorFilter::includeVendorFromEnv());
 if ($excludePaths !== []) {
     xdebug_set_filter(XDEBUG_FILTER_TRACING, XDEBUG_PATH_EXCLUDE, $excludePaths);
     xdebug_set_filter(XDEBUG_FILTER_CODE_COVERAGE, XDEBUG_PATH_EXCLUDE, $excludePaths);
