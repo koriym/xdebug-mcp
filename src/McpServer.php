@@ -38,6 +38,7 @@ use function fgets;
 use function file;
 use function file_exists;
 use function file_get_contents;
+use function filter_var;
 use function getcwd;
 use function getenv;
 use function implode;
@@ -58,6 +59,7 @@ use function tempnam;
 use function trim;
 use function unlink;
 
+use const FILTER_VALIDATE_BOOLEAN;
 use const JSON_INVALID_UTF8_SUBSTITUTE;
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
@@ -238,6 +240,11 @@ final class McpServer
                             'type' => 'string',
                             'description' => 'Restrict raw-mode coverage to these source paths (comma-separated). Mutually exclusive with include_vendor.',
                             'default' => '',
+                        ],
+                        'raw' => [
+                            'type' => 'boolean',
+                            'description' => 'Use raw Xdebug coverage of the script itself instead of PHPUnit mode. Implied automatically when include_vendor or source is set, or the script runs inline code (php -r).',
+                            'default' => false,
                         ],
                     ],
                     'required' => ['script'],
@@ -668,6 +675,11 @@ final class McpServer
                             'required' => false,
                         ],
                         [
+                            'name' => 'raw',
+                            'description' => 'Use raw Xdebug coverage of the script itself instead of PHPUnit mode. Implied automatically when include_vendor or source is set, or the script runs inline code (php -r).',
+                            'required' => false,
+                        ],
+                        [
                             'name' => 'last',
                             'description' => 'Use settings from last execution (true/false)',
                             'required' => false,
@@ -791,7 +803,7 @@ final class McpServer
         $mapping = match ($promptName) {
             'xtrace', 'xprofile' => ['script', 'context', 'include_vendor'],
             'xstep' => ['script', 'breakpoints', 'steps', 'context', 'include_vendor'],
-            'xcoverage' => ['script', 'context', 'include_vendor', 'cwd', 'php', 'source'],
+            'xcoverage' => ['script', 'context', 'include_vendor', 'cwd', 'php', 'source', 'raw'],
             'xback' => ['script', 'breakpoint', 'depth', 'context', 'cwd', 'php'],
             'xcompare' => ['script_a', 'script_b', 'breakpoint', 'context', 'steps', 'include_vendor'],
             default => [],
@@ -862,6 +874,16 @@ final class McpServer
     private function isPhpInlineCodeScript(string $script): bool
     {
         return PhpCommandParser::isPhpInlineCodeScript($script);
+    }
+
+    /**
+     * MCP args are documented as strings (e.g. "true"/"1"/""), but a client
+     * honoring the `boolean` JSON-schema type may send a real bool/int
+     * instead; filter_var coerces all three the same way.
+     */
+    private function coerceBoolArg(string|bool|int $value): bool
+    {
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**
@@ -1267,10 +1289,17 @@ final class McpServer
                 throw new InvalidArgumentException('Parameters "include_vendor" and "source" are mutually exclusive');
             }
 
-            // Build command - user must specify PHP binary explicitly
-            $cmd = $this->binDir . '/xcoverage';
+            // include_vendor/source/inline-code scripts are meaningless in PHPUnit mode
+            // (bin/xcoverage ignores them there), so they imply --raw.
+            $rawMode = $this->coerceBoolArg($args['raw'] ?? '')
+                || $includeVendor !== ''
+                || $source !== ''
+                || $this->isPhpInlineCodeScript($script);
 
-            if ($this->isPhpInlineCodeScript($script)) {
+            // Build command - user must specify PHP binary explicitly
+            $cmd = $this->binDir . '/xcoverage --json';
+
+            if ($rawMode) {
                 $cmd .= ' --raw';
             }
 

@@ -153,16 +153,16 @@ Collect code coverage data for PHPUnit or any PHP script. Shows only uncovered l
 **Key fields**: `{summary: {coverage_percent, covered_lines, uncovered_lines}, uncovered: {file: [lines]}}`
 
 ```bash
-~/.composer/vendor/bin/xcoverage [--json] [--include-vendor=PATTERNS] -- command
+~/.composer/vendor/bin/xcoverage [--json] [--raw] [--include-vendor=PATTERNS] -- command
 ~/.composer/vendor/bin/xcoverage -- vendor/bin/phpunit        # PHPUnit
-~/.composer/vendor/bin/xcoverage -- php script.php            # Any PHP script
+~/.composer/vendor/bin/xcoverage --raw -- php script.php      # Any PHP script (raw mode required)
 ```
 
 ### Examples
 
 ```bash
 ~/.composer/vendor/bin/xcoverage -- vendor/bin/phpunit
-~/.composer/vendor/bin/xcoverage --include-vendor="bear/*,ray/di" -- vendor/bin/phpunit
+~/.composer/vendor/bin/xcoverage --raw --include-vendor="bear/*,ray/di" -- php script.php
 ~/.composer/vendor/bin/xcoverage -- vendor/bin/phpunit --filter testMethod
 ```
 
