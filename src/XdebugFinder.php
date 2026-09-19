@@ -263,24 +263,37 @@ final class XdebugFinder
         return self::$probeCache[$phpBinary] = null;
     }
 
-    /** Look for the extension file in the Homebrew layout for that version, then in the given extension_dir. */
+    /**
+     * Look for the extension file in the reported extension_dir, then in the
+     * Homebrew layout for that version.
+     *
+     * extension_dir comes from the binary itself and is keyed by the internal
+     * API version (…/pecl/20240924), so whatever sits there matches that
+     * build's ABI. The Homebrew path is only matched on major.minor, which
+     * says nothing about architecture or thread safety, so it stays a
+     * fallback for installations that keep the extension outside extension_dir.
+     */
     private static function findExtensionFile(string $extensionDir, string $phpVersion): string|null
     {
-        if (PHP_OS_FAMILY === 'Darwin') {
-            foreach (["/opt/homebrew/opt/xdebug@{$phpVersion}/xdebug.so", "/usr/local/opt/xdebug@{$phpVersion}/xdebug.so"] as $brewPath) {
-                if (file_exists($brewPath)) {
-                    return $brewPath;
-                }
+        $extension = PHP_OS_FAMILY === 'Windows' ? 'php_xdebug.dll' : 'xdebug.so';
+
+        if ($extensionDir !== '') {
+            $standardPath = $extensionDir . DIRECTORY_SEPARATOR . $extension;
+            if (file_exists($standardPath)) {
+                return $standardPath;
             }
         }
 
-        if ($extensionDir === '') {
+        if (PHP_OS_FAMILY !== 'Darwin') {
             return null;
         }
 
-        $extension = PHP_OS_FAMILY === 'Windows' ? 'php_xdebug.dll' : 'xdebug.so';
-        $standardPath = $extensionDir . DIRECTORY_SEPARATOR . $extension;
+        foreach (["/opt/homebrew/opt/xdebug@{$phpVersion}/xdebug.so", "/usr/local/opt/xdebug@{$phpVersion}/xdebug.so"] as $brewPath) {
+            if (file_exists($brewPath)) {
+                return $brewPath;
+            }
+        }
 
-        return file_exists($standardPath) ? $standardPath : null;
+        return null;
     }
 }

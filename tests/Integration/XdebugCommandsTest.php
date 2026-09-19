@@ -866,7 +866,7 @@ PHP);
             foreach ($commands as $tool => $command) {
                 $output = shell_exec(sprintf('cd %s && %s 2>&1; printf "EXIT:%%d" "$?"', escapeshellarg(dirname(__DIR__, 2)), $command));
                 $this->assertNotNull($output);
-                $this->assertStringContainsString('EXIT:1', $output, $tool . ' must exit 1');
+                $this->assertStringEndsWith('EXIT:1', $output, $tool . ' must exit 1');
                 $this->assertStringContainsString('not loadable in PHP 4.9', $output, $tool . ' must name the target version');
                 $this->assertStringNotContainsString('"$schema"', $output, $tool . ' must not emit a result document');
                 $this->assertStringNotContainsString('Uncaught', $output, $tool . ' must not surface a fatal');
