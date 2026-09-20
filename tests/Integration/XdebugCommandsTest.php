@@ -10,6 +10,8 @@ use PHPUnit\Framework\TestCase;
 
 use function array_keys;
 use function bin2hex;
+use function chmod;
+use function copy;
 use function dirname;
 use function escapeshellarg;
 use function explode;
@@ -509,6 +511,115 @@ PHP);
         $this->assertSame(27, $payload['breaks'][0]['stack'][0]['line']);
     }
 
+    /**
+     * The auto_prepend helpers share the target's global scope, so their own
+     * variables used to appear in every captured dump — and would overwrite a
+     * target variable of the same name. The breakpoint must sit at top-level
+     * scope: inside a function only locals are dumped, which hides the leak.
+     */
+    public function testCapturedVariablesExcludeAutoPrependInternals(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/debug_friendly.php';
+        $output = shell_exec(sprintf(
+            'cd %s && ./bin/xstep --break=%s -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':26'),
+            escapeshellarg($fixture),
+        ));
+        $this->assertNotNull($output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $variables = $payload['breaks'][0]['variables'];
+        $this->assertArrayHasKey('$number', $variables, 'Expected the target own globals to be captured');
+        $this->assertArrayNotHasKey('$vendorPath', $variables);
+        $this->assertArrayNotHasKey('$excludePaths', $variables);
+    }
+
+    /**
+     * When the tool tree has no sibling vendor/ directory, `locateVendorDir()`
+     * returns null. That path used to return early from prepend_filter.php
+     * with $vendorPath already defined, leaking it into the target's scope.
+     */
+    public function testPrependFilterLeavesNoVariablesWhenVendorDirIsAbsent(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $root = dirname(__DIR__, 2);
+        $toolDir = sys_get_temp_dir() . '/xdebug-mcp-novendor-' . bin2hex(random_bytes(6));
+        mkdir($toolDir . '/src/Utilities', 0777, true);
+        foreach (['src/prepend_filter.php', 'src/Utilities/VendorFilter.php', 'src/Utilities/PathNormalizer.php'] as $file) {
+            copy($root . '/' . $file, $toolDir . '/' . $file);
+        }
+
+        $script = $toolDir . '/target.php';
+        file_put_contents($script, "<?php\n\$mine = 1;\necho implode(',', array_keys(get_defined_vars())), PHP_EOL;\n");
+
+        try {
+            $output = shell_exec(sprintf(
+                '%s%s -d auto_prepend_file=%s %s 2>&1',
+                escapeshellarg(PHP_BINARY),
+                XdebugFinder::getXdebugFlag(),
+                escapeshellarg($toolDir . '/src/prepend_filter.php'),
+                escapeshellarg($script),
+            ));
+            $this->assertNotNull($output);
+            $this->assertStringContainsString('mine', $output);
+            $this->assertStringNotContainsString('vendorPath', $output);
+            $this->assertStringNotContainsString('excludePaths', $output);
+        } finally {
+            unlink($script);
+            foreach (['src/prepend_filter.php', 'src/Utilities/VendorFilter.php', 'src/Utilities/PathNormalizer.php'] as $file) {
+                unlink($toolDir . '/' . $file);
+            }
+
+            rmdir($toolDir . '/src/Utilities');
+            rmdir($toolDir . '/src');
+            rmdir($toolDir);
+        }
+    }
+
+    /**
+     * Regression test: `php -d key=value script.php` must resolve the script
+     * argument, not the `-d` flag itself. The old code took $command[1]
+     * verbatim as the script whenever $command[0] === 'php', which broke on
+     * any interpreter option preceding the script.
+     */
+    public function testXstepAcceptsPhpWithDOptionBeforeScript(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/debug_test.php';
+        $command = sprintf(
+            'cd %s && ./bin/xstep --break=%s -- php -d memory_limit=256M %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':27'),
+            escapeshellarg($fixture),
+        );
+
+        $output = shell_exec($command);
+        $this->assertNotNull($output);
+        $this->assertStringNotContainsString('Could not determine target script', $output);
+        $this->assertStringNotContainsString('Target script not found', $output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('https://koriym.github.io/xdebug-mcp/schemas/xstep.json', $payload['$schema']);
+        $this->assertSame(27, $payload['breaks'][0]['stack'][0]['line']);
+    }
+
     public function testXbackCommandExists(): void
     {
         $this->assertTrue(file_exists(__DIR__ . '/../../bin/xback'));
@@ -722,6 +833,91 @@ PHP);
             unlink($script);
             rmdir($dir);
         }
+    }
+
+    /**
+     * A target whose Xdebug cannot be resolved must be reported the same way
+     * by every tool: one line naming the target version, exit 1. xstep and
+     * xback used to print a result document with an empty `breaks`/`stack`
+     * first — which reads as a successful run that hit nothing — and then die
+     * with an uncaught fatal.
+     */
+    public function testUnresolvableTargetIsReportedUniformly(): void
+    {
+        $dir = sys_get_temp_dir() . '/xdebug-mcp-unresolvable-' . bin2hex(random_bytes(6));
+        mkdir($dir, 0777, true);
+        // The name must satisfy PhpCommandParser::isPhpBinary(), or the tools
+        // treat this path as a script argument instead of the interpreter.
+        $fake = $dir . '/php4.9';
+        // Answers the probe as a PHP version no Xdebug build can satisfy.
+        file_put_contents($fake, "#!/bin/sh\necho \"__XDEBUG_MCP_PROBE__|0|/nonexistent|4.9\"\n");
+        chmod($fake, 0o755);
+        $script = $dir . '/t.php';
+        file_put_contents($script, "<?php\n\$x = 1;\necho \$x, PHP_EOL;\n");
+
+        $commands = [
+            'xtrace' => sprintf('./bin/xtrace -- %s %s', escapeshellarg($fake), escapeshellarg($script)),
+            'xstep' => sprintf('./bin/xstep --break=%s -- %s %s', escapeshellarg($script . ':3'), escapeshellarg($fake), escapeshellarg($script)),
+            'xback' => sprintf('./bin/xback --break=%s --php=%s -- php %s', escapeshellarg($script . ':3'), escapeshellarg($fake), escapeshellarg($script)),
+            'xcoverage' => sprintf('./bin/xcoverage --raw --php=%s -- php %s', escapeshellarg($fake), escapeshellarg($script)),
+        ];
+
+        try {
+            foreach ($commands as $tool => $command) {
+                $output = shell_exec(sprintf('cd %s && %s 2>&1; printf "EXIT:%%d" "$?"', escapeshellarg(dirname(__DIR__, 2)), $command));
+                $this->assertNotNull($output);
+                $this->assertStringEndsWith('EXIT:1', $output, $tool . ' must exit 1');
+                $this->assertStringContainsString('not loadable in PHP 4.9', $output, $tool . ' must name the target version');
+                $this->assertStringNotContainsString('"$schema"', $output, $tool . ' must not emit a result document');
+                $this->assertStringNotContainsString('Uncaught', $output, $tool . ' must not surface a fatal');
+            }
+        } finally {
+            unlink($script);
+            unlink($fake);
+            rmdir($dir);
+        }
+    }
+
+    /**
+     * Regression test: `--depth` must bound the returned frame count up to
+     * the actual call-stack depth, not be silently capped by DebugServer's
+     * internal STACK_CONTEXT_LIMIT (5) before xback's own slicing runs.
+     * fibonacci(5)'s first hit of the base-case return (line 9, `if ($n <= 1)`
+     * true) is 6 frames deep (fibonacci x5 + {main}), so --depth=3 truncates
+     * to 3 and --depth=20 returns all 6.
+     */
+    public function testXbackDepthBoundsFramesUpToActualStackDepth(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/debug_friendly.php';
+
+        $shallowOutput = shell_exec(sprintf(
+            'cd %s && ./bin/xback --break=%s --depth=3 -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':9'),
+            escapeshellarg($fixture),
+        ));
+        $this->assertNotNull($shallowOutput);
+        $jsonStart = strrpos($shallowOutput, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $shallowOutput);
+        $shallow = json_decode(substr($shallowOutput, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertCount(3, $shallow['stack']);
+
+        $deepOutput = shell_exec(sprintf(
+            'cd %s && ./bin/xback --break=%s --depth=20 -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':9'),
+            escapeshellarg($fixture),
+        ));
+        $this->assertNotNull($deepOutput);
+        $jsonStart = strrpos($deepOutput, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $deepOutput);
+        $deep = json_decode(substr($deepOutput, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertCount(6, $deep['stack']);
+        $this->assertSame('{main}', $deep['stack'][5]['function']);
     }
 
     public function testAllCommandsAreExecutable(): void

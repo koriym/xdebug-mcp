@@ -48,7 +48,7 @@
         "install-mcp": "Configure xdebug-mcp for Claude Code MCP integration",
         "install-desktop": "Configure xdebug-mcp for Claude Desktop integration",
         "check-env": "Check Xdebug environment and configuration",
-        "demo": "Run every CLI tool documented in README against the demo scripts"
+        "demo": "Exercise every documented CLI and MCP feature against the demo scripts"
     },
     "scripts": {
         "test": "phpunit",

@@ -283,7 +283,7 @@ class XdebugRunner
             $phpBinary = array_shift($workingParts);
         }
 
-        $xdebugArgs = $this->generateXdebugArguments(true);
+        $xdebugArgs = $this->generateXdebugArguments(true, $phpBinary);
         // Pin the mode in the child env: environment variables take
         // precedence over -d flags, so an inherited XDEBUG_MODE would
         // otherwise hijack the configuration (see XdebugEnv).
@@ -310,9 +310,10 @@ class XdebugRunner
             );
         }
 
-        // Do not inject the local auto_prepend_file into containers. The host
-        // path is not guaranteed to exist inside the container.
-        $xdebugArgs = $this->generateXdebugArguments(false);
+        // Do not inject the local auto_prepend_file or the host's Xdebug
+        // extension into containers: neither host path is guaranteed to exist
+        // inside the container, and the extension is built for the host ABI.
+        $xdebugArgs = $this->generateXdebugArguments(false, null);
 
         // Pin XDEBUG_MODE in the container env: environment variables take
         // precedence over -d flags, so a host value leaked via compose
@@ -348,14 +349,17 @@ class XdebugRunner
     }
 
     /** @return string[] */
-    private function generateXdebugArguments(bool $enableLocalVendorFilter): array
+    private function generateXdebugArguments(bool $isLocal, string|null $phpBinary): array
     {
-        // Add zend_extension flag if Xdebug is not already loaded
-        $xdebugFlag = XdebugFinder::getXdebugFlag();
         $args = [];
 
-        if ($xdebugFlag !== '') {
-            $args[] = trim($xdebugFlag); // @codeCoverageIgnore
+        // Add zend_extension flag if Xdebug is not already loaded in the target
+        if ($isLocal) {
+            $xdebugFlag = XdebugFinder::getXdebugFlag($phpBinary);
+
+            if ($xdebugFlag !== '') {
+                $args[] = trim($xdebugFlag); // @codeCoverageIgnore
+            }
         }
 
         $args = array_merge($args, [
@@ -369,7 +373,7 @@ class XdebugRunner
         if ($this->mode === 'trace') {
             $args[] = '-dxdebug.trace_format=1';
 
-            if ($enableLocalVendorFilter) {
+            if ($isLocal && XdebugFinder::canUseHostHelpers($phpBinary)) {
                 $prependFile = __DIR__ . '/prepend_filter.php';
                 if (file_exists($prependFile)) {
                     $args[] = '-dauto_prepend_file=' . $prependFile;

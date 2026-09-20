@@ -19,7 +19,7 @@ final class ToolsListResult implements JsonRpcResultInterface
     ) {
     }
 
-    /** @return array{tools: list<array{name: string, description: string, inputSchema: array{type: string, properties: array<string, array{type: string, description: string, default?: string|int}>, required: list<string>}}>, ttlMs: int, cacheScope: string} */
+    /** @return array{tools: list<array{name: string, description: string, inputSchema: array{type: string, properties: array<string, array{type: string, description: string, default?: string|int|bool}>, required: list<string>}}>, ttlMs: int, cacheScope: string} */
     public function jsonSerialize(): array
     {
         return [

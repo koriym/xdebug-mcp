@@ -11,7 +11,7 @@ use JsonSerializable;
  */
 final class McpTool implements JsonSerializable
 {
-    /** @param array{type: string, properties: array<string, array{type: string, description: string, default?: string|int}>, required: list<string>} $inputSchema */
+    /** @param array{type: string, properties: array<string, array{type: string, description: string, default?: string|int|bool}>, required: list<string>} $inputSchema */
     public function __construct(
         public readonly string $name,
         public readonly string $description,
@@ -19,7 +19,7 @@ final class McpTool implements JsonSerializable
     ) {
     }
 
-    /** @return array{name: string, description: string, inputSchema: array{type: string, properties: array<string, array{type: string, description: string, default?: string|int}>, required: list<string>}} */
+    /** @return array{name: string, description: string, inputSchema: array{type: string, properties: array<string, array{type: string, description: string, default?: string|int|bool}>, required: list<string>}} */
     public function jsonSerialize(): array
     {
         return [

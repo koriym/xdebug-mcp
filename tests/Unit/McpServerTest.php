@@ -327,6 +327,18 @@ class McpServerTest extends TestCase
         $this->assertEquals('file.php:10', $mapped['breakpoints']);
         $this->assertEquals('50', $mapped['steps']);
         $this->assertEquals('debug context', $mapped['context']);
+
+        // Test xcoverage mapping - all 7 positional slots including the raw flag
+        $namedArgs = [];
+        $positionalArgs = ['script.php', 'ctx', 'bear/*', '/tmp/proj', '/usr/bin/php', 'src', 'true'];
+        $mapped = $this->invokePrivateMethod($this->server, 'mapPositionalArgs', [$namedArgs, $positionalArgs, 'xcoverage']);
+        $this->assertEquals('script.php', $mapped['script']);
+        $this->assertEquals('ctx', $mapped['context']);
+        $this->assertEquals('bear/*', $mapped['include_vendor']);
+        $this->assertEquals('/tmp/proj', $mapped['cwd']);
+        $this->assertEquals('/usr/bin/php', $mapped['php']);
+        $this->assertEquals('src', $mapped['source']);
+        $this->assertEquals('true', $mapped['raw']);
     }
 
     public function testInitializeWithUnsupportedVersion(): void
@@ -644,6 +656,56 @@ class McpServerTest extends TestCase
 
         $this->assertArrayHasKey('error', $response);
         $this->assertStringContainsString('single breakpoint', $response['error']['message']);
+    }
+
+    public function testExecuteXCoverageRawArgIsCoercedAndAlwaysRequestsJson(): void
+    {
+        $result = $this->invokePrivateMethod($this->server, 'executeXCoverage', [
+            null,
+            ['script' => 'php tests/fake/loop-counter.php', 'raw' => 'true'],
+        ]);
+        $command = $result->toArray()['result']['debug_data']['command'];
+        $this->assertStringContainsString('--json', $command);
+        $this->assertStringContainsString('--raw', $command);
+
+        // A plain script with no vendor/source/inline-code and raw left unset
+        // must not enable raw mode: PHPUnit mode remains the default.
+        $result = $this->invokePrivateMethod($this->server, 'executeXCoverage', [
+            null,
+            ['script' => 'php tests/fake/loop-counter.php'],
+        ]);
+        $command = $result->toArray()['result']['debug_data']['command'];
+        $this->assertStringNotContainsString('--raw', $command);
+
+        // "false"/"0" must coerce to disabled, not to PHP's truthy non-empty-string.
+        $result = $this->invokePrivateMethod($this->server, 'executeXCoverage', [
+            null,
+            ['script' => 'php tests/fake/loop-counter.php', 'raw' => 'false'],
+        ]);
+        $command = $result->toArray()['result']['debug_data']['command'];
+        $this->assertStringNotContainsString('--raw', $command);
+    }
+
+    public function testExecuteXCoverageIncludeVendorAndSourceImplyRawMode(): void
+    {
+        // include_vendor/source are raw-mode-only flags in bin/xcoverage; without
+        // --raw, PHPUnit mode silently ignores them. MCP must imply --raw so the
+        // caller-requested option actually takes effect.
+        $result = $this->invokePrivateMethod($this->server, 'executeXCoverage', [
+            null,
+            ['script' => 'php tests/fake/loop-counter.php', 'include_vendor' => 'bear/*'],
+        ]);
+        $command = $result->toArray()['result']['debug_data']['command'];
+        $this->assertStringContainsString('--raw', $command);
+        $this->assertStringContainsString('--include-vendor=', $command);
+
+        $result = $this->invokePrivateMethod($this->server, 'executeXCoverage', [
+            null,
+            ['script' => 'php tests/fake/loop-counter.php', 'source' => 'tests/fake'],
+        ]);
+        $command = $result->toArray()['result']['debug_data']['command'];
+        $this->assertStringContainsString('--raw', $command);
+        $this->assertStringContainsString('--source=', $command);
     }
 
     public function testToolsCallXDebug(): void

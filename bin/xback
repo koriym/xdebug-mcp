@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 use Koriym\XdebugMcp\DebugServer;
 use Koriym\XdebugMcp\Constants;
+use Koriym\XdebugMcp\Exceptions\XdebugNotAvailableException;
 use Koriym\XdebugMcp\Utilities\PhpCommandParser;
 
 /**
@@ -257,6 +258,7 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
         'maxSteps' => 1,
         // No --break: report the first executable line, as the help documents
         'firstLineFallback' => true,
+        'stackFrames' => $depth,
         'onResult' => static function (array $result) use ($targetScript, $breakpointStr, $context, $depth): void {
             outputBacktraceJson($targetScript, $breakpointStr, $context, $depth, $result['breaks'][0]['stack'] ?? []);
         },
@@ -267,5 +269,17 @@ function outputBacktraceJson(string $script, ?string $breakpointStr, string $con
     }
 
     $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, null, $options, true);
-    $server();
+    try {
+        $server();
+    } catch (Throwable $e) {
+        // Report the actionable message (which names the target PHP version)
+        // instead of letting it surface as an uncaught fatal.
+        $reason = $e->getPrevious() instanceof XdebugNotAvailableException ? $e->getPrevious() : $e;
+        if (! $reason instanceof XdebugNotAvailableException) {
+            throw $e;
+        }
+
+        fwrite(STDERR, "❌ Error: " . $reason->getMessage() . "\n");
+        exit(1);
+    }
 })();
