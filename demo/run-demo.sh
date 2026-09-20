@@ -195,8 +195,19 @@ run_expect "xback: stack at a breakpoint" '"stack"' \
 run_expect "xback: without --break, the first executable line" '"stack"' \
     './bin/xback -- php demo/buggy.php'
 
-run "xback: --depth bounds the reported frames" \
-    ./bin/xback --break="demo/buggy.php:44" --depth=20 -- php demo/buggy.php
+# Assert the frame counts, not just the exit status. The recursive demo is
+# used deliberately: the internal limit that used to truncate every stack at
+# 5 frames is only visible past that depth.
+frames_at_depth() {
+    ./bin/xback --break=demo/slow.php:69 --depth="$1" -- php demo/slow.php 2>/dev/null |
+        grep -o '"level":' | wc -l | tr -d ' '
+}
+export -f frames_at_depth
+
+run_expect "xback: --depth bounds the reported frames" 'bounded=yes' \
+    'shallow=$(frames_at_depth 3); deep=$(frames_at_depth 20);
+     echo "depth=3 -> $shallow frame(s), depth=20 -> $deep frame(s)";
+     [ "$shallow" -eq 3 ] && [ "$deep" -gt 5 ] && echo bounded=yes'
 
 run "xback: --cwd runs from another project root" \
     ./bin/xback --break="buggy.php:44" --cwd=demo -- php buggy.php
@@ -245,9 +256,9 @@ fi
 
 section "MCP server (JSON-RPC over stdio)"
 
-# These confirm the request/response path: the server starts, negotiates, and
-# dispatches to each tool. Whether a given argument changed the command it
-# built is asserted in the test suite, not here.
+# These walk the request/response path: the server starts, negotiates, and
+# dispatches to each tool. The response echoes the command each tool built,
+# which is what the xcoverage check below reads.
 
 run_expect "MCP: server/discover advertises protocol versions" '"supportedVersions"' \
     'printf "%s\n" "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"server/discover\"}" | ./bin/xdebug-mcp 2>/dev/null'
@@ -261,7 +272,9 @@ run_expect "MCP: tools/list exposes the one-shot tools" '"xcompare"' \
 run_expect "MCP: tools/call runs xtrace" '"content"' \
     'printf "%s\n" "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"xtrace\",\"arguments\":{\"script\":\"php demo/buggy.php\",\"context\":\"demo\"}}}" | ./bin/xdebug-mcp 2>/dev/null'
 
-run_expect "MCP: tools/call runs xcoverage in raw mode" '"content"' \
+# The response echoes the command it built, so this shows the raw argument
+# reached xcoverage rather than merely that the call returned something.
+run_expect "MCP: tools/call passes the raw argument to xcoverage" 'xcoverage --json --raw' \
     'printf "%s\n" "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"xcoverage\",\"arguments\":{\"script\":\"php demo/coverage.php\",\"raw\":\"true\"}}}" | ./bin/xdebug-mcp 2>/dev/null'
 
 # A stateless request carries both _meta fields; omitting clientCapabilities
