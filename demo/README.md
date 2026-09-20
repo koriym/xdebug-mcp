@@ -19,6 +19,31 @@ composer install
 
 ---
 
+## 0. Run everything at once
+
+```bash
+composer demo
+```
+
+`run-demo.sh` exercises every documented feature of the CLI tools and the
+MCP server against the sample scripts below, reporting PASS/FAIL per check.
+It finishes in well under a minute and needs nothing beyond `composer
+install` and Xdebug.
+
+Checks whose prerequisites are missing are reported as SKIP rather than
+failing:
+
+| Check | Enable it by |
+|---|---|
+| Cross-version targets | having a second PHP on `PATH`, or `XDEBUG_MCP_DEMO_ALT_PHP=/path/to/php composer demo` |
+| Docker target | starting a container runtime |
+
+The interactive REPL is only presence-checked (`xrepl --help`) because it
+needs a TTY, and the `--claude` flags are left out because they shell out
+to the Claude CLI.
+
+---
+
 ## 1. Debugging with xstep
 
 Debug buggy code with step debugging.
