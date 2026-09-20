@@ -98,8 +98,23 @@ find_alternate_php() {
 
 section "Environment"
 
-run "check-env: Xdebug detection and extension check" \
-    ./bin/check-env
+# check-env exits 1 to report an environment it considers suboptimal — most
+# often Xdebug being loaded unconditionally, which is how CI images ship it.
+# That is a verdict about the machine, not a failure of the tool, so only a
+# crash (anything past exit 1) counts against the demo.
+printf '\n=== %s ===\n' "check-env: Xdebug detection and extension check"
+printf '  $ %s\n' "./bin/check-env"
+./bin/check-env >"$LOG" 2>&1
+CHECK_ENV_CODE=$?
+sed 's/^/    /' "$LOG"
+if [ "$CHECK_ENV_CODE" -le 1 ]; then
+    printf '  PASS (exit %d)\n' "$CHECK_ENV_CODE"
+    PASS=$((PASS + 1))
+else
+    printf '  FAIL (exit %d)\n' "$CHECK_ENV_CODE"
+    FAIL=$((FAIL + 1))
+    FAIL_NAMES+=("check-env: Xdebug detection and extension check")
+fi
 
 section "xtrace — execution flow"
 
