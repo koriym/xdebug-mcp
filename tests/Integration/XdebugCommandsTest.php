@@ -11,7 +11,6 @@ use PHPUnit\Framework\TestCase;
 use function array_keys;
 use function bin2hex;
 use function chmod;
-use function copy;
 use function dirname;
 use function escapeshellarg;
 use function explode;
@@ -543,47 +542,92 @@ PHP);
     }
 
     /**
-     * When the tool tree has no sibling vendor/ directory, `locateVendorDir()`
-     * returns null. That path used to return early from prepend_filter.php
-     * with $vendorPath already defined, leaking it into the target's scope.
+     * A working directory without vendor/ leaves the filter off. The prepend says
+     * so on stderr, keeps its locals out of the target's scope, and stays quiet
+     * when the filter was switched off on purpose.
      */
-    public function testPrependFilterLeavesNoVariablesWhenVendorDirIsAbsent(): void
+    public function testPrependFilterReportsAMissingVendorDirWithoutLeakingVariables(): void
     {
         if (! XdebugFinder::isXdebugAvailable()) {
             $this->markTestSkipped('Xdebug not available');
         }
 
-        $root = dirname(__DIR__, 2);
-        $toolDir = sys_get_temp_dir() . '/xdebug-mcp-novendor-' . bin2hex(random_bytes(6));
-        mkdir($toolDir . '/src/Utilities', 0777, true);
-        foreach (['src/prepend_filter.php', 'src/Utilities/VendorFilter.php', 'src/Utilities/PathNormalizer.php'] as $file) {
-            copy($root . '/' . $file, $toolDir . '/' . $file);
-        }
-
-        $script = $toolDir . '/target.php';
+        $dir = sys_get_temp_dir() . '/xdebug-mcp-novendor-' . bin2hex(random_bytes(6));
+        mkdir($dir);
+        $script = $dir . '/target.php';
         file_put_contents($script, "<?php\n\$mine = 1;\necho implode(',', array_keys(get_defined_vars())), PHP_EOL;\n");
+        $run = static fn (string $env): string|false|null => shell_exec(sprintf(
+            'cd %s && %s%s%s -d auto_prepend_file=%s target.php 2>&1',
+            escapeshellarg($dir),
+            $env,
+            escapeshellarg(PHP_BINARY),
+            XdebugFinder::getXdebugFlag(),
+            escapeshellarg(dirname(__DIR__, 2) . '/src/prepend_filter.php'),
+        ));
 
         try {
-            $output = shell_exec(sprintf(
-                '%s%s -d auto_prepend_file=%s %s 2>&1',
-                escapeshellarg(PHP_BINARY),
-                XdebugFinder::getXdebugFlag(),
-                escapeshellarg($toolDir . '/src/prepend_filter.php'),
-                escapeshellarg($script),
-            ));
-            $this->assertNotNull($output);
+            $output = $run('');
+            $this->assertIsString($output);
             $this->assertStringContainsString('mine', $output);
             $this->assertStringNotContainsString('vendorPath', $output);
             $this->assertStringNotContainsString('excludePaths', $output);
+            $this->assertStringContainsString('vendor filter inactive: no vendor/ at ' . realpath($dir), $output);
+
+            $optedOut = $run('XDEBUG_MCP_DISABLE_VENDOR_FILTER=1 ');
+            $this->assertIsString($optedOut);
+            $this->assertStringContainsString('mine', $optedOut);
+            $this->assertStringNotContainsString('vendor filter inactive', $optedOut);
         } finally {
             unlink($script);
-            foreach (['src/prepend_filter.php', 'src/Utilities/VendorFilter.php', 'src/Utilities/PathNormalizer.php'] as $file) {
-                unlink($toolDir . '/' . $file);
-            }
+            rmdir($dir);
+        }
+    }
 
-            rmdir($toolDir . '/src/Utilities');
-            rmdir($toolDir . '/src');
-            rmdir($toolDir);
+    /**
+     * The vendor tree to exclude is the traced project's, found from the working
+     * directory. Resolving it from the tool's own location excluded the tool's
+     * vendor instead, so with a global install the project's packages filled the trace.
+     *
+     * Xdebug's path filter matches the call site, so the project's own call into
+     * the package stays visible; the call made inside the package is what drops out.
+     */
+    public function testXtraceExcludesTheVendorOfTheWorkingDirectory(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $project = sys_get_temp_dir() . '/xdebug-mcp-project-' . bin2hex(random_bytes(6));
+        mkdir($project . '/vendor/acme/lib', 0777, true);
+        file_put_contents($project . '/vendor/acme/lib/Lib.php', "<?php\nnamespace Acme;\nfinal class Lib\n{\n    public function work(): int\n    {\n        return \$this->inner();\n    }\n\n    private function inner(): int\n    {\n        return 1;\n    }\n}\n");
+        file_put_contents($project . '/main.php', "<?php\nrequire __DIR__ . '/vendor/acme/lib/Lib.php';\nfunction app_entry(): int\n{\n    return (new Acme\\Lib())->work();\n}\napp_entry();\n");
+
+        try {
+            $output = shell_exec(sprintf(
+                'cd %s && %s %s --json -- %s main.php 2>/dev/null',
+                escapeshellarg($project),
+                escapeshellarg(PHP_BINARY),
+                escapeshellarg(dirname(__DIR__, 2) . '/bin/xtrace'),
+                escapeshellarg(PHP_BINARY),
+            ));
+            $this->assertIsString($output);
+
+            $jsonStart = strrpos($output, '{"specification"');
+            $this->assertNotFalse($jsonStart, $output);
+            $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+            $trace = file_get_contents($payload['file']);
+            unlink($payload['file']);
+            $this->assertNotFalse($trace);
+
+            $this->assertStringContainsString('app_entry', $trace);
+            $this->assertStringNotContainsString('Acme\\Lib->inner', $trace);
+        } finally {
+            unlink($project . '/main.php');
+            unlink($project . '/vendor/acme/lib/Lib.php');
+            rmdir($project . '/vendor/acme/lib');
+            rmdir($project . '/vendor/acme');
+            rmdir($project . '/vendor');
+            rmdir($project);
         }
     }
 

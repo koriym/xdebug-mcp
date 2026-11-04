@@ -29,7 +29,7 @@ use Koriym\XdebugMcp\Utilities\VendorFilter;
         return;
     }
 
-    $vendorPath = VendorFilter::locateVendorDir();
+    $vendorPath = VendorFilter::projectVendorDir();
     if ($vendorPath === null) {
         return;
     }
