@@ -126,6 +126,7 @@ function buildRawCoverageBootstrap(
     string $branchFlag,
     string $sourceLiteral,
     string $vendorExcludePathsLiteral,
+    string $reportFileLiteral,
 ): string
 {
     return '$tempDir = sys_get_temp_dir();
@@ -248,7 +249,7 @@ register_shutdown_function(function() use ($tempDir, $branchCoverage) {
             "uncovered" => $uncoveredOnly
         ];
     }
-    echo(json_encode($result, JSON_UNESCAPED_SLASHES) . PHP_EOL);
+    file_put_contents(' . $reportFileLiteral . ', json_encode($result, JSON_UNESCAPED_SLASHES));
 });
 xdebug_start_code_coverage($coverageFlags);
 ';
@@ -544,6 +545,18 @@ if (empty($args)) {
     }
 }
 
+// The report travels in a file: on the target's stdout it would join output
+// that lacks a trailing newline, or pass through the target's output buffers.
+$reportFile = tempnam(sys_get_temp_dir(), 'xcoverage_report_');
+if ($reportFile === false) {
+    fwrite(STDERR, "Error: failed to create temporary report file\n");
+    exit(1);
+}
+register_shutdown_function(static function () use ($reportFile): void {
+    @unlink($reportFile);
+});
+$reportFileLiteral = var_export($reportFile, true);
+
 $shutdownScript = null;
 $runCodeArgument = PhpCommandParser::findPhpRunCodeArgument($args);
 if ($runCodeArgument !== null) {
@@ -566,7 +579,7 @@ if ($runCodeArgument !== null) {
     }
 
     $inlineBootstrap = compactPhpSnippet(
-        buildRawCoverageBootstrap($branchFlag, $sourceLiteral, $vendorExcludePathsLiteral),
+        buildRawCoverageBootstrap($branchFlag, $sourceLiteral, $vendorExcludePathsLiteral, $reportFileLiteral),
     );
     $args[$codeIndex] = $codePrefix . prefixPhpRunCode($inlineCode, $inlineBootstrap);
 } else {
@@ -578,7 +591,7 @@ if ($runCodeArgument !== null) {
 
     if (file_put_contents(
         $shutdownScript,
-        "<?php\n" . buildRawCoverageBootstrap($branchFlag, $sourceLiteral, $vendorExcludePathsLiteral),
+        "<?php\n" . buildRawCoverageBootstrap($branchFlag, $sourceLiteral, $vendorExcludePathsLiteral, $reportFileLiteral),
     ) === false) {
         @unlink($shutdownScript);
         fwrite(STDERR, "Error: failed to write temporary bootstrap file\n");
@@ -611,22 +624,12 @@ exec($cmd . ' 2>&1', $lines, $exitCode);
 
 // STDOUT carries only the coverage JSON for AI consumption; the target
 // program's own output (stdout/stderr) is redirected to STDERR.
-$jsonLine = null;
-$programOutput = [];
-foreach ($lines as $line) {
-    if (str_starts_with($line, '{"$schema"')) {
-        $jsonLine = $line;
-        continue;
-    }
-
-    $programOutput[] = $line;
+if ($lines !== []) {
+    fwrite(STDERR, implode("\n", $lines) . "\n");
 }
 
-if ($programOutput !== []) {
-    fwrite(STDERR, implode("\n", $programOutput) . "\n");
-}
-
-if ($jsonLine === null) {
+$jsonLine = file_get_contents($reportFile);
+if ($jsonLine === false || $jsonLine === '') {
     fwrite(STDERR, "Error: coverage JSON was not produced (exit code: {$exitCode})\n");
     exit($exitCode !== 0 ? $exitCode : 1);
 }
