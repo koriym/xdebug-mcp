@@ -7,9 +7,10 @@ namespace Koriym\XdebugMcp\Utilities;
 use function array_filter;
 use function array_map;
 use function array_values;
-use function dirname;
 use function explode;
+use function file_put_contents;
 use function fnmatch;
+use function getcwd;
 use function getenv;
 use function glob;
 use function in_array;
@@ -17,6 +18,7 @@ use function is_array;
 use function is_dir;
 use function is_string;
 use function rtrim;
+use function sprintf;
 use function str_replace;
 use function strlen;
 use function substr;
@@ -67,25 +69,21 @@ final class VendorFilter
     }
 
     /**
-     * Locate the project's vendor directory relative to this package.
+     * The traced project's vendor directory, found under the working directory as Composer does.
      *
-     * Resolves against this class file (not the caller) so every auto-prepend
-     * script shares the same lookup. Handles both local development
-     * (project root) and Composer installs (vendor/koriym/xdebug-mcp).
-     * Returns null when no vendor directory exists.
+     * Without one the filter stays off, and a silent miss leaves a trace full of
+     * vendor frames, so the miss is reported on stderr.
      */
-    public static function locateVendorDir(): string|null
+    public static function projectVendorDir(): string|null
     {
-        $candidates = [
-            dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'vendor',  // local dev: <root>/vendor
-            dirname(__DIR__, 5) . DIRECTORY_SEPARATOR . 'vendor',  // composer: vendor/koriym/xdebug-mcp/src/Utilities -> <root>/vendor
-        ];
-
-        foreach ($candidates as $candidate) {
-            if (is_dir($candidate)) {
-                return $candidate;
-            }
+        $cwd = (string) getcwd();
+        $vendorPath = $cwd . DIRECTORY_SEPARATOR . 'vendor';
+        if (is_dir($vendorPath)) {
+            return $vendorPath;
         }
+
+        // php://stderr rather than STDERR: the prepend also runs under `php -S`, which leaves STDERR undefined.
+        file_put_contents('php://stderr', sprintf("vendor filter inactive: no vendor/ at %s\n", $cwd));
 
         return null;
     }

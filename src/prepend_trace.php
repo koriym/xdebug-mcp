@@ -36,7 +36,7 @@ if (! extension_loaded('xdebug')) {
         return;
     }
 
-    $vendorPath = VendorFilter::locateVendorDir();
+    $vendorPath = VendorFilter::projectVendorDir();
     if ($vendorPath === null) {
         return;
     }

@@ -306,6 +306,8 @@ By default, vendor code is excluded to focus on your code. Use `--include-vendor
 --include-vendor="*/*"              # Include all vendor (framework debugging)
 ```
 
+The excluded tree is the `vendor/` under the working directory, so run the tools from the project root. Without one, stderr says `vendor filter inactive: no vendor/ at <cwd>`.
+
 ## JSON Schemas
 
 - xtrace: https://koriym.github.io/xdebug-mcp/schemas/xtrace.json

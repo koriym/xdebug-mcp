@@ -499,8 +499,8 @@ $branchFlag = $branchCoverage ? 'true' : 'false';
 $sourceFilterEnabled = $sourceOption !== null && $sourceOption !== '';
 $vendorExcludePaths = [];
 if (! $sourceFilterEnabled) {
-    $vendorPath = getcwd() . '/vendor';
-    if (is_dir($vendorPath)) {
+    $vendorPath = VendorFilter::projectVendorDir();
+    if ($vendorPath !== null) {
         $vendorExcludePaths = VendorFilter::excludePaths($vendorPath, $includeVendor);
     }
 }

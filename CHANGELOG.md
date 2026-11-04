@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `xtrace` and the breakpoint tools exclude the traced project's `vendor/`, found under the working directory as `xcoverage` does; a global install excluded its own vendor tree, so every project package filled the trace. When the working directory has no `vendor/`, these tools and `xcoverage --raw` (without `--source`) say so on stderr (`vendor filter inactive: no vendor/ at <cwd>`); run them from the project root.
 - `xstep`/`xrepl` accept an absolute PHP binary after `--` as the README documents; `xback` accepts one without `--php`. This also fixes `-- php -d key=value script.php`, which previously took `-d` itself as the script.
 - `xback` emits the documented `xback.json` document (`stack` frames with `level`, `--depth` applied) instead of the `xstep.json` one.
 - `xback` without `--break` reports the first executable line of the target script instead of an empty `stack`; the injected `auto_prepend_file` helper is stepped past so the frame is user code.
