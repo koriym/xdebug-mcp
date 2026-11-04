@@ -13,11 +13,13 @@ use function bin2hex;
 use function chmod;
 use function dirname;
 use function escapeshellarg;
+use function exec;
 use function explode;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
 use function getenv;
+use function implode;
 use function is_dir;
 use function is_executable;
 use function json_decode;
@@ -739,15 +741,17 @@ PHP);
 
         try {
             foreach ($targets as $label => [$target, $targetOutput]) {
-                $stdout = shell_exec(sprintf(
+                $stdoutLines = [];
+                $exitCode = null;
+                exec(sprintf(
                     'cd %s && ./bin/xcoverage --raw --json -- php %s 2>%s',
                     escapeshellarg(dirname(__DIR__, 2)),
                     $target,
                     escapeshellarg($stderrFile),
-                ));
-                $this->assertIsString($stdout, $label);
+                ), $stdoutLines, $exitCode);
+                $this->assertSame(0, $exitCode, $label);
 
-                $report = json_decode($stdout, true, 512, JSON_THROW_ON_ERROR);
+                $report = json_decode(implode("\n", $stdoutLines), true, 512, JSON_THROW_ON_ERROR);
                 $this->assertIsArray($report, $label);
                 $this->assertSame('line', $report['coverage_type'], $label);
                 $this->assertStringContainsString($targetOutput, (string) file_get_contents($stderrFile), $label);
