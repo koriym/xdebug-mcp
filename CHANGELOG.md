@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- The unused `Koriym\XdebugMcp\Exceptions\SocketException`. Nothing threw it, and its typed class constant (PHP 8.3+) made the file unparseable on PHP 8.2, the minimum this package declares.
+
 ### Fixed
 - `xtrace` and the breakpoint tools exclude the traced project's `vendor/`, found under the working directory as `xcoverage` does; a global install excluded its own vendor tree, so every project package filled the trace. When the working directory has no `vendor/`, these tools and `xcoverage --raw` (without `--source`) say so on stderr (`vendor filter inactive: no vendor/ at <cwd>`); run them from the project root.
 - `xstep`/`xrepl` accept an absolute PHP binary after `--` as the README documents; `xback` accepts one without `--php`. This also fixes `-- php -d key=value script.php`, which previously took `-d` itself as the script.
