@@ -547,6 +547,11 @@ PHP);
      * A working directory without vendor/ leaves the filter off. The prepend says
      * so on stderr, keeps its locals out of the target's scope, and stays quiet
      * when the filter was switched off on purpose.
+     *
+     * The target runs through bin/xtrace, which decides how to load Xdebug in its
+     * own process. A child started here would get no Xdebug flag when this test
+     * process already has Xdebug from `-d` (as under `composer coverage`), and the
+     * prepend would return before the notice.
      */
     public function testPrependFilterReportsAMissingVendorDirWithoutLeakingVariables(): void
     {
@@ -558,25 +563,34 @@ PHP);
         mkdir($dir);
         $script = $dir . '/target.php';
         file_put_contents($script, "<?php\n\$mine = 1;\necho implode(',', array_keys(get_defined_vars())), PHP_EOL;\n");
-        $run = static fn (string $env): string|false|null => shell_exec(sprintf(
-            'cd %s && %s%s%s -d auto_prepend_file=%s target.php 2>&1',
-            escapeshellarg($dir),
-            $env,
-            escapeshellarg(PHP_BINARY),
-            XdebugFinder::getXdebugFlag(),
-            escapeshellarg(dirname(__DIR__, 2) . '/src/prepend_filter.php'),
-        ));
+        $run = function (string $env) use ($dir): string {
+            $output = shell_exec(sprintf(
+                'cd %s && %s%s %s --json -- %s target.php 2>&1',
+                escapeshellarg($dir),
+                $env,
+                escapeshellarg(PHP_BINARY),
+                escapeshellarg(dirname(__DIR__, 2) . '/bin/xtrace'),
+                escapeshellarg(PHP_BINARY),
+            ));
+            $this->assertIsString($output);
+
+            $jsonStart = strrpos($output, '{"specification"');
+            $this->assertNotFalse($jsonStart, $output);
+            $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+            $this->assertIsArray($payload);
+            unlink($payload['file']);
+
+            return $output;
+        };
 
         try {
             $output = $run('');
-            $this->assertIsString($output);
             $this->assertStringContainsString('mine', $output);
             $this->assertStringNotContainsString('vendorPath', $output);
             $this->assertStringNotContainsString('excludePaths', $output);
             $this->assertStringContainsString('vendor filter inactive: no vendor/ at ' . realpath($dir), $output);
 
             $optedOut = $run('XDEBUG_MCP_DISABLE_VENDOR_FILTER=1 ');
-            $this->assertIsString($optedOut);
             $this->assertStringContainsString('mine', $optedOut);
             $this->assertStringNotContainsString('vendor filter inactive', $optedOut);
         } finally {
