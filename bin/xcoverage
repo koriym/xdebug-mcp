@@ -399,8 +399,11 @@ if (!$rawMode) {
         $coveredLines = 0;
         $uncoveredLines = 0;
 
+        // A namespaced class's file sits under <package>, any other directly under <project>.
+        $files = $xml->xpath('//file') ?: [];
+
         // Handle empty coverage (no files)
-        if (!isset($xml->project->file)) {
+        if ($files === []) {
             $result = [
                 '$schema' => 'https://koriym.github.io/xdebug-mcp/schemas/xcoverage.json',
                 'coverage_type' => 'line',
@@ -419,7 +422,7 @@ if (!$rawMode) {
             exit($exitCode);
         }
 
-        foreach ($xml->project->file as $file) {
+        foreach ($files as $file) {
             $filePath = (string)$file['name'];
             $totalFiles++;
             $uncoveredLineNums = [];

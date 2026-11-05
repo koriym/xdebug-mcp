@@ -234,6 +234,80 @@ PHP);
         }
     }
 
+    /**
+     * PHPUnit's clover report nests the files of a namespaced class under a
+     * <package> element; those lines count like any other.
+     */
+    public function testXcoverageCountsTheFilesOfANamespacedClass(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $root = dirname(__DIR__, 2);
+        $fixtureDir = sys_get_temp_dir() . '/xcoverage_package_' . bin2hex(random_bytes(6));
+        mkdir($fixtureDir . '/src', 0777, true);
+        mkdir($fixtureDir . '/tests');
+        $sourceFile = $fixtureDir . '/src/Subject.php';
+        $testFile = $fixtureDir . '/tests/SubjectTest.php';
+
+        file_put_contents($sourceFile, <<<'PHP'
+<?php
+namespace Acme;
+
+final class Subject
+{
+    public function value(bool $flag): string
+    {
+        if ($flag) {
+            return 'covered';
+        }
+
+        return 'uncovered';
+    }
+}
+PHP);
+        file_put_contents($testFile, <<<'PHP'
+<?php
+
+use PHPUnit\Framework\TestCase;
+
+require_once __DIR__ . '/../src/Subject.php';
+
+final class SubjectTest extends TestCase
+{
+    public function testCoveredBranch(): void
+    {
+        self::assertSame('covered', (new Acme\Subject())->value(true));
+    }
+}
+PHP);
+
+        try {
+            $stdout = [];
+            $exitCode = null;
+            exec(sprintf(
+                'cd %s && ./bin/xcoverage --json -- php ./vendor/bin/phpunit --no-configuration --coverage-filter %s %s 2>/dev/null',
+                escapeshellarg($root),
+                escapeshellarg($fixtureDir . '/src'),
+                escapeshellarg($testFile),
+            ), $stdout, $exitCode);
+            $this->assertSame(0, $exitCode, implode("\n", $stdout));
+
+            $coverage = json_decode(implode("\n", $stdout), true, 512, JSON_THROW_ON_ERROR);
+            $this->assertIsArray($coverage);
+            $this->assertSame(1, $coverage['summary']['files']);
+            $this->assertGreaterThan(0, $coverage['summary']['covered_lines']);
+            $this->assertSame([12], $coverage['uncovered'][realpath($sourceFile)] ?? null);
+        } finally {
+            unlink($testFile);
+            unlink($sourceFile);
+            rmdir($fixtureDir . '/tests');
+            rmdir($fixtureDir . '/src');
+            rmdir($fixtureDir);
+        }
+    }
+
     public function testXcoverageRawSourceFilterExcludesSiblingFiles(): void
     {
         if (! XdebugFinder::isXdebugAvailable()) {
