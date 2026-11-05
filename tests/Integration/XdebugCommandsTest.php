@@ -13,11 +13,13 @@ use function bin2hex;
 use function chmod;
 use function dirname;
 use function escapeshellarg;
+use function exec;
 use function explode;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
 use function getenv;
+use function implode;
 use function is_dir;
 use function is_executable;
 use function json_decode;
@@ -711,6 +713,57 @@ PHP);
         $this->assertNotNull($output);
         // print_cwd.php prints the cwd; --cwd should have made it the temp dir
         $this->assertStringContainsString($tmpDir, $output);
+    }
+
+    /**
+     * The report travels apart from the target's output. On the target's stdout it
+     * joined a last line without a newline or went through the target's output
+     * buffer, and the run failed with "coverage JSON was not produced"; a target
+     * line starting with {"$schema" was taken for the report and dropped. Scripts
+     * and inline code are bootstrapped differently, so both are run.
+     */
+    public function testXcoverageRawKeepsTheTargetOutputApartFromTheReport(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $dir = sys_get_temp_dir() . '/xdebug-mcp-report-' . bin2hex(random_bytes(6));
+        mkdir($dir);
+        file_put_contents($dir . '/target.php', "<?php\necho 'no trailing newline';\n");
+        $stderrFile = $dir . '/stderr.txt';
+        $targets = [
+            'script without a trailing newline' => [escapeshellarg($dir . '/target.php'), 'no trailing newline'],
+            'inline code without a trailing newline' => ['-r ' . escapeshellarg("echo 'no trailing newline';"), 'no trailing newline'],
+            'output that looks like the report' => ['-r ' . escapeshellarg('echo \'{"$schema":"x"}\', PHP_EOL;'), '{"$schema":"x"}'],
+            'output buffer that rewrites the output' => ['-r ' . escapeshellarg('ob_start(static fn (string $b): string => strtoupper($b)); echo "target", PHP_EOL;'), 'TARGET'],
+        ];
+
+        try {
+            foreach ($targets as $label => [$target, $targetOutput]) {
+                $stdoutLines = [];
+                $exitCode = null;
+                exec(sprintf(
+                    'cd %s && ./bin/xcoverage --raw --json -- php %s 2>%s',
+                    escapeshellarg(dirname(__DIR__, 2)),
+                    $target,
+                    escapeshellarg($stderrFile),
+                ), $stdoutLines, $exitCode);
+                $this->assertSame(0, $exitCode, $label);
+
+                $report = json_decode(implode("\n", $stdoutLines), true, 512, JSON_THROW_ON_ERROR);
+                $this->assertIsArray($report, $label);
+                $this->assertSame('line', $report['coverage_type'], $label);
+                $this->assertStringContainsString($targetOutput, (string) file_get_contents($stderrFile), $label);
+            }
+        } finally {
+            unlink($dir . '/target.php');
+            if (file_exists($stderrFile)) {
+                unlink($stderrFile);
+            }
+
+            rmdir($dir);
+        }
     }
 
     public function testXbackCwdOption(): void
