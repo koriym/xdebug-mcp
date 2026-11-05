@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The vendor-filter helper is kept for any target running this PHP version, including one named on `PATH` such as `php8.2`: the decision now compares the probed version rather than the binary's path, which had silently dropped the filter for same-version targets.
 - A target whose Xdebug cannot be resolved is reported the same way by every tool — one line naming the target version, exit 1. `xstep` and `xback` previously printed a result document with an empty `breaks`/`stack` before dying with an uncaught fatal.
 - README and skill docs: xtrace, xprofile, and xcoverage need `--json` for JSON output; the xrepl `l` command shows the current location, not source code.
+- `llms.txt` and `llms-full.txt` follow the README: the Skill for Claude Code and Codex CLI, MCP for other clients, a portable `check-env` path, no `--exit-on-break`, and no php.ini that turns Xdebug on for every request. The README's "Try CLI Tools" `--compare-with` example runs against this repository's demo, and the README describes vendor filtering.
 
 ## [0.13.0] - 2026-08-03
 

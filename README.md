@@ -123,8 +123,8 @@ Run the demo examples to see each tool in action:
 # Compare variable states with different inputs
 ./bin/xcompare --break="demo/buggy.php:22" --run-a="php demo/buggy.php 10" --run-b="php demo/buggy.php 0"
 
-# Compare current code vs another branch
-./bin/xcompare --break="src/calc.php:25" --run="php src/calc.php 10" --compare-with=main
+# Compare current code vs an earlier commit
+./bin/xcompare --break="demo/buggy.php:22" --run="php demo/buggy.php 10" --compare-with=HEAD~1
 ```
 
 Each command outputs structured JSON that AI can analyze to provide debugging insights. xtrace, xprofile, and xcoverage print text unless `--json` is given; the other tools print JSON by default.
@@ -187,6 +187,8 @@ xcompare --break='calc.php:25' --run='php calc.php 10' --compare-with=main
 ```
 
 Run `--help` on any tool for detailed options.
+
+Vendor code is left out of traces, profiles, and raw coverage so the output stays on your code. The excluded tree is the `vendor/` of the working directory, so run the tools from the project root; without one, stderr says `vendor filter inactive: no vendor/ at <cwd>`. `xtrace`, `xstep`, `xprofile`, `xcoverage --raw`, and `xcompare` keep selected packages with `--include-vendor="bear/*"` (or `"*/*"` for all).
 
 > **Note on `xcompare` commands:** the `--run-a`, `--run-b`, and `--run` values are executed through the shell so that quoting, redirection, and environment variables behave as users expect. Only pass trusted input to these options.
 >
