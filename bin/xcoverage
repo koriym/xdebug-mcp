@@ -588,12 +588,14 @@ if ($runCodeArgument !== null) {
         fwrite(STDERR, "Error: failed to create temporary bootstrap file\n");
         exit(1);
     }
+    register_shutdown_function(static function () use ($shutdownScript): void {
+        @unlink($shutdownScript);
+    });
 
     if (file_put_contents(
         $shutdownScript,
         "<?php\n" . buildRawCoverageBootstrap($branchFlag, $sourceLiteral, $vendorExcludePathsLiteral, $reportFileLiteral),
     ) === false) {
-        @unlink($shutdownScript);
         fwrite(STDERR, "Error: failed to write temporary bootstrap file\n");
         exit(1);
     }
@@ -648,7 +650,4 @@ if (! $jsonOutput && ($result['coverage_type'] ?? null) === 'line') {
     echo $jsonLine . "\n";
 }
 
-if ($shutdownScript !== null && file_exists($shutdownScript)) {
-    unlink($shutdownScript);
-}
 exit($exitCode);
