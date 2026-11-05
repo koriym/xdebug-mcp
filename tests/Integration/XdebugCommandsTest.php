@@ -731,9 +731,8 @@ PHP);
     }
 
     /**
-     * A run that fails still removes its temporary files: the bootstrap that
-     * xcoverage prepends to a script used to be removed only on success. The
-     * files go to TMPDIR, so a private one shows exactly what the run left.
+     * A failing run removes its bootstrap and report files too. They go to
+     * TMPDIR, so a private one shows exactly what the run left.
      */
     public function testXcoverageRawLeavesNoTemporaryFilesWhenTheTargetFails(): void
     {
