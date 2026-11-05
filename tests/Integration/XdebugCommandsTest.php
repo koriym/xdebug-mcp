@@ -19,6 +19,7 @@ use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
 use function getenv;
+use function glob;
 use function implode;
 use function is_dir;
 use function is_executable;
@@ -727,6 +728,41 @@ PHP);
         $this->assertNotNull($output);
         // print_cwd.php prints the cwd; --cwd should have made it the temp dir
         $this->assertStringContainsString($tmpDir, $output);
+    }
+
+    /**
+     * A run that fails still removes its temporary files: the bootstrap that
+     * xcoverage prepends to a script used to be removed only on success. The
+     * files go to TMPDIR, so a private one shows exactly what the run left.
+     */
+    public function testXcoverageRawLeavesNoTemporaryFilesWhenTheTargetFails(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $tmpDir = sys_get_temp_dir() . '/xdebug-mcp-tmpdir-' . bin2hex(random_bytes(6));
+        mkdir($tmpDir);
+
+        try {
+            $output = [];
+            $exitCode = null;
+            exec(sprintf(
+                'cd %s && TMPDIR=%s ./bin/xcoverage --raw -- php %s 2>&1',
+                escapeshellarg(dirname(__DIR__, 2)),
+                escapeshellarg($tmpDir),
+                escapeshellarg($tmpDir . '/missing.php'),
+            ), $output, $exitCode);
+
+            $this->assertSame(1, $exitCode, implode("\n", $output));
+            $this->assertSame([], glob($tmpDir . '/*'));
+        } finally {
+            foreach (glob($tmpDir . '/*') ?: [] as $file) {
+                unlink($file);
+            }
+
+            rmdir($tmpDir);
+        }
     }
 
     /**
