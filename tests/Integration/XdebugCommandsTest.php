@@ -619,6 +619,37 @@ PHP);
     }
 
     /**
+     * The eval runs in the paused frame's class scope, so a scope-sensitive
+     * reader would miss private properties of other classes and of parents.
+     */
+    public function testCapturedObjectsIncludeNonPublicProperties(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/private_properties.php';
+        $output = shell_exec(sprintf(
+            'cd %s && ./bin/xstep --break=%s -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':23'),
+            escapeshellarg($fixture),
+        ));
+        $this->assertNotNull($output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
+        $variables = $payload['breaks'][0]['variables'];
+        $this->assertSame(
+            'object: {"__class": "PrivatePropertiesHolder", "PrivatePropertiesBase::name": "base", "items": {"k": 1}, "prot": "p", "name": "child", "self": "[RECURSION object:PrivatePropertiesHolder]"}',
+            $variables['$this'],
+        );
+        $this->assertSame('object: {"__class": "PrivatePropertiesOther", "secret": 42}', $variables['$other']);
+    }
+
+    /**
      * A working directory without vendor/ leaves the filter off. The prepend says
      * so on stderr, keeps its locals out of the target's scope, and stays quiet
      * when the filter was switched off on purpose.

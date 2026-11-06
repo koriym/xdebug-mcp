@@ -3338,8 +3338,8 @@ final class DebugServer
             $output = trim($output);
             $output = $this->truncateStringValue($output, $this->getMaxValueBytes() ?? self::DEFAULT_MAX_VALUE_BYTES);
 
-            // Make it more readable by adding spaces after colons and commas
-            $output = preg_replace('/([,:])\s*/', '$1 ', $output);
+            // Make it more readable by adding spaces after colons and commas outside string literals
+            $output = preg_replace('/"(?:[^"\\\\]|\\\\.)*"(*SKIP)(*FAIL)|([,:])\s*/', '$1 ', $output);
 
             return $output;
         } catch (Throwable) {
@@ -3347,34 +3347,52 @@ final class DebugServer
         }
     }
 
+    /**
+     * Objects are read through an (array) cast so private and protected
+     * properties appear whatever class scope the eval runs in. A private
+     * property sharing its name with another property is keyed `Class::name`.
+     */
     private function buildJsonEncodeExpression(string $varName): string
     {
         $maxDepth = $this->getMaxDepth();
-        if ($maxDepth === null) {
-            return "json_encode({$varName}, JSON_UNESCAPED_UNICODE)";
-        }
-
+        $maxDepthArg = $maxDepth === null ? 'null' : (string) $maxDepth;
         $maxValueBytes = $this->getMaxValueBytes();
         $maxValueBytesArg = $maxValueBytes === null ? 'null' : (string) $maxValueBytes;
 
-        return '(static function (mixed $value, int $maxDepth, int|null $maxValueBytes): string|false {'
+        return '(static function (mixed $value, int|null $maxDepth, int|null $maxValueBytes): string|false {'
             . '$truncate = static function (string $text) use ($maxValueBytes): string {'
             . 'if ($maxValueBytes === null || strlen($text) <= $maxValueBytes) { return $text; }'
             . 'return substr($text, 0, $maxValueBytes) . "... (truncated, " . $maxValueBytes . " bytes)";'
             . '};'
-            . '$normalize = static function (mixed $node, int $depth) use (&$normalize, $maxDepth, $truncate): mixed {'
+            . '$normalize = static function (mixed $node, int $depth, array $path) use (&$normalize, $maxDepth, $truncate): mixed {'
             . 'if (is_string($node)) { return $truncate($node); }'
-            . 'if ($depth >= $maxDepth) {'
+            . 'if ($maxDepth !== null && $depth >= $maxDepth) {'
             . 'if (is_array($node)) { return "[MAX_DEPTH array(" . count($node) . ")]"; }'
             . 'if (is_object($node)) { return "[MAX_DEPTH object:" . get_class($node) . "]"; }'
             . 'return $node;'
             . '}'
-            . 'if (is_array($node)) { $out = []; foreach ($node as $key => $child) { $out[$key] = $normalize($child, $depth + 1); } return $out; }'
-            . 'if (is_object($node)) { $out = ["__class" => get_class($node)]; foreach (get_object_vars($node) as $key => $child) { $out[$key] = $normalize($child, $depth + 1); } return $out; }'
+            . 'if (is_array($node)) { $out = []; foreach ($node as $key => $child) { $out[$key] = $normalize($child, $depth + 1, $path); } return $out; }'
+            . 'if (is_object($node)) {'
+            . '$id = spl_object_id($node);'
+            . 'if (isset($path[$id])) { return "[RECURSION object:" . get_class($node) . "]"; }'
+            . '$path[$id] = true;'
+            . '$props = []; $count = [];'
+            . 'foreach ((array) $node as $key => $child) {'
+            . '$key = (string) $key; $owner = null; $name = $key;'
+            . 'if (str_starts_with($key, "\0")) { [, $owner, $name] = explode("\0", $key, 3); }'
+            . '$props[] = [$owner, $name, $child]; $count[$name] = ($count[$name] ?? 0) + 1;'
+            . '}'
+            . '$out = ["__class" => get_class($node)];'
+            . 'foreach ($props as [$owner, $name, $child]) {'
+            . 'if ($count[$name] > 1 && $owner !== null && $owner !== "*") { $name = $owner . "::" . $name; }'
+            . '$out[$name] = $normalize($child, $depth + 1, $path);'
+            . '}'
+            . 'return $out;'
+            . '}'
             . 'return $node;'
             . '};'
-            . 'return json_encode($normalize($value, 0), JSON_UNESCAPED_UNICODE);'
-            . "})({$varName}, {$maxDepth}, {$maxValueBytesArg})";
+            . 'return json_encode($normalize($value, 0, []), JSON_UNESCAPED_UNICODE);'
+            . "})({$varName}, {$maxDepthArg}, {$maxValueBytesArg})";
     }
 
     /**
