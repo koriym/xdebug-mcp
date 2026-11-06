@@ -74,6 +74,11 @@ function showHelp(string $commandName = 'xstep'): void
     echo "  file.php:20:\$user==null       # Break only when \$user is null\n";
     echo "  file1.php:5,file2.php:10       # Multiple breakpoints\n";
     echo "  api.php:42:\$id>100            # Break when \$id exceeds 100\n";
+    if (! $isRepl) {
+        echo "\n";
+        echo "  With several breakpoints, recording starts at the first one hit and\n";
+        echo "  runs for --steps; a later breakpoint does not start another recording.\n";
+    }
     echo "\n";
 
     if ($isRepl) {
