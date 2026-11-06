@@ -64,8 +64,8 @@ function showHelp(string $commandName = 'xstep'): void
         echo "  --context=TEXT          Add contextual description for AI analysis (JSON output)\n";
         echo "  --pretty                Pretty-print JSON output with 2-space indentation\n";
         echo "  --max-value-bytes=N     Truncate long string values to N bytes in JSON output\n";
-        echo "  --max-depth=N           Truncate nested array/object rendering after N levels\n";
-        echo "  --vars=LIST             Record only these variables, e.g. '\$this,\$items' (JSON output)\n";
+        echo "  --max-depth=N           Truncate nested array/object rendering after N levels (default 3)\n";
+        echo "  --vars=LIST             Record only these local variables, e.g. '\$this,\$items' (JSON output)\n";
         echo "  --include-vendor=PATTERNS Include matching vendor packages in trace\n";
         echo "  --help, -h              Show this help\n";
     }
@@ -141,9 +141,6 @@ function showHelp(string $commandName = 'xstep'): void
     exit(0);
 }
 
-/**
- * Parse a positive integer option value.
- */
 /** @return list<string> */
 function parseVarsOption(string $value): array
 {
@@ -162,6 +159,9 @@ function parseVarsOption(string $value): array
     return $vars;
 }
 
+/**
+ * Parse a positive integer option value.
+ */
 function parsePositiveIntegerOption(string $name, string $value): int
 {
     if (! preg_match('/^[1-9][0-9]*$/', $value)) {

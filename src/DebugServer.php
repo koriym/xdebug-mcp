@@ -28,6 +28,7 @@ use Koriym\XdebugMcp\Utilities\XdebugEnv;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use SimpleXMLElement;
+use stdClass;
 use Stringable;
 use Throwable;
 
@@ -43,6 +44,7 @@ use function array_keys;
 use function array_map;
 use function array_merge;
 use function array_push;
+use function array_replace;
 use function array_reverse;
 use function array_slice;
 use function array_splice;
@@ -110,6 +112,7 @@ use function usort;
 
 use const DIRECTORY_SEPARATOR;
 use const FILE_IGNORE_NEW_LINES;
+use const JSON_INVALID_UTF8_SUBSTITUTE;
 use const JSON_PRETTY_PRINT;
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
@@ -148,8 +151,10 @@ final class DebugServer
     private const DEFAULT_STEP_TIMEOUT = 0.0;  // No timeout for interactive debugging
     private const MAX_STEPS = 100;  // Default maximum steps for step recording
     private const DEFAULT_MAX_VALUE_BYTES = 200;
-    private const DEFAULT_CHILD_VALUE_BYTES = 20;
     private const STACK_CONTEXT_LIMIT = 5;
+
+    /** Nesting levels xstep renders when --max-depth is not given */
+    private const DEFAULT_MAX_DEPTH = 3;
 
     /** Upper bound when stepping out of the injected prepend helper into the target script */
     private const MAX_PRELUDE_STEPS = 200;
@@ -159,6 +164,9 @@ final class DebugServer
 
     /** @var DeferredFuture<bool>|null */
     private DeferredFuture|null $listenerReady = null;
+
+    /** @var array<string, string|null> Xdebug's own feature values, read once per session */
+    private array $sessionFeatures = [];
 
     /** @var DeferredFuture<bool>|null */
     private DeferredFuture|null $xdebugConnected = null;
@@ -1044,7 +1052,7 @@ final class DebugServer
      * expression) and which must be rendered as a literal "-- {value}" — never
      * "-{key} {value}" (that would produce the "--- {value}" triple-dash that
      * Xdebug rejects with a parse error). See eval's usage of "--" in
-     * evaluateExpression()/getJsonEncodeOutput() for the established convention
+     * evaluateExpression() for the established convention
      * this reuses.
      *
      * @param array<string, string|int> $params
@@ -2851,7 +2859,14 @@ final class DebugServer
             $flags |= JSON_PRETTY_PRINT;
         }
 
-        $json = json_encode($result, $flags);
+        // An empty variables map still has to encode as a JSON object
+        $breaks = array_map(
+            static fn (array $break): array => ($break['variables'] ?? null) === []
+                ? array_replace($break, ['variables' => new stdClass()])
+                : $break,
+            $result['breaks'],
+        );
+        $json = json_encode(array_replace($result, ['breaks' => $breaks]), $flags);
         if (! $pretty) {
             return $json;
         }
@@ -3180,8 +3195,7 @@ final class DebugServer
     public function getCurrentVariables(): array
     {
         try {
-            // Send context_get command to get local variables
-            $response = $this->sendCommand('context_get', ['c' => '0']); // Local context
+            $response = $this->getRenderableContext();
 
             if ($response === '' || $response === '0') {
                 return [];
@@ -3197,39 +3211,21 @@ final class DebugServer
                 foreach ($xml->property as $prop) {
                     $name = (string) $prop['name'];
                     $type = (string) $prop['type'];
-                    $encoding = (string) ($prop['encoding'] ?? '');
-                    $raw = (string) $prop; // element text content
 
-                    // Get better info for arrays and objects using print_r
                     if ($type === 'array' || $type === 'object') {
                         $numChildren = (int) ($prop['numchildren'] ?? 0);
-                        $value = $encoding === 'base64' ? base64_decode($raw) : $raw;
-
-                        if ($numChildren > 0) {
-                            // Try json_encode first for detailed display
-                            $jsonOutput = $this->getJsonEncodeOutput($name);
-                            if ($jsonOutput) {
-                                $variables[$name] = "{$type}: {$jsonOutput}";
-                            } else {
-                                // Try to get detailed contents from child properties in the response
-                                $details = $this->extractChildDetails($prop, $type);
-                                if ($details) {
-                                    $variables[$name] = "{$type}: {$details}";
-                                } elseif ($type === 'array') {
-                                    // Fallback to basic info
-                                    $variables[$name] = "array: [{$numChildren} items]";
-                                } else {
-                                    $className = (string) ($prop['classname'] ?? 'object');
-                                    $variables[$name] = "object: {$className} [{$numChildren} properties]";
-                                }
-                            }
-                        } else {
+                        if ($numChildren === 0) {
                             $variables[$name] = $type === 'array' ? 'array: []' : 'object: {}';
+
+                            continue;
                         }
-                    } else {
-                        $value = $encoding === 'base64' ? base64_decode($raw) : $raw;
-                        $variables[$name] = $this->truncateVariableDisplay("{$type}: {$value}");
+
+                        $variables[$name] = "{$type}: " . $this->renderContainerJson($prop, $type, $numChildren);
+
+                        continue;
                     }
+
+                    $variables[$name] = $this->truncateVariableDisplay("{$type}: {$this->decodePropertyValue($prop)}");
                 }
             }
 
@@ -3240,179 +3236,154 @@ final class DebugServer
     }
 
     /**
-     * Extract child details from XML property node
+     * Fetch the local context with the depth and string length xstep renders,
+     * restoring the session's feature values so other commands see Xdebug's defaults.
      */
-    private function extractChildDetails(SimpleXMLElement $prop, string $type): string|null
+    private function getRenderableContext(): string
     {
-        try {
-            // Check if property has child elements
-            if (! property_exists($prop, 'property') || $prop->property === null) {
-                return null;
-            }
-
-            $items = [];
-            $maxItems = $type === 'array' ? 5 : 3; // Show more for arrays, less for objects
-
-            foreach ($prop->property as $child) {
-                $key = (string) $child['name'];
-                $childType = (string) $child['type'];
-                $encoding = (string) ($child['encoding'] ?? '');
-                $value = (string) $child;
-
-                if ($encoding === 'base64') {
-                    $value = base64_decode($value);
-                }
-
-                // Format key-value pairs
-                if ($childType === 'string') {
-                    $displayValue = $this->truncateStringValue($value, $this->getMaxValueBytes() ?? self::DEFAULT_CHILD_VALUE_BYTES);
-                    $items[] = "{$key}: \"{$displayValue}\"";
-                } elseif ($childType === 'int' || $childType === 'float') {
-                    $items[] = "{$key}: {$value}";
-                } elseif ($childType === 'bool') {
-                    $boolValue = $value === '1' ? 'true' : 'false';
-                    $items[] = "{$key}: {$boolValue}";
-                } elseif ($childType === 'array') {
-                    $childCount = (int) ($child['numchildren'] ?? 0);
-                    $items[] = "{$key}: array[{$childCount}]";
-                } elseif ($childType === 'object') {
-                    $className = (string) ($child['classname'] ?? 'object');
-                    $items[] = "{$key}: {$className}";
-                } else {
-                    $items[] = "{$key}: {$childType}";
-                }
-
-                // Limit number of items shown
-                if (count($items) < $maxItems) {
-                    continue;
-                }
-
-                $totalCount = (int) ($prop['numchildren'] ?? 0);
-                if ($totalCount > $maxItems) {
-                    $items[] = "... ({$totalCount} total)";
-                }
-
-                break;
-            }
-
-            if ($items === []) {
-                return null;
-            }
-
-            // Format based on type
-            if ($type === 'array') {
-                return '[' . implode(', ', $items) . ']';
-            }
-
-            return '{' . implode(', ', $items) . '}';
-        } catch (Throwable) {
-            return null;
-        }
-    }
-
-    /**
-     * Get json_encode output for a variable using Xdebug eval
-     */
-    private function getJsonEncodeOutput(string $varName): string|null
-    {
-        if (! $this->xdebugSocket instanceof Socket) {
-            return null;
-        }
-
-        try {
-            $expression = $this->buildJsonEncodeExpression($varName);
-            // Use proper DBGp protocol format: eval -- base64_encoded_data
-            $transactionId = $this->getNextTransactionId();
-            $fullCommand = "eval -i {$transactionId} -- " . base64_encode($expression) . "\0";
-            $this->xdebugSocket->write($fullCommand);
-            $response = $this->readDbgpFrame($this->xdebugSocket);
-
-            if ($response === '' || $response === '0') {
-                return null;
-            }
-
-            $useErrors = libxml_use_internal_errors(true);
-            libxml_clear_errors();
-            $xml = simplexml_load_string(DbgpXml::sanitize($response));
-            libxml_clear_errors();
-            libxml_use_internal_errors($useErrors);
-            if (! $xml || (! property_exists($xml, 'property') || $xml->property === null)) {
-                return null;
-            }
-
-            $property = $xml->property;
-            $type = (string) ($property['type'] ?? '');
-            $encoding = (string) ($property['encoding'] ?? '');
-            $output = (string) $property;
-
-            // Skip if it's not a string result
-            if ($type !== 'string') {
-                return null;
-            }
-
-            if ($encoding === 'base64') {
-                $output = base64_decode($output);
-            }
-
-            // Clean up and format JSON output
-            $output = trim($output);
-            $output = $this->truncateStringValue($output, $this->getMaxValueBytes() ?? self::DEFAULT_MAX_VALUE_BYTES);
-
-            // Make it more readable by adding spaces after colons and commas outside string literals
-            $output = preg_replace('/"(?:[^"\\\\]|\\\\.)*"(*SKIP)(*FAIL)|([,:])\s*/', '$1 ', $output);
-
-            return $output;
-        } catch (Throwable) {
-            return null;
-        }
-    }
-
-    /**
-     * Objects are read through an (array) cast so private and protected
-     * properties appear whatever class scope the eval runs in. A private
-     * property sharing its name with another property is keyed `Class::name`.
-     */
-    private function buildJsonEncodeExpression(string $varName): string
-    {
-        $maxDepth = $this->getMaxDepth();
-        $maxDepthArg = $maxDepth === null ? 'null' : (string) $maxDepth;
+        $features = ['max_depth' => (string) ($this->getMaxDepth() ?? self::DEFAULT_MAX_DEPTH)];
         $maxValueBytes = $this->getMaxValueBytes();
-        $maxValueBytesArg = $maxValueBytes === null ? 'null' : (string) $maxValueBytes;
+        if ($maxValueBytes !== null) {
+            $features['max_data'] = (string) $maxValueBytes;
+        }
 
-        return '(static function (mixed $value, int|null $maxDepth, int|null $maxValueBytes): string|false {'
-            . '$truncate = static function (string $text) use ($maxValueBytes): string {'
-            . 'if ($maxValueBytes === null || strlen($text) <= $maxValueBytes) { return $text; }'
-            . 'return substr($text, 0, $maxValueBytes) . "... (truncated, " . $maxValueBytes . " bytes)";'
-            . '};'
-            . '$normalize = static function (mixed $node, int $depth, array $path) use (&$normalize, $maxDepth, $truncate): mixed {'
-            . 'if (is_string($node)) { return $truncate($node); }'
-            . 'if ($maxDepth !== null && $depth >= $maxDepth) {'
-            . 'if (is_array($node)) { return "[MAX_DEPTH array(" . count($node) . ")]"; }'
-            . 'if (is_object($node)) { return "[MAX_DEPTH object:" . get_class($node) . "]"; }'
-            . 'return $node;'
-            . '}'
-            . 'if (is_array($node)) { $out = []; foreach ($node as $key => $child) { $out[$key] = $normalize($child, $depth + 1, $path); } return $out; }'
-            . 'if (is_object($node)) {'
-            . '$id = spl_object_id($node);'
-            . 'if (isset($path[$id])) { return "[RECURSION object:" . get_class($node) . "]"; }'
-            . '$path[$id] = true;'
-            . '$props = []; $count = [];'
-            . 'foreach ((array) $node as $key => $child) {'
-            . '$key = (string) $key; $owner = null; $name = $key;'
-            . 'if (str_starts_with($key, "\0")) { [, $owner, $name] = explode("\0", $key, 3); }'
-            . '$props[] = [$owner, $name, $child]; $count[$name] = ($count[$name] ?? 0) + 1;'
-            . '}'
-            . '$out = ["__class" => get_class($node)];'
-            . 'foreach ($props as [$owner, $name, $child]) {'
-            . 'if ($count[$name] > 1 && $owner !== null && $owner !== "*") { $name = $owner . "::" . $name; }'
-            . '$out[$name] = $normalize($child, $depth + 1, $path);'
-            . '}'
-            . 'return $out;'
-            . '}'
-            . 'return $node;'
-            . '};'
-            . 'return json_encode($normalize($value, 0, []), JSON_UNESCAPED_UNICODE);'
-            . "})({$varName}, {$maxDepthArg}, {$maxValueBytesArg})";
+        $restore = [];
+        foreach ($features as $feature => $value) {
+            if (! array_key_exists($feature, $this->sessionFeatures)) {
+                $this->sessionFeatures[$feature] = $this->getFeature($feature);
+            }
+
+            $original = $this->sessionFeatures[$feature];
+            if ($original === null || $original === $value) {
+                continue;
+            }
+
+            $this->sendCommand('feature_set', ['n' => $feature, 'v' => $value]);
+            $restore[$feature] = $original;
+        }
+
+        try {
+            return $this->sendCommand('context_get', ['c' => '0']);
+        } finally {
+            foreach ($restore as $feature => $value) {
+                $this->sendCommand('feature_set', ['n' => $feature, 'v' => $value]);
+            }
+        }
+    }
+
+    private function getFeature(string $feature): string|null
+    {
+        $xml = $this->parseXmlResponse($this->sendCommand('feature_get', ['n' => $feature]));
+        if ($xml === null || (string) ($xml['supported'] ?? '') !== '1') {
+            return null;
+        }
+
+        $value = trim((string) $xml);
+
+        return $value === '' ? null : $value;
+    }
+
+    private function renderContainerJson(SimpleXMLElement $prop, string $type, int $numChildren): string
+    {
+        $json = json_encode($this->renderProperty($prop), JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        if ($json === false) {
+            return $type === 'array'
+                ? "[{$numChildren} items]"
+                : (string) ($prop['classname'] ?? 'object') . " [{$numChildren} properties]";
+        }
+
+        // Make it more readable by adding spaces after colons and commas outside string literals
+        $json = (string) preg_replace('/"(?:[^"\\\\]|\\\\.)*"(*SKIP)(*FAIL)|([,:])\s*/', '$1 ', $json);
+
+        return $this->truncateStringValue($json, $this->getMaxValueBytes() ?? self::DEFAULT_MAX_VALUE_BYTES);
+    }
+
+    /**
+     * Private properties declared by a parent class arrive named `*Class*name`;
+     * one sharing its name with another property is keyed `Class::name`.
+     * Xdebug marks array recursion only, so an object cycle repeats down to the depth limit.
+     */
+    private function renderProperty(SimpleXMLElement $prop): mixed
+    {
+        $type = (string) $prop['type'];
+        if ($type !== 'array' && $type !== 'object') {
+            return match ($type) {
+                'int' => (int) (string) $prop,
+                'float' => (float) (string) $prop,
+                'bool' => (string) $prop === '1',
+                'null' => null,
+                'string' => $this->decodePropertyValue($prop),
+                default => trim("{$type} {$this->decodePropertyValue($prop)}"),
+            };
+        }
+
+        $className = (string) ($prop['classname'] ?? 'object');
+        $label = $type === 'array' ? 'array' : "object:{$className}";
+        if ((string) ($prop['recursive'] ?? '') === '1') {
+            return "[RECURSION {$label}]";
+        }
+
+        $numChildren = (int) ($prop['numchildren'] ?? 0);
+        $children = [];
+        foreach ($prop->property ?? [] as $child) {
+            $children[] = $child;
+        }
+
+        if ($numChildren > 0 && $children === []) {
+            return $type === 'array' ? "[MAX_DEPTH array({$numChildren})]" : "[MAX_DEPTH object:{$className}]";
+        }
+
+        $out = $type === 'object' ? ['__class' => $className] : [];
+        $named = [];
+        $nameCount = [];
+        foreach ($children as $child) {
+            $owner = null;
+            $name = (string) $child['name'];
+            if ($type === 'object' && preg_match('/^\*([^*]+)\*(.+)$/s', $name, $matches) === 1) {
+                [, $owner, $name] = $matches;
+            }
+
+            $named[] = [$owner, $name, $child];
+            $nameCount[$name] = ($nameCount[$name] ?? 0) + 1;
+        }
+
+        $isList = $type === 'array';
+        foreach ($named as $index => [$owner, $name, $child]) {
+            if ($owner !== null && $nameCount[$name] > 1) {
+                $name = "{$owner}::{$name}";
+            }
+
+            $isList = $isList && $name === (string) $index;
+            $out[$name] = $this->renderProperty($child);
+        }
+
+        if ($numChildren > count($children)) {
+            if ($isList) {
+                $out[] = "... ({$numChildren} total)";
+            } else {
+                $out['...'] = "({$numChildren} total)";
+            }
+        }
+
+        return $out;
+    }
+
+    /** A string cut by Xdebug's max_data loses its partial last character and gains a truncation note. */
+    private function decodePropertyValue(SimpleXMLElement $prop): string
+    {
+        $value = (string) $prop;
+        if ((string) ($prop['encoding'] ?? '') === 'base64') {
+            $value = base64_decode($value);
+        }
+
+        $bytes = strlen($value);
+        if ((string) $prop['type'] !== 'string' || (int) ($prop['size'] ?? $bytes) <= $bytes) {
+            return $value;
+        }
+
+        $value = (string) preg_replace('/(?:[\xC0-\xDF]|[\xE0-\xEF][\x80-\xBF]?|[\xF0-\xF7][\x80-\xBF]{0,2})$/', '', $value);
+
+        return "{$value}... (truncated, {$bytes} bytes)";
     }
 
     /**

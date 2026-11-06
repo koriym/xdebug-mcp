@@ -33,6 +33,7 @@ use function realpath;
 use function rmdir;
 use function shell_exec;
 use function sprintf;
+use function str_repeat;
 use function str_starts_with;
 use function strrpos;
 use function substr;
@@ -630,7 +631,7 @@ PHP);
 
         $fixture = dirname(__DIR__) . '/fixtures/private_properties.php';
         $output = shell_exec(sprintf(
-            'cd %s && ./bin/xstep --break=%s -- php %s 2>&1',
+            'cd %s && ./bin/xstep --max-depth=2 --max-value-bytes=2000 --break=%s -- php %s 2>&1',
             escapeshellarg(dirname(__DIR__, 2)),
             escapeshellarg($fixture . ':23'),
             escapeshellarg($fixture),
@@ -643,10 +644,35 @@ PHP);
         $payload = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR);
         $variables = $payload['breaks'][0]['variables'];
         $this->assertSame(
-            'object: {"__class": "PrivatePropertiesHolder", "PrivatePropertiesBase::name": "base", "items": {"k": 1}, "prot": "p", "name": "child", "self": "[RECURSION object:PrivatePropertiesHolder]"}',
+            'object: {"__class": "PrivatePropertiesHolder", "PrivatePropertiesBase::name": "base", "items": {"k": 1}, "prot": "p", "name": "child", '
+            . '"self": {"__class": "PrivatePropertiesHolder", "PrivatePropertiesBase::name": "base", "items": "[MAX_DEPTH array(1)]", "prot": "p", "name": "child", "self": "[MAX_DEPTH object:PrivatePropertiesHolder]"}}',
             $variables['$this'],
         );
         $this->assertSame('object: {"__class": "PrivatePropertiesOther", "secret": 42}', $variables['$other']);
+    }
+
+    public function testRenderingStaysBoundedForRecursiveAndLargeArrays(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/recursive_values.php';
+        $output = shell_exec(sprintf(
+            'cd %s && ./bin/xstep --break=%s -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':9'),
+            escapeshellarg($fixture),
+        ));
+        $this->assertNotNull($output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $variables = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR)['breaks'][0]['variables'];
+        $this->assertSame('array: {"x": 1, "self": "[RECURSION array]"}', $variables['$recursive']);
+        $this->assertStringEndsWith(', 32, "... (100000 total)"]', $variables['$large']);
+        $this->assertSame('string: ' . str_repeat('あ', 341) . '... (truncated, 1024 bytes)', $variables['$cut']);
     }
 
     public function testComposerGlobalsAreLeftOutOfRecordedVariables(): void
@@ -666,8 +692,18 @@ PHP);
         $this->assertSame(['$c'], array_keys($breaks[2]['diff']));
     }
 
+    public function testVarsMatchingNothingRecordsAnEmptyObject(): void
+    {
+        $this->assertStringContainsString('"variables":{}', $this->xstepJsonOnComposerGlobals('--vars=nothere'));
+    }
+
     /** @return list<array<string, mixed>> */
     private function runXstepOnComposerGlobals(string $options): array
+    {
+        return json_decode($this->xstepJsonOnComposerGlobals($options), true, 512, JSON_THROW_ON_ERROR)['breaks'];
+    }
+
+    private function xstepJsonOnComposerGlobals(string $options): string
     {
         if (! XdebugFinder::isXdebugAvailable()) {
             $this->markTestSkipped('Xdebug not available');
@@ -686,7 +722,7 @@ PHP);
         $jsonStart = strrpos($output, '{"$schema"');
         $this->assertNotFalse($jsonStart, $output);
 
-        return json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR)['breaks'];
+        return substr($output, $jsonStart);
     }
 
     /**

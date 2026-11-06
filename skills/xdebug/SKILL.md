@@ -87,7 +87,7 @@ Stop at breakpoint, step forward N times, record variable changes at each step. 
 - `--break=file.php:line:condition` - Conditional (e.g., `$user==null`)
 - `--steps=N` - Step forward N times from breakpoint
 - `--watch=EXPR` - Only record steps when expression value changes (can specify multiple times)
-- `--vars=LIST` - Record only these variables (e.g., `--vars='$this,$items'`)
+- `--vars=LIST` - Record only these local variables (e.g., `--vars='$this,$items'`)
 
 ### Examples
 

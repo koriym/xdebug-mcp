@@ -204,7 +204,7 @@ final class McpServer
                         ],
                         'vars' => [
                             'type' => 'string',
-                            'description' => 'Record only these variables (e.g., "$this,$items"). Default: all in scope',
+                            'description' => 'Record only these local variables (e.g., "$this,$items"). Default: all in scope',
                             'default' => '',
                         ],
                     ],
@@ -629,7 +629,7 @@ final class McpServer
                         ],
                         [
                             'name' => 'vars',
-                            'description' => 'Record only these variables (e.g., "$this,$items"). Default: all in scope',
+                            'description' => 'Record only these local variables (e.g., "$this,$items"). Default: all in scope',
                             'required' => false,
                         ],
                         [
