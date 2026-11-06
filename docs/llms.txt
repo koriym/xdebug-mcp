@@ -132,11 +132,11 @@ xstep --break='loop.php:15' --steps=100 -- php script.php
 
 ### Vendor Code
 
-Vendor code is left out of traces, profiles, and raw coverage. The excluded tree is the `vendor/` of the working directory, so run the tools from the project root; without one, stderr says `vendor filter inactive: no vendor/ at <cwd>`. Keep selected packages with `--include-vendor="bear/*"`.
+Vendor code is left out of traces, profiles, and raw coverage. Traces and raw coverage leave out the `vendor/` of the working directory, so run the tools from the project root; `xtrace` and `xcoverage --raw` say `vendor filter inactive: no vendor/ at <cwd>` on stderr when there is none. Profiles leave out every file under a `vendor/` directory. Keep selected packages with `--include-vendor="bear/*"`.
 
 ### Older PHP Targets
 
-The tools run on PHP 8.2+, but can debug an older PHP that has a compatible Xdebug 3.x: name the target binary after `--` (e.g. `xtrace -- /path/to/php7.2 legacy.php`), or use `--php=PATH` with xback and xcoverage.
+The tools run on PHP 8.2+, but can debug an older PHP that has a compatible Xdebug 3.x: name the target binary after `--` (e.g. `xtrace -- /path/to/php7.2 legacy.php`). `xcoverage` drops a binary named after `--` and needs `--php=PATH`; `xback` accepts either form.
 
 ## Documentation
 

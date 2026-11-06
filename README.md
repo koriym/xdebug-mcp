@@ -188,7 +188,7 @@ xcompare --break='calc.php:25' --run='php calc.php 10' --compare-with=main
 
 Run `--help` on any tool for detailed options.
 
-Vendor code is left out of traces, profiles, and raw coverage so the output stays on your code. The excluded tree is the `vendor/` of the working directory, so run the tools from the project root; without one, stderr says `vendor filter inactive: no vendor/ at <cwd>`. `xtrace`, `xstep`, `xprofile`, `xcoverage --raw`, and `xcompare` keep selected packages with `--include-vendor="bear/*"` (or `"*/*"` for all).
+Vendor code is left out of traces, profiles, and raw coverage so the output stays on your code. Traces and raw coverage leave out the `vendor/` of the working directory, so run the tools from the project root; `xtrace` and `xcoverage --raw` say `vendor filter inactive: no vendor/ at <cwd>` on stderr when there is none. Profiles leave out every file under a `vendor/` directory. `xtrace`, `xstep`/`xrepl`, `xprofile`, `xcoverage --raw`, and `xcompare` keep selected packages with `--include-vendor="bear/*"` (or `"*/*"` for all).
 
 > **Note on `xcompare` commands:** the `--run-a`, `--run-b`, and `--run` values are executed through the shell so that quoting, redirection, and environment variables behave as users expect. Only pass trusted input to these options.
 >
@@ -283,7 +283,7 @@ xstep --break="legacy_app.php:30" -- /opt/homebrew/opt/php@7.2/bin/php legacy_ap
 
 The tool runs on your modern PHP while the target script executes on the specified PHP binary — provided the specified PHP has a compatible Xdebug 3.x installed. No Docker required. Check the compatibility table below before trying older PHP binaries.
 
-`xback` and `xcoverage` also accept `--php=PATH` to pick the target binary while keeping `php` in the command:
+`xback` and `xcoverage` also accept `--php=PATH` to pick the target binary while keeping `php` in the command. `xcoverage` takes the target only this way: a binary named after `--` is dropped and the script runs on the tool's own PHP.
 
 ```bash
 xback --break="legacy_app.php:30" --php=/path/to/php7.2 -- php legacy_app.php
