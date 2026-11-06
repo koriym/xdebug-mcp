@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The unused `Koriym\XdebugMcp\Exceptions\SocketException`. Nothing threw it, and its typed class constant (PHP 8.3+) made the file unparseable on PHP 8.2, the minimum this package declares.
 
 ### Fixed
+- `xcoverage` in PHPUnit mode (the default) counts the files of namespaced classes, which PHPUnit's clover report nests under `<package>`. They were skipped, so a namespaced project reported `0% (0/0 lines covered)`.
 - `xtrace` and the breakpoint tools exclude the traced project's `vendor/`, found under the working directory as `xcoverage` does; a global install excluded its own vendor tree, so every project package filled the trace. When the working directory has no `vendor/`, these tools and `xcoverage --raw` (without `--source`) say so on stderr (`vendor filter inactive: no vendor/ at <cwd>`); run them from the project root.
 - `xcoverage --raw` passes the report through a temporary file, apart from the target's output. Output without a trailing newline (`php -r 'echo 1;'`) or rewritten by the target's output buffer no longer makes the run fail with "coverage JSON was not produced", and a target line starting with `{"$schema"` is no longer dropped.
 - `xcoverage --raw` removes the `coverage_end_*` bootstrap it writes to the temp directory when a run fails, not only when it succeeds.
