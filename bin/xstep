@@ -64,7 +64,8 @@ function showHelp(string $commandName = 'xstep'): void
         echo "  --context=TEXT          Add contextual description for AI analysis (JSON output)\n";
         echo "  --pretty                Pretty-print JSON output with 2-space indentation\n";
         echo "  --max-value-bytes=N     Truncate long string values to N bytes in JSON output\n";
-        echo "  --max-depth=N           Truncate nested array/object rendering after N levels\n";
+        echo "  --max-depth=N           Truncate nested array/object rendering after N levels (default 3)\n";
+        echo "  --vars=LIST             Record only these local variables, e.g. '\$this,\$items' (JSON output)\n";
         echo "  --include-vendor=PATTERNS Include matching vendor packages in trace\n";
         echo "  --help, -h              Show this help\n";
     }
@@ -74,6 +75,11 @@ function showHelp(string $commandName = 'xstep'): void
     echo "  file.php:20:\$user==null       # Break only when \$user is null\n";
     echo "  file1.php:5,file2.php:10       # Multiple breakpoints\n";
     echo "  api.php:42:\$id>100            # Break when \$id exceeds 100\n";
+    if (! $isRepl) {
+        echo "\n";
+        echo "  With several breakpoints, recording starts at the first one hit and\n";
+        echo "  runs for --steps; a later breakpoint does not start another recording.\n";
+    }
     echo "\n";
 
     if ($isRepl) {
@@ -133,6 +139,24 @@ function showHelp(string $commandName = 'xstep'): void
         echo "\n";
     }
     exit(0);
+}
+
+/** @return list<string> */
+function parseVarsOption(string $value): array
+{
+    $vars = [];
+    foreach (explode(',', $value) as $name) {
+        $name = ltrim(trim($name), '$');
+        if ($name !== '') {
+            $vars[] = '$' . $name;
+        }
+    }
+
+    if ($vars === []) {
+        throw new RuntimeException('Invalid --vars value: give at least one variable name');
+    }
+
+    return $vars;
 }
 
 /**
@@ -270,6 +294,7 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
     $pretty = false;
     $maxValueBytes = null;
     $maxDepth = null;
+    $vars = null;
     $includeVendor = null;
 
     for ($i = 1; $i < count($argv); $i++) {
@@ -350,6 +375,11 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
 
         if ($parseOptions && str_starts_with($arg, '--watch=')) {
             $watches[] = substr($arg, 8);
+            continue;
+        }
+
+        if ($parseOptions && str_starts_with($arg, '--vars=')) {
+            $vars = parseVarsOption(substr($arg, 7));
             continue;
         }
 
@@ -452,11 +482,12 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             'pretty' => $pretty,
             'maxValueBytes' => $maxValueBytes,
             'maxDepth' => $maxDepth,
+            'vars' => $vars,
             'includeVendor' => $includeVendor,
         ], $jsonOutput);
     } else {
         // For legacy format, only pass command if it's not just the target script
-        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches, 'pretty' => $pretty, 'maxValueBytes' => $maxValueBytes, 'maxDepth' => $maxDepth, 'includeVendor' => $includeVendor];
+        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches, 'pretty' => $pretty, 'maxValueBytes' => $maxValueBytes, 'maxDepth' => $maxDepth, 'vars' => $vars, 'includeVendor' => $includeVendor];
         if (count($command) > 1 || ($command[0] !== $targetScript)) {
             $options['command'] = $command;
         }

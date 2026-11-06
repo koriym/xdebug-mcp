@@ -7,10 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `xstep --vars=LIST` (MCP `xstep` argument `vars`) records only the listed variables in `variables` and `diff`, e.g. `--vars='$this,$items'`.
+
+### Changed
+- `xstep` leaves Composer's `$__composer_autoload_files` out of recorded variables unless `--vars` names it.
+- `xstep` renders arrays and objects from Xdebug's property data instead of evaluating code in the target. Nesting stops at 3 levels unless `--max-depth` says otherwise, and an array lists its first 32 elements followed by `"... (N total)"`. An object that refers back to itself repeats down to the depth limit.
+
 ### Removed
 - The unused `Koriym\XdebugMcp\Exceptions\SocketException`. Nothing threw it, and its typed class constant (PHP 8.3+) made the file unparseable on PHP 8.2, the minimum this package declares.
 
 ### Fixed
+- `xstep` renders private and protected properties (including a parent's) and `__class` for every object, with or without `--max-depth`. A property name shared by several classes in the hierarchy is keyed `Class::name` for the private one.
+- `xstep` no longer crashes the target on a self-referencing array (it shows `[RECURSION array]`), runs on PHP 7 targets, and renders a large array without walking all of it.
+- `xstep` no longer inserts spaces after `:` and `,` inside rendered string values (`http://` became `http: //`).
+- `xstep` keeps rendered values valid UTF-8 when it cuts a multibyte string, and writes an empty `variables` as `{}`.
+- `xstep --help` states what several `--break` locations do: recording starts at the first one hit and runs for `--steps`.
 - `xcoverage` in PHPUnit mode (the default) counts the files of namespaced classes, which PHPUnit's clover report nests under `<package>`. They were skipped, so a namespaced project reported `0% (0/0 lines covered)`.
 - `xtrace` and the breakpoint tools exclude the traced project's `vendor/`, found under the working directory as `xcoverage` does; a global install excluded its own vendor tree, so every project package filled the trace. When the working directory has no `vendor/`, these tools and `xcoverage --raw` (without `--source`) say so on stderr (`vendor filter inactive: no vendor/ at <cwd>`); run them from the project root.
 - `xcoverage --raw` passes the report through a temporary file, apart from the target's output. Output without a trailing newline (`php -r 'echo 1;'`) or rewritten by the target's output buffer no longer makes the run fail with "coverage JSON was not produced", and a target line starting with `{"$schema"` is no longer dropped.
