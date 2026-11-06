@@ -649,6 +649,46 @@ PHP);
         $this->assertSame('object: {"__class": "PrivatePropertiesOther", "secret": 42}', $variables['$other']);
     }
 
+    public function testComposerGlobalsAreLeftOutOfRecordedVariables(): void
+    {
+        $variables = $this->runXstepOnComposerGlobals('')[0]['variables'];
+
+        $this->assertArrayHasKey('$a', $variables);
+        $this->assertArrayNotHasKey('$__composer_autoload_files', $variables);
+    }
+
+    public function testVarsLimitsRecordedVariablesAndDiff(): void
+    {
+        $breaks = $this->runXstepOnComposerGlobals("--steps=3 --vars='a, \$c'");
+
+        $this->assertSame(['$a' => 'int: 1', '$c' => 'uninitialized: '], $breaks[0]['variables']);
+        $this->assertArrayNotHasKey('diff', $breaks[1], 'Expected the change to the unlisted $b to be left out');
+        $this->assertSame(['$c'], array_keys($breaks[2]['diff']));
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function runXstepOnComposerGlobals(string $options): array
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/composer_globals.php';
+        $output = shell_exec(sprintf(
+            'cd %s && ./bin/xstep --break=%s %s -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':8'),
+            $options,
+            escapeshellarg($fixture),
+        ));
+        $this->assertNotNull($output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        return json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR)['breaks'];
+    }
+
     /**
      * A working directory without vendor/ leaves the filter off. The prepend says
      * so on stderr, keeps its locals out of the target's scope, and stays quiet

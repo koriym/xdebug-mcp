@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `xstep --vars=LIST` (MCP `xstep` argument `vars`) records only the listed variables in `variables` and `diff`, e.g. `--vars='$this,$items'`.
+
+### Changed
+- `xstep` leaves Composer's `$__composer_autoload_files` out of recorded variables unless `--vars` names it.
+
 ### Removed
 - The unused `Koriym\XdebugMcp\Exceptions\SocketException`. Nothing threw it, and its typed class constant (PHP 8.3+) made the file unparseable on PHP 8.2, the minimum this package declares.
 

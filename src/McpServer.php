@@ -202,6 +202,11 @@ final class McpServer
                             'description' => 'Include vendor packages in trace (e.g., "bear/*,ray/di" or "*/*" for all)',
                             'default' => '',
                         ],
+                        'vars' => [
+                            'type' => 'string',
+                            'description' => 'Record only these variables (e.g., "$this,$items"). Default: all in scope',
+                            'default' => '',
+                        ],
                     ],
                     'required' => ['script'],
                 ],
@@ -623,6 +628,11 @@ final class McpServer
                             'required' => false,
                         ],
                         [
+                            'name' => 'vars',
+                            'description' => 'Record only these variables (e.g., "$this,$items"). Default: all in scope',
+                            'required' => false,
+                        ],
+                        [
                             'name' => 'last',
                             'description' => 'Use settings from last execution (true/false)',
                             'required' => false,
@@ -802,7 +812,7 @@ final class McpServer
 
         $mapping = match ($promptName) {
             'xtrace', 'xprofile' => ['script', 'context', 'include_vendor'],
-            'xstep' => ['script', 'breakpoints', 'steps', 'context', 'include_vendor'],
+            'xstep' => ['script', 'breakpoints', 'steps', 'context', 'include_vendor', 'vars'],
             'xcoverage' => ['script', 'context', 'include_vendor', 'cwd', 'php', 'source', 'raw'],
             'xback' => ['script', 'breakpoint', 'depth', 'context', 'cwd', 'php'],
             'xcompare' => ['script_a', 'script_b', 'breakpoint', 'context', 'steps', 'include_vendor'],
@@ -1137,6 +1147,7 @@ final class McpServer
 
             $steps = $args['steps'] ?? '100';
             $includeVendor = $args['include_vendor'] ?? '';
+            $vars = $args['vars'] ?? '';
 
             // Validate breakpoints if specified
             if ($breakpoints !== '') {
@@ -1163,6 +1174,10 @@ final class McpServer
             // Add include_vendor option if specified
             if ($includeVendor !== '') {
                 $cmd .= ' --include-vendor=' . escapeshellarg((string) $includeVendor);
+            }
+
+            if ($vars !== '') {
+                $cmd .= ' --vars=' . escapeshellarg((string) $vars);
             }
 
             // Build command - user must specify PHP binary explicitly

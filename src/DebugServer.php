@@ -34,7 +34,10 @@ use Throwable;
 use function Amp\async;
 use function Amp\delay;
 use function Amp\Socket\listen;
+use function array_diff_key;
 use function array_filter;
+use function array_flip;
+use function array_intersect_key;
 use function array_key_exists;
 use function array_keys;
 use function array_map;
@@ -151,6 +154,9 @@ final class DebugServer
     /** Upper bound when stepping out of the injected prepend helper into the target script */
     private const MAX_PRELUDE_STEPS = 200;
 
+    /** Globals Composer's autoloader leaves in the {main} scope */
+    private const COMPOSER_GLOBALS = ['$__composer_autoload_files' => true];
+
     /** @var DeferredFuture<bool>|null */
     private DeferredFuture|null $listenerReady = null;
 
@@ -193,7 +199,7 @@ final class DebugServer
     /** @var array{id: string, label: string, file: string, line: int, condition?: string}|null */
     private array|null $activeBreakpoint = null;
 
-    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, phpBinary?: string, includeVendor?: string|null, stackFrames?: int, firstLineFallback?: bool, onResult?: callable(XstepJsonOutput): void} $options */
+    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, vars?: list<string>|null, phpBinary?: string, includeVendor?: string|null, stackFrames?: int, firstLineFallback?: bool, onResult?: callable(XstepJsonOutput): void} $options */
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
@@ -686,8 +692,7 @@ final class DebugServer
             ];
             $breakpoint = $this->breakpointReferenceForLocation($location);
 
-            // Get current variables
-            $currentVariables = $this->getCurrentVariables();
+            $currentVariables = $this->selectRecordedVariables($this->getCurrentVariables());
 
             // Evaluate watch expressions if active
             $watchData = [];
@@ -2906,6 +2911,21 @@ final class DebugServer
         return is_int($maxValueBytes) && $maxValueBytes > 0 ? $maxValueBytes : null;
     }
 
+    /**
+     * @param array<string, string> $variables
+     *
+     * @return array<string, string>
+     */
+    private function selectRecordedVariables(array $variables): array
+    {
+        $vars = $this->options['vars'] ?? null;
+        if (is_array($vars)) {
+            return array_intersect_key($variables, array_flip($vars));
+        }
+
+        return array_diff_key($variables, self::COMPOSER_GLOBALS);
+    }
+
     private function getMaxDepth(): int|null
     {
         $maxDepth = $this->options['maxDepth'] ?? null;
@@ -3797,7 +3817,7 @@ final class DebugServer
             $stackXml = $this->getStack();
             $this->log('📋 Stack info: ' . json_encode($stackXml, JSON_THROW_ON_ERROR));
 
-            $variables = $this->getCurrentVariables();
+            $variables = $this->selectRecordedVariables($this->getCurrentVariables());
             $this->log('📋 Variables: ' . json_encode($variables, JSON_THROW_ON_ERROR));
 
             // Parse stack XML to get current location

@@ -65,6 +65,7 @@ function showHelp(string $commandName = 'xstep'): void
         echo "  --pretty                Pretty-print JSON output with 2-space indentation\n";
         echo "  --max-value-bytes=N     Truncate long string values to N bytes in JSON output\n";
         echo "  --max-depth=N           Truncate nested array/object rendering after N levels\n";
+        echo "  --vars=LIST             Record only these variables, e.g. '\$this,\$items' (JSON output)\n";
         echo "  --include-vendor=PATTERNS Include matching vendor packages in trace\n";
         echo "  --help, -h              Show this help\n";
     }
@@ -143,6 +144,24 @@ function showHelp(string $commandName = 'xstep'): void
 /**
  * Parse a positive integer option value.
  */
+/** @return list<string> */
+function parseVarsOption(string $value): array
+{
+    $vars = [];
+    foreach (explode(',', $value) as $name) {
+        $name = ltrim(trim($name), '$');
+        if ($name !== '') {
+            $vars[] = '$' . $name;
+        }
+    }
+
+    if ($vars === []) {
+        throw new RuntimeException('Invalid --vars value: give at least one variable name');
+    }
+
+    return $vars;
+}
+
 function parsePositiveIntegerOption(string $name, string $value): int
 {
     if (! preg_match('/^[1-9][0-9]*$/', $value)) {
@@ -275,6 +294,7 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
     $pretty = false;
     $maxValueBytes = null;
     $maxDepth = null;
+    $vars = null;
     $includeVendor = null;
 
     for ($i = 1; $i < count($argv); $i++) {
@@ -355,6 +375,11 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
 
         if ($parseOptions && str_starts_with($arg, '--watch=')) {
             $watches[] = substr($arg, 8);
+            continue;
+        }
+
+        if ($parseOptions && str_starts_with($arg, '--vars=')) {
+            $vars = parseVarsOption(substr($arg, 7));
             continue;
         }
 
@@ -457,11 +482,12 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             'pretty' => $pretty,
             'maxValueBytes' => $maxValueBytes,
             'maxDepth' => $maxDepth,
+            'vars' => $vars,
             'includeVendor' => $includeVendor,
         ], $jsonOutput);
     } else {
         // For legacy format, only pass command if it's not just the target script
-        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches, 'pretty' => $pretty, 'maxValueBytes' => $maxValueBytes, 'maxDepth' => $maxDepth, 'includeVendor' => $includeVendor];
+        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches, 'pretty' => $pretty, 'maxValueBytes' => $maxValueBytes, 'maxDepth' => $maxDepth, 'vars' => $vars, 'includeVendor' => $includeVendor];
         if (count($command) > 1 || ($command[0] !== $targetScript)) {
             $options['command'] = $command;
         }
