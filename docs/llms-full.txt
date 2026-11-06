@@ -2,9 +2,9 @@
 
 ## Overview
 
-AI-powered PHP debugging tools using Xdebug's runtime analysis. Works with Claude Code (plugin), Cursor, Windsurf (MCP), and CLI.
+Trace-based PHP debugging tools built on Xdebug's runtime analysis. Run them from the CLI, or let an AI assistant run them through the Skill (Claude Code, Codex CLI) or the MCP server (any MCP-capable client).
 
-**Debug PHP with Natural Language — No var_dump(), No Guesswork**
+**Debug PHP with Runtime Data — No var_dump(), No Guesswork**
 
 ## Core Purpose
 
@@ -24,8 +24,8 @@ AI-powered PHP debugging tools using Xdebug's runtime analysis. Works with Claud
 - Zero code modifications required
 
 ### AI Integration
-- Claude Code plugin for seamless integration
-- MCP server for Cursor, Windsurf, and other tools
+- Skill (recommended for agents with shell access): the agent runs the CLI tools directly — bundled in the Claude Code plugin, or copied into Codex CLI
+- MCP server for MCP-capable clients without shell or Skill support (e.g. Claude Desktop)
 - Natural language debugging commands
 - Automatic tool selection based on user intent
 
@@ -39,7 +39,7 @@ AI-powered PHP debugging tools using Xdebug's runtime analysis. Works with Claud
 | `xcoverage` | Code coverage analysis | `xcoverage -- vendor/bin/phpunit` |
 | `xback` | Call stack at breakpoint | `xback --break="file.php:50" -- php app.php` |
 | `xcompare` | Compare variables across two runs | `xcompare --break="file.php:25" --run-a="php a.php 1" --run-b="php a.php 2"` |
-| `xrepl` | Interactive REPL debugger | `xrepl --break="file.php:42" -- php app.php` |
+| `xrepl` | Interactive REPL debugger (CLI only) | `xrepl --break="file.php:42" -- php app.php` |
 
 ## Installation
 
@@ -50,44 +50,54 @@ AI-powered PHP debugging tools using Xdebug's runtime analysis. Works with Claud
 composer global require koriym/xdebug-mcp
 
 # Verify Xdebug
-~/.composer/vendor/bin/check-env
+"$(composer global config bin-dir --absolute --quiet)/check-env"
 ```
 
-### Claude Code Plugin
+### AI Assistant (optional)
+
+The Skill is the recommended integration for agents with shell access: the tools are stateless one-shot CLI commands, so the agent runs them directly.
+
+Claude Code — install the plugin, which bundles the Skill:
 
 ```text
 /plugin marketplace add koriym/xdebug-mcp
 /plugin install xdebug@xdebug-mcp
 ```
 
-### MCP Configuration (Cursor/Windsurf)
+Codex CLI — install the Skill:
 
-Create `.mcp.json` in your project root:
+```bash
+git clone --depth 1 https://github.com/koriym/xdebug-mcp.git /tmp/xdebug-mcp
+mkdir -p ~/.codex/skills
+cp -r /tmp/xdebug-mcp/skills/xdebug ~/.codex/skills/
+```
+
+MCP-capable clients without shell or Skill support (e.g. Claude Desktop) — register the server in the client's MCP config (e.g. `.mcp.json`). MCP exposes `xtrace`, `xprofile`, `xstep`, `xcoverage`, `xback`, and `xcompare`:
 
 ```json
 {
   "mcpServers": {
     "xdebug": {
       "command": "php",
-      "args": ["/Users/YOUR_USERNAME/.composer/vendor/bin/xdebug-mcp"]
+      "args": ["/ABSOLUTE/PATH/TO/xdebug-mcp"]
     }
   }
 }
 ```
 
-Find the correct path: `which xdebug-mcp`
+Find the path with `which xdebug-mcp`. The server speaks the stateless 2026-07-28 protocol revision (discoverable via `server/discover`) and keeps the legacy `initialize` handshake for clients on 2025-11-25 and earlier, both over stdio.
 
 ## Requirements
 
 - PHP 8.2+ with ext-sockets, ext-xml
 - Xdebug 3.x extension (installed but not enabled by default)
-- AI assistant: Claude Code (plugin), Cursor/Windsurf (MCP), or CLI
+- Optional: an AI assistant (Claude Code plugin, Codex Skill, or any MCP-capable client)
 
 > **Performance Tip:** Keep Xdebug disabled in php.ini for daily use. This tool loads Xdebug on-demand only when needed.
 
 ## Usage Examples
 
-### Natural Language (Claude Code)
+### Natural Language
 
 ```text
 "Debug script.php and find why $user is null at line 42"
@@ -104,13 +114,13 @@ Find the correct path: `which xdebug-mcp`
 xstep --break="script.php:42" -- php script.php
 
 # Trace execution flow
-xtrace --context="Debug login" -- php login.php
+xtrace --json --context="Debug login" -- php login.php
 
 # Profile performance
 xprofile --json -- php api.php
 
 # Code coverage
-xcoverage -- vendor/bin/phpunit
+xcoverage --json -- vendor/bin/phpunit
 
 # Stack trace at breakpoint
 xback --break="app.php:50" -- php app.php
@@ -118,15 +128,17 @@ xback --break="app.php:50" -- php app.php
 # Compare two runs at a breakpoint
 xcompare --break="calc.php:25" --run-a="php calc.php 10" --run-b="php calc.php 0"
 
-# Compare current code vs main branch
+# Compare current code vs another branch
 xcompare --break="calc.php:25" --run="php calc.php 10" --compare-with=main
 ```
+
+xstep, xback, and xcompare print JSON by default; xtrace, xprofile, and xcoverage print text unless `--json` is given. Every JSON document carries a schema URL (`$schema`, or `schema` for xtrace and xprofile).
 
 ### Conditional Breakpoints
 
 ```bash
 # Stop when $user is null
-xstep --break='User.php:42:$user==null' --exit-on-break -- php app.php
+xstep --break='User.php:42:$user==null' -- php app.php
 
 # Record 100 steps of variable evolution
 xstep --break='loop.php:15' --steps=100 -- php script.php
@@ -151,16 +163,24 @@ Commands:
 ### Docker Support
 
 ```bash
-xstep --break="/app/script.php:42" --exit-on-break -- \
+xstep --break="/app/script.php:42" -- \
   docker compose run --rm php php /app/script.php
 
 xtrace -- docker compose run --rm php php /app/script.php
 ```
 
+### Vendor Code
+
+Vendor code is left out of traces, profiles, and raw coverage. Traces and raw coverage leave out the `vendor/` of the working directory, so run the tools from the project root; `xtrace` and `xcoverage --raw` say `vendor filter inactive: no vendor/ at <cwd>` on stderr when there is none. Profiles leave out every file under a `vendor/` directory. `xtrace`, `xstep`/`xrepl`, `xprofile`, `xcoverage --raw`, and `xcompare` keep selected packages with `--include-vendor="bear/*"` (or `"*/*"` for all).
+
+### Older PHP Targets
+
+The tools run on PHP 8.2+, but can debug an older PHP that has a compatible Xdebug 3.x: name the target binary after `--` (e.g. `xtrace -- /path/to/php7.2 legacy.php`). `xcoverage` drops a binary named after `--` and needs `--php=PATH`; `xback` accepts either form. An Xdebug build for another PHP version is never loaded into the target; without a matching build the run fails with a message naming the target version.
+
 ## Documentation
 
 ### For AI Assistants
-- `CLAUDE.md`: Complete AI integration instructions
+- `skills/xdebug/SKILL.md`: Skill instructions for running the tools
 - `docs/debug_guideline_for_ai.md`: AI debugging methodology
 - `docs/schemas/`: JSON schemas for all tool outputs
 
@@ -183,26 +203,15 @@ xtrace -- docker compose run --rm php php /app/script.php
 - **Static**: Code structure analysis, educated guesses
 - **This tool**: Actual runtime data, precise problem identification
 
-## Xdebug Configuration (Optional)
+## Xdebug Configuration
 
-The tools automatically load Xdebug on-demand. For manual configuration:
+Keep Xdebug installed but disabled in php.ini; each tool loads it for its own run and sets the mode it needs. If php.ini already loads Xdebug, nothing is injected.
 
-```ini
-zend_extension=xdebug
-xdebug.mode=debug,profile,coverage
-xdebug.start_with_request=yes
-xdebug.client_host=127.0.0.1
-xdebug.client_port=9004
-xdebug.output_dir=/tmp
-```
-
-**Note:** Port 9004 is used to avoid conflicts with IDEs (which typically use 9003).
+The breakpoint tools listen on port 9004, away from the 9003 that IDEs typically use, and fall back to an OS-assigned port when 9004 is busy.
 
 ## Why "xdebug-mcp"?
 
-This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. While MCP remains supported for tools like Cursor and Windsurf, we now recommend the plugin approach for Claude Code users — it's simpler and requires no MCP configuration.
-
-The CLI tools work independently of both MCP and plugins.
+This project started as an MCP (Model Context Protocol) server for AI-powered PHP debugging. MCP is still supported for any MCP-capable client, but the CLI is now the primary interface, and the Skill is the recommended way for AI agents with shell access to use it. `xrepl` is CLI-only.
 
 ## GitHub Repository
 

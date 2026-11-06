@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `xcoverage` in PHPUnit mode (the default) counts the files of namespaced classes, which PHPUnit's clover report nests under `<package>`. They were skipped, so a namespaced project reported `0% (0/0 lines covered)`.
-- `xtrace` and the breakpoint tools exclude the traced project's `vendor/`, found under the working directory as `xcoverage` does; a global install excluded its own vendor tree, so every project package filled the trace. When the working directory has no `vendor/`, these tools and `xcoverage --raw` (without `--source`) say so on stderr (`vendor filter inactive: no vendor/ at <cwd>`); run them from the project root.
+- `xtrace` and the breakpoint tools exclude the traced project's `vendor/`, found under the working directory as `xcoverage` does; a global install excluded its own vendor tree, so every project package filled the trace. When the working directory has no `vendor/`, `xtrace` and `xcoverage --raw` (without `--source`) say so on stderr (`vendor filter inactive: no vendor/ at <cwd>`); run the tools from the project root.
 - `xcoverage --raw` passes the report through a temporary file, apart from the target's output. Output without a trailing newline (`php -r 'echo 1;'`) or rewritten by the target's output buffer no longer makes the run fail with "coverage JSON was not produced", and a target line starting with `{"$schema"` is no longer dropped.
 - `xcoverage --raw` removes the `coverage_end_*` bootstrap it writes to the temp directory when a run fails, not only when it succeeds.
 - `xstep`/`xrepl` accept an absolute PHP binary after `--` as the README documents; `xback` accepts one without `--php`. This also fixes `-- php -d key=value script.php`, which previously took `-d` itself as the script.
@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The vendor-filter helper is kept for any target running this PHP version, including one named on `PATH` such as `php8.2`: the decision now compares the probed version rather than the binary's path, which had silently dropped the filter for same-version targets.
 - A target whose Xdebug cannot be resolved is reported the same way by every tool — one line naming the target version, exit 1. `xstep` and `xback` previously printed a result document with an empty `breaks`/`stack` before dying with an uncaught fatal.
 - README and skill docs: xtrace, xprofile, and xcoverage need `--json` for JSON output; the xrepl `l` command shows the current location, not source code.
+- `llms.txt` and `llms-full.txt` follow the README: the Skill for Claude Code and Codex CLI, MCP for other clients, a portable `check-env` path, no `--exit-on-break`, and no php.ini that turns Xdebug on for every request. The README's "Try CLI Tools" `--compare-with` example runs against this repository's demo, and the README describes vendor filtering.
 
 ## [0.13.0] - 2026-08-03
 
