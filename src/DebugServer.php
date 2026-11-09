@@ -54,6 +54,7 @@ use function base64_decode;
 use function base64_encode;
 use function basename;
 use function bin2hex;
+use function chr;
 use function count;
 use function date;
 use function escapeshellarg;
@@ -87,6 +88,7 @@ use function ltrim;
 use function mb_strcut;
 use function md5;
 use function microtime;
+use function ord;
 use function parse_str;
 use function preg_match;
 use function preg_replace;
@@ -3295,7 +3297,7 @@ final class DebugServer
 
     /**
      * Private properties declared by a parent class arrive named `*Class*name`;
-     * one sharing its name with another property, or named `__class`, is keyed `Class::name`.
+     * a private one sharing its name with another property, or one named `__class`, is keyed `Class::name`.
      * Xdebug marks array recursion only, so an object cycle repeats down to the depth limit.
      */
     private function renderProperty(SimpleXMLElement $prop): mixed
@@ -3312,7 +3314,7 @@ final class DebugServer
             };
         }
 
-        $className = (string) ($prop['classname'] ?? 'object');
+        $className = isset($prop['classname']) ? $this->decodeAttribute($prop, 'classname') : 'object';
         $label = $type === 'array' ? 'array' : "object:{$className}";
         if ((string) ($prop['recursive'] ?? '') === '1') {
             return "[RECURSION {$label}]";
@@ -3333,19 +3335,20 @@ final class DebugServer
         $nameCount = [];
         foreach ($children as $child) {
             $owner = null;
-            $name = (string) $child['name'];
-            if ($type === 'object' && preg_match('/^\*([^*]+)\*(.+)$/s', $name, $matches) === 1) {
+            $name = $this->decodeAttribute($child, 'name');
+            $isPrivate = str_contains((string) $child['facet'], 'private');
+            if ($isPrivate && $type === 'object' && preg_match('/^\*([^*]+)\*(.+)$/s', $name, $matches) === 1) {
                 [, $owner, $name] = $matches;
             }
 
-            $named[] = [$owner, $name, $child];
+            $named[] = [$owner, $name, $child, $isPrivate];
             $nameCount[$name] = ($nameCount[$name] ?? 0) + 1;
         }
 
         $isList = $type === 'array';
-        foreach ($named as $index => [$owner, $name, $child]) {
-            if ($owner !== null && $nameCount[$name] > 1) {
-                $name = "{$owner}::{$name}";
+        foreach ($named as $index => [$owner, $name, $child, $isPrivate]) {
+            if ($isPrivate && $type === 'object' && $nameCount[$name] > 1) {
+                $name = ($owner ?? $className) . "::{$name}";
             } elseif ($type === 'object' && $name === '__class') {
                 $name = ($owner ?? $className) . '::__class';
             }
@@ -3363,6 +3366,19 @@ final class DebugServer
         }
 
         return $out;
+    }
+
+    /**
+     * Xdebug declares its XML ISO-8859-1 but writes names as raw UTF-8 bytes, so libxml widens each byte;
+     * this narrows them back.
+     */
+    private function decodeAttribute(SimpleXMLElement $prop, string $attribute): string
+    {
+        return preg_replace_callback(
+            '/[\xC2\xC3][\x80-\xBF]/',
+            static fn (array $m): string => chr(((ord($m[0][0]) & 0x1F) << 6) | (ord($m[0][1]) & 0x3F)),
+            (string) $prop[$attribute],
+        ) ?? (string) $prop[$attribute];
     }
 
     /** A string cut by Xdebug's max_data loses its partial last character and gains a truncation note. */
