@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - `xstep` leaves Composer's `$__composer_autoload_files` out of recorded variables unless `--vars` names it.
-- `xstep` renders arrays and objects from Xdebug's property data instead of evaluating code in the target. Nesting stops at 3 levels unless `--max-depth` says otherwise, and an array lists its first 32 elements followed by `"... (N total)"`. An object that refers back to itself repeats down to the depth limit.
+- `xstep` renders arrays and objects from Xdebug's property data instead of evaluating code in the target. Nesting stops at 3 levels unless `--max-depth` says otherwise, and an array lists its first 32 elements followed by `"... (N total)"`. An object that refers back to itself repeats down to the depth limit. `INF` and `NAN` inside them appear as strings.
 
 ### Removed
 - The unused `Koriym\XdebugMcp\Exceptions\SocketException`. Nothing threw it, and its typed class constant (PHP 8.3+) made the file unparseable on PHP 8.2, the minimum this package declares.

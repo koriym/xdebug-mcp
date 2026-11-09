@@ -77,9 +77,10 @@ function showHelp(string $commandName = 'xstep'): void
     echo "  api.php:42:\$id>100            # Break when \$id exceeds 100\n";
     if (! $isRepl) {
         echo "\n";
-        echo "  Without --steps, every breakpoint hit is recorded. With --steps, recording\n";
-        echo "  starts at the first breakpoint hit and runs for N steps; a later breakpoint\n";
-        echo "  does not start another recording.\n";
+        echo "  Without --steps, every breakpoint hit is recorded until 20 hits, 30 seconds,\n";
+        echo "  or a third hit in a row at the same line stops the run. With --steps,\n";
+        echo "  recording starts at the first breakpoint hit and runs for N steps; a later\n";
+        echo "  breakpoint does not start another recording.\n";
     }
     echo "\n";
 

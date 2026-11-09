@@ -75,6 +75,7 @@ use function is_array;
 use function is_bool;
 use function is_float;
 use function is_int;
+use function is_numeric;
 use function is_scalar;
 use function is_string;
 use function json_decode;
@@ -3303,7 +3304,7 @@ final class DebugServer
         if ($type !== 'array' && $type !== 'object') {
             return match ($type) {
                 'int' => (int) (string) $prop,
-                'float' => (float) (string) $prop,
+                'float' => is_numeric((string) $prop) ? (float) (string) $prop : (string) $prop,
                 'bool' => (string) $prop === '1',
                 'null' => null,
                 'string' => $this->decodePropertyValue($prop),

@@ -13,4 +13,5 @@ $large = range(1, 100000);
 $cut = str_repeat('あ', 700);
 $empty = new stdClass();
 $named = new ClassProperty();
+$floats = [INF, -INF, NAN, 1.5];
 echo count($large), "\n";
