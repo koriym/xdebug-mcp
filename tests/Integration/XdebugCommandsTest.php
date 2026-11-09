@@ -651,7 +651,7 @@ PHP);
         $this->assertSame('object: {"__class": "PrivatePropertiesOther", "secret": 42}', $variables['$other']);
     }
 
-    public function testRenderingStaysBoundedForRecursiveAndLargeArrays(): void
+    public function testRenderingStaysBoundedAndKeepsClassNames(): void
     {
         if (! XdebugFinder::isXdebugAvailable()) {
             $this->markTestSkipped('Xdebug not available');
@@ -661,7 +661,7 @@ PHP);
         $output = shell_exec(sprintf(
             'cd %s && ./bin/xstep --break=%s -- php %s 2>&1',
             escapeshellarg(dirname(__DIR__, 2)),
-            escapeshellarg($fixture . ':9'),
+            escapeshellarg($fixture . ':16'),
             escapeshellarg($fixture),
         ));
         $this->assertNotNull($output);
@@ -673,6 +673,8 @@ PHP);
         $this->assertSame('array: {"x": 1, "self": "[RECURSION array]"}', $variables['$recursive']);
         $this->assertStringEndsWith(', 32, "... (100000 total)"]', $variables['$large']);
         $this->assertSame('string: ' . str_repeat('あ', 341) . '... (truncated, 1024 bytes)', $variables['$cut']);
+        $this->assertSame('object: {"__class": "stdClass"}', $variables['$empty']);
+        $this->assertSame('object: {"__class": "ClassProperty", "ClassProperty::__class": "shadow"}', $variables['$named']);
     }
 
     public function testComposerGlobalsAreLeftOutOfRecordedVariables(): void

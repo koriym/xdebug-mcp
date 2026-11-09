@@ -2,9 +2,15 @@
 
 declare(strict_types=1);
 
+final class ClassProperty
+{
+    public string $__class = 'shadow';
+}
+
 $recursive = ['x' => 1];
 $recursive['self'] = &$recursive;
 $large = range(1, 100000);
 $cut = str_repeat('あ', 700);
-echo count($large), "
-";
+$empty = new stdClass();
+$named = new ClassProperty();
+echo count($large), "\n";

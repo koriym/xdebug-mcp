@@ -3214,12 +3214,6 @@ final class DebugServer
 
                     if ($type === 'array' || $type === 'object') {
                         $numChildren = (int) ($prop['numchildren'] ?? 0);
-                        if ($numChildren === 0) {
-                            $variables[$name] = $type === 'array' ? 'array: []' : 'object: {}';
-
-                            continue;
-                        }
-
                         $variables[$name] = "{$type}: " . $this->renderContainerJson($prop, $type, $numChildren);
 
                         continue;
@@ -3300,7 +3294,7 @@ final class DebugServer
 
     /**
      * Private properties declared by a parent class arrive named `*Class*name`;
-     * one sharing its name with another property is keyed `Class::name`.
+     * one sharing its name with another property, or named `__class`, is keyed `Class::name`.
      * Xdebug marks array recursion only, so an object cycle repeats down to the depth limit.
      */
     private function renderProperty(SimpleXMLElement $prop): mixed
@@ -3351,6 +3345,8 @@ final class DebugServer
         foreach ($named as $index => [$owner, $name, $child]) {
             if ($owner !== null && $nameCount[$name] > 1) {
                 $name = "{$owner}::{$name}";
+            } elseif ($type === 'object' && $name === '__class') {
+                $name = ($owner ?? $className) . '::__class';
             }
 
             $isList = $isList && $name === (string) $index;
