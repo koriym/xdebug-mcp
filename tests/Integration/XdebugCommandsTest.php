@@ -677,6 +677,29 @@ PHP);
         $this->assertSame('string: var', $variables['$日本']);
     }
 
+    public function testVarsSelectsMultibyteVariableName(): void
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/recursive_values.php';
+        $output = shell_exec(sprintf(
+            'cd %s && ./bin/xstep --break=%s --vars=%s -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':32'),
+            escapeshellarg('$日本'),
+            escapeshellarg($fixture),
+        ));
+        $this->assertNotNull($output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        $variables = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR)['breaks'][0]['variables'];
+        $this->assertSame(['$日本' => 'string: var'], $variables);
+    }
+
     public function testComposerGlobalsAreLeftOutOfRecordedVariables(): void
     {
         $variables = $this->runXstepOnComposerGlobals('')[0]['variables'];
