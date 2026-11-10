@@ -619,10 +619,6 @@ PHP);
         $this->assertArrayNotHasKey('$excludePaths', $variables);
     }
 
-    /**
-     * The eval runs in the paused frame's class scope, so a scope-sensitive
-     * reader would miss private properties of other classes and of parents.
-     */
     public function testCapturedObjectsIncludeNonPublicProperties(): void
     {
         if (! XdebugFinder::isXdebugAvailable()) {
