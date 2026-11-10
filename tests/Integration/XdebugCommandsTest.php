@@ -657,7 +657,7 @@ PHP);
         $output = shell_exec(sprintf(
             'cd %s && ./bin/xstep --break=%s -- php %s 2>&1',
             escapeshellarg(dirname(__DIR__, 2)),
-            escapeshellarg($fixture . ':31'),
+            escapeshellarg($fixture . ':32'),
             escapeshellarg($fixture),
         ));
         $this->assertNotNull($output);
@@ -674,6 +674,7 @@ PHP);
         $this->assertSame('array: ["INF", "-INF", "NAN", 1.5]', $variables['$floats']);
         $this->assertSame('array: {"日本": 1, "*Base*name": {"__class": "stdClass", "*Base*name": 2}}', $variables['$names']);
         $this->assertSame('object: {"__class": "Shadow", "ShadowBase::name": "base", "Shadow::name": "child"}', $variables['$shadow']);
+        $this->assertSame('string: var', $variables['$日本']);
     }
 
     public function testComposerGlobalsAreLeftOutOfRecordedVariables(): void

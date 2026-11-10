@@ -3212,7 +3212,7 @@ final class DebugServer
             libxml_use_internal_errors($useErrors);
             if ($xml && (property_exists($xml, 'property') && $xml->property !== null)) {
                 foreach ($xml->property as $prop) {
-                    $name = (string) $prop['name'];
+                    $name = $this->decodeAttribute($prop, 'name');
                     $type = (string) $prop['type'];
 
                     if ($type === 'array' || $type === 'object') {
