@@ -307,7 +307,7 @@ By default, vendor code is excluded to focus on your code. Use `--include-vendor
 --include-vendor="*/*"              # Include all vendor (framework debugging)
 ```
 
-For traces and raw coverage the excluded tree is the `vendor/` under the working directory, so run the tools from the project root; `xtrace` and `xcoverage --raw` say `vendor filter inactive: no vendor/ at <cwd>` on stderr when there is none. Profiles leave out every file under a `vendor/` directory.
+For traces and raw coverage the excluded tree is the `vendor/` under the working directory, so run the tools from the project root; `xtrace` and `xcoverage --raw` say `vendor filter inactive: no vendor/ at <cwd>` on stderr when there is none. With `--source`, raw coverage uses only those paths. Traces of a container or of a PHP version other than the tool's keep vendor code. Profiles leave out every file under a `vendor/` directory.
 
 ## JSON Schemas
 

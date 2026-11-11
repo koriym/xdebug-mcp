@@ -52,9 +52,11 @@ Claude Code — install the plugin, which bundles the Skill:
 Codex CLI — install the Skill:
 
 ```bash
-git clone --depth 1 https://github.com/koriym/xdebug-mcp.git /tmp/xdebug-mcp
-mkdir -p ~/.codex/skills
-cp -r /tmp/xdebug-mcp/skills/xdebug ~/.codex/skills/
+tmp=$(mktemp -d) \
+  && git clone --depth 1 https://github.com/koriym/xdebug-mcp.git "$tmp/xdebug-mcp" \
+  && mkdir -p ~/.codex/skills \
+  && cp -r "$tmp/xdebug-mcp/skills/xdebug" ~/.codex/skills/ \
+  && rm -rf "$tmp"
 ```
 
 MCP-capable clients without shell or Skill support (e.g. Claude Desktop) — register the server in the client's MCP config (e.g. `.mcp.json`):
@@ -70,7 +72,7 @@ MCP-capable clients without shell or Skill support (e.g. Claude Desktop) — reg
 }
 ```
 
-Find the path with `which xdebug-mcp`.
+Find the path with `echo "$(composer global config bin-dir --absolute 2>/dev/null)/xdebug-mcp"`.
 
 ## Requirements
 
@@ -118,7 +120,7 @@ xcompare --break="calc.php:25" --run="php calc.php 10" --compare-with=main
 xrepl --break="script.php:42" -- php script.php
 ```
 
-xstep, xback, and xcompare print JSON by default; xtrace, xprofile, and xcoverage print text unless `--json` is given. Every JSON document carries a schema URL (`$schema`, or `schema` for xtrace and xprofile).
+xstep, xback, and xcompare print JSON by default; xtrace, xprofile, and xcoverage print text unless `--json` is given (`xcoverage --raw --branch-coverage` always prints JSON). Every JSON document carries a schema URL (`$schema`, or `schema` for xtrace and xprofile).
 
 ### Conditional Breakpoints
 
@@ -135,11 +137,11 @@ xstep --break='User.php:42' --vars='$this,$items' -- php app.php
 
 ### Vendor Code
 
-Vendor code is left out of traces, profiles, and raw coverage. Traces and raw coverage leave out the `vendor/` of the working directory, so run the tools from the project root; `xtrace` and `xcoverage --raw` say `vendor filter inactive: no vendor/ at <cwd>` on stderr when there is none. Profiles leave out every file under a `vendor/` directory. Keep selected packages with `--include-vendor="bear/*"`.
+Vendor code is left out of traces, profiles, and raw coverage. Traces and raw coverage leave out the `vendor/` of the working directory, so run the tools from the project root; `xtrace` and `xcoverage --raw` say `vendor filter inactive: no vendor/ at <cwd>` on stderr when there is none. With `--source`, raw coverage uses only those paths. Traces of a container or of a PHP version other than the tool's keep vendor code. Profiles leave out every file under a `vendor/` directory. Keep selected packages with `--include-vendor="bear/*"`.
 
 ### Older PHP Targets
 
-The tools run on PHP 8.2+, but can debug an older PHP that has a compatible Xdebug 3.x: name the target binary after `--` (e.g. `xtrace -- /path/to/php7.2 legacy.php`). `xcoverage` drops a binary named after `--` and needs `--php=PATH`; `xback` accepts either form.
+The tools run on PHP 8.2+, but can debug an older PHP that has a compatible Xdebug 3.x: name the target binary after `--` (e.g. `xtrace -- /path/to/php7.2 legacy.php`). `xcoverage` drops a binary named after `--` and needs `--php=PATH`; `xback` accepts either form. `xcompare` takes the binary inside `--run`, or inside both `--run-a` and `--run-b`.
 
 ## Documentation
 
