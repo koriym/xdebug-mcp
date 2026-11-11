@@ -76,9 +76,11 @@ Two integrations are available. **We recommend the Skill**: these tools are stat
 **Codex CLI** — install the Skill:
 
 ```bash
-git clone --depth 1 https://github.com/koriym/xdebug-mcp.git /tmp/xdebug-mcp
-mkdir -p ~/.codex/skills
-cp -r /tmp/xdebug-mcp/skills/xdebug ~/.codex/skills/
+tmp=$(mktemp -d) \
+  && git clone --depth 1 https://github.com/koriym/xdebug-mcp.git "$tmp/xdebug-mcp" \
+  && mkdir -p ~/.codex/skills \
+  && cp -r "$tmp/xdebug-mcp/skills/xdebug" ~/.codex/skills/ \
+  && rm -rf "$tmp"
 ```
 
 **Any MCP-capable client** — see [MCP Configuration](#mcp-configuration) below.
@@ -123,11 +125,11 @@ Run the demo examples to see each tool in action:
 # Compare variable states with different inputs
 ./bin/xcompare --break="demo/buggy.php:22" --run-a="php demo/buggy.php 10" --run-b="php demo/buggy.php 0"
 
-# Compare current code vs another branch
-./bin/xcompare --break="src/calc.php:25" --run="php src/calc.php 10" --compare-with=main
+# Compare current code vs an earlier commit
+./bin/xcompare --break="demo/buggy.php:22" --run="php demo/buggy.php 10" --compare-with=HEAD~1
 ```
 
-Each command outputs structured JSON that AI can analyze to provide debugging insights. xtrace, xprofile, and xcoverage print text unless `--json` is given; the other tools print JSON by default.
+Each command outputs structured JSON that AI can analyze to provide debugging insights. xtrace, xprofile, and xcoverage print text unless `--json` is given (`xcoverage --raw --branch-coverage` always prints JSON); the other tools print JSON by default.
 
 ## How It Works
 
@@ -173,6 +175,9 @@ xstep --break='script.php:42:$user==null' -- php script.php
 # Pretty-print JSON, truncate long values, limit nesting depth
 xstep --break='script.php:42' --pretty --max-value-bytes=200 --max-depth=3 -- php script.php
 
+# Record only the named variables
+xstep --break='script.php:42' --vars='$this,$items' -- php script.php
+
 # Code coverage
 xcoverage -- vendor/bin/phpunit
 
@@ -187,6 +192,8 @@ xcompare --break='calc.php:25' --run='php calc.php 10' --compare-with=main
 ```
 
 Run `--help` on any tool for detailed options.
+
+Vendor code is left out of traces, profiles, and raw coverage so the output stays on your code. Traces and raw coverage leave out the `vendor/` of the working directory, so run the tools from the project root; `xtrace` and `xcoverage --raw` say `vendor filter inactive: no vendor/ at <cwd>` on stderr when there is none. With `--source`, raw coverage uses only those paths. Traces of a container or of a PHP version other than the tool's keep vendor code. Profiles leave out every file under a `vendor/` directory. `xtrace`, `xstep`/`xrepl`, `xprofile`, `xcoverage --raw`, and `xcompare` keep selected packages with `--include-vendor="bear/*"` (or `"*/*"` for all).
 
 > **Note on `xcompare` commands:** the `--run-a`, `--run-b`, and `--run` values are executed through the shell so that quoting, redirection, and environment variables behave as users expect. Only pass trusted input to these options.
 >
@@ -228,7 +235,7 @@ Add `xdebug-mcp` to the client's MCP config (e.g. `.mcp.json`). MCP exposes all 
 }
 ```
 
-Find the path with `which xdebug-mcp`. Restart your client after editing the config.
+Find the path with `echo "$(composer global config bin-dir --absolute 2>/dev/null)/xdebug-mcp"`. Restart your client after editing the config.
 
 The server speaks the stateless 2026-07-28 protocol revision (handshake-less, discoverable via `server/discover`) and keeps the legacy `initialize` handshake for clients on 2025-11-25 and earlier — both over stdio.
 
@@ -281,7 +288,7 @@ xstep --break="legacy_app.php:30" -- /opt/homebrew/opt/php@7.2/bin/php legacy_ap
 
 The tool runs on your modern PHP while the target script executes on the specified PHP binary — provided the specified PHP has a compatible Xdebug 3.x installed. No Docker required. Check the compatibility table below before trying older PHP binaries.
 
-`xback` and `xcoverage` also accept `--php=PATH` to pick the target binary while keeping `php` in the command:
+`xback` and `xcoverage` also accept `--php=PATH` to pick the target binary while keeping `php` in the command. `xcoverage` takes the target only this way: a binary named after `--` is dropped, and without `--php` the script runs on the tool's own PHP.
 
 ```bash
 xback --break="legacy_app.php:30" --php=/path/to/php7.2 -- php legacy_app.php
