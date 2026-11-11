@@ -12,7 +12,7 @@ declare(strict_types=1);
  * 2. Off-by-one error in array processing
  *
  * Usage:
- *   ./bin/xstep --exit-on-break -- php demo/buggy.php
+ *   ./bin/xstep --break=demo/buggy.php:22 -- php demo/buggy.php
  *   ./bin/xtrace -- php demo/buggy.php
  */
 
