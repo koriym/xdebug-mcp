@@ -56,7 +56,7 @@
         },
         "variables": {
           "type": "object",
-          "description": "Full variable snapshot at the breakpoint. Present only on 'full' frames; omitted on 'diff' frames because values are recoverable from `diff` (`after` for added/changed entries, and `change: 'removed'` with `before` for deletions). Each value is a rendered 'type: value' string, e.g. 'int: 0', 'array: [1, 2, 3]', 'uninitialized: ' (same format used by diff before/after)."
+          "description": "Full variable snapshot at the breakpoint, limited to the names given by --vars when set. Present only on 'full' frames; omitted on 'diff' frames because values are recoverable from `diff` (`after` for added/changed entries, and `change: 'removed'` with `before` for deletions). Each value is a rendered 'type: value' string, e.g. 'int: 0', 'array: [1, 2, 3]', 'uninitialized: ' (same format used by diff before/after)."
         },
         "diff": {
           "type": "object",

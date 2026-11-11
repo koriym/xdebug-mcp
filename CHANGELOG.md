@@ -7,12 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `llms.txt` and `llms-full.txt` follow the README: the Skill for Claude Code and Codex CLI, MCP for other clients, a portable `check-env` path, no `--exit-on-break`, and no php.ini that turns Xdebug on for every request. The README's "Try CLI Tools" `--compare-with` example runs against this repository's demo, and the README describes vendor filtering.
+- README and `llms` docs show `xstep --vars`.
+
+## [0.14.0] - 2026-11-11
+
+### Added
+- `xstep --vars=LIST` (MCP `xstep` argument `vars`) records only the listed variables in `variables` and `diff`, e.g. `--vars='$this,$items'`.
+
+### Changed
+- `xstep` leaves Composer's `$__composer_autoload_files` out of recorded variables unless `--vars` names it.
+- `xstep` renders arrays and objects from Xdebug's property data instead of evaluating code in the target. Nesting stops at 3 levels unless `--max-depth` says otherwise, and an array or object lists its first 32 entries followed by an `(N total)` note. An object that refers back to itself repeats down to the depth limit. `INF` and `NAN` inside them appear as strings.
+
 ### Removed
 - The unused `Koriym\XdebugMcp\Exceptions\SocketException`. Nothing threw it, and its typed class constant (PHP 8.3+) made the file unparseable on PHP 8.2, the minimum this package declares.
 
 ### Fixed
+- `xstep --watch` on an array or object, including one returned by an expression such as `$o->get()`, records a change nested inside it. Changes are detected within the depth and the first 32 entries that xstep records.
+- `xstep` no longer drops a whole breakpoint hit when a string variable or a variable name holds invalid UTF-8; the bad bytes are shown as `�`.
+- The MCP `xstep` tool accepts `steps` given as a number; it failed with a TypeError.
+- `xstep` renders private and protected properties (including a parent's) and `__class` for every object, with or without `--max-depth`. A property name shared by several classes in the hierarchy is keyed `Class::name` for the private one.
+- `xstep` no longer crashes the target on a self-referencing array (it shows `[RECURSION array]`), runs on PHP 7 targets, and renders a large array without walking all of it.
+- `xstep` no longer inserts spaces after `:` and `,` inside rendered string values (`http://` became `http: //`).
+- `xstep` keeps rendered values valid UTF-8 when it cuts a multibyte string, writes an empty `variables` as `{}`, and shows `__class` for an object without properties.
+- `xstep --help` states what several `--break` locations do: without `--steps` every hit is recorded; with `--steps` recording starts at the first hit and runs for N steps.
 - `xcoverage` in PHPUnit mode (the default) counts the files of namespaced classes, which PHPUnit's clover report nests under `<package>`. They were skipped, so a namespaced project reported `0% (0/0 lines covered)`.
-- `xtrace` and the breakpoint tools exclude the traced project's `vendor/`, found under the working directory as `xcoverage` does; a global install excluded its own vendor tree, so every project package filled the trace. When the working directory has no `vendor/`, `xtrace` and `xcoverage --raw` (without `--source`) say so on stderr (`vendor filter inactive: no vendor/ at <cwd>`); run the tools from the project root.
+- `xtrace` and the breakpoint tools exclude the traced project's `vendor/`, found under the working directory as `xcoverage` does; a global install excluded its own vendor tree, so every project package filled the trace. When the working directory has no `vendor/`, these tools and `xcoverage --raw` (without `--source`) say so on stderr (`vendor filter inactive: no vendor/ at <cwd>`); run them from the project root.
 - `xcoverage --raw` passes the report through a temporary file, apart from the target's output. Output without a trailing newline (`php -r 'echo 1;'`) or rewritten by the target's output buffer no longer makes the run fail with "coverage JSON was not produced", and a target line starting with `{"$schema"` is no longer dropped.
 - `xcoverage --raw` removes the `coverage_end_*` bootstrap it writes to the temp directory when a run fails, not only when it succeeds.
 - `xstep`/`xrepl` accept an absolute PHP binary after `--` as the README documents; `xback` accepts one without `--php`. This also fixes `-- php -d key=value script.php`, which previously took `-d` itself as the script.
@@ -24,7 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The vendor-filter helper is kept for any target running this PHP version, including one named on `PATH` such as `php8.2`: the decision now compares the probed version rather than the binary's path, which had silently dropped the filter for same-version targets.
 - A target whose Xdebug cannot be resolved is reported the same way by every tool — one line naming the target version, exit 1. `xstep` and `xback` previously printed a result document with an empty `breaks`/`stack` before dying with an uncaught fatal.
 - README and skill docs: xtrace, xprofile, and xcoverage need `--json` for JSON output; the xrepl `l` command shows the current location, not source code.
-- `llms.txt` and `llms-full.txt` follow the README: the Skill for Claude Code and Codex CLI, MCP for other clients, a portable `check-env` path, no `--exit-on-break`, and no php.ini that turns Xdebug on for every request. The README's "Try CLI Tools" `--compare-with` example runs against this repository's demo, and the README describes vendor filtering.
 
 ## [0.13.0] - 2026-08-03
 

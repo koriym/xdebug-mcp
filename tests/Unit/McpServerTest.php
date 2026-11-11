@@ -321,12 +321,13 @@ class McpServerTest extends TestCase
 
         // Test xstep mapping
         $namedArgs = [];
-        $positionalArgs = ['script.php', 'file.php:10', '50', 'debug context'];
+        $positionalArgs = ['script.php', 'file.php:10', '50', 'debug context', 'bear/*', '$this'];
         $mapped = $this->invokePrivateMethod($this->server, 'mapPositionalArgs', [$namedArgs, $positionalArgs, 'xstep']);
         $this->assertEquals('script.php', $mapped['script']);
         $this->assertEquals('file.php:10', $mapped['breakpoints']);
         $this->assertEquals('50', $mapped['steps']);
         $this->assertEquals('debug context', $mapped['context']);
+        $this->assertEquals('$this', $mapped['vars']);
 
         // Test xcoverage mapping - all 7 positional slots including the raw flag
         $namedArgs = [];
@@ -706,6 +707,26 @@ class McpServerTest extends TestCase
         $command = $result->toArray()['result']['debug_data']['command'];
         $this->assertStringContainsString('--raw', $command);
         $this->assertStringContainsString('--source=', $command);
+    }
+
+    public function testExecuteXDebugPassesVars(): void
+    {
+        $result = $this->invokePrivateMethod($this->server, 'executeXDebug', [
+            null,
+            ['script' => 'php tests/fake/loop-counter.php', 'vars' => '$i,$sum'],
+        ]);
+        $command = $result->toArray()['result']['debug_data']['command'];
+        $this->assertStringContainsString("--vars='\$i,\$sum'", $command);
+    }
+
+    public function testExecuteXDebugAcceptsNumericSteps(): void
+    {
+        $result = $this->invokePrivateMethod($this->server, 'executeXDebug', [
+            null,
+            ['script' => 'php tests/fake/loop-counter.php', 'steps' => 1],
+        ]);
+        $command = $result->toArray()['result']['debug_data']['command'];
+        $this->assertStringContainsString("--steps='1'", $command);
     }
 
     public function testToolsCallXDebug(): void
