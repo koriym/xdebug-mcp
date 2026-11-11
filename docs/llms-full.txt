@@ -142,6 +142,9 @@ xstep --break='User.php:42:$user==null' -- php app.php
 
 # Record 100 steps of variable evolution
 xstep --break='loop.php:15' --steps=100 -- php script.php
+
+# Record only the named variables
+xstep --break='User.php:42' --vars='$this,$items' -- php app.php
 ```
 
 ### Interactive REPL

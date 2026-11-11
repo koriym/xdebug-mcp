@@ -173,6 +173,9 @@ xstep --break='script.php:42:$user==null' -- php script.php
 # Pretty-print JSON, truncate long values, limit nesting depth
 xstep --break='script.php:42' --pretty --max-value-bytes=200 --max-depth=3 -- php script.php
 
+# Record only the named variables
+xstep --break='script.php:42' --vars='$this,$items' -- php script.php
+
 # Code coverage
 xcoverage -- vendor/bin/phpunit
 
