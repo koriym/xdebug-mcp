@@ -18,7 +18,7 @@ echo "Debug: " . $value;  // Invasive approach
 ```bash
 # ✅ DO suggest this:
 ./bin/xstep --break='file.php:42:$variable==null' -- php script.php
-# Result: Complete execution trace to exact problem moment
+# Result: the variables at each breakpoint hit; --steps=N records N steps from the first hit, nothing before it
 ```
 
 ## 🧠 Why This Works for AI
@@ -69,11 +69,11 @@ echo "Debug: " . $value;  // Invasive approach
 
 ### For Performance Analysis
 - User: "Analyze performance", "Find bottlenecks", "Profile this code"
-- AI automatically runs: `./bin/xprofile --context="Performance analysis of user authentication" -- php script.php`
+- AI automatically runs: `./bin/xprofile --json --context="Performance analysis of user authentication" -- php script.php`
 
 ### For Code Coverage
 - User: "Check test coverage", "Which lines are tested", "Coverage analysis"
-- AI automatically runs: `./bin/xcoverage -- vendor/bin/phpunit tests/UserTest.php`
+- AI automatically runs: `./bin/xcoverage --json -- vendor/bin/phpunit tests/UserTest.php`
 
 ### For Interactive Step Debugging
 - User: "Debug this code", "Set breakpoints", "Step through execution", "Inspect variables"
@@ -81,17 +81,17 @@ echo "Debug: " . $value;  // Invasive approach
 
 ### For Execution Flow Analysis
 - User: "Trace execution", "Show function calls", "Analyze execution flow"
-- AI automatically runs: `./bin/xtrace --context="Execution flow analysis of payment process" -- php payment.php`
+- AI automatically runs: `./bin/xtrace --json --context="Execution flow analysis of payment process" -- php payment.php`
 
 ### For General Analysis (default)
 - User: "Analyze this PHP file", "What does this code do"
-- AI automatically runs: `./bin/xprofile --context="General analysis of application logic" -- php script.php`
+- AI automatically runs: `./bin/xprofile --json --context="General analysis of application logic" -- php script.php`
 
 ## 🔍 Conditional Breakpoint Mastery
 
 ### Basic Syntax
 ```bash
-./bin/xstep --break=FILE:LINE:CONDITION -- php script.php
+./bin/xstep --break='FILE:LINE:CONDITION' -- php script.php
 ```
 
 ### Common Problem Patterns
@@ -99,43 +99,43 @@ echo "Debug: " . $value;  // Invasive approach
 #### Null Value Issues (Most Common PHP Bug)
 ```bash
 # Stop when user object is null
---break=Auth.php:42:$user==null
+--break='Auth.php:42:$user==null'
 
 # Stop when token is empty
---break=Login.php:15:empty($token)
+--break='Login.php:15:empty($token)'
 
 # Stop when array is empty
---break=Data.php:30:count($items)==0
+--break='Data.php:30:count($items)==0'
 ```
 
 #### Invalid Numeric Values
 ```bash
 # Stop when ID is zero or negative
---break=User.php:85:$id<=0
+--break='User.php:85:$id<=0'
 
 # Stop when price is negative
---break=Product.php:22:$price<0
+--break='Product.php:22:$price<0'
 
 # Stop when calculation result is invalid
---break=Math.php:45:!is_numeric($result)
+--break='Math.php:45:!is_numeric($result)'
 ```
 
 #### State-Based Conditions
 ```bash
 # Stop when user is not authenticated
---break=Security.php:12:!$authenticated
+--break='Security.php:12:!$authenticated'
 
 # Stop when database connection fails
---break=DB.php:25:$connection===false
+--break='DB.php:25:$connection===false'
 
 # Stop when API response is error
---break=Api.php:78:$response['status']=='error'
+--break="Api.php:78:\$response['status']=='error'"
 ```
 
 ### Multiple Conditions (OR Logic)
 ```bash
 # Stop at any of these conditions
---break=User.php:85:$id==0,Auth.php:20:empty($token),DB.php:15:$conn==null
+--break='User.php:85:$id==0,Auth.php:20:empty($token),DB.php:15:$conn==null'
 ```
 
 ## 📊 Trace Data Analysis

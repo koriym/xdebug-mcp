@@ -9,7 +9,7 @@ Non-invasive PHP debugging and analysis tools. No var_dump() or code modificatio
 
 ## Tool Paths
 
-Tools are installed globally via composer. Use absolute paths. The paths below assume Composer's default global bin directory; if `~/.composer/vendor/bin` does not exist, replace it with the output of `composer global config bin-dir --absolute`:
+Tools are installed globally via composer. Use absolute paths. The paths below assume Composer's default global bin directory; if `composer global config bin-dir --absolute` prints a different directory, use that one:
 
 | Tool | Path |
 |------|------|
