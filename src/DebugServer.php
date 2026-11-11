@@ -18,6 +18,7 @@ use Amp\Socket\ServerSocket;
 use Amp\Socket\Socket;
 use Amp\Socket\SocketException;
 use Amp\TimeoutCancellation;
+use Closure;
 use Koriym\XdebugMcp\Dbgp\DbgpXml;
 use Koriym\XdebugMcp\Exceptions\BreakpointException;
 use Koriym\XdebugMcp\Exceptions\DebugSessionException;
@@ -1444,7 +1445,7 @@ final class DebugServer
     private function evaluateWatchExpression(string $expression): string
     {
         try {
-            $response = $this->evaluateExpression($expression);
+            $response = $this->withRenderFeatures(fn (): string => $this->evaluateExpression($expression));
             if ($response === '' || str_contains($response, '<error')) {
                 return '<unavailable>';
             }
@@ -1483,8 +1484,7 @@ final class DebugServer
             }
 
             if ($type === 'array' || $type === 'object') {
-                // Use content hash to detect internal mutations
-                $contentHash = $this->getWatchContentHash($expression);
+                $contentHash = $this->getWatchContentHash($prop);
                 if ($contentHash !== null) {
                     if ($type === 'array') {
                         $numChildren = (string) ($prop['numchildren'] ?? '0');
@@ -1516,37 +1516,14 @@ final class DebugServer
         }
     }
 
-    /**
-     * Hashes the rendered value, so a change anywhere within the rendering depth alters the hash.
-     *
-     * @return string|null Short hash string, or null if unavailable
-     */
-    private function getWatchContentHash(string $expression): string|null
+    /** Hashes the rendered value, so a change anywhere within the rendering depth alters the hash. */
+    private function getWatchContentHash(SimpleXMLElement $prop): string|null
     {
-        try {
-            $response = $this->sendWithRenderFeatures('property_get', ['n' => $expression, 'd' => '0']);
-            if ($response === '' || str_contains($response, '<error')) {
-                return null;
-            }
-
-            $xml = $this->parseXmlResponse($response);
-            if (! $xml) {
-                return null;
-            }
-
-            $prop = $xml->property ?? ($xml->children()[0] ?? null);
-            if ($prop === null) {
-                return null;
-            }
-
-            if ((int) ($prop['numchildren'] ?? 0) === 0) {
-                return null;
-            }
-
-            return substr(md5(serialize($this->renderProperty($prop))), 0, 8);
-        } catch (Throwable) {
+        if ((int) ($prop['numchildren'] ?? 0) === 0) {
             return null;
         }
+
+        return substr(md5(serialize($this->renderProperty($prop))), 0, 8);
     }
 
     /**
@@ -3183,7 +3160,7 @@ final class DebugServer
     public function getCurrentVariables(): array
     {
         try {
-            $response = $this->sendWithRenderFeatures('context_get', ['c' => '0']);
+            $response = $this->withRenderFeatures(fn (): string => $this->sendCommand('context_get', ['c' => '0']));
 
             if ($response === '' || $response === '0') {
                 return [];
@@ -3218,12 +3195,12 @@ final class DebugServer
     }
 
     /**
-     * Sends a property command under xstep's rendering depth and string length,
+     * Runs DBGp commands under xstep's rendering depth and string length,
      * restoring the session's feature values so other commands see Xdebug's defaults.
      *
-     * @param array<string, string> $args
+     * @param Closure(): string $send
      */
-    private function sendWithRenderFeatures(string $command, array $args): string
+    private function withRenderFeatures(Closure $send): string
     {
         $features = ['max_depth' => (string) ($this->getMaxDepth() ?? self::DEFAULT_MAX_DEPTH)];
         $maxValueBytes = $this->getMaxValueBytes();
@@ -3247,7 +3224,7 @@ final class DebugServer
         }
 
         try {
-            return $this->sendCommand($command, $args);
+            return $send();
         } finally {
             foreach ($restore as $feature => $value) {
                 $this->sendCommand('feature_set', ['n' => $feature, 'v' => $value]);
@@ -3361,11 +3338,11 @@ final class DebugServer
      */
     private function decodeAttribute(SimpleXMLElement $prop, string $attribute): string
     {
-        return preg_replace_callback(
+        return $this->toValidUtf8(preg_replace_callback(
             '/[\xC2\xC3][\x80-\xBF]/',
             static fn (array $m): string => chr(((ord($m[0][0]) & 0x1F) << 6) | (ord($m[0][1]) & 0x3F)),
             (string) $prop[$attribute],
-        ) ?? (string) $prop[$attribute];
+        ) ?? (string) $prop[$attribute]);
     }
 
     /** A string cut by Xdebug's max_data loses its partial last character and gains a truncation note. */

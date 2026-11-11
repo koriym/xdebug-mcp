@@ -658,7 +658,7 @@ PHP);
         $output = shell_exec(sprintf(
             'cd %s && ./bin/xstep --break=%s -- php %s 2>&1',
             escapeshellarg(dirname(__DIR__, 2)),
-            escapeshellarg($fixture . ':33'),
+            escapeshellarg($fixture . ':34'),
             escapeshellarg($fixture),
         ));
         $this->assertNotNull($output);
@@ -677,6 +677,7 @@ PHP);
         $this->assertSame('object: {"__class": "Shadow", "ShadowBase::name": "base", "Shadow::name": "child"}', $variables['$shadow']);
         $this->assertSame('string: var', $variables['$日本']);
         $this->assertSame("string: \u{FFFD}\u{FFFD}abc", $variables['$invalid']);
+        $this->assertSame('int: 1', $variables["\$v\u{FFFD}"]);
     }
 
     public function testVarsSelectsMultibyteVariableName(): void
@@ -689,7 +690,7 @@ PHP);
         $output = shell_exec(sprintf(
             'cd %s && ./bin/xstep --break=%s --vars=%s -- php %s 2>&1',
             escapeshellarg(dirname(__DIR__, 2)),
-            escapeshellarg($fixture . ':33'),
+            escapeshellarg($fixture . ':34'),
             escapeshellarg('$日本'),
             escapeshellarg($fixture),
         ));
@@ -704,6 +705,17 @@ PHP);
 
     public function testWatchRecordsChangesNestedInsideAnArray(): void
     {
+        $this->assertSame(['initial', 'changed', 'changed', 'changed'], $this->watchReasons('$a'));
+    }
+
+    public function testWatchRecordsChangesOfAnArrayReturnedByAMethod(): void
+    {
+        $this->assertSame(['initial', 'changed', 'changed'], $this->watchReasons('$o->get()'));
+    }
+
+    /** @return list<string> */
+    private function watchReasons(string $expression): array
+    {
         if (! XdebugFinder::isXdebugAvailable()) {
             $this->markTestSkipped('Xdebug not available');
         }
@@ -712,8 +724,8 @@ PHP);
         $output = shell_exec(sprintf(
             'cd %s && ./bin/xstep --break=%s --steps=10 --watch=%s -- php %s 2>&1',
             escapeshellarg(dirname(__DIR__, 2)),
-            escapeshellarg($fixture . ':5'),
-            escapeshellarg('$a'),
+            escapeshellarg($fixture . ':18'),
+            escapeshellarg($expression),
             escapeshellarg($fixture),
         ));
         $this->assertNotNull($output);
@@ -721,11 +733,10 @@ PHP);
         $jsonStart = strrpos($output, '{"$schema"');
         $this->assertNotFalse($jsonStart, $output);
 
-        $reasons = array_map(
+        return array_map(
             static fn (array $break): string => $break['watches'][0]['reason'],
             json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR)['breaks'],
         );
-        $this->assertSame(['initial', 'changed', 'changed', 'changed'], $reasons);
     }
 
     public function testComposerGlobalsAreLeftOutOfRecordedVariables(): void

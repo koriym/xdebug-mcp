@@ -30,4 +30,5 @@ $invalid = "\xff\xfeabc";
 $names['*Base*name'] = new stdClass();
 $names['*Base*name']->{'*Base*name'} = 2;
 $shadow = new Shadow();
+${"v\xff"} = 1;
 echo count($large), "\n";
