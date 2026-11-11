@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The unused `Koriym\XdebugMcp\Exceptions\SocketException`. Nothing threw it, and its typed class constant (PHP 8.3+) made the file unparseable on PHP 8.2, the minimum this package declares.
 
 ### Fixed
+- `xstep --watch` on an array or object records a change nested inside it, not only one in its first level.
+- `xstep` no longer drops a whole breakpoint hit when a string variable holds invalid UTF-8; the bad bytes are shown as `�`.
+- The MCP `xstep` tool accepts `steps` given as a number; it failed with a TypeError.
 - `xstep` renders private and protected properties (including a parent's) and `__class` for every object, with or without `--max-depth`. A property name shared by several classes in the hierarchy is keyed `Class::name` for the private one.
 - `xstep` no longer crashes the target on a self-referencing array (it shows `[RECURSION array]`), runs on PHP 7 targets, and renders a large array without walking all of it.
 - `xstep` no longer inserts spaces after `:` and `,` inside rendered string values (`http://` became `http: //`).

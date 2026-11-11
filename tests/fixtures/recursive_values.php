@@ -26,6 +26,7 @@ $named = new ClassProperty();
 $floats = [INF, -INF, NAN, 1.5];
 $names = ['日本' => 1];
 $日本 = 'var';
+$invalid = "\xff\xfeabc";
 $names['*Base*name'] = new stdClass();
 $names['*Base*name']->{'*Base*name'} = 2;
 $shadow = new Shadow();

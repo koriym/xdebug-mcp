@@ -1145,7 +1145,7 @@ final class McpServer
                 $breakpoints = '';
             }
 
-            $steps = $args['steps'] ?? '100';
+            $steps = (string) ($args['steps'] ?? '100');
             $includeVendor = $args['include_vendor'] ?? '';
             $vars = $args['vars'] ?? '';
 
