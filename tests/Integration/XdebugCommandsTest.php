@@ -9,6 +9,7 @@ use Koriym\XdebugMcp\XdebugFinder;
 use PHPUnit\Framework\TestCase;
 
 use function array_keys;
+use function array_map;
 use function bin2hex;
 use function chmod;
 use function dirname;
@@ -657,7 +658,7 @@ PHP);
         $output = shell_exec(sprintf(
             'cd %s && ./bin/xstep --break=%s -- php %s 2>&1',
             escapeshellarg(dirname(__DIR__, 2)),
-            escapeshellarg($fixture . ':32'),
+            escapeshellarg($fixture . ':34'),
             escapeshellarg($fixture),
         ));
         $this->assertNotNull($output);
@@ -675,6 +676,8 @@ PHP);
         $this->assertSame('array: {"日本": 1, "*Base*name": {"__class": "stdClass", "*Base*name": 2}}', $variables['$names']);
         $this->assertSame('object: {"__class": "Shadow", "ShadowBase::name": "base", "Shadow::name": "child"}', $variables['$shadow']);
         $this->assertSame('string: var', $variables['$日本']);
+        $this->assertSame("string: \u{FFFD}\u{FFFD}abc", $variables['$invalid']);
+        $this->assertSame('int: 1', $variables["\$v\u{FFFD}"]);
     }
 
     public function testVarsSelectsMultibyteVariableName(): void
@@ -687,7 +690,7 @@ PHP);
         $output = shell_exec(sprintf(
             'cd %s && ./bin/xstep --break=%s --vars=%s -- php %s 2>&1',
             escapeshellarg(dirname(__DIR__, 2)),
-            escapeshellarg($fixture . ':32'),
+            escapeshellarg($fixture . ':34'),
             escapeshellarg('$日本'),
             escapeshellarg($fixture),
         ));
@@ -698,6 +701,42 @@ PHP);
 
         $variables = json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR)['breaks'][0]['variables'];
         $this->assertSame(['$日本' => 'string: var'], $variables);
+    }
+
+    public function testWatchRecordsChangesNestedInsideAnArray(): void
+    {
+        $this->assertSame(['initial', 'changed', 'changed', 'changed'], $this->watchReasons('$a'));
+    }
+
+    public function testWatchRecordsChangesOfAnArrayReturnedByAMethod(): void
+    {
+        $this->assertSame(['initial', 'changed', 'changed'], $this->watchReasons('$o->get()'));
+    }
+
+    /** @return list<string> */
+    private function watchReasons(string $expression): array
+    {
+        if (! XdebugFinder::isXdebugAvailable()) {
+            $this->markTestSkipped('Xdebug not available');
+        }
+
+        $fixture = dirname(__DIR__) . '/fixtures/nested_watch.php';
+        $output = shell_exec(sprintf(
+            'cd %s && ./bin/xstep --break=%s --steps=10 --watch=%s -- php %s 2>&1',
+            escapeshellarg(dirname(__DIR__, 2)),
+            escapeshellarg($fixture . ':18'),
+            escapeshellarg($expression),
+            escapeshellarg($fixture),
+        ));
+        $this->assertNotNull($output);
+
+        $jsonStart = strrpos($output, '{"$schema"');
+        $this->assertNotFalse($jsonStart, $output);
+
+        return array_map(
+            static fn (array $break): string => $break['watches'][0]['reason'],
+            json_decode(substr($output, $jsonStart), true, 512, JSON_THROW_ON_ERROR)['breaks'],
+        );
     }
 
     public function testComposerGlobalsAreLeftOutOfRecordedVariables(): void

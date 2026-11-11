@@ -18,6 +18,7 @@ use Amp\Socket\ServerSocket;
 use Amp\Socket\Socket;
 use Amp\Socket\SocketException;
 use Amp\TimeoutCancellation;
+use Closure;
 use Koriym\XdebugMcp\Dbgp\DbgpXml;
 use Koriym\XdebugMcp\Exceptions\BreakpointException;
 use Koriym\XdebugMcp\Exceptions\DebugSessionException;
@@ -98,6 +99,7 @@ use function rawurlencode;
 use function realpath;
 use function register_shutdown_function;
 use function round;
+use function serialize;
 use function shell_exec;
 use function simplexml_load_string;
 use function sprintf;
@@ -1443,7 +1445,7 @@ final class DebugServer
     private function evaluateWatchExpression(string $expression): string
     {
         try {
-            $response = $this->evaluateExpression($expression);
+            $response = $this->withRenderFeatures(fn (): string => $this->evaluateExpression($expression));
             if ($response === '' || str_contains($response, '<error')) {
                 return '<unavailable>';
             }
@@ -1463,7 +1465,7 @@ final class DebugServer
             $value = (string) $prop;
 
             if ($encoding === 'base64') {
-                $value = base64_decode($value);
+                $value = $this->toValidUtf8(base64_decode($value));
             }
 
             $type = (string) ($prop['type'] ?? 'string');
@@ -1482,8 +1484,7 @@ final class DebugServer
             }
 
             if ($type === 'array' || $type === 'object') {
-                // Use content hash to detect internal mutations
-                $contentHash = $this->getWatchContentHash($expression);
+                $contentHash = $this->getWatchContentHash($prop);
                 if ($contentHash !== null) {
                     if ($type === 'array') {
                         $numChildren = (string) ($prop['numchildren'] ?? '0');
@@ -1515,53 +1516,14 @@ final class DebugServer
         }
     }
 
-    /**
-     * Get a content-based hash for array/object watch expressions
-     *
-     * Uses json_encode via eval to detect internal mutations.
-     *
-     * @return string|null Short hash string, or null if unavailable
-     */
-    private function getWatchContentHash(string $expression): string|null
+    /** Hashes the rendered value, so a change anywhere within the rendering depth alters the hash. */
+    private function getWatchContentHash(SimpleXMLElement $prop): string|null
     {
-        try {
-            // Use property_get to retrieve child elements (depth 0 = current frame)
-            $response = $this->sendCommand('property_get', ['n' => $expression, 'd' => '0']);
-            if ($response === '' || str_contains($response, '<error')) {
-                return null;
-            }
-
-            $xml = $this->parseXmlResponse($response);
-            if (! $xml) {
-                return null;
-            }
-
-            $prop = $xml->property ?? ($xml->children()[0] ?? null);
-            if ($prop === null) {
-                return null;
-            }
-
-            // Build a content signature from child properties
-            $signature = '';
-            foreach ($prop->property as $child) {
-                $childName = (string) ($child['name'] ?? '');
-                $childValue = (string) $child;
-                if ((string) ($child['encoding'] ?? '') === 'base64') {
-                    $childValue = base64_decode($childValue);
-                }
-
-                $signature .= $childName . '=' . $childValue . ';';
-            }
-
-            if ($signature === '') {
-                return null;
-            }
-
-            // Short hash (8 chars) for compact output
-            return substr(md5($signature), 0, 8);
-        } catch (Throwable) {
+        if ((int) ($prop['numchildren'] ?? 0) === 0) {
             return null;
         }
+
+        return substr(md5(serialize($this->renderProperty($prop))), 0, 8);
     }
 
     /**
@@ -3198,7 +3160,7 @@ final class DebugServer
     public function getCurrentVariables(): array
     {
         try {
-            $response = $this->getRenderableContext();
+            $response = $this->withRenderFeatures(fn (): string => $this->sendCommand('context_get', ['c' => '0']));
 
             if ($response === '' || $response === '0') {
                 return [];
@@ -3233,10 +3195,12 @@ final class DebugServer
     }
 
     /**
-     * Fetch the local context with the depth and string length xstep renders,
+     * Runs DBGp commands under xstep's rendering depth and string length,
      * restoring the session's feature values so other commands see Xdebug's defaults.
+     *
+     * @param Closure(): string $send
      */
-    private function getRenderableContext(): string
+    private function withRenderFeatures(Closure $send): string
     {
         $features = ['max_depth' => (string) ($this->getMaxDepth() ?? self::DEFAULT_MAX_DEPTH)];
         $maxValueBytes = $this->getMaxValueBytes();
@@ -3260,7 +3224,7 @@ final class DebugServer
         }
 
         try {
-            return $this->sendCommand('context_get', ['c' => '0']);
+            return $send();
         } finally {
             foreach ($restore as $feature => $value) {
                 $this->sendCommand('feature_set', ['n' => $feature, 'v' => $value]);
@@ -3374,11 +3338,11 @@ final class DebugServer
      */
     private function decodeAttribute(SimpleXMLElement $prop, string $attribute): string
     {
-        return preg_replace_callback(
+        return $this->toValidUtf8(preg_replace_callback(
             '/[\xC2\xC3][\x80-\xBF]/',
             static fn (array $m): string => chr(((ord($m[0][0]) & 0x1F) << 6) | (ord($m[0][1]) & 0x3F)),
             (string) $prop[$attribute],
-        ) ?? (string) $prop[$attribute];
+        ) ?? (string) $prop[$attribute]);
     }
 
     /** A string cut by Xdebug's max_data loses its partial last character and gains a truncation note. */
@@ -3391,12 +3355,24 @@ final class DebugServer
 
         $bytes = strlen($value);
         if ((string) $prop['type'] !== 'string' || (int) ($prop['size'] ?? $bytes) <= $bytes) {
-            return $value;
+            return $this->toValidUtf8($value);
         }
 
         $value = (string) preg_replace('/(?:[\xC0-\xDF]|[\xE0-\xEF][\x80-\xBF]?|[\xF0-\xF7][\x80-\xBF]{0,2})$/', '', $value);
 
-        return "{$value}... (truncated, {$bytes} bytes)";
+        return "{$this->toValidUtf8($value)}... (truncated, {$bytes} bytes)";
+    }
+
+    /** Recorded values end up in JSON output, which rejects invalid UTF-8; such bytes become U+FFFD. */
+    private function toValidUtf8(string $value): string
+    {
+        if (preg_match('//u', $value) === 1) {
+            return $value;
+        }
+
+        $decoded = json_decode(json_encode($value, JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR), flags: JSON_THROW_ON_ERROR);
+
+        return is_string($decoded) ? $decoded : '';
     }
 
     /**

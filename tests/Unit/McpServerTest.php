@@ -719,6 +719,16 @@ class McpServerTest extends TestCase
         $this->assertStringContainsString("--vars='\$i,\$sum'", $command);
     }
 
+    public function testExecuteXDebugAcceptsNumericSteps(): void
+    {
+        $result = $this->invokePrivateMethod($this->server, 'executeXDebug', [
+            null,
+            ['script' => 'php tests/fake/loop-counter.php', 'steps' => 1],
+        ]);
+        $command = $result->toArray()['result']['debug_data']['command'];
+        $this->assertStringContainsString("--steps='1'", $command);
+    }
+
     public function testToolsCallXDebug(): void
     {
         // Test tools/call request with xstep to hit executeToolCall case
