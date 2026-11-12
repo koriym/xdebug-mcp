@@ -17,8 +17,8 @@ echo "Debug: " . $value;  // Invasive approach
 ### Forward Trace™ Debugging (ALWAYS USE)
 ```bash
 # ✅ DO suggest this:
-./bin/xdebug-debug --break='file.php:42:$variable==null' --exit-on-break -- php script.php
-# Result: Complete execution trace to exact problem moment
+./bin/xstep --break='file.php:42:$variable==null' -- php script.php
+# Result: the variables at each breakpoint hit; --steps=N records N steps from the first hit, nothing before it
 ```
 
 ## 🧠 Why This Works for AI
@@ -53,7 +53,7 @@ echo "Debug: " . $value;  // Invasive approach
 ### Forward Trace™ = 🎥 Video Shooting
 ```bash
 # Single command records entire movie
-./bin/x-debug --break="script.php:10:$user==null" --steps=300 --exit-on-break
+./bin/xstep --break='script.php:10:$user==null' --steps=300 -- php script.php
 
 # AI sees the complete 🎥 movie:
 # Step 1: $id = getUserId() → returns 42
@@ -69,29 +69,29 @@ echo "Debug: " . $value;  // Invasive approach
 
 ### For Performance Analysis
 - User: "Analyze performance", "Find bottlenecks", "Profile this code"
-- AI automatically runs: `./bin/xdebug-profile --context="Performance analysis of user authentication" script.php`
+- AI automatically runs: `./bin/xprofile --json --context="Performance analysis of user authentication" -- php script.php`
 
 ### For Code Coverage
 - User: "Check test coverage", "Which lines are tested", "Coverage analysis"
-- AI automatically runs: `./bin/xdebug-coverage --context="Test coverage analysis for UserController" tests/UserTest.php`
+- AI automatically runs: `./bin/xcoverage --json -- vendor/bin/phpunit tests/UserTest.php`
 
 ### For Interactive Step Debugging
 - User: "Debug this code", "Set breakpoints", "Step through execution", "Inspect variables"
-- AI automatically runs: `./bin/xdebug-debug --context="Debugging authentication failure with null user" --break="Auth.php:42:$user==null" --exit-on-break script.php`
+- AI automatically runs: `./bin/xstep --context="Debugging authentication failure with null user" --break='Auth.php:42:$user==null' -- php script.php`
 
 ### For Execution Flow Analysis
 - User: "Trace execution", "Show function calls", "Analyze execution flow"
-- AI automatically runs: `./bin/xdebug-trace --context="Execution flow analysis of payment process" payment.php`
+- AI automatically runs: `./bin/xtrace --json --context="Execution flow analysis of payment process" -- php payment.php`
 
 ### For General Analysis (default)
 - User: "Analyze this PHP file", "What does this code do"
-- AI automatically runs: `./bin/xdebug-profile --context="General analysis of application logic" script.php`
+- AI automatically runs: `./bin/xprofile --json --context="General analysis of application logic" -- php script.php`
 
 ## 🔍 Conditional Breakpoint Mastery
 
 ### Basic Syntax
 ```bash
-./bin/xdebug-debug --break=FILE:LINE:CONDITION --exit-on-break -- php script.php
+./bin/xstep --break='FILE:LINE:CONDITION' -- php script.php
 ```
 
 ### Common Problem Patterns
@@ -99,43 +99,43 @@ echo "Debug: " . $value;  // Invasive approach
 #### Null Value Issues (Most Common PHP Bug)
 ```bash
 # Stop when user object is null
---break=Auth.php:42:$user==null
+--break='Auth.php:42:$user==null'
 
 # Stop when token is empty
---break=Login.php:15:empty($token)
+--break='Login.php:15:empty($token)'
 
 # Stop when array is empty
---break=Data.php:30:count($items)==0
+--break='Data.php:30:count($items)==0'
 ```
 
 #### Invalid Numeric Values
 ```bash
 # Stop when ID is zero or negative
---break=User.php:85:$id<=0
+--break='User.php:85:$id<=0'
 
 # Stop when price is negative
---break=Product.php:22:$price<0
+--break='Product.php:22:$price<0'
 
 # Stop when calculation result is invalid
---break=Math.php:45:!is_numeric($result)
+--break='Math.php:45:!is_numeric($result)'
 ```
 
 #### State-Based Conditions
 ```bash
 # Stop when user is not authenticated
---break=Security.php:12:!$authenticated
+--break='Security.php:12:!$authenticated'
 
 # Stop when database connection fails
---break=DB.php:25:$connection===false
+--break='DB.php:25:$connection===false'
 
 # Stop when API response is error
---break=Api.php:78:$response['status']=='error'
+--break="Api.php:78:\$response['status']=='error'"
 ```
 
 ### Multiple Conditions (OR Logic)
 ```bash
 # Stop at any of these conditions
---break=User.php:85:$id==0,Auth.php:20:empty($token),DB.php:15:$conn==null
+--break='User.php:85:$id==0,Auth.php:20:empty($token),DB.php:15:$conn==null'
 ```
 
 ## 📊 Trace Data Analysis
@@ -165,7 +165,7 @@ Level   FuncID  Time    Memory  Function    UserDef  File:Line  Params/Return
 ### Step 1: Set Strategic Breakpoints
 ```bash
 # Target the exact problem condition
-./bin/xdebug-debug --break='register.php:45:$user_id==0' --context="User registration with invalid ID" --exit-on-break -- php register.php
+./bin/xstep --break='register.php:45:$user_id==0' --context="User registration with invalid ID" -- php register.php
 ```
 
 ### Step 2: Analyze Complete Execution Path
@@ -204,7 +204,7 @@ Level   FuncID  Time    Memory  Function    UserDef  File:Line  Params/Return
 ### Step 4: Variable Evolution Analysis
 ```bash
 # Record step-by-step variable changes
-./bin/xdebug-debug --break='loop.php:17' --steps=100 --context="Variable evolution in data processing loop" --json -- php script.php
+./bin/xstep --break='loop.php:17' --steps=100 --context="Variable evolution in data processing loop" -- php script.php
 ```
 
 AI can analyze each step to detect:
@@ -240,21 +240,21 @@ AI can analyze each step to detect:
 ```bash
 # OLD: var_dump($user); die();
 # NEW: 
-./bin/xdebug-debug --break='file.php:line' --steps=1 --context="Variable inspection" --json -- php script.php
+./bin/xstep --break='file.php:line' --steps=1 --context="Variable inspection" -- php script.php
 ```
 
 #### Instead of Loop Debugging
 ```bash
 # OLD: foreach($items as $item) { var_dump($item); }
 # NEW:
-./bin/xdebug-debug --break='loop.php:45' --steps=100 --context="Loop iteration analysis" --json -- php script.php
+./bin/xstep --break='loop.php:45' --steps=100 --context="Loop iteration analysis" -- php script.php
 ```
 
 #### Instead of Conditional Debug Prints
 ```bash
 # OLD: if ($total < 0) { var_dump($cart); die("negative!"); }
 # NEW:
-./bin/xdebug-debug --break='cart.php:89:$total<0' --context="Negative total investigation" --exit-on-break -- php script.php
+./bin/xstep --break='cart.php:89:$total<0' --context="Negative total investigation" -- php script.php
 ```
 
 ## 🧪 Schema-Validated Output
@@ -290,7 +290,7 @@ This enables:
 ## 🏆 Success Metrics
 
 ### AI Debugging Revolution Indicators
-- ✅ AI proactively uses `./bin/xdebug-*` tools instead of suggesting var_dump()
+- ✅ AI proactively uses `./bin/x*` tools instead of suggesting var_dump()
 - ✅ AI provides microsecond-level performance insights with actual data
 - ✅ Variable tracking occurs without any code modification
 - ✅ Memory usage analysis uses real execution data
