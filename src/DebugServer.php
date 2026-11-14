@@ -644,6 +644,8 @@ final class DebugServer
                 if ($this->jsonMode) {
                     // Add steps data to the breaks array for JSON output
                     $this->breaks = array_merge($this->breaks, $steps);
+                } else {
+                    $this->gracefulExit(0);
                 }
             } else {
                 // Start interactive debugging session
@@ -685,7 +687,7 @@ final class DebugServer
             $stepCount++;
 
             // Get current position and variables
-            $this->log("--- Step {$stepCount} ---");
+            $this->say("--- Step {$stepCount} ---");
 
             try {
                 $stackResponse = $this->getStack();
@@ -802,7 +804,7 @@ final class DebugServer
                 $stepResponse = $this->stepInto();
 
                 if ($this->isExecutionComplete($stepResponse)) {
-                    $this->log("✅ Execution completed after {$stepCount} steps");
+                    $this->say("✅ Execution completed after {$stepCount} steps");
                     if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
                         array_push($this->breaks, ...$steps);
                         $this->outputStepRecordingResults();
@@ -813,7 +815,7 @@ final class DebugServer
 
                 // Safety cap for executed steps (prevents infinite loops)
                 if ($stepCount >= $maxExecutedSteps) {
-                    $this->log("⚠️ Maximum executed steps ({$maxExecutedSteps}) reached, stopping execution");
+                    $this->say("⚠️ Maximum executed steps ({$maxExecutedSteps}) reached, stopping execution");
                     if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
                         array_push($this->breaks, ...$steps);
                         $this->outputStepRecordingResults();
@@ -840,7 +842,7 @@ final class DebugServer
 
             // Check if we've reached the recorded step limit AFTER recording the step
             if ($recordedCount >= $maxSteps) {
-                $this->log("⚠️ Maximum recorded steps ({$maxSteps}) reached, stopping execution");
+                $this->say("⚠️ Maximum recorded steps ({$maxSteps}) reached, stopping execution");
 
                 // Output JSON results immediately when step limit is reached
                 if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
@@ -870,7 +872,7 @@ final class DebugServer
 
             // Check if execution completed
             if ($this->isExecutionComplete($stepResponse)) {
-                $this->log("✅ Execution completed after {$stepCount} steps");
+                $this->say("✅ Execution completed after {$stepCount} steps");
 
                 // Output JSON results immediately when execution completes
                 if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
@@ -3894,28 +3896,28 @@ final class DebugServer
             $this->stepRecordingOutputDone = true;
         } else {
             // Human-readable format
-            $this->log("\n" . str_repeat('=', 60));
-            $this->log('🎯 MULTIPLE BREAKPOINTS DEBUG RESULT');
-            $this->log(str_repeat('=', 60));
+            $this->say("\n" . str_repeat('=', 60));
+            $this->say('🎯 MULTIPLE BREAKPOINTS DEBUG RESULT');
+            $this->say(str_repeat('=', 60));
 
             foreach ($breaks as $break) {
                 $frame = $break['stack'][0] ?? ['file' => '', 'line' => 0];
-                $this->log("📍 Step {$break['step']}: {$frame['file']}:{$frame['line']}");
+                $this->say("📍 Step {$break['step']}: {$frame['file']}:{$frame['line']}");
 
                 $variables = $break['variables'] ?? [];
                 if ($variables !== []) {
-                    $this->log('📊 Variables:');
+                    $this->say('📊 Variables:');
                     foreach ($variables as $name => $value) {
-                        $this->log("  {$name} = {$value}");
+                        $this->say("  {$name} = {$value}");
                     }
                 }
 
-                $this->log('');
+                $this->say('');
             }
 
             if ($debugState['trace']['file'] !== '') {
-                $this->log("📈 Trace file: {$debugState['trace']['file']}");
-                $this->log("📊 Trace lines: {$debugState['trace']['lines']}");
+                $this->say("📈 Trace file: {$debugState['trace']['file']}");
+                $this->say("📊 Trace lines: {$debugState['trace']['lines']}");
             }
         }
     }
