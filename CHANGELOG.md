@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `llms.txt` and `llms-full.txt` follow the README: the Skill for Claude Code and Codex CLI, MCP for other clients, a portable `check-env` path, no `--exit-on-break`, and no php.ini that turns Xdebug on for every request. The README's "Try CLI Tools" `--compare-with` example runs against this repository's demo, and the README describes vendor filtering.
 - README and `llms` docs show `xstep --vars`.
+- `xrepl` opens at the first `--break` hit instead of an internal bootstrap file, prints only the session (set `XDEBUG_DEBUG=1` for the diagnostic log), and exits when the script ends before any breakpoint or input closes.
 - `docs/debug_guideline_for_ai.md` and the `demo/buggy.php` header show commands that exist, without `--exit-on-break`. The `xdebug` Skill says how to find Composer's global bin directory when it is not `~/.composer/vendor/bin`.
 
 ## [0.14.0] - 2026-11-11
