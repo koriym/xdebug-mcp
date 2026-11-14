@@ -622,7 +622,7 @@ final class DebugServer
             }
 
             // Interactive mode: stop at the first breakpoint, or at the target's first line when none is set
-            $hasBreakpoint = $this->configuredBreakpoints !== [] || $this->initialBreakpointLine !== null;
+            $hasBreakpoint = $this->configuredBreakpoints !== [];
             $response = $hasBreakpoint ? $this->sendCommand('run') : $this->stepToTargetScript();
 
             if ($this->isExecutionComplete($response)) {
