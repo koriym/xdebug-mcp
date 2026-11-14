@@ -623,6 +623,13 @@ final class DebugServer
 
             // Interactive mode: stop at the first breakpoint, or at the target's first line when none is set
             $hasBreakpoint = $this->configuredBreakpoints !== [];
+            if (! $hasBreakpoint && ($this->options['breakpoints'] ?? []) !== []) {
+                $this->say('❌ None of the requested breakpoints could be set');
+                $this->gracefulExit(1);
+
+                return;
+            }
+
             $response = $hasBreakpoint ? $this->sendCommand('run') : $this->stepToTargetScript();
 
             if ($this->isExecutionComplete($response)) {
@@ -840,19 +847,6 @@ final class DebugServer
             $steps[] = $step;
             $recordedCount++;
 
-            // Check if we've reached the recorded step limit AFTER recording the step
-            if ($recordedCount >= $maxSteps) {
-                $this->say("⚠️ Maximum recorded steps ({$maxSteps}) reached, stopping execution");
-
-                // Output JSON results immediately when step limit is reached
-                if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
-                    array_push($this->breaks, ...$steps);
-                    $this->outputStepRecordingResults();
-                }
-
-                break;
-            }
-
             if ($this->jsonMode) {
                 $changeCount = count($variablesToRecord);
                 $type = $recordingType === 'full' ? 'full state' : 'changes only';
@@ -864,6 +858,18 @@ final class DebugServer
                     ? "Step {$stepCount} Variables (Full State)"
                     : "Step {$stepCount} Variables (Changes Only)";
                 $this->displayVariableArray($variablesToRecord, $title);
+            }
+
+            if ($recordedCount >= $maxSteps) {
+                $this->say("⚠️ Maximum recorded steps ({$maxSteps}) reached, stopping execution");
+
+                // Output JSON results immediately when step limit is reached
+                if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
+                    array_push($this->breaks, ...$steps);
+                    $this->outputStepRecordingResults();
+                }
+
+                break;
             }
 
             // Step into next instruction
@@ -2682,7 +2688,7 @@ final class DebugServer
      */
     private function say(string $message): void
     {
-        if ($this->jsonMode) {
+        if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
             return;
         }
 
