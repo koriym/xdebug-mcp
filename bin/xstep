@@ -34,6 +34,7 @@ function showHelp(string $commandName = 'xstep'): void
         echo "CORE OPTIONS:\n";
         echo "  --break=SPEC            Set breakpoints (file.php:line or file.php:line:condition)\n";
         echo "  --include-vendor=PATTERNS Include matching vendor packages in trace\n";
+        echo "  --follow-pane=PANE      Move the vim in tmux pane PANE to each stopped line\n";
         echo "  --help, -h              Show this help\n";
     } else {
         echo "Usage: xstep [options] [--] command\n";
@@ -101,6 +102,7 @@ function showHelp(string $commandName = 'xstep'): void
         echo "  p <var>  Print variable (e.g., p \$user)\n";
         echo "  bt       Show backtrace\n";
         echo "  l        Show current location (stack and variables)\n";
+        echo "  r        Run the script again from the beginning\n";
         echo "  q        Quit debugger\n";
         echo "\n";
     } else {
@@ -298,6 +300,7 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
     $maxDepth = null;
     $vars = null;
     $includeVendor = null;
+    $followPane = null;
 
     for ($i = 1; $i < count($argv); $i++) {
         $arg = $argv[$i];
@@ -390,6 +393,11 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             continue;
         }
 
+        if ($parseOptions && str_starts_with($arg, '--follow-pane=')) {
+            $followPane = substr($arg, 14);
+            continue;
+        }
+
         if ($parseOptions && ($arg === '--help' || $arg === '-h')) {
             showHelp($commandName);
         }
@@ -471,6 +479,11 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
         }
     }
 
+    // Restart replaces this process with the same command line, so every option carries over.
+    $onRestart = $replMode && function_exists('pcntl_exec')
+        ? static function () use ($argv): void { pcntl_exec(PHP_BINARY, $argv); }
+        : null;
+
     // Use advanced breakpoints if specified, otherwise use legacy format
     if (!empty($breakpoints)) {
         $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, null, [
@@ -486,10 +499,12 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             'maxDepth' => $maxDepth,
             'vars' => $vars,
             'includeVendor' => $includeVendor,
+            'followPane' => $followPane,
+            'onRestart' => $onRestart,
         ], $jsonOutput);
     } else {
         // For legacy format, only pass command if it's not just the target script
-        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches, 'pretty' => $pretty, 'maxValueBytes' => $maxValueBytes, 'maxDepth' => $maxDepth, 'vars' => $vars, 'includeVendor' => $includeVendor];
+        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches, 'pretty' => $pretty, 'maxValueBytes' => $maxValueBytes, 'maxDepth' => $maxDepth, 'vars' => $vars, 'includeVendor' => $includeVendor, 'followPane' => $followPane, 'onRestart' => $onRestart];
         if (count($command) > 1 || ($command[0] !== $targetScript)) {
             $options['command'] = $command;
         }
