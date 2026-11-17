@@ -39,7 +39,7 @@ class XreplIdleTest extends TestCase
     {
         $root = dirname(__DIR__, 2);
         $fixture = $root . '/tests/fixtures/simple.php';
-        $this->driver = tempnam(sys_get_temp_dir(), 'xrepl_idle_') . '.php';
+        $this->driver = tempnam(sys_get_temp_dir(), 'xrepl_idle_');
         file_put_contents($this->driver, '<?php
 require ' . var_export($root . '/vendor/autoload.php', true) . ';
 (new Koriym\XdebugMcp\DebugServer(' . var_export($fixture, true) . ', 9004, null, [

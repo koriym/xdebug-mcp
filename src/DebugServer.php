@@ -1676,7 +1676,7 @@ final class DebugServer
             $input = $this->readUserInputWithTimeout();
 
             if ($input === null) {
-                $this->say('❌ Failed to read user input, exiting');
+                $this->say('Input closed, exiting');
                 $this->gracefulExit(0);
 
                 return;
