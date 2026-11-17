@@ -556,18 +556,14 @@ final class DebugServer
             $this->targetLaunched = true;
             $this->log('📋 Process started, PID: ' . $this->process->getPid());
 
-            // Skip process waiting for interactive debugging to avoid connection issues
-            if (($this->options['traceOnly'] ?? false) || ! $this->isConnected()) {
-                // Wait for process completion with timeout
-                $executionTimeout = $this->options['executionTimeout'] ?? self::DEFAULT_EXECUTION_TIMEOUT;
-                $cancellation = new TimeoutCancellation($executionTimeout);
-                $exitCode = $this->process?->join($cancellation);
-
-                if ($exitCode !== 0) {
-                    $this->log("⚠️ Script exited with code: {$exitCode}");
-                }
+            // An interactive session lasts as long as the user stays at the prompt, so only xstep gets a time limit.
+            $cancellation = $this->options['traceOnly'] ?? false
+                ? new TimeoutCancellation($this->options['executionTimeout'] ?? self::DEFAULT_EXECUTION_TIMEOUT)
+                : null;
+            $exitCode = $this->process?->join($cancellation);
+            if ($exitCode !== 0) {
+                $this->log("⚠️ Script exited with code: {$exitCode}");
             }
-            // For interactive debugging, don't wait for process completion
         } catch (Throwable $e) {
             $this->log('❌ Script execution error: ' . $e->getMessage());
 
