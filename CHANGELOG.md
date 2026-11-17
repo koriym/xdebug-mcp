@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-18
+
 ### Added
 - `xrepl --follow-pane=PANE` moves the vim in that tmux pane to each stopped line and highlights it.
 - `xrepl` command `r` runs the script again from the beginning with the same options.
