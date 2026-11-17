@@ -94,7 +94,10 @@ use function parse_str;
 use function preg_match;
 use function preg_replace;
 use function preg_replace_callback;
+use function proc_close;
+use function proc_open;
 use function property_exists;
+use function rawurldecode;
 use function rawurlencode;
 use function realpath;
 use function register_shutdown_function;
@@ -212,7 +215,7 @@ final class DebugServer
     /** @var array{id: string, label: string, file: string, line: int, condition?: string}|null */
     private array|null $activeBreakpoint = null;
 
-    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, vars?: list<string>|null, phpBinary?: string, includeVendor?: string|null, stackFrames?: int, firstLineFallback?: bool, onResult?: callable(XstepJsonOutput): void} $options */
+    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, vars?: list<string>|null, phpBinary?: string, includeVendor?: string|null, stackFrames?: int, firstLineFallback?: bool, followPane?: string|null, onResult?: callable(XstepJsonOutput): void, onRestart?: (callable(): void)|null} $options */
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
@@ -556,18 +559,14 @@ final class DebugServer
             $this->targetLaunched = true;
             $this->log('📋 Process started, PID: ' . $this->process->getPid());
 
-            // Skip process waiting for interactive debugging to avoid connection issues
-            if (($this->options['traceOnly'] ?? false) || ! $this->isConnected()) {
-                // Wait for process completion with timeout
-                $executionTimeout = $this->options['executionTimeout'] ?? self::DEFAULT_EXECUTION_TIMEOUT;
-                $cancellation = new TimeoutCancellation($executionTimeout);
-                $exitCode = $this->process?->join($cancellation);
-
-                if ($exitCode !== 0) {
-                    $this->log("⚠️ Script exited with code: {$exitCode}");
-                }
+            // An interactive session lasts as long as the user stays at the prompt, so only xstep gets a time limit.
+            $cancellation = $this->options['traceOnly'] ?? false
+                ? new TimeoutCancellation($this->options['executionTimeout'] ?? self::DEFAULT_EXECUTION_TIMEOUT)
+                : null;
+            $exitCode = $this->process?->join($cancellation);
+            if ($exitCode !== 0) {
+                $this->log("⚠️ Script exited with code: {$exitCode}");
             }
-            // For interactive debugging, don't wait for process completion
         } catch (Throwable $e) {
             $this->log('❌ Script execution error: ' . $e->getMessage());
 
@@ -621,18 +620,27 @@ final class DebugServer
                 return; // Never reached, but explicit for readability
             }
 
-            // Interactive mode: Use step_into to stop at first executable line
-            $this->log('🚶 Starting with step_into to stop at first executable line...');
-            $response = $this->stepInto();
-
-            // Check if already completed (empty script?)
-            if ($this->isExecutionComplete($response)) {
-                $this->log('✅ Script completed immediately');
+            // Interactive mode: stop at the first breakpoint, or at the target's first line when none is set
+            $hasBreakpoint = $this->configuredBreakpoints !== [];
+            if (! $hasBreakpoint && ($this->options['breakpoints'] ?? []) !== []) {
+                $this->say('❌ None of the requested breakpoints could be set');
+                $this->gracefulExit(1);
 
                 return;
             }
 
-            $this->log('⏸️ Stopped at first executable line');
+            $response = $hasBreakpoint ? $this->sendCommand('run') : $this->stepToTargetScript();
+
+            if ($this->isExecutionComplete($response)) {
+                $this->say($hasBreakpoint ? '✅ Script finished without reaching a breakpoint' : '✅ Script completed immediately');
+                $this->gracefulExit(0);
+
+                return;
+            }
+
+            if (! ($this->options['maxSteps'] ?? 0)) {
+                $this->displayCurrentState();
+            }
 
             // Check if Step Recording mode is enabled
             if (isset($this->options['maxSteps']) && $this->options['maxSteps'] > 0) {
@@ -642,13 +650,15 @@ final class DebugServer
                 if ($this->jsonMode) {
                     // Add steps data to the breaks array for JSON output
                     $this->breaks = array_merge($this->breaks, $steps);
+                } else {
+                    $this->gracefulExit(0);
                 }
             } else {
                 // Start interactive debugging session
                 $this->startInteractiveSession();
             }
         } catch (Throwable $e) {
-            $this->log('Debug sequence error: ' . $e->getMessage());
+            $this->say('❌ Debug sequence error: ' . $e->getMessage());
         }
     }
 
@@ -683,7 +693,7 @@ final class DebugServer
             $stepCount++;
 
             // Get current position and variables
-            $this->log("--- Step {$stepCount} ---");
+            $this->say("--- Step {$stepCount} ---");
 
             try {
                 $stackResponse = $this->getStack();
@@ -800,7 +810,7 @@ final class DebugServer
                 $stepResponse = $this->stepInto();
 
                 if ($this->isExecutionComplete($stepResponse)) {
-                    $this->log("✅ Execution completed after {$stepCount} steps");
+                    $this->say("✅ Execution completed after {$stepCount} steps");
                     if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
                         array_push($this->breaks, ...$steps);
                         $this->outputStepRecordingResults();
@@ -811,7 +821,7 @@ final class DebugServer
 
                 // Safety cap for executed steps (prevents infinite loops)
                 if ($stepCount >= $maxExecutedSteps) {
-                    $this->log("⚠️ Maximum executed steps ({$maxExecutedSteps}) reached, stopping execution");
+                    $this->say("⚠️ Maximum executed steps ({$maxExecutedSteps}) reached, stopping execution");
                     if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
                         array_push($this->breaks, ...$steps);
                         $this->outputStepRecordingResults();
@@ -836,19 +846,6 @@ final class DebugServer
             $steps[] = $step;
             $recordedCount++;
 
-            // Check if we've reached the recorded step limit AFTER recording the step
-            if ($recordedCount >= $maxSteps) {
-                $this->log("⚠️ Maximum recorded steps ({$maxSteps}) reached, stopping execution");
-
-                // Output JSON results immediately when step limit is reached
-                if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
-                    array_push($this->breaks, ...$steps);
-                    $this->outputStepRecordingResults();
-                }
-
-                break;
-            }
-
             if ($this->jsonMode) {
                 $changeCount = count($variablesToRecord);
                 $type = $recordingType === 'full' ? 'full state' : 'changes only';
@@ -862,13 +859,25 @@ final class DebugServer
                 $this->displayVariableArray($variablesToRecord, $title);
             }
 
+            if ($recordedCount >= $maxSteps) {
+                $this->say("⚠️ Maximum recorded steps ({$maxSteps}) reached, stopping execution");
+
+                // Output JSON results immediately when step limit is reached
+                if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
+                    array_push($this->breaks, ...$steps);
+                    $this->outputStepRecordingResults();
+                }
+
+                break;
+            }
+
             // Step into next instruction
             $this->log('👣 Step into...');
             $stepResponse = $this->stepInto();
 
             // Check if execution completed
             if ($this->isExecutionComplete($stepResponse)) {
-                $this->log("✅ Execution completed after {$stepCount} steps");
+                $this->say("✅ Execution completed after {$stepCount} steps");
 
                 // Output JSON results immediately when execution completes
                 if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
@@ -1660,15 +1669,17 @@ final class DebugServer
     private function startConsoleSession(): void
     {
         $this->log('🎮 Starting interactive debugging session');
-        $this->log('Available commands: s(tep), o(ver), out, c(ontinue), p <var>, bt, l(ist), claude, q(uit)');
+        $this->say('Available commands: s(tep), o(ver), out, c(ontinue), p <var>, bt, l(ist), r(estart), claude, q(uit)');
 
         while (true) {
             $this->displayPrompt();
             $input = $this->readUserInputWithTimeout();
 
             if ($input === null) {
-                $this->log('❌ Failed to read user input, exiting');
-                break;
+                $this->say('Input closed, exiting');
+                $this->gracefulExit(0);
+
+                return;
             }
 
             $command = trim($input);
@@ -1946,7 +1957,7 @@ final class DebugServer
                             'command' => $command,
                         ], JSON_THROW_ON_ERROR) . "\n";
                     } else {
-                        $this->log("📊 Trace file generated up to conditional breakpoint: {$latestTrace} ({$lines} lines, {$sizeKB}KB)");
+                        $this->say("📊 Trace file generated up to conditional breakpoint: {$latestTrace} ({$lines} lines, {$sizeKB}KB)");
                     }
                 } elseif ($this->options['jsonOutput'] ?? false) {
                     echo json_encode([
@@ -1956,24 +1967,24 @@ final class DebugServer
                         'command' => implode(' ', $this->options['command'] ?? ['php', $this->targetScript]),
                     ], JSON_THROW_ON_ERROR) . "\n";
                 } else {
-                    $this->log("📊 Trace file generated up to conditional breakpoint: {$latestTrace}");
+                    $this->say("📊 Trace file generated up to conditional breakpoint: {$latestTrace}");
                 }
             } else {
                 // For interactive mode: show detailed info
-                $this->log("📈 Trace file available: {$latestTrace}");
+                $this->say("📈 Trace file available: {$latestTrace}");
                 if (file_exists($latestTrace)) {
                     $fileLines = file($latestTrace, FILE_IGNORE_NEW_LINES);
                     $lines = $fileLines !== false ? count($fileLines) : 0;
                     $size = filesize($latestTrace);
-                    $this->log("📊 Trace contains {$lines} lines ({$size} bytes)");
+                    $this->say("📊 Trace contains {$lines} lines ({$size} bytes)");
                 }
 
-                $this->log('✅ Debug session complete');
+                $this->say('✅ Debug session complete');
             }
         } elseif (! ($this->options['traceOnly'] ?? false)) {
-            $this->log('⚠️ No trace file found');
-            $this->log('💡 Trace files are typically saved as /tmp/trace.*.xt');
-            $this->log('✅ Debug session complete');
+            $this->say('⚠️ No trace file found');
+            $this->say('💡 Trace files are typically saved as /tmp/trace.*.xt');
+            $this->say('✅ Debug session complete');
         }
     }
 
@@ -2026,6 +2037,12 @@ final class DebugServer
 
                 return true;
 
+            case 'r':
+            case 'restart':
+                $this->handleRestartCommand();
+
+                return false;
+
             case 'claude':
                 $this->handleClaudeCommand($args);
 
@@ -2038,7 +2055,7 @@ final class DebugServer
                 return false;
 
             default:
-                $this->log("❌ Unknown command: {$cmd}. Type 'h' for help.");
+                $this->say("❌ Unknown command: {$cmd}. Type 'h' for help.");
 
                 return false;
         }
@@ -2058,7 +2075,7 @@ final class DebugServer
             // Trace is already enabled via Xdebug configuration and continues throughout debug session
 
             if ($this->isExecutionComplete($response)) {
-                $this->log('✅ Execution completed');
+                $this->say('✅ Execution completed');
 
                 return true;
             }
@@ -2068,7 +2085,7 @@ final class DebugServer
 
             return false;
         } catch (Throwable $e) {
-            $this->log('⚠️ Step command encountered error: ' . $e->getMessage());
+            $this->say('⚠️ Step command encountered error: ' . $e->getMessage());
 
             // Check if this is a connection error (broken pipe, connection closed, etc.)
             if (
@@ -2076,18 +2093,18 @@ final class DebugServer
                 || str_contains($e->getMessage(), 'Connection closed')
                 || str_contains($e->getMessage(), 'Failed to write to stream')
             ) {
-                $this->log('🔚 Debug session ended due to connection issues');
+                $this->say('🔚 Debug session ended due to connection issues');
 
                 return true; // End session gracefully
             }
 
             // Try to recover only for non-connection errors
             if ($this->isConnected()) {
-                $this->log('🔄 Connection still active, trying continue to next executable line...');
+                $this->say('🔄 Connection still active, trying continue to next executable line...');
                 try {
                     $response = $this->continueExecution();
                     if ($this->isExecutionComplete($response)) {
-                        $this->log('✅ Execution completed');
+                        $this->say('✅ Execution completed');
 
                         return true;
                     }
@@ -2096,11 +2113,11 @@ final class DebugServer
 
                     return false;
                 } catch (Throwable $retryException) {
-                    $this->log('❌ Recovery failed: ' . $retryException->getMessage());
+                    $this->say('❌ Recovery failed: ' . $retryException->getMessage());
                 }
             }
 
-            $this->log('🔚 Debug session ended due to connection issues');
+            $this->say('🔚 Debug session ended due to connection issues');
 
             return true;
         }
@@ -2117,7 +2134,7 @@ final class DebugServer
             $response = $this->stepOver();
 
             if ($this->isExecutionComplete($response)) {
-                $this->log('✅ Execution completed');
+                $this->say('✅ Execution completed');
 
                 return true;
             }
@@ -2127,7 +2144,7 @@ final class DebugServer
 
             return false;
         } catch (Throwable $e) {
-            $this->log('⚠️ Step over command encountered error: ' . $e->getMessage());
+            $this->say('⚠️ Step over command encountered error: ' . $e->getMessage());
 
             // Check if this is a connection error
             if (
@@ -2135,18 +2152,18 @@ final class DebugServer
                 || str_contains($e->getMessage(), 'Connection closed')
                 || str_contains($e->getMessage(), 'Failed to write to stream')
             ) {
-                $this->log('🔚 Debug session ended due to connection issues');
+                $this->say('🔚 Debug session ended due to connection issues');
 
                 return true;
             }
 
             // Try to recover only for non-connection errors
             if ($this->isConnected()) {
-                $this->log('🔄 Connection still active, trying continue to next executable line...');
+                $this->say('🔄 Connection still active, trying continue to next executable line...');
                 try {
                     $response = $this->continueExecution();
                     if ($this->isExecutionComplete($response)) {
-                        $this->log('✅ Execution completed');
+                        $this->say('✅ Execution completed');
 
                         return true;
                     }
@@ -2155,11 +2172,11 @@ final class DebugServer
 
                     return false;
                 } catch (Throwable $retryException) {
-                    $this->log('❌ Recovery failed: ' . $retryException->getMessage());
+                    $this->say('❌ Recovery failed: ' . $retryException->getMessage());
                 }
             }
 
-            $this->log('🔚 Debug session ended due to connection issues');
+            $this->say('🔚 Debug session ended due to connection issues');
 
             return true;
         }
@@ -2176,7 +2193,7 @@ final class DebugServer
             $response = $this->stepOut();
 
             if ($this->isExecutionComplete($response)) {
-                $this->log('✅ Execution completed');
+                $this->say('✅ Execution completed');
 
                 return true;
             }
@@ -2186,7 +2203,7 @@ final class DebugServer
 
             return false;
         } catch (Throwable $e) {
-            $this->log('⚠️ Step out command encountered error: ' . $e->getMessage());
+            $this->say('⚠️ Step out command encountered error: ' . $e->getMessage());
 
             // Check if this is a connection error
             if (
@@ -2194,18 +2211,18 @@ final class DebugServer
                 || str_contains($e->getMessage(), 'Connection closed')
                 || str_contains($e->getMessage(), 'Failed to write to stream')
             ) {
-                $this->log('🔚 Debug session ended due to connection issues');
+                $this->say('🔚 Debug session ended due to connection issues');
 
                 return true;
             }
 
             // Try to recover only for non-connection errors
             if ($this->isConnected()) {
-                $this->log('🔄 Connection still active, trying continue to next executable line...');
+                $this->say('🔄 Connection still active, trying continue to next executable line...');
                 try {
                     $response = $this->continueExecution();
                     if ($this->isExecutionComplete($response)) {
-                        $this->log('✅ Execution completed');
+                        $this->say('✅ Execution completed');
 
                         return true;
                     }
@@ -2214,11 +2231,11 @@ final class DebugServer
 
                     return false;
                 } catch (Throwable $retryException) {
-                    $this->log('❌ Recovery failed: ' . $retryException->getMessage());
+                    $this->say('❌ Recovery failed: ' . $retryException->getMessage());
                 }
             }
 
-            $this->log('🔚 Debug session ended due to connection issues');
+            $this->say('🔚 Debug session ended due to connection issues');
 
             return true;
         }
@@ -2241,7 +2258,7 @@ final class DebugServer
         }
 
         if ($this->isExecutionComplete($response)) {
-            $this->log('✅ Execution completed');
+            $this->say('✅ Execution completed');
 
             return true;
         }
@@ -2258,7 +2275,7 @@ final class DebugServer
     private function handlePrintCommand(string $variable): void
     {
         if ($variable === '') {
-            $this->log('❌ Usage: p <variable_name>');
+            $this->say('❌ Usage: p <variable_name>');
 
             return;
         }
@@ -2272,10 +2289,10 @@ final class DebugServer
             if ($xml instanceof SimpleXMLElement) {
                 $this->displayPropertyResult($xml, $variable);
             } else {
-                $this->log("📋 Raw result: {$result}");
+                $this->say("📋 Raw result: {$result}");
             }
         } catch (Throwable $e) {
-            $this->log("❌ Error evaluating '{$variable}': " . $e->getMessage());
+            $this->say("❌ Error evaluating '{$variable}': " . $e->getMessage());
         }
     }
 
@@ -2287,7 +2304,7 @@ final class DebugServer
         // Check for error first
         if (property_exists($xml, 'error') && $xml->error !== null) {
             $errorMsg = (string) $xml->error->message;
-            $this->log("❌ Error: {$errorMsg}");
+            $this->say("❌ Error: {$errorMsg}");
 
             return;
         }
@@ -2306,7 +2323,7 @@ final class DebugServer
 
         if ($type === 'array' || $type === 'object') {
             $childCount = count($property->property ?? []);
-            $this->log("📋 {$variable} ({$type}[{$childCount}]):");
+            $this->say("📋 {$variable} ({$type}[{$childCount}]):");
 
             // Show ALL elements for AI client - no pagination needed
             if ($childCount > 0) {
@@ -2321,13 +2338,32 @@ final class DebugServer
                         $childValue = '"' . $childValue . '"';
                     }
 
-                    $this->log("  [{$childName}] ({$childType}): {$childValue}");
+                    $this->say("  [{$childName}] ({$childType}): {$childValue}");
                 }
             }
         } else {
             $displayValue = $this->formatVariableValue($value, $type);
-            $this->log("📋 {$variable} ({$type}): {$displayValue}");
+            $this->say("📋 {$variable} ({$type}): {$displayValue}");
         }
+    }
+
+    /**
+     * Stop the target and hand over to onRestart, which starts the same xrepl again.
+     */
+    private function handleRestartCommand(): void
+    {
+        $restart = $this->options['onRestart'] ?? null;
+        if ($restart === null) {
+            $this->say('❌ Restart is not available here');
+
+            return;
+        }
+
+        $this->say('🔄 Restarting from the beginning');
+        $this->emergencyCleanup();
+        $restart();
+        $this->say('❌ Restart failed');
+        $this->gracefulExit(1);
     }
 
     /**
@@ -2335,7 +2371,7 @@ final class DebugServer
      */
     private function handleBacktraceCommand(): void
     {
-        $this->log('📋 Call stack:');
+        $this->say('📋 Call stack:');
         $stackInfo = $this->getStack();
         $this->displayStackInfo($stackInfo);
     }
@@ -2346,12 +2382,12 @@ final class DebugServer
     private function handleListCommand(): void
     {
         if (! $this->isConnected()) {
-            $this->log('📄 Cannot list: Debug session ended');
+            $this->say('📄 Cannot list: Debug session ended');
 
             return;
         }
 
-        $this->log('📄 Current location:');
+        $this->say('📄 Current location:');
         $this->displayCurrentState();
     }
 
@@ -2360,17 +2396,18 @@ final class DebugServer
      */
     private function displayHelp(): void
     {
-        $this->log('🆘 Available commands:');
-        $this->log('  s, step     - Execute next line (step into)');
-        $this->log('  o, over     - Execute next line (step over)');
-        $this->log('  out         - Step out of current function');
-        $this->log('  c, continue - Continue execution');
-        $this->log('  p <var>     - Print variable value');
-        $this->log('  bt          - Show backtrace');
-        $this->log('  l, list     - Show current location');
-        $this->log('  claude      - Analyze execution trace with AI');
-        $this->log('  q, quit     - Exit debugger');
-        $this->log('  h, help     - Show this help');
+        $this->say('🆘 Available commands:');
+        $this->say('  s, step     - Execute next line (step into)');
+        $this->say('  o, over     - Execute next line (step over)');
+        $this->say('  out         - Step out of current function');
+        $this->say('  c, continue - Continue execution');
+        $this->say('  p <var>     - Print variable value');
+        $this->say('  bt          - Show backtrace');
+        $this->say('  l, list     - Show current location');
+        $this->say('  claude      - Analyze execution trace with AI');
+        $this->say('  r, restart  - Run the script again from the beginning');
+        $this->say('  q, quit     - Exit debugger');
+        $this->say('  h, help     - Show this help');
     }
 
     /**
@@ -2380,7 +2417,7 @@ final class DebugServer
     {
         // Skip display if connection is not available
         if (! $this->isConnected()) {
-            $this->log('📍 Cannot display state: Connection not available');
+            $this->say('📍 Cannot display state: Connection not available');
 
             return;
         }
@@ -2392,7 +2429,7 @@ final class DebugServer
                 $this->displayStackInfo($stackInfo);
             }
         } catch (Throwable $e) {
-            $this->log('⚠️ Unable to get stack info: ' . $e->getMessage());
+            $this->say('⚠️ Unable to get stack info: ' . $e->getMessage());
         }
 
         try {
@@ -2402,7 +2439,7 @@ final class DebugServer
                 $this->displayVariables($variables);
             }
         } catch (Throwable $e) {
-            $this->log('⚠️ Unable to get variables: ' . $e->getMessage());
+            $this->say('⚠️ Unable to get variables: ' . $e->getMessage());
         }
     }
 
@@ -2417,23 +2454,56 @@ final class DebugServer
 
         $xml = $this->parseXmlResponse($xmlResponse);
         if (! $xml instanceof SimpleXMLElement) {
-            $this->log('⚠️ Failed to parse stack XML response');
+            $this->say('⚠️ Failed to parse stack XML response');
 
             return;
         }
 
-        $this->log('📍 Current execution position:');
+        $this->say('📍 Current execution position:');
+        $top = null;
         foreach ($xml->stack ?? [] as $frame) {
             $level = (string) $frame['level'];
             $type = (string) $frame['type'];
             $filename = (string) $frame['filename'];
             $lineno = (string) $frame['lineno'];
             $where = (string) $frame['where'];
+            $top ??= [$filename, (int) $lineno];
 
             // Extract just filename from path
             $shortFilename = basename($filename);
-            $this->log("  📂 Level {$level}: {$where} at {$shortFilename}:{$lineno}");
+            $this->say("  📂 Level {$level}: {$where} at {$shortFilename}:{$lineno}");
         }
+
+        if ($top === null) {
+            return;
+        }
+
+        $this->followPane($top[0], $top[1]);
+    }
+
+    /**
+     * Move the vim in the --follow-pane tmux pane to the stopped line.
+     */
+    private function followPane(string $fileUri, int $line): void
+    {
+        $pane = $this->options['followPane'] ?? null;
+        if ($pane === null || ! str_starts_with($fileUri, 'file://')) {
+            return;
+        }
+
+        $path = rawurldecode(substr($fileUri, 7));
+        $vimPath = str_replace("'", "''", $path);
+        $vimCommand = ":exe 'e +{$line} '.fnameescape('{$vimPath}')|match Visual /\\%{$line}l/";
+        $tmux = proc_open(
+            ['tmux', 'send-keys', '-t', $pane, 'Escape', ';', 'send-keys', '-t', $pane, '-l', $vimCommand, ';', 'send-keys', '-t', $pane, 'Enter'],
+            [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']],
+            $pipes,
+        );
+        if ($tmux === false) {
+            return;
+        }
+
+        proc_close($tmux);
     }
 
     /**
@@ -2443,23 +2513,23 @@ final class DebugServer
      */
     private function displayVariableArray(array $variables, string $title): void
     {
-        $this->log("📊 {$title}:");
+        $this->say("📊 {$title}:");
 
         if ($variables === []) {
-            $this->log('  (no variables)');
+            $this->say('  (no variables)');
 
             return;
         }
 
         foreach ($variables as $name => $value) {
             if ($value === '[DELETED]') {
-                $this->log("  🗑️  {$name} = [DELETED]");
+                $this->say("  🗑️  {$name} = [DELETED]");
             } else {
-                $this->log("  📌 {$name} = {$value}");
+                $this->say("  📌 {$name} = {$value}");
             }
         }
 
-        $this->log('');
+        $this->say('');
     }
 
     /**
@@ -2473,12 +2543,12 @@ final class DebugServer
 
         $xml = $this->parseXmlResponse($xmlResponse);
         if (! $xml instanceof SimpleXMLElement) {
-            $this->log('⚠️ Failed to parse variables XML response');
+            $this->say('⚠️ Failed to parse variables XML response');
 
             return;
         }
 
-        $this->log('📊 Variables at current position:');
+        $this->say('📊 Variables at current position:');
 
         // Handle both direct properties and nested in context element
         $properties = $xml->context->property ?? $xml->property ?? [];
@@ -2497,13 +2567,13 @@ final class DebugServer
                 $childCount = count($property->property ?? []);
                 // Fix double $ issue - remove prefix if already present
                 $displayName = str_starts_with($name, '$') ? $name : '$' . $name;
-                $this->log("  📋 {$displayName} ({$type}[{$childCount}]): <expandable>");
+                $this->say("  📋 {$displayName} ({$type}[{$childCount}]): <expandable>");
             } else {
                 // Format the value display based on type
                 $displayValue = $this->formatVariableValue($value, $type);
                 // Fix double $ issue - remove prefix if already present
                 $displayName = str_starts_with($name, '$') ? $name : '$' . $name;
-                $this->log("  📋 {$displayName} ({$type}): {$displayValue}");
+                $this->say("  📋 {$displayName} ({$type}): {$displayValue}");
             }
         }
     }
@@ -2659,16 +2729,28 @@ final class DebugServer
     }
 
     /**
-     * Log message
+     * Diagnostic message, shown only when XDEBUG_DEBUG is set
      */
     private function log(string $message): void
     {
-        if ($this->jsonMode) {
+        if ($this->jsonMode || ! getenv('XDEBUG_DEBUG')) {
             return;
         }
 
         $timestamp = date('H:i:s');
         echo "[{$timestamp}] {$message}\n";
+    }
+
+    /**
+     * Output for the person at the REPL
+     */
+    private function say(string $message): void
+    {
+        if ($this->jsonMode || ($this->options['jsonOutput'] ?? false)) {
+            return;
+        }
+
+        echo "{$message}\n";
     }
 
     /**
@@ -3038,20 +3120,20 @@ final class DebugServer
             $output = shell_exec($claudeCommand . ' 2>&1');
 
             if ($output) {
-                $this->log('📊 Claude Analysis Result:');
+                $this->say('📊 Claude Analysis Result:');
                 $lines = explode("\n", trim($output));
                 foreach ($lines as $line) {
                     if (in_array(trim($line), ['', '0'], true)) {
                         continue;
                     }
 
-                    $this->log('   ' . $line);
+                    $this->say('   ' . $line);
                 }
             } else {
-                $this->log('❌ Claude analysis failed or produced no output');
+                $this->say('❌ Claude analysis failed or produced no output');
             }
         } catch (Throwable $e) {
-            $this->log('❌ Claude analysis error: ' . $e->getMessage());
+            $this->say('❌ Claude analysis error: ' . $e->getMessage());
         }
     }
 
@@ -3878,28 +3960,28 @@ final class DebugServer
             $this->stepRecordingOutputDone = true;
         } else {
             // Human-readable format
-            $this->log("\n" . str_repeat('=', 60));
-            $this->log('🎯 MULTIPLE BREAKPOINTS DEBUG RESULT');
-            $this->log(str_repeat('=', 60));
+            $this->say("\n" . str_repeat('=', 60));
+            $this->say('🎯 MULTIPLE BREAKPOINTS DEBUG RESULT');
+            $this->say(str_repeat('=', 60));
 
             foreach ($breaks as $break) {
                 $frame = $break['stack'][0] ?? ['file' => '', 'line' => 0];
-                $this->log("📍 Step {$break['step']}: {$frame['file']}:{$frame['line']}");
+                $this->say("📍 Step {$break['step']}: {$frame['file']}:{$frame['line']}");
 
                 $variables = $break['variables'] ?? [];
                 if ($variables !== []) {
-                    $this->log('📊 Variables:');
+                    $this->say('📊 Variables:');
                     foreach ($variables as $name => $value) {
-                        $this->log("  {$name} = {$value}");
+                        $this->say("  {$name} = {$value}");
                     }
                 }
 
-                $this->log('');
+                $this->say('');
             }
 
             if ($debugState['trace']['file'] !== '') {
-                $this->log("📈 Trace file: {$debugState['trace']['file']}");
-                $this->log("📊 Trace lines: {$debugState['trace']['lines']}");
+                $this->say("📈 Trace file: {$debugState['trace']['file']}");
+                $this->say("📊 Trace lines: {$debugState['trace']['lines']}");
             }
         }
     }

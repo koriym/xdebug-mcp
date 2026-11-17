@@ -247,6 +247,13 @@ For hands-on debugging without AI, use the interactive debugger (`xrepl`):
 xrepl --break="script.php:42" -- php script.php
 ```
 
+Inside tmux, `--follow-pane` keeps a read-only vim in another pane on the stopped line:
+
+```bash
+tmux split-window -h "vim -R script.php"   # note the new pane's id: tmux display -p '#{pane_id}'
+xrepl --follow-pane=%1 --break="script.php:42" -- php script.php
+```
+
 **Commands:**
 
 | Command | Description |
@@ -258,6 +265,7 @@ xrepl --break="script.php:42" -- php script.php
 | `p <var>` | Print variable (e.g., `p $user`) |
 | `bt` | Show backtrace |
 | `l` | Show current location (stack and variables) |
+| `r` | Run the script again from the beginning (needs `pcntl`) |
 | `q` | Quit debugger |
 
 ## Docker Support
