@@ -305,7 +305,7 @@ An agent can stop at the breakpoint in a terminal the user can open, then leave 
    ```
    Start xrepl in pane 0 with `--follow-pane=<pane 1 id>`, select pane 0, then attach the terminal with `tmux attach -t xrepl-<what stops>`. Paseo titles a tab with the running command (`tmux attach -t …`), not the terminal name; the tmux title makes the tab read `🐞 xrepl: <what stops>`.
 3. Send each command once, then Enter as a separate key. Read the pane until `(Xdebug)` and the stopped position appear before sending anything else: a line sent while the REPL waits is read as a REPL command (`Unknown command`).
-4. Keep shell prompts out of the command line: `rm dir/*` may ask for confirmation in zsh; use `find dir -type f -delete`.
+4. Keep shell prompts out of the command line: `rm dir/*` may ask for confirmation in zsh; use `find dir -maxdepth 1 -type f -delete`, which, like `rm dir/*`, deletes only the files directly in `dir`.
 5. Tell the user the tab title, the workspace, the stopped position, the variables shown and the commands above, then stop typing into it.
 
 ---
