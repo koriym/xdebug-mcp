@@ -215,7 +215,7 @@ final class DebugServer
     /** @var array{id: string, label: string, file: string, line: int, condition?: string}|null */
     private array|null $activeBreakpoint = null;
 
-    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, vars?: list<string>|null, phpBinary?: string, includeVendor?: string|null, stackFrames?: int, firstLineFallback?: bool, followPane?: string|null, onResult?: callable(XstepJsonOutput): void} $options */
+    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, vars?: list<string>|null, phpBinary?: string, includeVendor?: string|null, stackFrames?: int, firstLineFallback?: bool, followPane?: string|null, onResult?: callable(XstepJsonOutput): void, onRestart?: (callable(): void)|null} $options */
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
@@ -1669,7 +1669,7 @@ final class DebugServer
     private function startConsoleSession(): void
     {
         $this->log('🎮 Starting interactive debugging session');
-        $this->say('Available commands: s(tep), o(ver), out, c(ontinue), p <var>, bt, l(ist), claude, q(uit)');
+        $this->say('Available commands: s(tep), o(ver), out, c(ontinue), p <var>, bt, l(ist), r(estart), claude, q(uit)');
 
         while (true) {
             $this->displayPrompt();
@@ -2037,6 +2037,12 @@ final class DebugServer
 
                 return true;
 
+            case 'r':
+            case 'restart':
+                $this->handleRestartCommand();
+
+                return false;
+
             case 'claude':
                 $this->handleClaudeCommand($args);
 
@@ -2342,6 +2348,25 @@ final class DebugServer
     }
 
     /**
+     * Stop the target and hand over to onRestart, which starts the same xrepl again.
+     */
+    private function handleRestartCommand(): void
+    {
+        $restart = $this->options['onRestart'] ?? null;
+        if ($restart === null) {
+            $this->say('❌ Restart is not available here');
+
+            return;
+        }
+
+        $this->say('🔄 Restarting from the beginning');
+        $this->emergencyCleanup();
+        $restart();
+        $this->say('❌ Restart failed');
+        $this->gracefulExit(1);
+    }
+
+    /**
      * Handle backtrace command
      */
     private function handleBacktraceCommand(): void
@@ -2380,6 +2405,7 @@ final class DebugServer
         $this->say('  bt          - Show backtrace');
         $this->say('  l, list     - Show current location');
         $this->say('  claude      - Analyze execution trace with AI');
+        $this->say('  r, restart  - Run the script again from the beginning');
         $this->say('  q, quit     - Exit debugger');
         $this->say('  h, help     - Show this help');
     }

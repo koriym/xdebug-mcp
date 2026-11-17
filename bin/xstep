@@ -102,6 +102,7 @@ function showHelp(string $commandName = 'xstep'): void
         echo "  p <var>  Print variable (e.g., p \$user)\n";
         echo "  bt       Show backtrace\n";
         echo "  l        Show current location (stack and variables)\n";
+        echo "  r        Run the script again from the beginning\n";
         echo "  q        Quit debugger\n";
         echo "\n";
     } else {
@@ -478,6 +479,11 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
         }
     }
 
+    // Restart replaces this process with the same command line, so every option carries over.
+    $onRestart = $replMode && function_exists('pcntl_exec')
+        ? static function () use ($argv): void { pcntl_exec(PHP_BINARY, $argv); }
+        : null;
+
     // Use advanced breakpoints if specified, otherwise use legacy format
     if (!empty($breakpoints)) {
         $server = new DebugServer($targetScript, Constants::XDEBUG_DEBUG_PORT, null, [
@@ -494,10 +500,11 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             'vars' => $vars,
             'includeVendor' => $includeVendor,
             'followPane' => $followPane,
+            'onRestart' => $onRestart,
         ], $jsonOutput);
     } else {
         // For legacy format, only pass command if it's not just the target script
-        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches, 'pretty' => $pretty, 'maxValueBytes' => $maxValueBytes, 'maxDepth' => $maxDepth, 'vars' => $vars, 'includeVendor' => $includeVendor, 'followPane' => $followPane];
+        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches, 'pretty' => $pretty, 'maxValueBytes' => $maxValueBytes, 'maxDepth' => $maxDepth, 'vars' => $vars, 'includeVendor' => $includeVendor, 'followPane' => $followPane, 'onRestart' => $onRestart];
         if (count($command) > 1 || ($command[0] !== $targetScript)) {
             $options['command'] = $command;
         }

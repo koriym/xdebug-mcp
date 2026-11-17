@@ -271,6 +271,7 @@ Human-friendly interactive debugging session with breakpoints and variable inspe
 - `p <var>` - Print variable (e.g., `p $user`)
 - `bt` - Show backtrace
 - `l` - Show current location (stack and variables)
+- `r` - Run the script again from the beginning, with the same options (needs `pcntl`)
 - `q` - Quit debugger
 
 ### Examples

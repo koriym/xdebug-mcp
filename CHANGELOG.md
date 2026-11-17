@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `xrepl --follow-pane=PANE` moves the vim in that tmux pane to each stopped line and highlights it.
+- `xrepl` command `r` runs the script again from the beginning with the same options.
 
 ### Fixed
 - `llms.txt` and `llms-full.txt` follow the README: the Skill for Claude Code and Codex CLI, MCP for other clients, a portable `check-env` path, no `--exit-on-break`, and no php.ini that turns Xdebug on for every request. The README's "Try CLI Tools" `--compare-with` example runs against this repository's demo, and the README describes vendor filtering.
