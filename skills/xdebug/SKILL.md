@@ -287,6 +287,16 @@ Human-friendly interactive debugging session with breakpoints and variable inspe
 - "Step through manually and inspect variables"
 - Exploratory debugging by a human at the terminal
 
+### Hand a Session to a Human
+
+An agent can stop at the breakpoint in a terminal the user can open, then leave the session to them.
+
+1. Create the terminal with the user's workspace directory as its working directory. Terminal lists (Paseo's included) group terminals by working directory, so one opened in a scratch directory is not shown to the user. Give the script and the breakpoint as absolute paths.
+2. Name it `🐞 xrepl: <what stops>`, e.g. `🐞 xrepl: exportCompact`, so the user can find it by the prefix.
+3. Send the command once, then Enter as a separate key. Read the terminal until `(Xdebug)` and the stopped position appear before sending anything else: a line sent while the REPL waits is read as a REPL command (`Unknown command`).
+4. Keep shell prompts out of the command line: `rm dir/*` may ask for confirmation in zsh; use `find dir -type f -delete`.
+5. Tell the user the terminal name, the stopped position, the variables shown and the commands above, then stop typing into it.
+
 ---
 
 ## Common Options
