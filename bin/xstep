@@ -34,6 +34,7 @@ function showHelp(string $commandName = 'xstep'): void
         echo "CORE OPTIONS:\n";
         echo "  --break=SPEC            Set breakpoints (file.php:line or file.php:line:condition)\n";
         echo "  --include-vendor=PATTERNS Include matching vendor packages in trace\n";
+        echo "  --follow-pane=PANE      Move the vim in tmux pane PANE to each stopped line\n";
         echo "  --help, -h              Show this help\n";
     } else {
         echo "Usage: xstep [options] [--] command\n";
@@ -298,6 +299,7 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
     $maxDepth = null;
     $vars = null;
     $includeVendor = null;
+    $followPane = null;
 
     for ($i = 1; $i < count($argv); $i++) {
         $arg = $argv[$i];
@@ -387,6 +389,11 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
 
         if ($parseOptions && str_starts_with($arg, '--include-vendor=')) {
             $includeVendor = substr($arg, 17);
+            continue;
+        }
+
+        if ($parseOptions && str_starts_with($arg, '--follow-pane=')) {
+            $followPane = substr($arg, 14);
             continue;
         }
 
@@ -486,10 +493,11 @@ function parseBreakpoints(string $breakSpec, bool $isDockerCommand = false): arr
             'maxDepth' => $maxDepth,
             'vars' => $vars,
             'includeVendor' => $includeVendor,
+            'followPane' => $followPane,
         ], $jsonOutput);
     } else {
         // For legacy format, only pass command if it's not just the target script
-        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches, 'pretty' => $pretty, 'maxValueBytes' => $maxValueBytes, 'maxDepth' => $maxDepth, 'vars' => $vars, 'includeVendor' => $includeVendor];
+        $options = ['breakpointFile' => $breakpointFile, 'traceOnly' => $traceOnly, 'jsonOutput' => $jsonOutput, 'context' => $context, 'maxSteps' => $maxSteps, 'watches' => $watches, 'pretty' => $pretty, 'maxValueBytes' => $maxValueBytes, 'maxDepth' => $maxDepth, 'vars' => $vars, 'includeVendor' => $includeVendor, 'followPane' => $followPane];
         if (count($command) > 1 || ($command[0] !== $targetScript)) {
             $options['command'] = $command;
         }

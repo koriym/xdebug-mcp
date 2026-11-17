@@ -94,7 +94,10 @@ use function parse_str;
 use function preg_match;
 use function preg_replace;
 use function preg_replace_callback;
+use function proc_close;
+use function proc_open;
 use function property_exists;
+use function rawurldecode;
 use function rawurlencode;
 use function realpath;
 use function register_shutdown_function;
@@ -212,7 +215,7 @@ final class DebugServer
     /** @var array{id: string, label: string, file: string, line: int, condition?: string}|null */
     private array|null $activeBreakpoint = null;
 
-    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, vars?: list<string>|null, phpBinary?: string, includeVendor?: string|null, stackFrames?: int, firstLineFallback?: bool, onResult?: callable(XstepJsonOutput): void} $options */
+    /** @param array{command?: list<string>, context?: string, breakpoint?: string, steps?: int, connectionTimeout?: float, executionTimeout?: float, traceOnly?: bool, maxSteps?: int, jsonOutput?: bool, breakpoints?: list<array{file: string, line: int|string, condition?: string}>, readTimeout?: float, watches?: list<string>, pretty?: bool, maxValueBytes?: int|null, maxDepth?: int|null, vars?: list<string>|null, phpBinary?: string, includeVendor?: string|null, stackFrames?: int, firstLineFallback?: bool, followPane?: string|null, onResult?: callable(XstepJsonOutput): void} $options */
     public function __construct(
         private readonly string $targetScript,
         private readonly int $debugPort,
@@ -2431,17 +2434,50 @@ final class DebugServer
         }
 
         $this->say('📍 Current execution position:');
+        $top = null;
         foreach ($xml->stack ?? [] as $frame) {
             $level = (string) $frame['level'];
             $type = (string) $frame['type'];
             $filename = (string) $frame['filename'];
             $lineno = (string) $frame['lineno'];
             $where = (string) $frame['where'];
+            $top ??= [$filename, (int) $lineno];
 
             // Extract just filename from path
             $shortFilename = basename($filename);
             $this->say("  📂 Level {$level}: {$where} at {$shortFilename}:{$lineno}");
         }
+
+        if ($top === null) {
+            return;
+        }
+
+        $this->followPane($top[0], $top[1]);
+    }
+
+    /**
+     * Move the vim in the --follow-pane tmux pane to the stopped line.
+     */
+    private function followPane(string $fileUri, int $line): void
+    {
+        $pane = $this->options['followPane'] ?? null;
+        if ($pane === null || ! str_starts_with($fileUri, 'file://')) {
+            return;
+        }
+
+        $path = rawurldecode(substr($fileUri, 7));
+        $vimPath = str_replace("'", "''", $path);
+        $vimCommand = ":exe 'e +{$line} '.fnameescape('{$vimPath}')|match Visual /\\%{$line}l/";
+        $tmux = proc_open(
+            ['tmux', 'send-keys', '-t', $pane, 'Escape', ';', 'send-keys', '-t', $pane, '-l', $vimCommand, ';', 'send-keys', '-t', $pane, 'Enter'],
+            [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']],
+            $pipes,
+        );
+        if ($tmux === false) {
+            return;
+        }
+
+        proc_close($tmux);
     }
 
     /**

@@ -257,8 +257,10 @@ Compare variable states at the same breakpoint across two different executions. 
 Human-friendly interactive debugging session with breakpoints and variable inspection. Unlike the other tools, xrepl is an interactive session rather than one-shot JSON output — for AI-driven analysis, prefer `xstep`.
 
 ```bash
-~/.composer/vendor/bin/xrepl --break=FILE:LINE [--include-vendor=PATTERNS] -- command
+~/.composer/vendor/bin/xrepl --break=FILE:LINE [--include-vendor=PATTERNS] [--follow-pane=TMUX_PANE] -- command
 ```
+
+`--follow-pane` sends each stopped `file:line` to a vim in that tmux pane, which opens the file there and highlights the line.
 
 ### Commands
 
@@ -292,10 +294,18 @@ Human-friendly interactive debugging session with breakpoints and variable inspe
 An agent can stop at the breakpoint in a terminal the user can open, then leave the session to them.
 
 1. Create the terminal with the user's workspace directory as its working directory. Terminal lists (Paseo's included) group terminals by working directory, so one opened in a scratch directory is not shown to the user. Give the script and the breakpoint as absolute paths.
-2. Name it `🐞 xrepl: <what stops>`, e.g. `🐞 xrepl: exportCompact`, so the user can find it by the prefix.
-3. Send the command once, then Enter as a separate key. Read the terminal until `(Xdebug)` and the stopped position appear before sending anything else: a line sent while the REPL waits is read as a REPL command (`Unknown command`).
+2. Run xrepl in a tmux session with the source beside it, and attach the terminal to it:
+   ```bash
+   tmux new-session -d -s xrepl-<what stops> -x 200 -y 50 -c <script dir>
+   tmux split-window -h -t xrepl-<what stops> "vim -R -c 'set number' +LINE FILE"
+   tmux list-panes -t xrepl-<what stops> -F '#{pane_index} #{pane_id}'   # pane 0 runs xrepl, pane 1 is vim
+   tmux set-option -t xrepl-<what stops> set-titles on
+   tmux set-option -t xrepl-<what stops> set-titles-string '🐞 xrepl: <what stops>'
+   ```
+   Start xrepl in pane 0 with `--follow-pane=<pane 1 id>`, select pane 0, then attach the terminal with `tmux attach -t xrepl-<what stops>`. Paseo titles a tab with the running command (`tmux attach -t …`), not the terminal name; the tmux title makes the tab read `🐞 xrepl: <what stops>`.
+3. Send each command once, then Enter as a separate key. Read the pane until `(Xdebug)` and the stopped position appear before sending anything else: a line sent while the REPL waits is read as a REPL command (`Unknown command`).
 4. Keep shell prompts out of the command line: `rm dir/*` may ask for confirmation in zsh; use `find dir -type f -delete`.
-5. Tell the user the terminal name, the stopped position, the variables shown and the commands above, then stop typing into it.
+5. Tell the user the tab title, the workspace, the stopped position, the variables shown and the commands above, then stop typing into it.
 
 ---
 
