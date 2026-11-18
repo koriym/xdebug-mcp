@@ -2360,6 +2360,8 @@ final class DebugServer
         }
 
         $this->say('🔄 Restarting from the beginning');
+        // Kill before cleanup's detach, which would let the script run on to its end.
+        $this->process?->kill();
         $this->emergencyCleanup();
         $restart();
         $this->say('❌ Restart failed');
